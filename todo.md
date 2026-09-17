@@ -211,13 +211,57 @@ written twice.
       array per call through `np.pad`, and it is called ~18 times per layer.
       Re-profile first — after the 2.74x the shape of the run has changed and
       this may no longer be worth doing.
-- [ ] 2. Sparse/RLE layer representation end-to-end, from `Rasterizer::slice`
-      through validation, union and GOO encode. Kills the dense `.any()`
-      reductions — emptiness becomes O(1). Touches native/raster.cpp, raster.py,
-      validation.py, assembly.py, goo.py.
-- [ ] 3. Port the per-layer analysis kernels to native code over RLE layers:
-      CCL, the cross-layer union-find `VoidTracker`, block-max decimation, the
-      growth/EDT check. One kernel at a time, each A/B-tested against scipy.
+- [ ] 2. **RLE per-layer analysis — scoped to `validation.py` internals.**
+      Assessed in depth; `scratchpad/rle_assessment.md` has the data. The
+      plan's "end-to-end, from `Rasterizer::slice` through validation, union and
+      GOO encode" framing is **rejected**: that is most of the files for about a
+      tenth of the win (~0.5 s of a ~7 s prize), and it changes the `Layer`
+      contract, so all 8 external call sites, the GUI and every test that builds
+      a `Layer` would move. Keep `analyze_layers` taking a `Layer` with a dense
+      `.mask` and convert only what happens inside. **External call sites that
+      change: zero.**
+
+      Measured on real dumped layers: mean 8,640 binary runs per 3.54 Mpx layer
+      = **410x compression**, worst layer 235x; other fixtures 434-1,296 px/run.
+      The "material may be sparse where air is not" worry is a category error --
+      material and void runs are the same partition of each row, so the void
+      fraction changes run *lengths*, never run *counts*, and run count is what
+      run-space algorithms cost. Confirmed on 18 real layers. Antialiasing does
+      not affect validation at all, because `occupancy_mask` is `!= 0`
+      (validation.py:45-52) and sees only the binary structure.
+
+      Prototype kernels in C, benchmarked against the code they replace, all
+      verified exact on 18 real layers (and 200 random fields for CCL):
+      material CCL 228x, void CCL 310x, void bincount 594x, overlap bincount
+      182x, `merge` pair extraction 193x **with an identical union-call
+      sequence including the 64-row chunking and its cross-chunk duplicates**.
+      Nothing is a blocker; only the EDT stays dense, and it already runs on a
+      64x-decimated panel costing 1.07 s over the build.
+
+      Byte-exactness is demonstrated rather than argued: an RLE rewrite does
+      **not** inherently reorder the float accumulation the VoidForest gotcha
+      warns about -- reordering would be a choice. The load-bearing constraint
+      is that the 64-row chunking (validation.py:185-189) is carried forward
+      verbatim, or the cross-chunk duplicate unions are lost and
+      `peak_present_trapped_volume_mm3` moves in its last bits.
+
+      **Do not take a partial conversion.** A spike that computes in run space
+      but materializes dense labels at the boundary measured only **1.06x** --
+      the materialization costs 15.6 s/900 layers, against 0.11 s/900 for all
+      the run kernels put together. The unit of value is the whole per-layer
+      path as one coherent change, behind a switch with the dense path retained
+      as the permanent fallback for pathological density (run space loses below
+      about 6 px/run; real fixtures sit two orders clear).
+
+      Scope: ~10 functions and ~300 lines in validation.py plus a new
+      `native/runs.cpp` (~250-300 lines; a working C draft exists at
+      `scratchpad/rle/runs.c`). Estimated 2-4 days.
+
+- [ ] 3. Port the per-layer analysis kernels to native code over RLE layers.
+      Folded into item 2 above — the kernels and the representation are the
+      same change, and splitting them is what the 1.06x partial-conversion
+      measurement warns against.
+
 - [-] 4. Parallelize across layers with `tbb::parallel_for` — **retired by
       measurement, do not do this.** The pool is bandwidth-limited, not
       thread-limited: the worker sweep is flat past 8 (22.61 / 19.06 / 18.38 /
@@ -269,18 +313,18 @@ written twice.
       a strict reduction on every input. **18.39 s -> 12.88 s (-30 %)**, user
       CPU 82.0 -> 63.7 s. RSS unchanged: the prototype's 795 -> 660 MB was
       noise, the removed vector was per component, not per pixel.
-- [ ] 5d. Fused native kernel for the overlap-pair extraction in
-      `VoidForest.merge`. Reads 8 B/px once instead of touching 41; measured
-      21.8 GB/s, 84 % of this machine's read ceiling, 3.8x on the loop,
-      byte-identical key sequence on 18 dumped layers. Worth **-1.9 s alone but
-      only -0.5 s after 5c**, because deleting the extraction outright stops
-      the run at 16.21 s stock / 10.24 s with lazy counts — that is the ceiling.
-      Sequence it after 5c and re-measure before deciding it is worth the C.
-      Moving the extraction to the worker pool instead is order-feasible (pairs
-      depend only on `labels[i]`, `labels[i-1]`, and the id mapping applies
-      afterwards) but strictly worse: same ceiling, adds bandwidth-hungry work
-      to a pool that is already 83 % busy and does not scale past 8, and costs a
-      second pool stage plus a changed `merge` signature.
+- [ ] 5d. Fused native kernel for `merge`'s overlap-pair extraction.
+      Superseded by item 2 if that lands: the run-space extraction is 193x and
+      byte-identical, against this kernel's 3.8x. Keep only as the fallback if
+      item 2 is abandoned. Worth about -0.5 s on its own after the island-count
+      change.
+
+**The ~10 s floor, and why it caps nearly every remaining item.** Deleting
+`merge`'s extraction outright stops the run at 10.24 s; eliminating *all* pool
+work would also stop it at about 10 s. Neither side alone clears that floor, so
+every single-sided candidate — item 5d, item 7, more workers — is capped there.
+Item 2 is the only remaining change that removes work from both sides at once,
+which is the argument for doing it and for not bothering with the rest first.
 
 - [ ] 6. Persist the Z-interval structure on the `Rasterizer` across passes
       instead of rebuilding it (native/raster.cpp:53-66).
