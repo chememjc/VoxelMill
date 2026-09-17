@@ -35,6 +35,13 @@ from .contracts import CancellationToken, VoxelMillError, Diagnostic, ResourceBu
 CROSS = ndi.generate_binary_structure(2, 1)
 CROSS3 = ndi.generate_binary_structure(3, 1)
 
+# Largest dense (before, after) key table `VoidForest.merge` may allocate for one
+# layer. 4 Mi bool is the same order as the int64 key array a single row chunk
+# already builds, so the sort-free dedup never costs more scratch than the sort
+# it replaces. Above it the layer falls back to sorting, whose scratch scales
+# with the overlapping pixels rather than with the product of the label counts.
+MERGE_KEY_TABLE_CAP = 1 << 22
+
 def occupancy_mask(mask):
     """Binary material mask for connectivity / growth / voids.
 
@@ -150,17 +157,57 @@ class VoidForest:
             self.count += total
         if self.previous is not None and total:
             cancel.check()
-            # Bound overlap-key scratch instead of allocating several int64
-            # full-panel arrays (hundreds of MiB each on a 9K printer).
+            # Deduplicate the overlapping label pairs by scattering into a dense
+            # key table instead of sorting. `np.unique` sorted every chunk, and
+            # this tracks *empty* space, so on most layers the great majority of
+            # pixels carry a label on both sides (measured: 45-83% of the panel
+            # above the base on the bracket fixture) -- a near-full-chunk sort,
+            # tens of thousands of times over a build, to recover a couple of
+            # dozen distinct pairs. Same defect `_border_flags` already had
+            # removed, same fix.
+            #
+            # The emission order is load-bearing and is preserved exactly.
+            # `union` accumulates volumes and `trapped` in floating point, which
+            # is not associative, so the sequence of calls -- the pairs, their
+            # order, and the duplicates that arise when one pair straddles
+            # several chunks -- is part of the reported number. The key here is
+            # the identical `before * (total + 1) + after`, so `flatnonzero` over
+            # its occupancy walks the identical distinct keys in the identical
+            # ascending order `np.unique` returned. `seen` starts and ends every
+            # chunk all-False, cleared through the keys just found rather than
+            # wholesale, so no state crosses a chunk boundary. Chunking stays per
+            # 64 rows: hoisting the dedup to once per layer would drop the
+            # cross-chunk duplicate unions and reorder the rest.
+            span = total + 1
+            table = len(self.previous_ids) * span
+            # Bound the scratch, as the 64-row chunking already does for the key
+            # array: above the cap the table would outgrow the chunk describing
+            # it, so pay for the sort instead. Component counts are small in
+            # practice (29 x 29 on the bracket), so this is the rare path.
+            seen = np.zeros(table, dtype=bool) if table <= MERGE_KEY_TABLE_CAP else None
+            keys = (np.empty(min(64, labels.shape[0]) * labels.shape[1], dtype=np.int64)
+                    if seen is not None else None)
             for row in range(0, labels.shape[0], 64):
                 cancel.check()
                 before = self.previous[row:row + 64].ravel()
                 after = labels[row:row + 64].ravel()
-                both = (before > 0) & (after > 0)
-                if both.any():
-                    keys = before[both].astype(np.int64) * (total + 1) + after[both]
-                    for key in np.unique(keys):
-                        self.union(int(self.previous_ids[key // (total + 1)]), int(ids[key % (total + 1)]))
+                if seen is None:
+                    both = (before > 0) & (after > 0)
+                    if both.any():
+                        keyed = before[both].astype(np.int64) * span + after[both]
+                        for key in np.unique(keyed):
+                            self.union(int(self.previous_ids[key // span]), int(ids[key % span]))
+                    continue
+                chunk = keys[:before.size]
+                np.multiply(before, span, out=chunk, dtype=np.int64, casting='unsafe')
+                np.add(chunk, after, out=chunk, casting='unsafe')
+                seen[chunk] = True
+                seen[:span] = False   # before == 0: no predecessor component here
+                seen[::span] = False  # after == 0: no component this layer here
+                found = np.flatnonzero(seen)
+                seen[found] = False
+                for key in found.tolist():
+                    self.union(int(self.previous_ids[key // span]), int(ids[key % span]))
         self.previous, self.previous_ids = labels, ids
         self.history.append(self.trapped)
         return labels, ids

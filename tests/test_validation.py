@@ -298,3 +298,144 @@ def test_model_only_absence_classifies_support_drainage_and_policy_ignore():
         {'count': 1, 'volume_mm3': 0.5, 'examples': [{'component': 0, 'volume_mm3': 0.5}]},
         {'count': 0, 'volume_mm3': 0.0})
     assert support_only['support_count'] == 1 and support_only['model_count'] == 0
+
+
+class _ReferenceVoidForest:
+    """The v0.1.0 ``VoidForest.merge`` loop, verbatim, as an accumulation reference.
+
+    ``VoidForest.union`` accumulates volumes and ``trapped`` in floating point,
+    and floating-point addition is not associative, so the *sequence* of union
+    calls -- the same pairs, in the same order, with the same cross-chunk
+    duplicates -- is part of the reported number, not an implementation detail.
+    Anything that replaces the ``np.unique`` dedup has to reproduce this loop
+    call for call; ``test_merge_union_sequence_matches_reference`` is what says
+    so, and it is why this copy stays here rather than being deleted as dead.
+    """
+
+    def merge(self, components, index, cancel):
+        labels, total, counts, outside = components
+        if index == 0:
+            outside = np.ones(total + 1, dtype=bool)
+        self._grow(self.count + total + 1)
+        ids = np.zeros(total + 1, dtype=np.int64)
+        if total:
+            ids[1:] = np.arange(self.count, self.count + total, dtype=np.int64)
+            slice_ = slice(self.count, self.count + total)
+            self.parent[slice_] = np.arange(self.count, self.count + total)
+            self.volume[slice_] = counts[1:] * self.voxel_volume
+            self.exterior[slice_] = outside[1:]
+            self.born[slice_] = index
+            self.trapped += float(self.volume[slice_][~outside[1:]].sum())
+            self.count += total
+        if self.previous is not None and total:
+            cancel.check()
+            for row in range(0, labels.shape[0], 64):
+                cancel.check()
+                before = self.previous[row:row + 64].ravel()
+                after = labels[row:row + 64].ravel()
+                both = (before > 0) & (after > 0)
+                if both.any():
+                    keys = before[both].astype(np.int64) * (total + 1) + after[both]
+                    for key in np.unique(keys):
+                        self.union(int(self.previous_ids[key // (total + 1)]),
+                                   int(ids[key % (total + 1)]))
+        self.previous, self.previous_ids = labels, ids
+        self.history.append(self.trapped)
+        return labels, ids
+
+
+class _RecordingUnion:
+    """Capture every ``union`` argument pair, in call order, duplicates kept."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.calls = []
+
+    def union(self, a, b):
+        self.calls.append((a, b))
+        return super().union(a, b)
+
+
+def _void_merge_stack(layers=7, height=200, width=61):
+    """Masks whose empty space spans several 64-row chunks and repeats in each.
+
+    Full-height void stripes make the same ``(before, after)`` label pair occur
+    in every one of the four row chunks, which is the duplicate-preservation
+    case a per-layer dedup would silently drop. The corridor, the drifting blob
+    and the speckle keep label numbering from being trivially stable, so the
+    emission order matters too.
+    """
+    rng = np.random.default_rng(20240917)
+    masks = []
+    for index in range(layers):
+        mask = np.ones((height, width), np.uint8)
+        for column in (7, 19, 31, 43):
+            mask[:, column:column + 3] = 0
+        if index % 2:
+            mask[90:94, 5:50] = 0  # joins the stripes into one component
+        row = 20 + 9 * index
+        mask[row:row + 12, 50:57] = 0  # a blob that is born, drifts and dies
+        mask[rng.random((height, width)) < .01] = 0
+        masks.append(mask)
+    return masks
+
+
+def _record_merges(forest_class, masks):
+    from voxelmill.validation import void_components, occupancy_mask
+    from voxelmill.contracts import CancellationToken
+    cancel = CancellationToken()
+    forest = forest_class(0.0018 * 0.0018 * 0.05)
+    for index, mask in enumerate(masks):
+        forest.merge(void_components(occupancy_mask(mask)), index, cancel)
+    return forest
+
+
+def test_merge_union_sequence_matches_reference():
+    """The union call sequence is the result; it may never be reordered.
+
+    Same pairs, same order, same count including the duplicates that arise when
+    one label pair straddles more than one row chunk. Rewrites of the dedup are
+    allowed; changes to this sequence are not, because they move float
+    accumulation and the v0.1.0 equivalence gate compares those volumes.
+    """
+    from voxelmill.validation import VoidForest
+
+    class Recorded(_RecordingUnion, VoidForest):
+        pass
+
+    class Reference(_RecordingUnion, _ReferenceVoidForest, VoidForest):
+        pass
+
+    masks = _void_merge_stack()
+    assert masks[0].shape[0] > 64, 'a single-chunk fixture would not guard duplicates'
+    current = _record_merges(Recorded, masks)
+    reference = _record_merges(Reference, masks)
+    assert current.calls == reference.calls
+    assert current.calls, 'fixture produced no overlaps to union'
+    assert len(current.calls) > len(set(current.calls)), \
+        'fixture produced no cross-chunk duplicate unions to preserve'
+    assert current.history == reference.history
+    assert current.trapped == reference.trapped
+    assert current.finish() == reference.finish()
+
+
+def test_merge_union_sequence_matches_reference_under_key_table_cap():
+    """The sorting fallback, taken when the key table would be too large, agrees."""
+    import voxelmill.validation as validation
+
+    class Recorded(_RecordingUnion, validation.VoidForest):
+        pass
+
+    class Reference(_RecordingUnion, _ReferenceVoidForest, validation.VoidForest):
+        pass
+
+    masks = _void_merge_stack()
+    reference = _record_merges(Reference, masks)
+    saved = validation.MERGE_KEY_TABLE_CAP
+    try:
+        validation.MERGE_KEY_TABLE_CAP = 0  # every chunk takes the fallback
+        capped = _record_merges(Recorded, masks)
+    finally:
+        validation.MERGE_KEY_TABLE_CAP = saved
+    assert capped.calls == reference.calls
+    assert capped.finish() == reference.finish()
