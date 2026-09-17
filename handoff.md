@@ -6,13 +6,16 @@ State as of 2026-09-17. Read this, then `todo.md` for the task ledger and
 
 ## Where things stand
 
-Two commits on `master`, plus an uncommitted-at-time-of-writing third:
+Three commits on `master`:
 
 1. `b7d68ee` — pristine import of v0.1.0's committed tree, so every later diff
    shows exactly what changed relative to the working version.
 2. `a0f9fdc` — version 0.2.0, CPU affinity fix, `topology.py`, `--workers auto`,
    `--worker-policy`.
-3. Phase 2: parallel `analyze_layers`.
+3. `35bb4b4` — parallel `analyze_layers`, the border-sort removal, the derived
+   worker default, and `scripts/equivalence.py`.
+
+Working tree is clean. Suite: **1029 passed, 13 skipped**.
 
 **`prepare fixtures/shapes/overhang_bracket.stl --max-passes 1 --allow-unresolved`
 went from 73.7 s to 26.9 s — 2.74x — with no C written yet.**
@@ -90,13 +93,21 @@ Amdahl limit.
 - **Determinism: verified.** Reports are field-for-field identical at 4, 8 and
   16 workers, and the output STL hashes identically before and after the
   refactor (`69172ca4...`).
-- **Full equivalence vs v0.1.0: INCOMPLETE.** `scripts/equivalence.py` runs both
-  trees over `fixtures/shapes/*.stl` through inspect → prepare → slice and
-  diffs reports structurally plus decoded GOO layer payloads. `cone`, `cube`
-  and `tetrahedron` pass end to end; the rest had not finished when this was
-  written. **Finish this before building on top of Phase 2.** Runs get killed
-  by the background-task memory guard when the machine is otherwise loaded, so
-  run it in chunks of three or four scenarios with `--scenario`.
+- **Full equivalence vs v0.1.0: INCOMPLETE — finish this first.**
+  `scripts/equivalence.py` runs both trees over `fixtures/shapes/*.stl` through
+  inspect → prepare → slice and diffs reports structurally plus decoded GOO
+  layer payloads. Confirmed identical so far: `cone`, `cube`, `cube_ascii`,
+  `cylinder`, `tetrahedron`. Outstanding: `drained_cup`, `hollow_cup`,
+  `overhang_bracket`, `pin_array`, `sphere`, `stepped_pyramid`, `thin_wall`,
+  `torus`. Runs get killed by the background-task memory guard when the machine
+  is otherwise busy, so run three or four at a time with `--scenario`, e.g.
+
+      .venv/bin/python -u scripts/equivalence.py --workers 2 \
+          --scenario torus --scenario sphere --scenario pin_array
+
+  Exit 0 means every scenario matched. `find_shapes` globs only the top level,
+  so the five error fixtures in `fixtures/shapes/invalid/` are not covered yet;
+  `todo.md` tracks that.
 
 ## Setup for a fresh session
 
