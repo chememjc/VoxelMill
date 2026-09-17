@@ -1270,3 +1270,41 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   pipeline.py:3-9 states the reslice exists to describe the file actually
   written rather than the in-memory solid. Make each call cheaper; do not
   merge them.
+
+- **A cProfile line number is not a diagnosis.** The profile put `{ndarray.sort}`
+  inside `VoidForest.merge` at the top of the list, and that was the right line.
+  Three different sort-free rewrites of it then measured 4.40 s, 7.94 s and
+  20.80 s on the same dumped label arrays. The one that looked obviously right
+  on paper — compacting the label space before scattering — was 33 % *slower*
+  end to end than the sort it replaced, because it needs four fancy-index passes
+  over the chunk before it can scatter, and NumPy fancy indexing runs at 2-4
+  ns/element, dearer per element than the ufunc passes and the sort together.
+  Benchmark the candidate against real data; do not reason it out and ship it.
+
+- **Union-find accumulation order is part of the reported number.**
+  `VoidForest.union` does `volume[a] += volume[b]` and `trapped += ...` in
+  floating point, which is not associative. The sequence of union calls — the
+  pairs, their order, and the duplicates that arise when one label pair straddles
+  several row chunks — therefore has to be preserved exactly by any rewrite of
+  `merge`. Hoisting the per-chunk dedup to once per layer looks like an
+  optimization and silently drops those duplicates. The evidence this is real:
+  the bracket fixture reports
+  `peak_present_trapped_volume_mm3 = 2.0886070650760757e-15`, a pure
+  accumulation residue that moves if anything reorders.
+  `tests/test_validation.py::test_merge_union_sequence_matches_reference` pins
+  the sequence against a kept copy of the original implementation; the reference
+  class is deliberate, not dead code.
+
+- **The worker pool being idle is not the same as it being the bottleneck.**
+  After the layer analysis was parallelized, 110.9 s of the pool's 190.2
+  thread-seconds was `SimpleQueue.get` — idle wait — while one serial stage held
+  61 % of wall clock. Eight workers bought 2.90x, not 8x. Look at the serial
+  remainder before adding more parallelism.
+
+- **cProfile sees only the calling thread.** Once per-layer analysis moved onto a
+  `ThreadPoolExecutor`, a plain `cProfile` run of the default configuration
+  undercounted the pool badly and made the remaining serial work look larger
+  than it was in CPU terms while hiding where wall clock actually went. Profile
+  with `--workers 1` for honest CPU attribution, and separately instrument the
+  pool threads (give each its own `cProfile.Profile` via a `Thread.run` patch and
+  merge with `pstats.Stats(*files)`) to get wall-clock truth.
