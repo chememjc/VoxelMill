@@ -14,6 +14,7 @@ and never a verdict: the first and last passes always scan the whole build, and
 from __future__ import annotations
 
 import math
+import time
 
 import numpy as np
 
@@ -84,11 +85,15 @@ def scan_assembly_islands(union, settings, *, crop_bounds=None, layer_range=None
     grid = RasterGrid.for_bounds(grid_bounds, settings)
     # The stream still measures the build from the real assembly bounds, so a
     # cropped scan's layer indices stay the build's own layer indices.
+    started = time.monotonic()
     stream = UnionLayerStream(union.groups, bounds, settings, grid=grid,
                               layer_range=layer_range, budget=budget, cancel=cancel,
                               progress=progress)
+    raster_seconds = time.monotonic() - started
+    analyze_started = time.monotonic()
     report = analyze_layers(stream, grid, settings, cancel=cancel, budget=budget,
                             progress=progress, track_voids=False, check_growth=False)
+    analyze_seconds = time.monotonic() - analyze_started
     diagnostics = [d for d in report.diagnostics if d.code == 'raster_island' and d.position_mm]
     if local:
         diagnostics = [d for d in diagnostics if not d.details.get('touches_crop_edge')]
@@ -97,6 +102,7 @@ def scan_assembly_islands(union, settings, *, crop_bounds=None, layer_range=None
     if local:
         count = max(0, count - on_edge)
     positions = [tuple(float(v) for v in d.position_mm) for d in diagnostics[:MAX_FEEDBACK]]
+    seconds = time.monotonic() - started
     return {
         'scan': 'local' if local else 'full',
         'islands': count,
@@ -108,6 +114,8 @@ def scan_assembly_islands(union, settings, *, crop_bounds=None, layer_range=None
         'grid': [int(grid.width), int(grid.height)],
         'crop_bounds_mm': None if crop_bounds is None else grid_bounds.tolist(),
         'islands_by_layer': sorted({int(d.layer) for d in diagnostics if d.layer is not None}),
+        'seconds': seconds,
+        'timing': {'raster': raster_seconds, 'analyze': analyze_seconds},
     }
 
 

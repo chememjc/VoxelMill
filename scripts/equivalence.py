@@ -50,7 +50,7 @@ DEFAULT_NEW_ROOT = Path('/home3/voxelmill')
 #: tree rather than a fixed list of dotted paths.
 VOLATILE_KEYS = {
     'seconds', 'inspection_seconds', 'peak_rss_bytes', 'scratch_bytes', 'analysis_workers',
-    'software_version',
+    'software_version', 'timing',
 }
 
 #: Keys whose *string* values are filesystem paths. Two things vary by
@@ -64,7 +64,7 @@ PATH_KEYS = {'path', 'source', 'output', 'input', 'destination', 'scratch_dir'}
 
 #: Subtree that just echoes the invocation's resource flags back (workers,
 #: memory budget, scratch dir) -- never part of what the pipeline computed.
-VOLATILE_SUBTREES = {'resources'}
+VOLATILE_SUBTREES = {'resources', 'timing'}
 
 STEPS = ('inspect', 'prepare', 'slice')
 

@@ -330,6 +330,9 @@ def cmd_prepare(args):
         print(f"WARNING: the model was {transform['note']}.", file=sys.stderr)
     if args.candidates is not None or args.candidate_rank is not None:
         _print_orientation_candidates(report.get('placement', {}).get('search', {}))
+    if args.timing:
+        from .stage_timing import print_timing_table
+        print_timing_table(report.get('timing') or {}, report.get('seconds'))
     _emit(report, args.report)
     return 0 if report.get('validation', {}).get('passed') else 2
 
@@ -358,8 +361,15 @@ def cmd_validate(args):
                           cancel=CancellationToken(), progress=_progress(args.progress),
                           drainage=not args.no_drainage,
                           track_voids=not args.no_void_analysis)
-    _emit({'schema_version': 1, 'command': 'validate', 'input': str(args.input),
-           'report': report.to_dict()}, args.report)
+    payload = {'schema_version': 1, 'command': 'validate', 'input': str(args.input),
+               'report': report.to_dict()}
+    timing = (report.metrics or {}).get('timing')
+    if timing is not None:
+        payload['timing'] = timing
+    if args.timing:
+        from .stage_timing import print_timing_table
+        print_timing_table(timing or {})
+    _emit(payload, args.report)
     return 0 if report.passed else 2
 
 
@@ -444,6 +454,9 @@ def cmd_slice(args):
         print('WARNING: the LCD image orientation for this printer is unverified and the two '
               'reference files disagree. A mirrored threaded or keyed part is scrap. See the '
               'goo_orientation_unverified diagnostic.', file=sys.stderr)
+    if args.timing:
+        from .stage_timing import print_timing_table
+        print_timing_table(report.get('timing') or {}, report.get('seconds'))
     _emit(report, args.report)
     hook = (report.get('hooks') or {}).get('post_slice')
     if hook is not None and not hook.get('ok', True):
@@ -1014,6 +1027,8 @@ def build_parser():
                         help='leave enclosed cavities alone; the layer analysis still reports them')
     common.add_argument('--report', help='write the JSON report here instead of stdout')
     common.add_argument('--progress', action='store_true', help='print progress to stderr')
+    common.add_argument('--timing', action='store_true',
+                        help='print a per-stage wall-time table to stderr')
     sub = parser.add_subparsers(dest='command', required=True)
 
     import_step = sub.add_parser('import-step', parents=[common],

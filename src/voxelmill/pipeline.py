@@ -37,6 +37,7 @@ from .peel import apply_peel_check
 from .overhangs import apply_overhang_check
 from .island_guard import route_without_islands
 from .contact_parameters import normalize_contact_parameters
+from .stage_timing import StageTimer
 
 CHUNK = 65536
 
@@ -252,30 +253,36 @@ def validate_stl(source, settings, *, budget=None, cancel=None, progress=no_prog
     """
     budget = budget or ResourceBudget(**settings['resources'])
     cancel = cancel or CancellationToken()
-    with open_stl(source, budget, cancel, progress) as mesh:
+    timer = StageTimer()
+    with timer.stage('load'):
+        opened = open_stl(source, budget, cancel, progress)
+    with opened as mesh:
         load_diagnostics = list(mesh.diagnostics)
         bounds = np.asarray(mesh.asset.bounds, dtype=float)
-        stream = MeshLayerStream(mesh.triangles, bounds, settings, budget=budget, cancel=cancel,
-                                 progress=progress)
-        report = analyze_layers(stream, stream.grid, settings, cancel=cancel, budget=budget,
-                                progress=progress, track_voids=track_voids)
-        report.diagnostics.extend(load_diagnostics)
-        report.diagnostics.extend(stream.diagnostics())
-        report.checks['closed_surface'] = 'fail' if stream.open_rows else 'pass'
-        report.checks['plate_fit'] = 'pass' if geometry.envelope_fits(bounds, settings) else 'fail'
-        apply_peel_check(report, mesh.triangles, bounds, settings,
-                         budget=budget, cancel=cancel, progress=progress)
-        report.metrics['open_rows'] = stream.open_rows
-        report.metrics['source'] = {'path': str(mesh.asset.path), 'sha256': mesh.asset.sha256,
-                                    'triangles': mesh.asset.triangle_count,
-                                    'bounds': mesh.asset.bounds}
-        if drainage:
-            drain = analyze_drainage(mesh.triangles, bounds, settings, budget=budget, cancel=cancel,
+        with timer.stage('reslice'):
+            stream = MeshLayerStream(mesh.triangles, bounds, settings, budget=budget, cancel=cancel,
                                      progress=progress)
-            report.metrics['drainage'] = drain
-            report.checks['drainage_bottlenecks'] = drainage_check(drain)
+            report = analyze_layers(stream, stream.grid, settings, cancel=cancel, budget=budget,
+                                    progress=progress, track_voids=track_voids)
+            report.diagnostics.extend(load_diagnostics)
+            report.diagnostics.extend(stream.diagnostics())
+            report.checks['closed_surface'] = 'fail' if stream.open_rows else 'pass'
+            report.checks['plate_fit'] = 'pass' if geometry.envelope_fits(bounds, settings) else 'fail'
+            apply_peel_check(report, mesh.triangles, bounds, settings,
+                             budget=budget, cancel=cancel, progress=progress)
+            report.metrics['open_rows'] = stream.open_rows
+            report.metrics['source'] = {'path': str(mesh.asset.path), 'sha256': mesh.asset.sha256,
+                                        'triangles': mesh.asset.triangle_count,
+                                        'bounds': mesh.asset.bounds}
+        if drainage:
+            with timer.stage('drainage'):
+                drain = analyze_drainage(mesh.triangles, bounds, settings, budget=budget,
+                                         cancel=cancel, progress=progress)
+                report.metrics['drainage'] = drain
+                report.checks['drainage_bottlenecks'] = drainage_check(drain)
         else:
             report.checks['drainage_bottlenecks'] = 'not_run'
+    report.metrics['timing'] = timer.as_dict()
     return report
 
 
@@ -300,6 +307,7 @@ def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=
     budget = budget or ResourceBudget(**settings['resources'])
     cancel = cancel or CancellationToken()
     started = time.monotonic()
+    timer = StageTimer()
     source = Path(source)
     if output and source.resolve() == Path(output).resolve():
         raise VoxelMillError('source_overwrite', 'Output must differ from the original source')
@@ -334,7 +342,11 @@ def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=
               'stages': {}, 'diagnostics': [], 'passes': []}
     scratch = tempfile.TemporaryDirectory(prefix='voxelmill-prepare-', dir=settings['resources']['scratch_dir'])
     try:
-        with open_stl(source, budget, cancel, progress) as mesh:
+        # open_stl loads in its constructor, so the load stage wraps construction
+        # and place runs while the mesh handle is still held open.
+        with timer.stage('load'):
+            opened = open_stl(source, budget, cancel, progress)
+        with opened as mesh:
             asset = asdict(mesh.asset)
             asset['path'] = str(asset['path'])
             report['asset'] = asset
@@ -343,67 +355,68 @@ def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=
             cancel.check()
             clipping = bool(settings['assembly'].get('clip_to_build_volume', False))
             transform_note = None
-            if rotate == 'auto':
-                if not np.allclose(scale, 1.0) or any(mirror):
-                    raise VoxelMillError(
-                        'invalid_placement',
-                        'Automatic orientation search does not yet consider scale or mirror; '
-                        'give explicit rotation angles when resizing or mirroring a part')
-                try:
-                    placement = geometry.auto_placement(mesh.triangles, settings, center_offset,
-                                                        lift_mm, cancel, finalists=candidate_count,
-                                                        candidate_rank=selected_rank)
-                except VoxelMillError as error:
-                    # A search that found nothing feasible has not proved that
-                    # nothing fits, so with clipping requested the part is still
-                    # placed unrotated and the shortfall is measured.
-                    if error.code != 'no_feasible_placement' or not clipping:
-                        raise
+            with timer.stage('place'):
+                if rotate == 'auto':
+                    if not np.allclose(scale, 1.0) or any(mirror):
+                        raise VoxelMillError(
+                            'invalid_placement',
+                            'Automatic orientation search does not yet consider scale or mirror; '
+                            'give explicit rotation angles when resizing or mirroring a part')
+                    try:
+                        placement = geometry.auto_placement(mesh.triangles, settings, center_offset,
+                                                            lift_mm, cancel, finalists=candidate_count,
+                                                            candidate_rank=selected_rank)
+                    except VoxelMillError as error:
+                        # A search that found nothing feasible has not proved that
+                        # nothing fits, so with clipping requested the part is still
+                        # placed unrotated and the shortfall is measured.
+                        if error.code != 'no_feasible_placement' or not clipping:
+                            raise
+                        placement, _fits, _overflow = geometry.placement_or_overflow(
+                            mesh.triangles, settings, (0.0, 0.0, 0.0), center_offset, lift_mm, cancel,
+                            scale, mirror)
+                        placement.search = {**(placement.search or {}), 'mode': 'auto_search_exhausted',
+                                            'reason': 'no orientation fitted; unrotated pose kept for clipping'}
+                elif clipping:
                     placement, _fits, _overflow = geometry.placement_or_overflow(
-                        mesh.triangles, settings, (0.0, 0.0, 0.0), center_offset, lift_mm, cancel,
-                        scale, mirror)
-                    placement.search = {**(placement.search or {}), 'mode': 'auto_search_exhausted',
-                                        'reason': 'no orientation fitted; unrotated pose kept for clipping'}
-            elif clipping:
-                placement, _fits, _overflow = geometry.placement_or_overflow(
-                    mesh.triangles, settings, rotate or (0.0, 0.0, 0.0), center_offset, lift_mm,
-                    cancel, scale, mirror)
-            else:
-                placement = geometry.placement_for_triangles(
-                    mesh.triangles, settings, rotate or (0.0, 0.0, 0.0), center_offset, lift_mm,
-                    cancel, scale, mirror)
-            report['placement'] = asdict(placement)
-            if rotate == 'auto':
-                report['stages']['orientation_selection'] = {
-                    'requested_candidates': candidate_count,
-                    'available_candidates': len(placement.search.get('ranked_candidates', [])),
-                    'selected_rank': placement.search.get('selected_rank'),
-                    'persist_as_explicit_pose': candidates is not None or candidate_rank is not None,
+                        mesh.triangles, settings, rotate or (0.0, 0.0, 0.0), center_offset, lift_mm,
+                        cancel, scale, mirror)
+                else:
+                    placement = geometry.placement_for_triangles(
+                        mesh.triangles, settings, rotate or (0.0, 0.0, 0.0), center_offset, lift_mm,
+                        cancel, scale, mirror)
+                report['placement'] = asdict(placement)
+                if rotate == 'auto':
+                    report['stages']['orientation_selection'] = {
+                        'requested_candidates': candidate_count,
+                        'available_candidates': len(placement.search.get('ranked_candidates', [])),
+                        'selected_rank': placement.search.get('selected_rank'),
+                        'persist_as_explicit_pose': candidates is not None or candidate_rank is not None,
+                    }
+                # A resized or mirrored part is a different part.  Say so in the
+                # report and as a warning diagnostic that survives into the archive,
+                # rather than leaving it to be inferred from a matrix.
+                note = geometry.scale_note(placement.scale, placement.mirror)
+                report['stages']['transform'] = {
+                    'scale': list(placement.scale), 'mirror': list(placement.mirror),
+                    'note': note,
+                    'source_size_mm': (np.asarray(mesh.asset.bounds, dtype=float)[1]
+                                       - np.asarray(mesh.asset.bounds, dtype=float)[0]).tolist(),
+                    'placed_size_mm': (np.asarray(placement.bounds, dtype=float)[1]
+                                       - np.asarray(placement.bounds, dtype=float)[0]).tolist(),
                 }
-            # A resized or mirrored part is a different part.  Say so in the
-            # report and as a warning diagnostic that survives into the archive,
-            # rather than leaving it to be inferred from a matrix.
-            note = geometry.scale_note(placement.scale, placement.mirror)
-            report['stages']['transform'] = {
-                'scale': list(placement.scale), 'mirror': list(placement.mirror),
-                'note': note,
-                'source_size_mm': (np.asarray(mesh.asset.bounds, dtype=float)[1]
-                                   - np.asarray(mesh.asset.bounds, dtype=float)[0]).tolist(),
-                'placed_size_mm': (np.asarray(placement.bounds, dtype=float)[1]
-                                   - np.asarray(placement.bounds, dtype=float)[0]).tolist(),
-            }
-            if note is not None:
-                transform_note = note
-            report['stages']['build_volume'] = {
-                'clip_to_build_volume': clipping,
-                'fits': bool(geometry.envelope_fits(np.asarray(placement.bounds, dtype=float), settings)),
-                'overflow_mm': geometry.envelope_overflow_mm(
-                    np.asarray(placement.bounds, dtype=float), settings),
-                'build_mm': list(settings['printer']['build_mm']),
-                'edge_clearance_mm': settings['printer']['edge_clearance_mm'],
-            }
-            placed_path, placed = _materialize(mesh.triangles, np.asarray(placement.matrix),
-                                               scratch.name, cancel, progress)
+                if note is not None:
+                    transform_note = note
+                report['stages']['build_volume'] = {
+                    'clip_to_build_volume': clipping,
+                    'fits': bool(geometry.envelope_fits(np.asarray(placement.bounds, dtype=float), settings)),
+                    'overflow_mm': geometry.envelope_overflow_mm(
+                        np.asarray(placement.bounds, dtype=float), settings),
+                    'build_mm': list(settings['printer']['build_mm']),
+                    'edge_clearance_mm': settings['printer']['edge_clearance_mm'],
+                }
+                placed_path, placed = _materialize(mesh.triangles, np.asarray(placement.matrix),
+                                                   scratch.name, cancel, progress)
         part_meshes = None
         extra_parts = []
         if extra_models:
@@ -417,14 +430,16 @@ def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=
                 np.asarray(part['placement']['matrix'], dtype=float) for part in extra_parts])
         bounds = np.asarray(placement.bounds, dtype=float)
         signed_volume = _signed_volume(placed, cancel)
-        model = prepare_model(placed, settings, budget=budget, cancel=cancel,
-                              progress=progress, source_volume=signed_volume)
-        report['stages']['repair'] = model.repair
+        with timer.stage('repair'):
+            model = prepare_model(placed, settings, budget=budget, cancel=cancel,
+                                  progress=progress, source_volume=signed_volume)
+            report['stages']['repair'] = model.repair
         if settings['hollow']['enabled']:
             from .hollow import apply_hollow
-            model, hollow_report = apply_hollow(model, settings, budget=budget, cancel=cancel,
-                                                progress=progress)
-            report['stages']['hollow'] = hollow_report
+            with timer.stage('hollow'):
+                model, hollow_report = apply_hollow(model, settings, budget=budget, cancel=cancel,
+                                                    progress=progress)
+                report['stages']['hollow'] = hollow_report
         if model.cavity_fill is not None:
             report['stages']['cavity_fill'] = model.cavity_fill
         model_triangles = model.triangles
@@ -432,24 +447,30 @@ def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=
                                      'volume_mm3': float(model.solid.volume()) if model.solid is not None else None,
                                      'genus': int(model.solid.genus()) if model.solid is not None else None}
         model_bounds = geometry.triangle_bounds(model_triangles, cancel=cancel)
-        field = build_column_field(model_triangles, model_bounds, settings, budget=budget,
-                                   cancel=cancel, progress=progress)
-        def replan(extra_contacts):
-            return plan_supports(model_triangles, model_bounds, settings, field=field,
-                                 budget=budget, cancel=cancel, progress=progress,
-                                 extra_contacts=extra_contacts, removed_contacts=removed_contacts,
-                                 contact_parameters=contact_parameters, paint=paint,
-                                 object_groups=support_object_groups(
-                                     settings, extra_models, part_meshes))
+        with timer.stage('supports'):
+            field = build_column_field(model_triangles, model_bounds, settings, budget=budget,
+                                       cancel=cancel, progress=progress)
+            def replan(extra_contacts):
+                return plan_supports(model_triangles, model_bounds, settings, field=field,
+                                     budget=budget, cancel=cancel, progress=progress,
+                                     extra_contacts=extra_contacts, removed_contacts=removed_contacts,
+                                     contact_parameters=contact_parameters, paint=paint,
+                                     object_groups=support_object_groups(
+                                         settings, extra_models, part_meshes))
+            if not settings['support']['automatic']:
+                # Manual routing: plan once here. Automatic mode plans inside
+                # island_guard via the same replan callable.
+                plan, raft = replan(list(manual_contacts))
         search_passes = []
         if settings['support']['automatic']:
             # The search for a contact set that leaves no island runs on the
             # in-memory assembly and never writes anything; only the accepted
             # result below gets written, reread and rechecked.
-            guard = route_without_islands(model, settings, replan=replan, budget=budget,
-                                          cancel=cancel, progress=progress, max_passes=max_passes,
-                                          extra_contacts=manual_contacts)
-            plan, raft, union = guard['plan'], guard['raft'], guard['union']
+            with timer.stage('island_guard'):
+                guard = route_without_islands(model, settings, replan=replan, budget=budget,
+                                              cancel=cancel, progress=progress, max_passes=max_passes,
+                                              extra_contacts=manual_contacts)
+                plan, raft, union = guard['plan'], guard['raft'], guard['union']
             # A guard that settled on its first, whole-build scan finding
             # nothing to fix ran no real correction. The full reslice below
             # reports that identical clean state with actual validation
@@ -461,19 +482,22 @@ def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=
             # not go add contacts of its own even if the one pass it is given
             # leaves islands behind.
             guard = None
-            plan, raft = replan(list(manual_contacts))
-            union = assemble(model, plan.solids, raft, budget=budget, cancel=cancel)
+            with timer.stage('assemble'):
+                union = assemble(model, plan.solids, raft, budget=budget, cancel=cancel)
         report['stages']['assembly'] = union.report
         union_bounds = np.asarray(union.bounding_box()).reshape(2, 3)
         fits = geometry.envelope_fits(union_bounds, settings)
         triangles = union.triangle_arrays
         target = Path(scratch.name) / 'prepared.stl'
         target.parent.mkdir(parents=True, exist_ok=True)
-        write_stl(target, triangles, cancel, progress)
+        with timer.stage('write'):
+            write_stl(target, triangles, cancel, progress)
         # The accepted contact set always gets the full treatment: written,
         # reread and rechecked by the same rasterizer the printer path uses.
         # Nothing before this line is evidence that a check actually ran.
-        validation = _reslice(target, settings, budget, cancel, progress, track_voids=track_voids, assembly=union)
+        with timer.stage('reslice'):
+            validation = _reslice(target, settings, budget, cancel, progress,
+                                  track_voids=track_voids, assembly=union)
         apply_support_validation(validation, plan, settings)
         validation.checks['plate_fit'] = 'pass' if fits else 'fail'
         if not fits:
@@ -527,21 +551,22 @@ def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=
             validation.checks['unsupported_overhangs'] = 'not_run'
         if drainage:
             try:
-                drain = analyze_drainage(union.soup_triangles(budget),
-                                         np.asarray(union.bounding_box()).reshape(2, 3),
-                                         settings, budget=budget, cancel=cancel, progress=progress)
-                if policy != 'fail' and support_group is not None and model_group is not None:
-                    model_bounds = geometry.triangle_bounds(model_group.triangles, cancel=cancel)
-                    model_drain = analyze_drainage(model_group.triangles, model_bounds, settings,
-                                                   budget=budget, cancel=cancel, progress=progress)
-                    drain = attribute_drainage_by_model(drain, model_drain)
-                validation.checks['drainage_bottlenecks'] = drainage_check(drain)
-                validation.metrics['drainage'] = drain
-                if drain.get('bottlenecked_components'):
-                    validation.diagnostics.append(Diagnostic(
-                        'drainage_bottleneck',
-                        'Void connects to the exterior only through an orifice below the configured area',
-                        details=drain))
+                with timer.stage('drainage'):
+                    drain = analyze_drainage(union.soup_triangles(budget),
+                                             np.asarray(union.bounding_box()).reshape(2, 3),
+                                             settings, budget=budget, cancel=cancel, progress=progress)
+                    if policy != 'fail' and support_group is not None and model_group is not None:
+                        model_bounds = geometry.triangle_bounds(model_group.triangles, cancel=cancel)
+                        model_drain = analyze_drainage(model_group.triangles, model_bounds, settings,
+                                                       budget=budget, cancel=cancel, progress=progress)
+                        drain = attribute_drainage_by_model(drain, model_drain)
+                    validation.checks['drainage_bottlenecks'] = drainage_check(drain)
+                    validation.metrics['drainage'] = drain
+                    if drain.get('bottlenecked_components'):
+                        validation.diagnostics.append(Diagnostic(
+                            'drainage_bottleneck',
+                            'Void connects to the exterior only through an orifice below the configured area',
+                            details=drain))
             except VoxelMillError as error:
                 if error.code == 'canceled':
                     raise
@@ -651,6 +676,7 @@ def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=
         report['stages']['resin_usage'] = resin_usage(
             settings, validation.metrics.get('raster_volume_mm3'))
         report['seconds'] = time.monotonic() - started
+        report['timing'] = timer.as_dict()
         report['peak_rss_bytes'] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
         report['scratch_bytes'] = sum(p.stat().st_size for p in Path(scratch.name).rglob('*') if p.is_file())
         return report
