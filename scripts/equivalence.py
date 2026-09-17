@@ -258,7 +258,44 @@ def _compare_goo_fallback(old_path, new_path):
 
 
 def find_shapes(root):
-    return sorted((root / 'fixtures' / 'shapes').glob('*.stl'))
+    """All shape fixtures: the 13 valid top-level scenarios plus the 5 error
+    fixtures under fixtures/shapes/invalid/ (degenerate, flipped_winding,
+    nonmanifold_edge, open_box, self_intersecting) -- those exercise the
+    failure paths and diagnostic payloads, which is exactly the code a
+    rewrite is most likely to get subtly wrong.
+
+    Both sets are addressed by bare basename (no 'invalid/' prefix needed on
+    --scenario), via resolve_shape below, so a name colliding between the
+    two directories would silently make one shadow the other. There is no
+    collision today, but this checks rather than assumes, so a future
+    fixture addition fails loudly instead of quietly shadowing.
+    """
+    base = root / 'fixtures' / 'shapes'
+    top = sorted(base.glob('*.stl'))
+    invalid = sorted((base / 'invalid').glob('*.stl'))
+    seen = {}
+    for path in top + invalid:
+        seen.setdefault(path.stem, []).append(path)
+    collisions = sorted(name for name, paths in seen.items() if len(paths) > 1)
+    if collisions:
+        raise ValueError(
+            f'fixture name collision between top-level and invalid/ shapes: {", ".join(collisions)}')
+    return top + invalid
+
+
+def resolve_shape(root, name):
+    """Locate a scenario's .stl by bare name, top-level first then invalid/.
+
+    Mirrors find_shapes's namespace: a scenario name is looked up the same
+    way regardless of whether it came from the default listing or from an
+    explicit --scenario. Returns a Path that may not exist -- callers already
+    check .exists() (that is how a scenario is treated as "shape missing").
+    """
+    base = root / 'fixtures' / 'shapes'
+    candidate = base / f'{name}.stl'
+    if candidate.exists():
+        return candidate
+    return base / 'invalid' / f'{name}.stl'
 
 
 def run_cli(root, args, cwd):
@@ -322,8 +359,8 @@ def run_scenario_steps(root, shape, work_dir, workers=None):
 
 def run_scenario(name, old_root, new_root, base_scratch, workers, verbose):
     """Run one shape's scenario under both trees, in isolated scratch dirs."""
-    old_shape = old_root / 'fixtures' / 'shapes' / f'{name}.stl'
-    new_shape = new_root / 'fixtures' / 'shapes' / f'{name}.stl'
+    old_shape = resolve_shape(old_root, name)
+    new_shape = resolve_shape(new_root, name)
     old_work = base_scratch / 'old' / name
     new_work = base_scratch / 'new' / name
     old_work.mkdir(parents=True, exist_ok=True)
@@ -337,7 +374,77 @@ def run_scenario(name, old_root, new_root, base_scratch, workers, verbose):
     }
 
 
-def evaluate_scenario(raw, new_root, golden_dir, update_golden, verbose):
+def _evaluate_golden_only(name, new_steps, golden_dir, verbose):
+    """Compare the new side's reports against recorded goldens when the old
+    tree is unavailable entirely (module docstring: "the golden-comparison
+    path lets the new tree keep guarding its own regressions"). Mirrors the
+    old-vs-new loop in evaluate_scenario, with the golden JSON standing in
+    for old_info['report'].
+
+    A step whose golden file does not exist is reported as an explicit
+    error, not a quiet skip: a golden set that is silently missing a step
+    is exactly the situation that would let a regression through
+    unnoticed, so it must show up in the summary and fail the run rather
+    than pass by omission.
+
+    prepared_stl and the slice `.goo` binary payload are inherently
+    old-vs-new comparisons -- there is no golden binary to compare
+    against. With no old side they have not happened, so they are marked
+    'skip' rather than silently reported as a match.
+    """
+    report_lines = []
+    step_status = {}
+    ok = True
+    for step in STEPS:
+        new_info = new_steps.get(step)
+        golden_path = golden_dir / name / f'{step}.json'
+        golden_exists = golden_path.exists()
+
+        if new_info is None:
+            if golden_exists:
+                step_status[step] = 'differ'
+                report_lines.append(
+                    f'{name}.{step}: golden has a recorded report but the new run did not reach this step')
+                ok = False
+            else:
+                step_status[step] = 'skip'
+            continue
+
+        if not golden_exists:
+            step_status[step] = 'error'
+            report_lines.append(
+                f'{name}.{step}: NO GOLDEN ENTRY recorded for this step -- cannot verify it '
+                '(re-record the golden set or investigate why it is missing)')
+            ok = False
+            continue
+
+        golden_json = _read_json(golden_path)
+        new_report = new_info['report']
+        if golden_json is None or new_report is None:
+            if golden_json != new_report:
+                step_status[step] = 'differ'
+                report_lines.append(f'{name}.{step}: report.json present on only one side (golden)')
+                ok = False
+            else:
+                step_status[step] = 'match'
+            continue
+
+        matched, lines = diff_reports(golden_json, new_report, f'{name}.{step}.json (golden)')
+        step_status[step] = 'match' if matched else 'differ'
+        report_lines.extend(lines)
+        ok = ok and matched
+
+    # Neither binary comparison has an old side to run against.
+    step_status['prepared_stl'] = 'skip'
+    slice_info = new_steps.get('slice')
+    if slice_info is not None and slice_info.get('output') is not None:
+        report_lines.append(
+            f'{name}.slice: binary .goo payload not compared (golden-only mode has no reference binary)')
+
+    return {'name': name, 'step_status': step_status, 'lines': report_lines, 'ok': ok}
+
+
+def evaluate_scenario(raw, old_root, new_root, golden_dir, update_golden, verbose):
     """Turn one scenario's raw run(s) into per-step match/differ + diff lines."""
     name = raw['name']
     old_steps, new_steps = raw['old_steps'], raw['new_steps']
@@ -369,10 +476,25 @@ def evaluate_scenario(raw, new_root, golden_dir, update_golden, verbose):
     if old_steps is None and new_steps is None:
         return {'name': name, 'step_status': {s: 'skip' for s in DISPLAY_STEPS},
                 'lines': [f'{name}: shape missing under both roots'], 'ok': True}
-    if old_steps is None or new_steps is None:
-        missing = 'old' if old_steps is None else 'new'
+    if new_steps is None:
         return {'name': name, 'step_status': {s: 'error' for s in DISPLAY_STEPS},
-                'lines': [f'{name}: shape missing under {missing} root'], 'ok': False}
+                'lines': [f'{name}: shape missing under new root'], 'ok': False}
+    if old_steps is None:
+        if old_root.exists():
+            # The old root is there but this particular shape is not -- a
+            # genuine fixture problem, not the "old tree is gone" case the
+            # golden path exists for.
+            return {'name': name, 'step_status': {s: 'error' for s in DISPLAY_STEPS},
+                    'lines': [f'{name}: shape missing under old root'], 'ok': False}
+        # The whole old tree is unavailable (e.g. it has since been
+        # deleted). Per the module docstring, fall back to comparing the
+        # new side against the recorded goldens instead of failing outright
+        # -- that is the entire point of --golden.
+        if not golden_dir_has_content(golden_dir / name):
+            return {'name': name, 'step_status': {s: 'error' for s in DISPLAY_STEPS},
+                    'lines': [f'{name}: old root {old_root} does not exist and no golden entries are '
+                              'recorded for this scenario -- nothing to compare against'], 'ok': False}
+        return _evaluate_golden_only(name, new_steps, golden_dir, verbose)
 
     for step in STEPS:
         old_info, new_info = old_steps.get(step), new_steps.get(step)
@@ -563,7 +685,7 @@ def main(argv=None):
         # `pool.map` yields in submission order, so ordering stays deterministic
         # either way.
         def _evaluate(raw, position):
-            evaluation = evaluate_scenario(raw, new_root, golden_dir, args.update_golden, args.verbose)
+            evaluation = evaluate_scenario(raw, old_root, new_root, golden_dir, args.update_golden, args.verbose)
             verdict = 'WROTE' if args.update_golden else ('OK' if evaluation['ok'] else 'DIFFERS')
             # stderr, flushed: a long run shows progress, and a run that is
             # killed still leaves a record of how far it got. The ordered table
