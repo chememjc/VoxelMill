@@ -21,23 +21,50 @@ lessons go in `gotchas.md`.
 
 Record a new row after every Phase 2 item so the curve is visible.
 
-## Where the time actually goes (cProfile, 85.5 s under profiler)
+## Where the time actually goes — re-measured 2026-09-17 after the 2.74x
 
-| Cost | Where | Calls |
+The v0.1.0 profile that used to sit here was stale and was steering decisions
+wrong. Fresh numbers, machine otherwise idle:
+
+| Configuration | Wall (3 runs) | Peak RSS |
 | --- | --- | --- |
-| 83.1 s (97 %) | `validation.analyze_layers` (validation.py:268) | 2 |
-| 74.5 s | `_consume` per-layer body (validation.py:291) | 1800 |
-| 31.6 s | `_growth_pixels` (validation.py:247) | 1798 |
-| 29.7 s | `VoidTracker.add` (validation.py:122) | 1800 |
-| 27.4 s tottime | `numpy.ufunc.reduce` — dense `.any()` | 46167 |
-| 24.7 s | via `block_any` (validation.py:47) | 32617 |
-| 8.2 s | `np.unique` border labels (validation.py:124) | 25184 |
-| 7.7 s | `scipy.ndimage.label` | 1804 |
-| 5.7 s | thread-lock acquire — prefetch pool idle-waiting | 760 |
-| 5.4 s | `distance_transform_edt` | 1879 |
-| 1.3 s | `raster.slice_coverage` — the actual rasterizer | 2700 |
+| default 8 workers, `--max-passes 1` | 25.21 / 25.04 / 25.13 s | 810 MB |
+| `--workers 1`, `--max-passes 1` | 72.53 / 73.03 / 72.80 s | 513 MB |
+| default `--max-passes` (5) | 24.90 s | — |
 
-Rasterization is 1.5 % of the run. `validation.py` is the target.
+**The parallel speedup is 2.90x on 8 workers, not 8x.** That gap is the finding.
+Default `--max-passes` measures the same as `--max-passes 1` because the island
+guard converges on the first pass for this fixture, so the benchmark is not
+exercising the retry loop at all.
+
+Measuring this needed care: `cProfile` installs only on the calling thread, so a
+naive profile of the 8-worker run undercounts the pool badly. The numbers below
+come from `--workers 1` for honest CPU attribution plus a per-thread harness
+that gives each pool thread its own profiler and merges the stats.
+
+| Cost | Where | Note |
+| --- | --- | --- |
+| **~61 % of wall** | `VoidForest.merge` (validation.py:131-166) | **100 % serial, main thread** |
+| 8.455 s tottime | └ `{ndarray.sort}` via `np.unique` per 64-row chunk | the single biggest lever |
+| 6.934 s tottime | └ merge's own masking/indexing bookkeeping | |
+| 22.1 s CPU / 2700 calls | `ndi.label` (occupancy + void) | parallel, hidden by the pool |
+| 110.9 s of 190.2 thread-seconds | `_queue.SimpleQueue.get` — pool **idle** | starved, not the constraint |
+| 9.35 s (workers=1) | `_growth_pixels` | |
+| 1.888 s | `raster.slice_coverage` | still ~2 % |
+
+Gone since v0.1.0: the 8.2 s border-label `np.unique` sort. Shrunk and now
+parallel: `ndi.label`, the dense `.any()` reductions, `block_any`,
+`distance_transform_edt`. Renamed and now dominant: the old `VoidTracker.add`
+split into a cheap parallel `void_components` and a serial `VoidForest.merge`,
+and the merge is where the time went.
+
+**Refuted:** the ledger's `block_any` / `np.pad` concern. Its allocation is
+0.4-0.7 s total, under 1 %, and it is called about twice per layer now, not 18.
+
+**Not exercised by this fixture at all**, so unmeasurable here: Rasterizer
+Z-interval persistence across passes, the `hollow.py` loops, and support KD-tree
+caching — this fixture runs one pass and never hollows. Benchmark those on a
+shape that actually retries or hollows before spending effort on them.
 
 ## Phase 0 — fork, baseline, ledgers
 
