@@ -137,10 +137,36 @@ written twice.
       design: topology from `topology.py` via `vm_set_topology`, dynamic
       work-stealing across P/E cores, worker count capped by the memory budget,
       deterministic cross-layer `VoidTracker` merge.
-- [ ] 5. Stop running `analyze_layers` twice inside `prepare` — share one
-      analysis between `pipeline._reslice` and `island_guard.scan_assembly_islands`.
-      Keep GOO's three independent passes (gotchas.md: the verify pass must
-      re-raster from source).
+- [~] 5. Stop running `analyze_layers` twice inside `prepare` -- **evidence says
+      the two calls are NOT interchangeable; do not cache one into the other.**
+      `island_guard.scan_assembly_islands` (island_guard.py:70-84) analyzes the
+      in-memory `UnionLayerStream`, which rasterizes each group separately and
+      ORs them (assembly.py:270). `pipeline._reslice` (pipeline.py:211-219)
+      analyzes the STL after it has been written and reopened, as one flat soup
+      under the nonzero winding rule, where overlapping shells can cancel
+      (raster.py:125-127). That divergence is the whole reason `RasterParity`
+      (assembly.py:288-332) exists, `write_stl` downcasts every vertex to
+      float32 on the way out (mesh.py:293), and the two callers ask for
+      different work anyway (`track_voids=False` vs `True`). pipeline.py:3-9
+      states the reslice exists to describe "the file that was actually written
+      rather than the in-memory solid", which sharing would defeat.
+      Left open because the *cost* is still real -- the fix has to be making
+      each call cheaper, not merging them. Verify this analysis independently
+      before closing the item.
+- [ ] 5a. Skip the growth distance transform where its result is discarded.
+      `_analyze_layer` always computes `_growth_pixels` (validation.py:340),
+      but `scan_assembly_islands` reads only `island_components`,
+      `island_components_on_crop_edge` and `raster_island` diagnostics
+      (island_guard.py:85-104) and throws the growth data away -- on every one
+      of its 1 to `max_passes`+1 calls per `prepare`. Add `check_growth=True`
+      to `analyze_layers`/`_analyze_layer` and pass `False` from the island
+      guard only. Every other caller keeps the default, so their reports stay
+      byte-identical.
+- [ ] 5b. Note for whoever rescopes item 5: there is a *third* `analyze_layers`
+      inside `prepare` at pipeline.py:556-559, gated on
+      `repair.support_void_policy != 'fail'` (non-default). It analyzes the
+      pre-export model group, so it shares a data source with the island guard
+      and is a more plausible sharing candidate than the reslice.
 - [ ] 6. Persist the Z-interval structure on the `Rasterizer` across passes
       instead of rebuilding it (native/raster.cpp:53-66).
 - [ ] 7. Fold `UnionLayerStream`'s per-group slices into one native call
@@ -154,6 +180,22 @@ written twice.
       `scan_assembly_islands` (item 5) were 49 s and 34 s of the old 85 s, so
       collapsing the duplicate `analyze_layers` is probably the largest
       remaining win — but confirm with cProfile rather than assuming it.
+
+- [x] Run every top-level scenario through `scripts/equivalence.py`. All 13
+      match: cone, cube, cube_ascii, cylinder, drained_cup, hollow_cup,
+      overhang_bracket, pin_array, sphere, stepped_pyramid, tetrahedron,
+      thin_wall, torus.
+
+- [ ] Widen `scripts/equivalence.py` past the first failing step. Six of the 13
+      scenarios stop at `prepare` because it exits 2 -- `--allow-unresolved`
+      waives only unresolved islands, and e.g. `torus` fails `enclosed_voids`
+      and `drainage_bottlenecks`. `run_scenario_steps` (equivalence.py:284-290)
+      returns as soon as a step's returncode is nonzero, so `slice` never runs
+      and the GOO encoder is compared on only `pin_array` and `thin_wall`.
+      The run still writes a valid `prepared.stl` in those cases and it is
+      never compared either. Fix: compare `prepared.stl` whenever both sides
+      wrote one, and proceed to `slice` when both sides exited `prepare` the
+      same way. Keep "both sides failed identically" as a match.
 
 - [ ] Extend `scripts/equivalence.py` coverage: `find_shapes` globs
       `fixtures/shapes/*.stl`, which is 13 scenarios and misses the five error

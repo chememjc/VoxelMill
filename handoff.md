@@ -93,15 +93,23 @@ Amdahl limit.
 - **Determinism: verified.** Reports are field-for-field identical at 4, 8 and
   16 workers, and the output STL hashes identically before and after the
   refactor (`69172ca4...`).
-- **Full equivalence vs v0.1.0: INCOMPLETE — finish this first.**
+- **Full equivalence vs v0.1.0: COMPLETE for the 13 top-level shape fixtures.**
   `scripts/equivalence.py` runs both trees over `fixtures/shapes/*.stl` through
-  inspect → prepare → slice and diffs reports structurally plus decoded GOO
-  layer payloads. Confirmed identical (6 of 13): `cone`, `cube`, `cube_ascii`,
-  `cylinder`, `stepped_pyramid`, `tetrahedron`. Outstanding (7):
-  `drained_cup`, `hollow_cup`, `overhang_bracket`, `pin_array`, `sphere`,
-  `thin_wall`, `torus`. Note `cylinder` reports `-` for slice: its prepare
-  failed identically on both sides, which the harness counts as a match and
-  then skips the later steps. Runs get killed by the background-task memory guard when the machine
+  inspect -> prepare -> slice and diffs reports structurally plus decoded GOO
+  layer payloads. All 13 scenarios match: `cone`, `cube`, `cube_ascii`,
+  `cylinder`, `drained_cup`, `hollow_cup`, `overhang_bracket`, `pin_array`,
+  `sphere`, `stepped_pyramid`, `tetrahedron`, `thin_wall`, `torus`.
+  **Read the slice column before trusting the tally.** `run_scenario_steps`
+  (scripts/equivalence.py:284-290) stops a scenario as soon as a step exits
+  nonzero, and `prepare` exits 2 on many fixtures even with
+  `--allow-unresolved`, because that flag only waives unresolved islands --
+  `torus` fails on `enclosed_voids` and `drainage_bottlenecks`. Both sides fail
+  identically and the full prepare report is still compared field for field, but
+  `slice` never runs, so the GOO encode path is compared only where the slice
+  column says `match` (confirmed so far: `pin_array`, `thin_wall`). The written
+  `prepared.stl` exists in those runs and is not compared either. `todo.md`
+  tracks widening this.
+  Runs get killed by the background-task memory guard when the machine
   is otherwise busy, so run three or four at a time with `--scenario`, e.g.
 
       .venv/bin/python -u scripts/equivalence.py --workers 2 \
@@ -134,15 +142,20 @@ Check: `QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q` → 1029 passed
 
 ## Immediate next steps
 
-1. Finish the equivalence run across all 13 scenarios, in chunks.
+1. Widen `scripts/equivalence.py` so a nonzero `prepare` exit no longer hides the
+   slice/GOO path: compare the written `prepared.stl` whenever both sides wrote
+   one, and run `slice` on it even when `prepare` exited nonzero, as long as both
+   sides exited the same way. Today six of the thirteen scenarios stop at
+   `prepare`, so the GOO encoder is only covered by `pin_array` and `thin_wall`.
 2. Record v0.1.0 goldens once (`--new-root /home3/noisecancelingcodex
    --update-golden --golden reports/golden/v010`) so later checks stop paying
-   for the slow side on every pass.
-3. Re-profile. `_reslice` and `scan_assembly_islands` were 49 s and 34 s of the
-   old 85 s, so collapsing the duplicate `analyze_layers` inside `prepare` is
-   probably the largest remaining win — but confirm rather than assume.
-4. Then the ledger's Phase 2 items 2 and 3 (sparse RLE layers, then native
-   kernels over them), which is where the C work genuinely starts paying.
+   for the slow side on every pass. Do this after step 1, so the goldens carry
+   the fuller step set.
+3. Re-profile. The profile in `todo.md` predates the 2.74x and is stale.
+4. Then the ledger's Phase 2 items, re-ordered by what the fresh profile shows.
+   Note that item 5 (share one `analyze_layers` between `pipeline._reslice` and
+   `island_guard.scan_assembly_islands`) is now believed unsafe -- see the
+   ledger entry for the evidence.
 
 ## Traps that will cost you time if you rediscover them
 
