@@ -96,10 +96,12 @@ Amdahl limit.
 - **Full equivalence vs v0.1.0: INCOMPLETE — finish this first.**
   `scripts/equivalence.py` runs both trees over `fixtures/shapes/*.stl` through
   inspect → prepare → slice and diffs reports structurally plus decoded GOO
-  layer payloads. Confirmed identical so far: `cone`, `cube`, `cube_ascii`,
-  `cylinder`, `tetrahedron`. Outstanding: `drained_cup`, `hollow_cup`,
-  `overhang_bracket`, `pin_array`, `sphere`, `stepped_pyramid`, `thin_wall`,
-  `torus`. Runs get killed by the background-task memory guard when the machine
+  layer payloads. Confirmed identical (6 of 13): `cone`, `cube`, `cube_ascii`,
+  `cylinder`, `stepped_pyramid`, `tetrahedron`. Outstanding (7):
+  `drained_cup`, `hollow_cup`, `overhang_bracket`, `pin_array`, `sphere`,
+  `thin_wall`, `torus`. Note `cylinder` reports `-` for slice: its prepare
+  failed identically on both sides, which the harness counts as a match and
+  then skips the later steps. Runs get killed by the background-task memory guard when the machine
   is otherwise busy, so run three or four at a time with `--scenario`, e.g.
 
       .venv/bin/python -u scripts/equivalence.py --workers 2 \
