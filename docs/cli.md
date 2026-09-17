@@ -46,7 +46,7 @@ These are accepted by every command except `goo-info`.
 | `--max-deviation-mm` | Allowed repair deviation, verified in both directions against the original surface. |
 | `--repair-voxel-mm` | Explicit voxel pitch for aggressive repair; `0` derives it from the deviation limit. |
 | `--clip-to-build-volume` / `--no-clip-to-build-volume` | Sets `assembly.clip_to_build_volume`. Off by default: a part outside the usable envelope is refused. On: place and export it anyway, discarding geometry the printer cannot reach and recording exactly how much. Nothing is ever scaled. |
-| `--memory-gib`, `--workers`, `--scratch-dir` | Resource budget. Exceeding it is an error, never a silent coarsening. `--workers auto` picks one worker per physical core. |
+| `--memory-gib`, `--workers`, `--scratch-dir` | Resource budget. Exceeding it is an error, never a silent coarsening. `--workers auto`, or `resources.workers = 0`, derives the count from the machine: one per physical core, capped at the measured parallel plateau of 8. That is the default. |
 | `--worker-policy {performance,efficiency,all}` | Which class of core to pin workers to on a hybrid CPU. `performance` (default) keeps a foreground run off the efficiency cores; `efficiency` leaves the fast cores free for an interactive session; `all` declines to pin. Workers are always spread across distinct physical cores, never stacked onto one core's SMT siblings. |
 | `--acceleration {auto,cpu,cuda}` | Raster morphology backend. `auto` (default) uses CUDA after a successful runtime and device probe, otherwise CPU. `cuda` is refused when no device is available rather than silently falling back. |
 | `--cuda-device N` | Zero-based CUDA device used when acceleration selects CUDA. |

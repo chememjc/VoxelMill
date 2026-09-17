@@ -35,7 +35,12 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.cuda_device.setValue(resources['cuda_device'])
         self.cuda_device.setToolTip('Config key: resources.cuda_device. CLI: --cuda-device N.')
         self.workers = QtWidgets.QSpinBox()
-        self.workers.setRange(1, 32)
+        # 0 is the derive sentinel. The range has to admit it or the spin box
+        # clamps the default up to 1 and Apply then writes single-worker mode
+        # back into the document, which is the slowest possible setting.
+        self.workers.setRange(0, 32)
+        from ..topology import default_workers
+        self.workers.setSpecialValueText(f'auto ({default_workers()})')
         self.workers.setValue(resources['workers'])
         self.memory = QtWidgets.QDoubleSpinBox()
         self.memory.setRange(.25, 1024)

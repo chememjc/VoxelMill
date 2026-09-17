@@ -13,6 +13,7 @@ VoxelMill is a Linux single-part resin 3D-print preparation tool that transforms
 | `src/voxelmill/shellhelp.py` | Shell completion (bash, zsh, fish) and man page text, generated from the live `build_parser()`; nothing here is checked in |
 | `src/voxelmill/config.py` | Profile loading and settings resolution; built-in defaults, printer/resin profiles, process overrides |
 | `src/voxelmill/profiles.py` | Profile library: layered search-path discovery, path-vs-identifier resolution for `--printer`/`--resin`, provenance, settings diff, and the TOML writer behind `profile save`/`resin bind`. See [profiles.md](profiles.md) |
+| `src/voxelmill/topology.py` | CPU topology detection: performance/efficiency core split, SMT siblings and the affinity mask, per OS (Linux sysfs, macOS perflevels, Windows EfficiencyClass) with a uniform fallback. Feeds `resources.execution_limits` and the derived worker count |
 | `src/voxelmill/contracts.py` | Core data types: `VoxelMillError`, `CancellationToken`, `ValidationReport`, `Placement`, `SupportGraph`, `Diagnostic` |
 | `src/voxelmill/mesh.py` | STL I/O: binary and ASCII parsing with memory mapping; full-resolution mesh inspection via native module |
 | `src/voxelmill/geometry.py` | Rigid placement, orientation search, manifold construction; convex hull and coarse occupancy assessment |
@@ -177,12 +178,21 @@ Pixel-center scan conversion.
 ### validation.py
 Layer connectivity, void analysis, and drainage checking.
 
+Layer i depends only on layer i-1, never on the whole prefix, so `_analyze_layer`
+carries almost all the work and runs concurrently across layers; only the
+accumulators, the bounded diagnostics and the `VoidForest` union-find stay in
+order. Worker count comes from `resources.workers` (0 derives it) and is capped
+by `_layer_worker_cap` so the in-flight full-panel buffers fit the memory budget.
+
 | Name | Parameters | Returns | Purpose |
 |------|-----------|---------|---------|
 | `block_any(mask, factor)` | Boolean mask, decimation factor | Boolean mask | Block-maximum decimate (never stride) to keep features |
 | `VoidForest` | — | Class | Union-find over per-layer empty components; tracks volume, exterior reach, birth layer |
-| `VoidForest.add(mask, index, cancel)` | Empty-space mask, layer index, cancel | `(labels, ids)` tuple | Add one layer of empty-space components; union with previous |
+| `void_components(occupied)` | Occupancy mask | `(labels, total, counts, outside)` | Label one layer's empty space. Pure, so it runs on a worker thread; the ordered merge is separate |
+| `VoidForest.add(mask, index, cancel)` | Empty-space mask, layer index, cancel | `(labels, ids)` tuple | Label and merge in one step; the entry point for callers outside `analyze_layers` |
+| `VoidForest.merge(components, index, cancel)` | `void_components` result, layer index, cancel | `(labels, ids)` tuple | Union one layer's components into the forest. Order-dependent: void identity is temporal |
 | `VoidForest.finish(min_volume_mm3=0.0)` | Min volume threshold | `dict` | Finalize and return void summary (count, volume, examples, peak trapped) |
+| `_analyze_layer(previous, mask, grid, settings, decimate, min_overlap, track_voids, cancel)` | Previous and current occupancy, plus context | evidence tuple | Everything about one layer that does not depend on layer order: both labelings, the overlap bincount, the growth transform. Runs on the worker pool |
 | `analyze_layers(layers, grid, settings, cancel=None, budget=None, progress=no_progress, growth_decimation=8, max_examples=128, track_voids=True)` | Layer stream, raster grid, settings, optional params | `ValidationReport` | Check per-layer connectivity (islands, overlaps, growth), and optionally track enclosed voids and transient traps |
 | `analyze_drainage(triangles, bounds, settings, budget=None, cancel=None, progress=no_progress, voxels_per_radius=3.0)` | Triangles, bounds, settings, optional params | `dict` | Erosion-based effective-drainage check on a fine analysis grid; reports bottlenecks |
 | `drainage_check(result)` | Drainage analysis dict | `'pass'`, `'fail'`, or `'not_run'` | Map drainage result to check state |

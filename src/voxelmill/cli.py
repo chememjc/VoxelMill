@@ -77,8 +77,7 @@ def _workers(value):
     if value is None:
         return None
     if str(value).strip().lower() == 'auto':
-        from .topology import default_workers
-        return default_workers()
+        return 0  # the sentinel ResourceBudget resolves against the real machine
     try:
         return int(value)
     except (TypeError, ValueError):

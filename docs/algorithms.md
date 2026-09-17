@@ -131,10 +131,19 @@ computed in 256×256 tiles with an anisotropic threshold-sized halo, retaining
 equality pixels at the configured distance. This avoids allocating a full
 8520×4320 distance field while preserving the full-panel result. Empty halos
 are handled explicitly rather than relying on the distance transform's implicit
-outside pixel. Layer workers are capped from a conservative memory estimate that
-includes previous masks, labels, EDT scratch, component counts, and prefetch
-copies; reducing `resources.workers` or increasing `resources.memory_gib` is the
-appropriate response to a `memory_budget` refusal.
+outside pixel.
+
+Layer analysis runs concurrently across layers. Layer i depends only on layer
+i-1, not on the whole prefix, so both connected-component labelings, the
+overlap count and this growth transform are computed on a worker pool; only
+the accumulators, the bounded diagnostics and the enclosed-void union-find run
+in layer order, because void identity is temporal. Results do not depend on the
+worker count. Workers are capped from a conservative memory estimate that
+includes previous masks, labels, void labels, EDT scratch, component counts and
+in-flight copies; reducing `resources.workers` or increasing
+`resources.memory_gib` is the appropriate response to a `memory_budget`
+refusal. `resources.workers = 0`, the default, derives one worker per physical
+core capped at the point where the ordered stage stops the speedup scaling.
 
 ## Elephant-foot (first-layer) compensation
 

@@ -36,7 +36,10 @@ def no_progress(stage: str, completed: int, total: int) -> None:
 @dataclass
 class ResourceBudget:
     memory_gib: float = 32.0
-    workers: int = 2
+    # 0 derives one worker per physical core, the same "0 means derive"
+    # convention the support geometry settings use. Resolved in __post_init__
+    # so every consumer downstream sees a real count.
+    workers: int = 0
     scratch_dir: str | None = None
     acceleration: str = 'auto'
     cuda_device: int = 0
@@ -48,8 +51,11 @@ class ResourceBudget:
     # It is not a memory limit; hooks.py reads settings, not the budget.
     post_slice_hook: str | None = None
     def __post_init__(self):
-        if not np.isfinite(self.memory_gib) or self.memory_gib < 0.25 or not 1 <= self.workers <= 32:
-            raise VoxelMillError("resource_budget", "Memory must be >= 0.25 GiB and workers between 1 and 32")
+        if not np.isfinite(self.memory_gib) or self.memory_gib < 0.25 or not 0 <= self.workers <= 32:
+            raise VoxelMillError("resource_budget", "Memory must be >= 0.25 GiB and workers between 0 and 32, 0 to derive")
+        if self.workers == 0:
+            from .topology import default_workers
+            self.workers = default_workers()
         if self.acceleration not in ('auto', 'cpu', 'cuda') or self.cuda_device < 0:
             raise VoxelMillError("resource_budget", "Acceleration must be auto, cpu, or cuda and CUDA device nonnegative")
         if self.worker_policy not in ('performance', 'efficiency', 'all'):

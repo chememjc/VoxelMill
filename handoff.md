@@ -1,0 +1,149 @@
+# VoxelMill v0.2.0 — handoff
+
+State as of 2026-09-17. Read this, then `todo.md` for the task ledger and
+`gotchas.md` for verified lessons. The approved plan lives outside the repo at
+`~/.claude/plans/twinkly-orbiting-grove.md`.
+
+## Where things stand
+
+Two commits on `master`, plus an uncommitted-at-time-of-writing third:
+
+1. `b7d68ee` — pristine import of v0.1.0's committed tree, so every later diff
+   shows exactly what changed relative to the working version.
+2. `a0f9fdc` — version 0.2.0, CPU affinity fix, `topology.py`, `--workers auto`,
+   `--worker-policy`.
+3. Phase 2: parallel `analyze_layers`.
+
+**`prepare fixtures/shapes/overhang_bracket.stl --max-passes 1 --allow-unresolved`
+went from 73.7 s to 26.9 s — 2.74x — with no C written yet.**
+
+| Stage | Wall | Peak RSS |
+| --- | --- | --- |
+| v0.1.0 | 73.7 s | 636 MB |
+| + affinity fix | 61.3 s | 656 MB |
+| + parallel analysis, 2 workers | 52.1 s | 609 MB |
+| + derived default (8 workers) | **26.9 s** | 784 MB |
+
+## The finding that should shape the rest of the work
+
+**The original premise — that rewriting the CLI in C would deliver the
+speedup — did not survive measurement.** Three facts, all reproducible:
+
+- Python startup is 0.10 s (`import voxelmill.cli`), 0.20 s with numpy, scipy
+  and manifold3d. Heavy imports are already lazy. A standalone binary saves
+  about 0.3 s per run against runs measured in tens of seconds.
+- The hot kernels are already C++: `native/raster.cpp`, `mesh.cpp`, `voxel.cpp`,
+  `goo.cpp`, `ctb.cpp`, `distance.cpp`, `intersections.cpp`, with exact
+  double-double predicates and a BVH in `geom.hpp`.
+- cProfile put **97% of `prepare` in `validation.py`** and 1.5% in the
+  rasterizer. The cost was dense-NumPy per-layer analysis, not scan conversion
+  and not the interpreter.
+
+Everything gained so far came from algorithm structure. A C rewrite that
+faithfully reproduced the old dense-array algorithm would have been only
+modestly faster. The native core still earns its place — it is what makes an
+RLE layer representation and real cross-layer TBB parallelism tractable without
+fighting the GIL — but it is the vehicle, not the source, of the speedup.
+**Sequence it after the remaining structural wins, and re-profile between each
+one.** The profile in `todo.md` is already stale after 2.74x.
+
+## What changed, and why
+
+### Affinity (commit 2)
+`resources.execution_limits` picked cpus with
+`sorted(sched_getaffinity(0))[:workers]`. Cpu numbering places SMT siblings
+adjacently, so the default two workers landed on cpu0 and cpu1 — the two
+hyperthreads of one physical core, with 23 cores idle on a 24C/32T part.
+`topology.py` now detects the performance/efficiency split (Linux hybrid PMU
+nodes, then per-core clocks, then SMT asymmetry; macOS perflevels; Windows
+EfficiencyClass) and spreads the mask across distinct physical cores. It
+degrades to one uniform group when nothing is detectable, which is the path
+Mac, Windows and container hosts will take until someone tests them.
+
+### Parallel layer analysis (commit 3)
+`_consume` looked sequential but its only cross-layer input is the immediately
+preceding layer's occupancy — a sliding *pair*, not a prefix. So `_analyze_layer`
+now runs both labelings, the overlap bincount and the growth distance transform
+on the worker pool, and only the accumulators, the bounded diagnostics and the
+`VoidForest` union-find stay in layer order. `VoidForest.add` split into a pure
+`void_components` and an ordered `merge`. The border `np.unique` is gone —
+scattering `True` through the border indices is identical without the sort, and
+that sort was the single largest NumPy cost in the profile.
+
+This works in plain Python threads because `scipy.ndimage` releases the GIL:
+measured 4.3x on `distance_transform_edt`, 5.0x on `binary_erosion`, 3.3x on
+`ndi.label`. NumPy reductions do **not** (0.28x) — that is why the dense
+`.any()` calls have to be removed by making layers sparse, not by threading.
+
+`resources.workers = 0` now derives `min(PARALLEL_PLATEAU, physical cores)`,
+using the project's existing "0 means derive" convention. The plateau is 8,
+measured: 52.1 / 30.7 / 28.8 / 27.8 / 28.5 / 28.4 s at 2 / 4 / 6 / 8 / 12 / 24
+workers, with RSS climbing 609 MB to 1.95 GB. The ordered merge stage is the
+Amdahl limit.
+
+## Verification status — read this before trusting the above
+
+- **Test suite: green.** v0.1.0 is 1005 passed / 13 skipped; v0.2.0 is 1029 /
+  13. The delta is exactly the new tests. Getting the skip counts to match
+  needs the gitignored reference GOO symlinked at the repo root (see Setup);
+  without it `test_goo.py` silently skips and the comparison is wrong.
+- **Determinism: verified.** Reports are field-for-field identical at 4, 8 and
+  16 workers, and the output STL hashes identically before and after the
+  refactor (`69172ca4...`).
+- **Full equivalence vs v0.1.0: INCOMPLETE.** `scripts/equivalence.py` runs both
+  trees over `fixtures/shapes/*.stl` through inspect → prepare → slice and
+  diffs reports structurally plus decoded GOO layer payloads. `cone`, `cube`
+  and `tetrahedron` pass end to end; the rest had not finished when this was
+  written. **Finish this before building on top of Phase 2.** Runs get killed
+  by the background-task memory guard when the machine is otherwise loaded, so
+  run it in chunks of three or four scenarios with `--scenario`.
+
+## Setup for a fresh session
+
+```sh
+cd /home3/voxelmill
+python3 -m venv --system-site-packages .venv
+.venv/bin/python -m pip install pybind11==3.0.4 scikit-build-core==0.11.6 manifold3d==3.3.2 tomli==2.2.1
+PYBIND=$(.venv/bin/python -c 'import pybind11;print(pybind11.get_cmake_dir())')
+SKBUILD_CMAKE_DEFINE="pybind11_DIR=$PYBIND" .venv/bin/python -m pip install --no-build-isolation -e '.[test,gui]'
+```
+
+Two symlinks are required and are deliberately gitignored — they point at
+immutable originals that must not be copied:
+
+```sh
+ln -sfn /home3/noisecancelingcodex/inputstl inputstl
+for f in /home3/noisecancelingcodex/*.goo; do ln -sfn "$f" "./$(basename "$f")"; done
+```
+
+Check: `QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q` → 1029 passed,
+13 skipped. A 14th skip means the reference GOO link is missing.
+
+## Immediate next steps
+
+1. Finish the equivalence run across all 13 scenarios, in chunks.
+2. Record v0.1.0 goldens once (`--new-root /home3/noisecancelingcodex
+   --update-golden --golden reports/golden/v010`) so later checks stop paying
+   for the slow side on every pass.
+3. Re-profile. `_reslice` and `scan_assembly_islands` were 49 s and 34 s of the
+   old 85 s, so collapsing the duplicate `analyze_layers` inside `prepare` is
+   probably the largest remaining win — but confirm rather than assume.
+4. Then the ledger's Phase 2 items 2 and 3 (sparse RLE layers, then native
+   kernels over them), which is where the C work genuinely starts paying.
+
+## Traps that will cost you time if you rediscover them
+
+`gotchas.md` has the full list with evidence. The ones most likely to bite next:
+
+- Do not edit `src/` while `scripts/equivalence.py` is running. Both sides are
+  subprocesses importing the live tree, so a mid-run edit silently invalidates
+  the comparison.
+- `.goo` files are never byte-identical between runs: the header carries
+  `file_create_time` and `software_version`. Compare decoded layer payloads.
+- A settings default of 0 meaning "derive" has to be admitted by the validator
+  *and* by every GUI widget bound to it. The Preferences spin box was
+  `setRange(1, 32)`, which clamped the new default to 1 and would have written
+  single-worker mode into the document for anyone who opened the dialog.
+- Layer streams currently allocate a fresh mask per layer, which is the only
+  reason a sliding window may hold references to previous layers. Re-check this
+  before adding any stream that recycles output buffers.

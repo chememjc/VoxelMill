@@ -14,6 +14,10 @@ lessons go in `gotchas.md`.
 | + CPU pinning fix (workers=2) | 61.3 s | 656 MB | -17%, affinity change only |
 | + workers=4 | 61.2 s | 731 MB | no gain; consumer loop is serial |
 | + workers=8 / 16 / 24 | 61.6 / 61.0 / 60.5 s | 0.9-1.1 GB | flat; only RSS grows |
+| + parallel `_analyze_layer`, w=2 | 52.1 s | 609 MB | serial path, np.unique removed |
+| + parallel `_analyze_layer`, w=8 | **27.8 s** | 782 MB | **2.65x vs v0.1.0**, less RSS than v0.1.0 at w=8 |
+| + parallel `_analyze_layer`, w=24 | 28.4 s | 1.95 GB | past the knee; 2.5x RSS for nothing |
+| + `workers=0` derives 8 (shipping default) | **26.9 s** | 784 MB | **2.74x vs v0.1.0**, no flags needed |
 
 Record a new row after every Phase 2 item so the curve is visible.
 
@@ -52,7 +56,11 @@ Rasterization is 1.5 % of the run. `validation.py` is the target.
       the matching `resources.worker_policy` setting, a GUI dropdown for it,
       docs, and `tests/test_topology.py` (20 tests).
       Default left at `workers=2`: the sweep shows no gain from raising it.
-- [ ] Freeze the equivalence baseline: pytest pass/skip counts,
+- [x] Freeze the equivalence baseline. v0.1.0 is **1005 passed, 13 skipped**;
+      v0.2.0 is 1028 passed, 13 skipped (+23 new tests, same skips once the
+      gitignored reference GOO at the repo root is symlinked in like
+      `inputstl/` — without it `test_goo.py` silently skips).
+      Still to do: `scripts/benchmark.py --output reports/bench/v020-baseline.json`,
       `scripts/benchmark.py --output reports/bench/v020-baseline.json`, and
       golden `prepare`/`slice` outputs for all 16 `fixtures/shapes/*.stl`
       under `reports/golden/v010/`.
@@ -63,7 +71,7 @@ Rasterization is 1.5 % of the run. `validation.py` is the target.
       Unify the scattered `seconds` fields (pipeline.py:653, hollow.py:571,
       supports.py:947, validation.py:378, goo.py:1335) behind one stage-timer
       context manager in `contracts.py`.
-- [ ] `scripts/equivalence.py`: run a command under v0.1.0 and v0.2.0, diff the
+- [x] `scripts/equivalence.py` (527 lines): runs a command under v0.1.0 and v0.2.0, diffs the
       JSON reports structurally, byte-compare `.goo`/`.ctb` layer payloads.
       This is the "behaves identically" gate for every later phase.
       The volatile fields to normalize, measured by diffing two real runs, are
@@ -85,8 +93,14 @@ Rasterization is 1.5 % of the run. `validation.py` is the target.
 Strictly in this order. Sparse layers before threading, or the threading gets
 written twice.
 
-- [ ] 1a. Widen the prefetch stage in `analyze_layers` to cover everything that
-      is order-independent. Measured: raising `--workers` from 2 to 4 changes
+- [x] 1a. Widen the prefetch stage in `analyze_layers` to cover everything that
+      is order-independent. DONE: `_analyze_layer` now runs both labelings, the
+      overlap bincount and the growth distance transform on the pool;
+      `VoidForest.add` split into pure `void_components` plus an ordered
+      `merge`; the border `np.unique` replaced with a scatter into a flags
+      array. `resources.workers = 0` derives `min(8, physical cores)` where 8
+      is the measured plateau (`topology.PARALLEL_PLATEAU`). 61.3 s -> 26.9 s.
+      Original note kept for the record: Measured: raising `--workers` from 2 to 4 changes
       nothing (61.3 s vs 61.2 s), because the pool only prefetches
       `_label_occupancy` (7.7 s of 85 s) while `_consume` runs serially on the
       main thread and carries `_growth_pixels` (31.6 s), `forest.add` (29.7 s)
@@ -103,11 +117,15 @@ written twice.
       `ndi.label` 3.3x. NumPy's `.any()` does not scale. So the 31.6 s of
       `_growth_pixels` is reachable from plain Python threads right now — this
       item does not have to wait for the native port, and should land before it.
-- [ ] 1b. Cheap NumPy wins in `validation.py`: `np.bincount` + boolean mask
-      instead of `np.unique(np.concatenate(border))` (validation.py:124); hoist
-      `block_any`'s padding allocation out of the per-layer loop
-      (validation.py:47); stop re-deriving `occupancy_mask` where the caller
-      already holds it.
+- [ ] 1b. Remaining cheap NumPy wins in `validation.py`. Two of the three are
+      already done as part of 1a: the border `np.unique` is gone (scatter into
+      a flags array instead), and `occupancy_mask` is now derived once per
+      layer and passed to both the island labeling and the void labeling
+      rather than recomputed inside `VoidForest.add`.
+      Left: `block_any` (validation.py:47) still allocates a fresh padded
+      array per call through `np.pad`, and it is called ~18 times per layer.
+      Re-profile first — after the 2.74x the shape of the run has changed and
+      this may no longer be worth doing.
 - [ ] 2. Sparse/RLE layer representation end-to-end, from `Rasterizer::slice`
       through validation, union and GOO encode. Kills the dense `.any()`
       reductions — emptiness becomes O(1). Touches native/raster.cpp, raster.py,
@@ -130,6 +148,27 @@ written twice.
 - [ ] 8. Port the pure-Python voxel loops: `hollow._bottom_open`,
       `hollow._infill_mask` hex branch.
 - [ ] 9. Cache the support KD-tree across island-guard replan passes.
+
+- [ ] **Re-profile before picking the next item.** After 2.74x the shape of the
+      run has changed and the original profile is stale. `_reslice` and
+      `scan_assembly_islands` (item 5) were 49 s and 34 s of the old 85 s, so
+      collapsing the duplicate `analyze_layers` is probably the largest
+      remaining win — but confirm with cProfile rather than assuming it.
+
+- [ ] Extend `scripts/equivalence.py` coverage: `find_shapes` globs
+      `fixtures/shapes/*.stl`, which is 13 scenarios and misses the five error
+      fixtures in `fixtures/shapes/invalid/` (degenerate, flipped_winding,
+      nonmanifold_edge, open_box, self_intersecting). Those exercise the
+      failure paths and diagnostic payloads, which are exactly the parts a
+      rewrite is most likely to get subtly wrong. The harness already treats
+      "both sides failed the same way" as a match, so they just need globbing.
+
+- [ ] Record v0.1.0 goldens once so later runs stop re-running the slow side.
+      `equivalence.py --new-root /home3/noisecancelingcodex --update-golden
+      --golden /home3/voxelmill/reports/golden/v010` writes the old tree's
+      normalized reports; after that every check is new-vs-golden and costs
+      only the new side, which is 2.74x faster. Right now each pass pays for
+      both trees, and the old one dominates the wall time.
 
 Run `scripts/equivalence.py` after each item. Commit each item separately.
 

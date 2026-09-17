@@ -174,7 +174,9 @@ DEFAULTS = {
                  # Off by default: clipping destroys geometry the printer
                  # cannot reach, and that must be asked for, never assumed.
                  'clip_to_build_volume': False},
-    'resources': {'memory_gib': 32.0, 'workers': 2, 'worker_policy': 'performance',
+    'resources': {'memory_gib': 32.0,
+                  # 0 derives the count from the machine's physical cores.
+                  'workers': 0, 'worker_policy': 'performance',
                   'scratch_dir': None,
                   # auto selects CUDA only after a successful runtime/device
                   # probe. cpu is deterministic fallback; cuda is strict.
@@ -475,8 +477,8 @@ def validate_settings(settings):
         _error('assembly.clip_to_build_volume must be boolean')
     resources = settings['resources']
     _number(resources['memory_gib'], 'resources.memory_gib', minimum=0.25)
-    if type(resources['workers']) is not int or not 1 <= resources['workers'] <= 32:
-        _error('resources.workers must be an integer from 1 to 32')
+    if type(resources['workers']) is not int or not 0 <= resources['workers'] <= 32:
+        _error('resources.workers must be an integer from 0 to 32, where 0 derives it from the machine')
     if resources['worker_policy'] not in ('performance', 'efficiency', 'all'):
         _error('resources.worker_policy must be performance, efficiency, or all')
     if resources['acceleration'] not in ('auto', 'cpu', 'cuda'):

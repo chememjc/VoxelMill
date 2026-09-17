@@ -118,7 +118,7 @@ OVERRIDES: dict[str, dict[str, Any]] = {
     'assembly.clip_to_build_volume': {'tier': 'simple', 'risk': 'caution'},
     'assembly.require_raster_parity': {'tier': 'expert', 'risk': 'caution'},
     'resources.memory_gib': {'tier': 'advanced', 'unit': 'GiB', 'range': (0.25, 1024.0)},
-    'resources.workers': {'tier': 'advanced', 'range': (1, 256)},
+    'resources.workers': {'tier': 'advanced', 'range': (0, 32)},
     'resources.acceleration': {'tier': 'advanced'},
     'resources.worker_policy': {'tier': 'advanced'},
     'resources.cuda_device': {'tier': 'advanced', 'range': (0, 16)},

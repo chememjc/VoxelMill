@@ -98,12 +98,14 @@ def test_detection_on_this_machine_is_self_consistent():
 
 
 def test_default_workers_counts_physical_cores_not_threads():
-    assert t.default_workers(HYBRID) == 24
+    small = _topology([(i, i + 1) for i in range(0, 8, 2)], range(8), [])
+    assert t.default_workers(small) == 4  # four physical cores, eight threads
 
 
-def test_default_workers_is_clamped_to_the_budget_range():
+def test_default_workers_stops_at_the_measured_plateau():
+    assert t.default_workers(HYBRID) == t.PARALLEL_PLATEAU
     huge = _topology([(i,) for i in range(64)], range(64), [])
-    assert t.default_workers(huge) == 32
+    assert t.default_workers(huge) == t.PARALLEL_PLATEAU
 
 
 @pytest.mark.skipif(not hasattr(os, 'sched_setaffinity'), reason='needs Linux affinity')
@@ -133,13 +135,19 @@ def _resolved(argv):
     return resolve_settings(overrides=_overrides(args))['resources']
 
 
-def test_workers_auto_resolves_to_physical_cores():
-    assert _resolved(['prepare', 'x.stl', '--workers', 'auto'])['workers'] == t.default_workers()
+def test_workers_auto_becomes_the_derive_sentinel():
+    """`auto` stores 0; the budget resolves it against the real machine."""
+    from voxelmill.contracts import ResourceBudget
+    resolved = _resolved(['prepare', 'x.stl', '--workers', 'auto'])
+    assert resolved['workers'] == 0
+    assert ResourceBudget(**resolved).workers == t.default_workers()
 
 
-def test_workers_still_accepts_a_plain_integer_and_defaults_to_two():
+def test_workers_still_accepts_a_plain_integer_and_derives_by_default():
+    from voxelmill.contracts import ResourceBudget
     assert _resolved(['prepare', 'x.stl', '--workers', '7'])['workers'] == 7
-    assert _resolved(['prepare', 'x.stl'])['workers'] == 2
+    assert ResourceBudget(**_resolved(['prepare', 'x.stl', '--workers', '7'])).workers == 7
+    assert _resolved(['prepare', 'x.stl'])['workers'] == 0
 
 
 def test_worker_policy_reaches_the_resources_table():

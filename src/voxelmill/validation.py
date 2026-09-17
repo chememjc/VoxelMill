@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import math
 import time
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
@@ -120,13 +121,22 @@ class VoidForest:
         return
 
     def add(self, mask, index, cancel):
-        labels, total = ndi.label(~occupancy_mask(mask), CROSS)
-        counts = np.bincount(labels.ravel(), minlength=total + 1)
-        border = np.unique(np.concatenate((labels[0], labels[-1], labels[:, 0], labels[:, -1])))
-        outside = np.zeros(total + 1, dtype=bool)
-        outside[border] = True
+        """Label this layer's empty space and merge it, in one step.
+
+        `analyze_layers` splits these two halves apart so the labeling can run
+        on a worker thread; this entry point stays for every other caller.
+        """
+        return self.merge(void_components(occupancy_mask(mask)), index, cancel)
+
+    def merge(self, components, index, cancel):
+        """Union this layer's empty-space components into the forest.
+
+        The order-dependent half of `add`: void identity is temporal, so this
+        has to see layers in sequence even when they were labeled out of order.
+        """
+        labels, total, counts, outside = components
         if index == 0:
-            outside[:] = True  # open plate-side air
+            outside = np.ones(total + 1, dtype=bool)  # open plate-side air
         self._grow(self.count + total + 1)
         ids = np.zeros(total + 1, dtype=np.int64)
         if total:
@@ -199,6 +209,30 @@ def _label_occupancy(occupied):
     return labels, count, counts
 
 
+def _border_flags(labels, size):
+    """Which component ids touch the grid border.
+
+    Scattering `True` through the concatenated border rows and columns lands on
+    duplicate indices, which is exactly what `np.unique` was being used to
+    remove first. The flags are identical and the sort is gone; that sort was
+    the single largest NumPy cost in the run.
+    """
+    flags = np.zeros(size, dtype=bool)
+    flags[np.concatenate((labels[0], labels[-1], labels[:, 0], labels[:, -1]))] = True
+    return flags
+
+
+def void_components(occupied):
+    """Label one layer's empty space; the expensive, order-free half of VoidForest.add.
+
+    Pure in its input, so it can run on a worker thread while the union-find
+    merge that consumes it stays in layer order.
+    """
+    labels, total = ndi.label(~occupied, CROSS)
+    counts = np.bincount(labels.ravel(), minlength=total + 1)
+    return labels, total, counts, _border_flags(labels, total + 1)
+
+
 def _layer_worker_cap(budget, grid):
     """Cap concurrency so workers do not hold more full-panel copies than fit."""
     workers = max(1, min(int(budget.workers), 32))
@@ -207,8 +241,11 @@ def _layer_worker_cap(budget, grid):
     # component counts and source masks before reserving prefetch slots.
     # Counts can themselves be large for a checkerboard of tiny islands.
     base = panel * 48
-    budget.require(base + panel * 16, 'layer analysis buffers')
-    per_worker = panel * 16
+    budget.require(base + panel * 24, 'layer analysis buffers')
+    # Each in-flight layer now carries more than its island labels: the void
+    # labels, both count vectors, its own occupancy and a reference to its
+    # predecessor's, plus the growth transform's decimated scratch.
+    per_worker = panel * 24
     ceiling = int(budget.memory_gib * 1024 ** 3 * 0.8)
     return max(1, min(workers, (ceiling - base) // per_worker))
 
@@ -265,14 +302,58 @@ def _growth_pixels(previous, mask, grid, settings, decimate):
     return int(np.count_nonzero(mask & ~previous))
 
 
+def _analyze_layer(previous, mask, grid, settings, decimate, min_overlap, track_voids, cancel):
+    """Everything about one layer that does not depend on layer order.
+
+    The only cross-layer input is the immediately preceding layer's occupancy,
+    so this is a sliding *pair*, not a prefix: given mask[i-1] and mask[i],
+    every quantity here is independent of every other layer. That is what lets
+    a worker pool cover the expensive work — both labelings and the growth
+    distance transform — instead of just the island labeling, and scipy
+    releases the GIL throughout, so plain threads do scale here.
+
+    Returns raw evidence only. Every accumulator, diagnostic and union-find
+    merge stays with the caller, in layer order.
+    """
+    cancel.check()
+    labels, count, counts = _label_occupancy(mask)
+    pixels = int(mask.sum())
+    overlap = bad = on_edge = None
+    growth = 0
+    if previous is not None:
+        # Bound the bincount key scratch rather than allocating a full-panel
+        # int64 array, which is hundreds of MiB on a 9K printer.
+        overlap = np.zeros(count + 1, dtype=np.int64)
+        for row in range(0, mask.shape[0], 64):
+            cancel.check()
+            overlap += np.bincount(labels[row:row + 64][previous[row:row + 64]],
+                                   minlength=count + 1)
+        bad = np.flatnonzero((overlap < min_overlap) & (np.arange(count + 1) > 0))
+        if len(bad):
+            # A cropped grid cannot see past its own edge: a component that
+            # continues outside the crop is cut off there and reads as
+            # unsupported. Recording which components touch the border lets a
+            # caller scanning a sub-volume treat those as unknown rather than
+            # as islands. On a full-panel grid this is only evidence.
+            on_edge = _border_flags(labels, count + 1)
+            on_edge[0] = False
+        growth = _growth_pixels(previous, mask, grid, settings, decimate)
+    voids = void_components(mask) if track_voids else None
+    return labels, count, counts, pixels, overlap, bad, on_edge, growth, voids
+
+
 def analyze_layers(layers, grid, settings, *, cancel=None, budget=None, progress=no_progress,
                    growth_decimation=8, max_examples=128, track_voids=True):
     """Exact per-layer connectivity plus empty-space tracking over the build.
 
-    Island / overlap / growth labeling may run concurrently across layers
-    (``resources.workers``), capped so in-flight full-panel copies fit the
-    memory budget. VoidForest stays sequential because void identity is
-    temporal. Every nonzero grayscale AA sample is material for topology.
+    Layer i depends only on layer i-1, never on the whole prefix, so almost all
+    of the work runs concurrently across layers (``resources.workers``): both
+    labelings, the overlap bincount and the growth distance transform all sit
+    in `_analyze_layer` on the pool. What stays ordered here is the arithmetic
+    — accumulators, bounded diagnostics, and the VoidForest union-find, whose
+    identity is temporal. Concurrency is capped so the in-flight full-panel
+    copies fit the memory budget. Every nonzero grayscale AA sample is material
+    for topology.
     """
     cancel = cancel or CancellationToken()
     budget = budget or ResourceBudget(**settings.get('resources', {}))
@@ -281,89 +362,82 @@ def analyze_layers(layers, grid, settings, *, cancel=None, budget=None, progress
                                       'growth_span': 'pass', 'enclosed_voids': 'pass',
                                       'transient_traps': 'pass'})
     layer_height = settings['process']['layer_height_mm']
-    previous = None
     total_pixels = layer_count = births = growth_count = nonempty = edge_births = 0
     forest = VoidForest(grid.dx * grid.dy * layer_height, budget)
     decimate = max(1, int(growth_decimation))
     workers = _layer_worker_cap(budget, grid)
     report.metrics['analysis_workers'] = workers
 
-    def _consume(layer, labels, count, counts, mask):
-        nonlocal previous, total_pixels, layer_count, births, growth_count, nonempty, edge_births
+    def _consume(layer, prepared):
+        """Fold one layer's evidence into the report, strictly in layer order."""
+        nonlocal total_pixels, layer_count, births, growth_count, nonempty, edge_births
         cancel.check()
-        if mask.shape != (grid.height, grid.width):
-            raise VoxelMillError('layer_shape', 'Layer dimensions differ from raster grid')
-        total_pixels += int(mask.sum())
+        labels, count, counts, pixels, overlap, bad, on_edge, growth, voids = prepared
+        total_pixels += pixels
         nonempty += int(count > 0)
-        if previous is not None:
-            overlap = np.zeros(count + 1, dtype=np.int64)
-            for row in range(0, grid.height, 64):
-                cancel.check()
-                overlap += np.bincount(labels[row:row + 64][previous[row:row + 64]],
-                                       minlength=count + 1)
-            bad = np.flatnonzero((overlap < settings['support']['min_overlap_pixels']) & (np.arange(count + 1) > 0))
+        if bad is not None:
             births += len(bad)
             if len(bad):
                 report.checks['raster_connectivity'] = 'fail'
                 report.checks['overlap'] = 'fail'
-                # A cropped grid cannot see past its own edge: a component that
-                # continues outside the crop is cut off there and reads as
-                # unsupported. Recording which components touch the border lets
-                # a caller scanning a sub-volume treat those as unknown rather
-                # than as islands. On a full-panel grid this is only evidence.
-                border = np.unique(np.concatenate(
-                    (labels[0], labels[-1], labels[:, 0], labels[:, -1])))
-                on_edge = set(int(v) for v in border) - {0}
-                edge_births += sum(1 for component in bad if int(component) in on_edge)
+                edge_births += int(on_edge[bad].sum())
                 for component in bad[:max(0, max_examples - len(report.diagnostics))]:
                     row, col = np.argwhere(labels == component)[0]
                     report.diagnostics.append(Diagnostic(
                         'raster_island', 'Component has insufficient face overlap with preceding layer',
                         layer=layer.index, position_mm=grid.xy(int(row), int(col)) + [layer.z_mm],
                         details={'pixels': int(counts[component]), 'overlap_pixels': int(overlap[component]),
-                                 'touches_crop_edge': bool(int(component) in on_edge)}))
-            growth = _growth_pixels(previous, mask, grid, settings, decimate)
-            growth_count += growth
-            if growth:
-                report.checks['growth_span'] = 'fail'
-                if len(report.diagnostics) < max_examples:
-                    report.diagnostics.append(Diagnostic(
-                        'growth_span',
-                        'New material exceeds the configured distance to preceding material; '
-                        'this is a configured distance rule at printer pitch, not a strength proof',
-                        layer=layer.index,
-                        details={'pixels': growth, 'limit_mm': settings['support']['max_span_mm'],
-                                 'decimation': decimate}))
+                                 'touches_crop_edge': bool(on_edge[component])}))
+        growth_count += growth
+        if growth:
+            report.checks['growth_span'] = 'fail'
+            if len(report.diagnostics) < max_examples:
+                report.diagnostics.append(Diagnostic(
+                    'growth_span',
+                    'New material exceeds the configured distance to preceding material; '
+                    'this is a configured distance rule at printer pitch, not a strength proof',
+                    layer=layer.index,
+                    details={'pixels': growth, 'limit_mm': settings['support']['max_span_mm'],
+                             'decimation': decimate}))
         if track_voids:
-            forest.add(layer.mask, layer.index, cancel)
-        previous = mask
+            forest.merge(voids, layer.index, cancel)
         layer_count += 1
         progress('validate', layer_count, layer_count)
 
+    def _occupancy(layer):
+        mask = occupancy_mask(layer.mask)
+        if mask.shape != (grid.height, grid.width):
+            raise VoxelMillError('layer_shape', 'Layer dimensions differ from raster grid')
+        return mask
+
+    min_overlap = settings['support']['min_overlap_pixels']
+    args = (grid, settings, decimate, min_overlap, track_voids, cancel)
     if workers <= 1:
+        previous = None
         for layer in layers:
             cancel.check()
-            mask = occupancy_mask(layer.mask)
-            labels, count, counts = _label_occupancy(mask)
-            _consume(layer, labels, count, counts, mask)
+            mask = _occupancy(layer)
+            _consume(layer, _analyze_layer(previous, mask, *args))
+            previous = mask
     else:
-        # Prefetch labels on worker threads; combine + VoidForest stay ordered.
+        # Both labelings and the growth distance transform run on the pool;
+        # only the accumulators, the diagnostics and the VoidForest union-find
+        # stay ordered here. Holding the previous mask alongside each in-flight
+        # layer is what makes that split legal, and `_layer_worker_cap` prices
+        # those extra copies into the memory budget.
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            pending = []
+            pending, previous = deque(), None
             for layer in layers:
                 cancel.check()
-                mask = occupancy_mask(layer.mask)
-                if mask.shape != (grid.height, grid.width):
-                    raise VoxelMillError('layer_shape', 'Layer dimensions differ from raster grid')
-                future = pool.submit(_label_occupancy, mask)
-                pending.append((layer, mask, future))
+                mask = _occupancy(layer)
+                pending.append((layer, pool.submit(_analyze_layer, previous, mask, *args)))
+                previous = mask
                 while len(pending) >= workers:
-                    layer_i, mask_i, future_i = pending.pop(0)
-                    labels, count, counts = future_i.result()
-                    _consume(layer_i, labels, count, counts, mask_i)
-            for layer_i, mask_i, future_i in pending:
-                labels, count, counts = future_i.result()
-                _consume(layer_i, labels, count, counts, mask_i)
+                    layer_i, future_i = pending.popleft()
+                    _consume(layer_i, future_i.result())
+            while pending:
+                layer_i, future_i = pending.popleft()
+                _consume(layer_i, future_i.result())
 
     if not track_voids:
         report.checks['enclosed_voids'] = 'not_run'

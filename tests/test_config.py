@@ -53,7 +53,9 @@ def test_linear_transition_excludes_endpoints():
     {'support': {'drop_attached_unroutable': 1}},
     {'support': {'contour_supports': 1}},
     {'support': {'boundary_supports': 1}},
-    {'resources': {'workers': 0}},
+    {'resources': {'workers': -1}},
+    {'resources': {'workers': 33}},
+    {'resources': {'worker_policy': 'fastest'}},
     {'resources': {'memory_gib': .1}},
     {'process': {'antialias_levels': 3}},
     {'process': {'antialias_supports': 1}},
@@ -66,6 +68,16 @@ def test_linear_transition_excludes_endpoints():
 def test_reject_invalid_overrides(overrides):
     with pytest.raises(VoxelMillError):
         resolve_settings(overrides=overrides)
+
+
+def test_zero_workers_is_the_derive_sentinel_not_an_error():
+    """0 means "ask the machine", the same convention the brace sizes use."""
+    from voxelmill.contracts import ResourceBudget
+    from voxelmill.topology import default_workers
+    settings = resolve_settings(overrides={'resources': {'workers': 0}})
+    assert settings['resources']['workers'] == 0
+    assert ResourceBudget(**settings['resources']).workers == default_workers()
+    assert resolve_settings()['resources']['workers'] == 0
 
 
 @pytest.mark.parametrize('body', [

@@ -1160,3 +1160,69 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   any equivalence check: `seconds` at every nesting depth, `peak_rss_bytes`,
   `scratch_bytes`, `analysis_workers`, the output path, the per-run scratch
   directory `/tmp/voxelmill-prepare-<random>/`, and `settings.resources.*`.
+
+- **`analyze_layers` parallelizes because the dependency is pairwise, not a
+  prefix.** `_consume` looked sequential, but the only cross-layer input is the
+  immediately preceding layer's occupancy mask. Given mask[i-1] and mask[i],
+  both labelings, the overlap bincount and the growth distance transform are
+  independent of every other layer, so they all move to the pool and only the
+  accumulators, the bounded diagnostics and the VoidForest union-find stay
+  ordered. That took the bracket `prepare` from 61.3 s to 27.8 s. The thing
+  that makes it legal is holding the previous mask alongside each in-flight
+  layer, which `_layer_worker_cap` has to price into the memory budget.
+
+- **`np.unique` on concatenated border rows was pure overhead.** Both
+  `VoidForest.add` and the island check built a border-component set with
+  `np.unique(np.concatenate((labels[0], labels[-1], labels[:, 0], labels[:, -1])))`.
+  Scattering `True` through those indices into a flags array gives an identical
+  result without the sort, and that sort was the single largest NumPy cost in
+  the profile (8.2 s, of which 6.9 s was `ndarray.sort`).
+
+- **Worker scaling plateaus at eight, and past it memory grows linearly for
+  nothing.** With the parallel stage widened, the bracket `prepare` runs 52.1,
+  30.7, 28.8, 27.8, 28.5 and 28.4 s at 2, 4, 6, 8, 12 and 24 workers, while
+  peak RSS goes 609 MB, 600, 725, 782, 1010, 1952. The ordered merge stage is
+  the Amdahl limit. `topology.PARALLEL_PLATEAU` records the number, and
+  `resources.workers = 0` derives `min(plateau, physical cores)`.
+
+- **Layer streams allocate a fresh mask per layer, which is what makes holding
+  them safe.** `MeshLayerStream` yields `Layer(index, z, result['mask'])` from a
+  frozen dataclass, and `UnionLayerStream` allocates `mask = np.zeros(...)`
+  inside its loop before OR-ing each group in. Neither reuses a buffer, so a
+  sliding window can keep references to previous layers. Check this again
+  before adding a stream that recycles output arrays; it would silently corrupt
+  every windowed consumer.
+
+- **A settings default of 0 meaning "derive" has to be allowed by the
+  validator.** `tests/test_config.py` listed `{'resources': {'workers': 0}}`
+  among the overrides that must be rejected. Turning 0 into the derive sentinel
+  makes that assertion wrong, not the code.
+
+- **A spin box range has to admit a derive sentinel, or the GUI silently
+  overwrites it.** `PreferencesDialog`'s worker spin box was `setRange(1, 32)`.
+  Once the default became 0, `setValue(0)` clamped to 1, the dialog showed 1,
+  and Apply wrote `workers = 1` into the document — single-worker mode, the
+  slowest possible setting, for anyone who merely opened Preferences. The range
+  now starts at 0 with `setSpecialValueText('auto (N)')` so the sentinel is
+  both representable and legible. Check every widget bound to a setting whose
+  domain gains a sentinel value.
+
+- **Do not edit `src/` while `scripts/equivalence.py` is running.** Both sides
+  are subprocesses that import the live working tree, so a mid-run edit gets
+  picked up by some scenarios and not others and the comparison silently
+  becomes meaningless. The run takes tens of minutes because the old side is
+  the slow one; wait it out, or copy the tree first.
+
+- **An equivalence harness that evaluates only at the end runs out of memory.**
+  The first full run was killed partway through: it collected every scenario's
+  parsed reports into a dict and diffed them after the last one finished, so
+  footprint grew monotonically across the fixture set, and because nothing was
+  printed until the end the kill destroyed every partial result too. Evaluate
+  each scenario as it finishes, keep only the verdict, and print a flushed
+  progress line to stderr so a long run is observable and survivable.
+
+- **Path-valued report fields are not only under keys named `path`.** Reports
+  also carry `source` (the input STL) and `output` (the written GOO), and both
+  embed the tree root, which differs by construction between the two sides.
+  Normalizing only `path` made every `prepare` and `slice` compare as DIFFERS
+  for a reason that had nothing to do with the code under test.

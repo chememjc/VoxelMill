@@ -260,15 +260,25 @@ def detect(*, refresh=False):
     return _CACHE
 
 
-def default_workers(topology=None):
-    """One worker per physical core.
+#: Measured plateau. A `prepare` of fixtures/shapes/overhang_bracket.stl runs
+#: 52.1, 30.7, 28.8, 27.8, 28.4 s at 2, 4, 6, 8 and 24 workers, while peak RSS
+#: climbs 609 MB -> 600 -> 725 -> 782 -> 1952. Past eight the ordered merge
+#: stage is the limit, so more workers buy nothing and cost memory linearly.
+#: `_layer_worker_cap` still trims this further to fit the memory budget.
+PARALLEL_PLATEAU = 8
 
-    Not per logical cpu: the layer analysis this sizes is bandwidth-bound, so
-    SMT siblings contend for the same cache rather than adding throughput.
-    Clamped to the 1..32 range `ResourceBudget` validates.
+
+def default_workers(topology=None):
+    """How many workers to derive when `resources.workers` is 0.
+
+    One per physical core, not per logical cpu: the layer analysis this sizes
+    is memory-bandwidth-bound, so an SMT sibling contends for the same cache
+    instead of adding throughput. Capped at the measured plateau above, because
+    the ordered merge stage stops scaling there and every extra worker holds
+    another set of full-panel buffers.
     """
     topology = topology or detect()
-    return max(1, min(32, topology.n_physical))
+    return max(1, min(PARALLEL_PLATEAU, topology.n_physical))
 
 
 def select_cpus(count, *, policy='performance', topology=None):
