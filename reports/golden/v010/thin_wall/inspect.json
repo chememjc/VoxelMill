@@ -1,0 +1,48 @@
+{
+  "command": "inspect",
+  "meshes": [
+    {
+      "boundary_edges": 0,
+      "bounds": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          30.0,
+          10.0,
+          17.0
+        ]
+      ],
+      "component_triangle_counts": [
+        28
+      ],
+      "connected_components": 1,
+      "degenerate_triangles": 0,
+      "diagnostics": [],
+      "estimated_working_bytes": 67115584,
+      "inconsistent_winding_edges": 0,
+      "intersection_candidate_pairs": 350,
+      "intersection_examples": [],
+      "intersection_method": "exact double-double predicates; all BVH candidates; legal shared subfaces excluded",
+      "intersection_skipped_invalid_triangles": 0,
+      "invalid_triangles": 0,
+      "nonfinite_triangles": 0,
+      "nonmanifold_edges": 0,
+      "path": "thin_wall.stl",
+      "self_intersections": 0,
+      "self_intersections_status": "complete",
+      "sha256": "35286117faf5f30aad79c83f43dec5fe57f474065cea6d80de774cbffdb4d9e1",
+      "signed_volume_mm3": 735.0000858306885,
+      "source_format": "binary_stl",
+      "topology_connectivity": "shared exact-coordinate edge; invalid triangles excluded and reported",
+      "triangle_count": 28,
+      "unique_edges": 42,
+      "unique_vertices": 16,
+      "units": "mm",
+      "valid_triangle_count": 28
+    }
+  ],
+  "schema_version": 1
+}

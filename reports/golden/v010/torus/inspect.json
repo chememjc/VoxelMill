@@ -1,0 +1,48 @@
+{
+  "command": "inspect",
+  "meshes": [
+    {
+      "boundary_edges": 0,
+      "bounds": [
+        [
+          -16.0,
+          -16.0,
+          0.0
+        ],
+        [
+          16.0,
+          16.0,
+          8.0
+        ]
+      ],
+      "component_triangle_counts": [
+        3072
+      ],
+      "connected_components": 1,
+      "degenerate_triangles": 0,
+      "diagnostics": [],
+      "estimated_working_bytes": 67846144,
+      "inconsistent_winding_edges": 0,
+      "intersection_candidate_pairs": 46702,
+      "intersection_examples": [],
+      "intersection_method": "exact double-double predicates; all BVH candidates; legal shared subfaces excluded",
+      "intersection_skipped_invalid_triangles": 0,
+      "invalid_triangles": 0,
+      "nonfinite_triangles": 0,
+      "nonmanifold_edges": 0,
+      "path": "torus.stl",
+      "self_intersections": 0,
+      "self_intersections_status": "complete",
+      "sha256": "461e1b588fcc6fd0e863714026ea381dbaa6f82f424b38c983eac517916932af",
+      "signed_volume_mm3": 3754.8780776730014,
+      "source_format": "binary_stl",
+      "topology_connectivity": "shared exact-coordinate edge; invalid triangles excluded and reported",
+      "triangle_count": 3072,
+      "unique_edges": 4608,
+      "unique_vertices": 1536,
+      "units": "mm",
+      "valid_triangle_count": 3072
+    }
+  ],
+  "schema_version": 1
+}

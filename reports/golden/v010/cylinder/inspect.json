@@ -1,0 +1,48 @@
+{
+  "command": "inspect",
+  "meshes": [
+    {
+      "boundary_edges": 0,
+      "bounds": [
+        [
+          -8.0,
+          -8.0,
+          0.0
+        ],
+        [
+          8.0,
+          8.0,
+          25.0
+        ]
+      ],
+      "component_triangle_counts": [
+        252
+      ],
+      "connected_components": 1,
+      "degenerate_triangles": 0,
+      "diagnostics": [],
+      "estimated_working_bytes": 67169344,
+      "inconsistent_winding_edges": 0,
+      "intersection_candidate_pairs": 12550,
+      "intersection_examples": [],
+      "intersection_method": "exact double-double predicates; all BVH candidates; legal shared subfaces excluded",
+      "intersection_skipped_invalid_triangles": 0,
+      "invalid_triangles": 0,
+      "nonfinite_triangles": 0,
+      "nonmanifold_edges": 0,
+      "path": "cylinder.stl",
+      "self_intersections": 0,
+      "self_intersections_status": "complete",
+      "sha256": "dcb1712b9da3d804d40690f01b3f36efca8822a063b323d84860843abc91f03b",
+      "signed_volume_mm3": 5018.477506374256,
+      "source_format": "binary_stl",
+      "topology_connectivity": "shared exact-coordinate edge; invalid triangles excluded and reported",
+      "triangle_count": 252,
+      "unique_edges": 378,
+      "unique_vertices": 128,
+      "units": "mm",
+      "valid_triangle_count": 252
+    }
+  ],
+  "schema_version": 1
+}
