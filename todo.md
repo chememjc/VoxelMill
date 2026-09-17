@@ -153,15 +153,15 @@ written twice.
       Left open because the *cost* is still real -- the fix has to be making
       each call cheaper, not merging them. Verify this analysis independently
       before closing the item.
-- [ ] 5a. Skip the growth distance transform where its result is discarded.
-      `_analyze_layer` always computes `_growth_pixels` (validation.py:340),
-      but `scan_assembly_islands` reads only `island_components`,
-      `island_components_on_crop_edge` and `raster_island` diagnostics
-      (island_guard.py:85-104) and throws the growth data away -- on every one
-      of its 1 to `max_passes`+1 calls per `prepare`. Add `check_growth=True`
-      to `analyze_layers`/`_analyze_layer` and pass `False` from the island
-      guard only. Every other caller keeps the default, so their reports stay
-      byte-identical.
+- [x] 5a. Skip the growth distance transform where its result is discarded.
+      DONE: `analyze_layers`/`_analyze_layer` take `check_growth` (default
+      True); `island_guard.scan_assembly_islands` passes False. The skipped
+      check reports `growth_span = 'not_run'` and omits
+      `growth_violation_pixels` rather than reading as a verified pass.
+      Saving on `overhang_bracket` was within run-to-run noise on a busy
+      machine (29.8 s -> 28.2 s over two runs each); the fixture holds the
+      island guard to one pass, so re-measure on a shape that actually
+      retries before claiming a number.
 - [ ] 5b. Note for whoever rescopes item 5: there is a *third* `analyze_layers`
       inside `prepare` at pipeline.py:556-559, gated on
       `repair.support_void_policy != 'fail'` (non-default). It analyzes the
@@ -186,16 +186,11 @@ written twice.
       overhang_bracket, pin_array, sphere, stepped_pyramid, tetrahedron,
       thin_wall, torus.
 
-- [ ] Widen `scripts/equivalence.py` past the first failing step. Six of the 13
-      scenarios stop at `prepare` because it exits 2 -- `--allow-unresolved`
-      waives only unresolved islands, and e.g. `torus` fails `enclosed_voids`
-      and `drainage_bottlenecks`. `run_scenario_steps` (equivalence.py:284-290)
-      returns as soon as a step's returncode is nonzero, so `slice` never runs
-      and the GOO encoder is compared on only `pin_array` and `thin_wall`.
-      The run still writes a valid `prepared.stl` in those cases and it is
-      never compared either. Fix: compare `prepared.stl` whenever both sides
-      wrote one, and proceed to `slice` when both sides exited `prepare` the
-      same way. Keep "both sides failed identically" as a match.
+- [x] Widen `scripts/equivalence.py` past the first failing step. DONE:
+      `prepared.stl` is hashed whenever both sides wrote one and reported in
+      its own column, and `slice` runs as long as both sides exited `prepare`
+      the same way. All 13 scenarios now match on all four columns, where
+      before six never reached `slice` at all.
 
 - [ ] Extend `scripts/equivalence.py` coverage: `find_shapes` globs
       `fixtures/shapes/*.stl`, which is 13 scenarios and misses the five error
@@ -205,12 +200,17 @@ written twice.
       rewrite is most likely to get subtly wrong. The harness already treats
       "both sides failed the same way" as a match, so they just need globbing.
 
-- [ ] Record v0.1.0 goldens once so later runs stop re-running the slow side.
-      `equivalence.py --new-root /home3/noisecancelingcodex --update-golden
-      --golden /home3/voxelmill/reports/golden/v010` writes the old tree's
-      normalized reports; after that every check is new-vs-golden and costs
-      only the new side, which is 2.74x faster. Right now each pass pays for
-      both trees, and the old one dominates the wall time.
+- [x] Record v0.1.0 goldens once. DONE: `reports/golden/v010/` holds
+      normalized inspect/prepare/slice reports for all 13 scenarios (39 files,
+      1.7 MB), committed.
+
+- [ ] Make the golden-only comparison actually work. `main` guards for a
+      missing old root (equivalence.py:543) and there is a new-vs-golden diff
+      block (equivalence.py:465), but `evaluate_scenario` returns
+      `'shape missing under old root'` with `ok=False` before either can
+      matter, because `old_steps is None` is unconditionally an error. Until
+      this is fixed the goldens save nothing and every check still pays for
+      the slow tree.
 
 Run `scripts/equivalence.py` after each item. Commit each item separately.
 
@@ -260,11 +260,13 @@ the build and tests must pass with no GPU and no CUDA compiler.
 
 ## Phase 6 — bracing flags, docs, release
 
-- [ ] Add `--brace-spacing-mm`, `--brace-start-height-mm`,
+- [x] Add `--brace-spacing-mm`, `--brace-start-height-mm`,
       `--brace-diameter-mm`, `--brace-max-distance-mm` alongside
-      `--auto-bracing` (cli.py:884), wired through `_overrides`. The GUI needs
-      no change — both its surfaces are generated from `config.DEFAULTS`.
-- [ ] CLI tests for the four new flags; update docs/cli.md, docs/configuration.md.
+      `--auto-bracing`, wired through `_overrides`, with CLI tests and
+      docs/cli.md + docs/configuration.md updates. DONE. Completions and the
+      man page are generated by introspecting the parser (shellhelp.py has no
+      static option table), so they needed no change. The GUI needed none
+      either, being generated from `config.DEFAULTS`.
 - [ ] Update README.md, docs/architecture.md, docs/packaging.md for the
       core/binary split. Tag v0.2.0.
 

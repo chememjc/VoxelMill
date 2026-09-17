@@ -6,7 +6,7 @@ State as of 2026-09-17. Read this, then `todo.md` for the task ledger and
 
 ## Where things stand
 
-Three commits on `master`:
+Commits on `master`:
 
 1. `b7d68ee` — pristine import of v0.1.0's committed tree, so every later diff
    shows exactly what changed relative to the working version.
@@ -14,11 +14,22 @@ Three commits on `master`:
    `--worker-policy`.
 3. `35bb4b4` — parallel `analyze_layers`, the border-sort removal, the derived
    worker default, and `scripts/equivalence.py`.
+4. `72b5d79` — equivalence confirmed on all 13 shape fixtures; ledger updates.
+5. `93c27a7` — the harness compares `prepared.stl` and keeps slicing when
+   `prepare` reports a validation failure.
+6. `083265b` — gotchas from the equivalence work.
+7. `3be0dd9` — v0.1.0 golden reports for all 13 fixtures.
+8. `7fd41a1` — `check_growth`, skipping the growth transform on the island-guard
+   path that discards it.
+9. `640d11f` — the four named brace sizing flags.
 
-Working tree is clean. Suite: **1029 passed, 13 skipped**.
+Working tree is clean. Suite: **1031 passed, 13 skipped** (1029 plus the two
+new tests).
 
 **`prepare fixtures/shapes/overhang_bracket.stl --max-passes 1 --allow-unresolved`
-went from 73.7 s to 26.9 s — 2.74x — with no C written yet.**
+went from 73.7 s to 26.9 s — 2.74x — with no C written yet.** Nothing since
+commit 3 has moved that number measurably; the work since has gone into making
+the equivalence gate trustworthy, which it now is.
 
 | Stage | Wall | Peak RSS |
 | --- | --- | --- |
@@ -26,6 +37,7 @@ went from 73.7 s to 26.9 s — 2.74x — with no C written yet.**
 | + affinity fix | 61.3 s | 656 MB |
 | + parallel analysis, 2 workers | 52.1 s | 609 MB |
 | + derived default (8 workers) | **26.9 s** | 784 MB |
+| + `check_growth` on the island guard | within noise of 26.9 s | 767 MB |
 
 ## The finding that should shape the rest of the work
 
@@ -93,31 +105,36 @@ Amdahl limit.
 - **Determinism: verified.** Reports are field-for-field identical at 4, 8 and
   16 workers, and the output STL hashes identically before and after the
   refactor (`69172ca4...`).
-- **Full equivalence vs v0.1.0: COMPLETE for the 13 top-level shape fixtures.**
-  `scripts/equivalence.py` runs both trees over `fixtures/shapes/*.stl` through
-  inspect -> prepare -> slice and diffs reports structurally plus decoded GOO
-  layer payloads. All 13 scenarios match: `cone`, `cube`, `cube_ascii`,
-  `cylinder`, `drained_cup`, `hollow_cup`, `overhang_bracket`, `pin_array`,
-  `sphere`, `stepped_pyramid`, `tetrahedron`, `thin_wall`, `torus`.
-  **Read the slice column before trusting the tally.** `run_scenario_steps`
-  (scripts/equivalence.py:284-290) stops a scenario as soon as a step exits
-  nonzero, and `prepare` exits 2 on many fixtures even with
-  `--allow-unresolved`, because that flag only waives unresolved islands --
-  `torus` fails on `enclosed_voids` and `drainage_bottlenecks`. Both sides fail
-  identically and the full prepare report is still compared field for field, but
-  `slice` never runs, so the GOO encode path is compared only where the slice
-  column says `match` (confirmed so far: `pin_array`, `thin_wall`). The written
-  `prepared.stl` exists in those runs and is not compared either. `todo.md`
-  tracks widening this.
-  Runs get killed by the background-task memory guard when the machine
-  is otherwise busy, so run three or four at a time with `--scenario`, e.g.
+- **Full equivalence vs v0.1.0: COMPLETE and now genuinely meaningful.**
+  All 13 top-level shape fixtures match on all four comparison columns —
+  `inspect`, `prepare`, `prepared_stl` and `slice` — as of commits `93c27a7`
+  (harness) and re-verified after `7fd41a1` and `640d11f`.
+
+  This was weaker than it looked until `93c27a7`. The harness stopped a
+  scenario at the first nonzero returncode, and `prepare` exits 2 on many
+  fixtures because `--allow-unresolved` waives *unresolved islands only* --
+  `torus` still fails `enclosed_voids` and `drainage_bottlenecks` while
+  writing a perfectly good `prepared.stl`. Six of thirteen therefore never
+  reached `slice`, so the GOO encoder was compared on two shapes while the
+  summary printed "13/13 scenarios matching". Now `prepared.stl` is hashed
+  whenever both sides wrote one, and `slice` runs as long as both sides exited
+  `prepare` the same way.
+
+  Runs get killed by the background-task memory guard when the machine is
+  otherwise busy, so run three at a time with `--scenario`, one batch after
+  another. A driver script that chains the batches is more reliable than
+  polling by hand:
 
       .venv/bin/python -u scripts/equivalence.py --workers 2 \
           --scenario torus --scenario sphere --scenario pin_array
 
   Exit 0 means every scenario matched. `find_shapes` globs only the top level,
-  so the five error fixtures in `fixtures/shapes/invalid/` are not covered yet;
-  `todo.md` tracks that.
+  so the five error fixtures in `fixtures/shapes/invalid/` are not covered yet.
+
+- **Goldens recorded, but not yet usable.** `reports/golden/v010/` holds the
+  v0.1.0 normalized reports for all 13 scenarios (39 files). They cannot save
+  the slow side yet: `evaluate_scenario` treats a missing old root as an error
+  before the golden diff block can run. `todo.md` tracks the fix.
 
 ## Setup for a fresh session
 
