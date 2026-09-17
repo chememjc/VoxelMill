@@ -380,13 +380,17 @@ def _void_merge_stack(layers=7, height=200, width=61):
     return masks
 
 
-def _record_merges(forest_class, masks):
-    from voxelmill.validation import void_components, occupancy_mask
+def _record_merges(forest_class, masks, *, dense_components=False):
+    from voxelmill.validation import void_components, occupancy_mask, _dense_void_components
     from voxelmill.contracts import CancellationToken
     cancel = CancellationToken()
     forest = forest_class(0.0018 * 0.0018 * 0.05)
+    # `_ReferenceVoidForest` is a verbatim v0.1.0 dense merge and unpacks the
+    # dense 4-tuple. The current VoidForest consumes whatever `void_components`
+    # now returns (run payloads when density allows).
+    label = _dense_void_components if dense_components else void_components
     for index, mask in enumerate(masks):
-        forest.merge(void_components(occupancy_mask(mask)), index, cancel)
+        forest.merge(label(occupancy_mask(mask)), index, cancel)
     return forest
 
 
@@ -409,7 +413,7 @@ def test_merge_union_sequence_matches_reference():
     masks = _void_merge_stack()
     assert masks[0].shape[0] > 64, 'a single-chunk fixture would not guard duplicates'
     current = _record_merges(Recorded, masks)
-    reference = _record_merges(Reference, masks)
+    reference = _record_merges(Reference, masks, dense_components=True)
     assert current.calls == reference.calls
     assert current.calls, 'fixture produced no overlaps to union'
     assert len(current.calls) > len(set(current.calls)), \
@@ -420,7 +424,13 @@ def test_merge_union_sequence_matches_reference():
 
 
 def test_merge_union_sequence_matches_reference_under_key_table_cap():
-    """The sorting fallback, taken when the key table would be too large, agrees."""
+    """The sorting fallback, taken when the key table would be too large, agrees.
+
+    `MERGE_KEY_TABLE_CAP` only gates the dense scatter. Run-space pair
+    extraction has no cap equivalent (`run_pairs` is exact at any component
+    count); the current forest still has to match the reference sequence
+    whichever representation `void_components` chose.
+    """
     import voxelmill.validation as validation
 
     class Recorded(_RecordingUnion, validation.VoidForest):
@@ -430,10 +440,10 @@ def test_merge_union_sequence_matches_reference_under_key_table_cap():
         pass
 
     masks = _void_merge_stack()
-    reference = _record_merges(Reference, masks)
+    reference = _record_merges(Reference, masks, dense_components=True)
     saved = validation.MERGE_KEY_TABLE_CAP
     try:
-        validation.MERGE_KEY_TABLE_CAP = 0  # every chunk takes the fallback
+        validation.MERGE_KEY_TABLE_CAP = 0  # every dense chunk takes the fallback
         capped = _record_merges(Recorded, masks)
     finally:
         validation.MERGE_KEY_TABLE_CAP = saved

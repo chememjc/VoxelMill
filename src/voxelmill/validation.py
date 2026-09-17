@@ -23,6 +23,7 @@ fallback; the configured distance rule is not a strength proof.
 from __future__ import annotations
 
 import math
+import os
 import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
@@ -41,6 +42,86 @@ CROSS3 = ndi.generate_binary_structure(3, 1)
 # it replaces. Above it the layer falls back to sorting, whose scratch scales
 # with the overlapping pixels rather than with the product of the label counts.
 MERGE_KEY_TABLE_CAP = 1 << 22
+
+# Values of VOXELMILL_NATIVE_RUNS that force the dense per-layer path. Default
+# is on; this is the A/B kill-switch, not a feature flag that changes results.
+_NATIVE_RUNS_OFF = frozenset({'0', 'false', 'off'})
+
+
+class _RunLayer:
+    """Labeled row-RLE panel. Not a dense 2-D array.
+
+    `labels` is one int32 per run, numbered as `scipy.ndimage.label` (row-major
+    first-pixel order). `counts` / `outside` are filled for void components;
+    material island labels leave them None. `_ReferenceVoidForest` is a
+    verbatim v0.1.0 dense merge and must keep receiving the dense 4-tuple,
+    never this payload.
+    """
+
+    __slots__ = (
+        'starts', 'ends', 'row_offsets', 'labels', 'count',
+        'counts', 'outside', 'width', 'height',
+    )
+
+    def __init__(self, starts, ends, row_offsets, labels, count, width, height,
+                 counts=None, outside=None):
+        self.starts = starts
+        self.ends = ends
+        self.row_offsets = row_offsets
+        self.labels = labels
+        self.count = int(count)
+        self.width = int(width)
+        self.height = int(height)
+        self.counts = counts
+        self.outside = outside
+
+
+def _native_runs():
+    """Row-RLE kernels when the env switch allows them; None forces dense.
+
+    `VOXELMILL_NATIVE_RUNS=0` (also `false`/`off`) keeps the original dense
+    path for A/B. Default is on. A missing `extract_runs` attribute (an older
+    extension) is the same decision, not a hard error. Lazy so importing this
+    module does not require the native build; same pattern as drainage below.
+    """
+    flag = os.environ.get('VOXELMILL_NATIVE_RUNS', '1').strip().lower()
+    if flag in _NATIVE_RUNS_OFF:
+        return None
+    try:
+        from . import _native
+    except ImportError:
+        return None
+    if not hasattr(_native, 'extract_runs'):
+        return None
+    return _native
+
+
+def _extract_occupancy_runs(native, mask, *, require_density=True):
+    """Row-RLE of a binary occupancy panel, or None to take the dense path.
+
+    `extract_runs` refuses a layer above `RUN_TABLE_CAP`; that, and a mean
+    run length below `RUN_DENSITY_FLOOR`, are the same decision: pay for the
+    dense path on this layer. `require_density=False` is for the predecessor
+    occupancy used only as a mask (overlap, growth), where the current layer
+    has already cleared the floor.
+    """
+    try:
+        starts, ends, offsets = native.extract_runs(mask, 1)
+    except (ValueError, AttributeError):
+        return None
+    if require_density:
+        panel = int(mask.shape[0]) * int(mask.shape[1])
+        if panel / max(1, len(starts)) < native.RUN_DENSITY_FLOOR:
+            return None
+    return starts, ends, offsets
+
+
+def _scatter_run_layer(field):
+    """Dense int32 labels. Mixed-representation merge only, never the hot path."""
+    from . import _native
+    return _native.run_scatter(field.starts, field.ends, field.row_offsets,
+                               field.labels, field.width)
+
 
 def occupancy_mask(mask):
     """Binary material mask for connectivity / growth / voids.
@@ -132,16 +213,45 @@ class VoidForest:
 
         `analyze_layers` splits these two halves apart so the labeling can run
         on a worker thread; this entry point stays for every other caller.
+        The return is a dense 2-D label array and the per-component forest
+        ids, which `supports.py` indexes as
+        `empty_ids[empty_labels.ravel()[closed]]`. That path is not the
+        prepare bottleneck, so it stays on dense components rather than
+        scattering a run payload at the boundary. `analyze_layers` must not
+        scatter.
         """
-        return self.merge(void_components(occupancy_mask(mask)), index, cancel)
+        return self.merge(_dense_void_components(occupancy_mask(mask)), index, cancel)
 
     def merge(self, components, index, cancel):
         """Union this layer's empty-space components into the forest.
 
         The order-dependent half of `add`: void identity is temporal, so this
         has to see layers in sequence even when they were labeled out of order.
+
+        Pair extraction is the only part that moves to run space. Union-find,
+        volume and trapped arithmetic stay here, in the order `run_pairs` (or
+        the dense scatter) emits. That order is load-bearing: `union`
+        accumulates in floating point, so the pairs, their sequence and the
+        duplicates from 64-row chunking are part of the reported
+        `peak_present_trapped_volume_mm3`. Mixed consecutive representations
+        take the dense merge for that step rather than crashing.
         """
-        labels, total, counts, outside = components
+        runs = isinstance(components, _RunLayer)
+        if runs:
+            total = components.count
+            counts = components.counts
+            outside = components.outside
+            labels = components
+        else:
+            labels, total, counts, outside = components
+        if self.previous is not None and runs != isinstance(self.previous, _RunLayer):
+            # Rare density-switch or kill-switch flip between layers. Scatter
+            # only the run side; the dense side is already the merge format.
+            if runs:
+                labels = _scatter_run_layer(components)
+                runs = False
+            else:
+                self.previous = _scatter_run_layer(self.previous)
         if index == 0:
             outside = np.ones(total + 1, dtype=bool)  # open plate-side air
         self._grow(self.count + total + 1)
@@ -157,57 +267,72 @@ class VoidForest:
             self.count += total
         if self.previous is not None and total:
             cancel.check()
-            # Deduplicate the overlapping label pairs by scattering into a dense
-            # key table instead of sorting. `np.unique` sorted every chunk, and
-            # this tracks *empty* space, so on most layers the great majority of
-            # pixels carry a label on both sides (measured: 45-83% of the panel
-            # above the base on the bracket fixture) -- a near-full-chunk sort,
-            # tens of thousands of times over a build, to recover a couple of
-            # dozen distinct pairs. Same defect `_border_flags` already had
-            # removed, same fix.
-            #
-            # The emission order is load-bearing and is preserved exactly.
-            # `union` accumulates volumes and `trapped` in floating point, which
-            # is not associative, so the sequence of calls -- the pairs, their
-            # order, and the duplicates that arise when one pair straddles
-            # several chunks -- is part of the reported number. The key here is
-            # the identical `before * (total + 1) + after`, so `flatnonzero` over
-            # its occupancy walks the identical distinct keys in the identical
-            # ascending order `np.unique` returned. `seen` starts and ends every
-            # chunk all-False, cleared through the keys just found rather than
-            # wholesale, so no state crosses a chunk boundary. Chunking stays per
-            # 64 rows: hoisting the dedup to once per layer would drop the
-            # cross-chunk duplicate unions and reorder the rest.
-            span = total + 1
-            table = len(self.previous_ids) * span
-            # Bound the scratch, as the 64-row chunking already does for the key
-            # array: above the cap the table would outgrow the chunk describing
-            # it, so pay for the sort instead. Component counts are small in
-            # practice (29 x 29 on the bracket), so this is the rare path.
-            seen = np.zeros(table, dtype=bool) if table <= MERGE_KEY_TABLE_CAP else None
-            keys = (np.empty(min(64, labels.shape[0]) * labels.shape[1], dtype=np.int64)
-                    if seen is not None else None)
-            for row in range(0, labels.shape[0], 64):
-                cancel.check()
-                before = self.previous[row:row + 64].ravel()
-                after = labels[row:row + 64].ravel()
-                if seen is None:
-                    both = (before > 0) & (after > 0)
-                    if both.any():
-                        keyed = before[both].astype(np.int64) * span + after[both]
-                        for key in np.unique(keyed):
-                            self.union(int(self.previous_ids[key // span]), int(ids[key % span]))
-                    continue
-                chunk = keys[:before.size]
-                np.multiply(before, span, out=chunk, dtype=np.int64, casting='unsafe')
-                np.add(chunk, after, out=chunk, casting='unsafe')
-                seen[chunk] = True
-                seen[:span] = False   # before == 0: no predecessor component here
-                seen[::span] = False  # after == 0: no component this layer here
-                found = np.flatnonzero(seen)
-                seen[found] = False
-                for key in found.tolist():
-                    self.union(int(self.previous_ids[key // span]), int(ids[key % span]))
+            if runs:
+                # 64-row chunking, within-chunk dedup only, cross-chunk
+                # duplicate unions preserved. `run_pairs` emits in the same
+                # order as the dense scatter/flatnonzero below.
+                from . import _native
+                pairs = _native.run_pairs(
+                    labels.starts, labels.ends, labels.row_offsets, labels.labels,
+                    self.previous.starts, self.previous.ends,
+                    self.previous.row_offsets, self.previous.labels,
+                    64)
+                for i, pair in enumerate(pairs.tolist()):
+                    if i % 64 == 0:
+                        cancel.check()
+                    self.union(int(self.previous_ids[pair[0]]), int(ids[pair[1]]))
+            else:
+                # Deduplicate the overlapping label pairs by scattering into a dense
+                # key table instead of sorting. `np.unique` sorted every chunk, and
+                # this tracks *empty* space, so on most layers the great majority of
+                # pixels carry a label on both sides (measured: 45-83% of the panel
+                # above the base on the bracket fixture) -- a near-full-chunk sort,
+                # tens of thousands of times over a build, to recover a couple of
+                # dozen distinct pairs. Same defect `_border_flags` already had
+                # removed, same fix.
+                #
+                # The emission order is load-bearing and is preserved exactly.
+                # `union` accumulates volumes and `trapped` in floating point, which
+                # is not associative, so the sequence of calls -- the pairs, their
+                # order, and the duplicates that arise when one pair straddles
+                # several chunks -- is part of the reported number. The key here is
+                # the identical `before * (total + 1) + after`, so `flatnonzero` over
+                # its occupancy walks the identical distinct keys in the identical
+                # ascending order `np.unique` returned. `seen` starts and ends every
+                # chunk all-False, cleared through the keys just found rather than
+                # wholesale, so no state crosses a chunk boundary. Chunking stays per
+                # 64 rows: hoisting the dedup to once per layer would drop the
+                # cross-chunk duplicate unions and reorder the rest.
+                span = total + 1
+                table = len(self.previous_ids) * span
+                # Bound the scratch, as the 64-row chunking already does for the key
+                # array: above the cap the table would outgrow the chunk describing
+                # it, so pay for the sort instead. Component counts are small in
+                # practice (29 x 29 on the bracket), so this is the rare path.
+                seen = np.zeros(table, dtype=bool) if table <= MERGE_KEY_TABLE_CAP else None
+                keys = (np.empty(min(64, labels.shape[0]) * labels.shape[1], dtype=np.int64)
+                        if seen is not None else None)
+                for row in range(0, labels.shape[0], 64):
+                    cancel.check()
+                    before = self.previous[row:row + 64].ravel()
+                    after = labels[row:row + 64].ravel()
+                    if seen is None:
+                        both = (before > 0) & (after > 0)
+                        if both.any():
+                            keyed = before[both].astype(np.int64) * span + after[both]
+                            for key in np.unique(keyed):
+                                self.union(int(self.previous_ids[key // span]), int(ids[key % span]))
+                        continue
+                    chunk = keys[:before.size]
+                    np.multiply(before, span, out=chunk, dtype=np.int64, casting='unsafe')
+                    np.add(chunk, after, out=chunk, casting='unsafe')
+                    seen[chunk] = True
+                    seen[:span] = False   # before == 0: no predecessor component here
+                    seen[::span] = False  # after == 0: no component this layer here
+                    found = np.flatnonzero(seen)
+                    seen[found] = False
+                    for key in found.tolist():
+                        self.union(int(self.previous_ids[key // span]), int(ids[key % span]))
         self.previous, self.previous_ids = labels, ids
         self.history.append(self.trapped)
         return labels, ids
@@ -270,7 +395,15 @@ def _island_extent(labels, component):
     component's first pixel was already being found with a full-panel
     ``labels == component`` pass; this reuses that one mask for the count
     instead of paying a separate `bincount` over every label on every layer.
+    Run payloads go through `run_extent` rather than scattering a dense label
+    image: the first pixel of a component is the start of its first run.
     """
+    if isinstance(labels, _RunLayer):
+        from . import _native
+        row, col, pixels = _native.run_extent(
+            labels.starts, labels.ends, labels.row_offsets,
+            labels.labels, labels.count, int(component))
+        return int(row), int(col), int(pixels)
     hits = labels == component
     # `argwhere` lists indices in C order, so its first row is the first set
     # pixel -- which is what `argmax` on the boolean mask returns directly.
@@ -291,15 +424,39 @@ def _border_flags(labels, size):
     return flags
 
 
+def _dense_void_components(occupied):
+    """Dense empty-space labeling. The 4-tuple `_ReferenceVoidForest` unpacks."""
+    labels, total = ndi.label(~occupied, CROSS)
+    counts = np.bincount(labels.ravel(), minlength=total + 1)
+    return labels, total, counts, _border_flags(labels, total + 1)
+
+
 def void_components(occupied):
     """Label one layer's empty space; the expensive, order-free half of VoidForest.add.
 
     Pure in its input, so it can run on a worker thread while the union-find
-    merge that consumes it stays in layer order.
+    merge that consumes it stays in layer order. Prefers run space when the
+    native kernels are available and the layer is sparse enough
+    (`panel_pixels / run_count >= RUN_DENSITY_FLOOR`). Below that, or when
+    `VOXELMILL_NATIVE_RUNS=0`, returns the dense 4-tuple the original merge
+    loop unpacks. `analyze_layers` stays in run space for the whole per-layer
+    path; it does not scatter.
     """
-    labels, total = ndi.label(~occupied, CROSS)
-    counts = np.bincount(labels.ravel(), minlength=total + 1)
-    return labels, total, counts, _border_flags(labels, total + 1)
+    native = _native_runs()
+    if native is None:
+        return _dense_void_components(occupied)
+    occupied = np.ascontiguousarray(occupied)
+    runs = _extract_occupancy_runs(native, occupied, require_density=True)
+    if runs is None:
+        return _dense_void_components(occupied)
+    starts, ends, offsets = runs
+    height, width = occupied.shape
+    vs, ve, vo = native.complement_runs(starts, ends, offsets, width)
+    labels, total = native.run_ccl(vs, ve, vo, height)
+    counts = native.run_counts(vs, ve, labels, total, height * width)
+    outside = native.run_border(vs, ve, vo, labels, total, width)
+    return _RunLayer(vs, ve, vo, labels, total, width, height,
+                     counts=counts, outside=outside)
 
 
 def _layer_worker_cap(budget, grid):
@@ -373,6 +530,95 @@ def _growth_pixels(previous, mask, grid, settings, decimate):
     return int(np.count_nonzero(mask & ~previous))
 
 
+def _growth_pixels_from_runs(previous, mask, cur_runs, prev_runs, grid, settings,
+                             decimate, native):
+    """Coarse growth check from occupancy runs; exact fallback stays dense.
+
+    `ndi.distance_transform_edt` is still the dense scipy call, but it only
+    ever sees the tiny panels `run_block_any` materialises. The rare tiled
+    exact path reads the dense occupancy we already hold; there is no
+    run-space EDT.
+    """
+    if (native.run_area(cur_runs[0], cur_runs[1]) == 0
+            or native.run_area(prev_runs[0], prev_runs[1]) == 0):
+        return 0
+    width = mask.shape[1]
+    coarse_previous = native.run_block_any(
+        prev_runs[0], prev_runs[1], prev_runs[2], width, decimate)
+    grown = native.run_difference(
+        cur_runs[0], cur_runs[1], cur_runs[2],
+        prev_runs[0], prev_runs[1], prev_runs[2])
+    coarse_mask = native.run_block_any(grown[0], grown[1], grown[2], width, decimate)
+    if coarse_previous.any():
+        distance = ndi.distance_transform_edt(~coarse_previous,
+                                              sampling=(grid.dy * decimate, grid.dx * decimate))
+        # Each occupied block has an actual preceding pixel within
+        # one block diagonal. The query pixel is likewise at most
+        # one diagonal from its block center. Accept only a proven
+        # upper bound; otherwise compute exact pixel distances.
+        uncertainty = 2 * math.hypot(grid.dx * decimate, grid.dy * decimate)
+        upper = distance + uncertainty
+        if np.any(coarse_mask & (upper > settings['support']['max_span_mm'] + 1e-10)):
+            return _tiled_growth_pixels(previous, mask, grid,
+                                        settings['support']['max_span_mm'])
+        return 0
+    return int(native.run_area(grown[0], grown[1]))
+
+
+def _analyze_layer_runs(previous, mask, grid, settings, decimate, min_overlap,
+                        track_voids, check_growth, cancel, native):
+    """Run-space `_analyze_layer`. None means this layer should stay dense.
+
+    One `extract_runs` of the current occupancy serves material CCL, overlap,
+    growth and (via `complement_runs`) voids. The predecessor is extracted
+    only as occupancy runs — a mask, not a second labeling. Returning None
+    after a failed predecessor extract drops the whole layer onto the dense
+    path rather than mixing representations inside one 8-tuple.
+    """
+    runs = _extract_occupancy_runs(native, mask, require_density=True)
+    if runs is None:
+        return None
+    starts, ends, offsets = runs
+    height, width = mask.shape
+    prev_runs = None
+    if previous is not None:
+        prev_runs = _extract_occupancy_runs(
+            native, np.ascontiguousarray(previous), require_density=False)
+        if prev_runs is None:
+            return None
+    labels, count = native.run_ccl(starts, ends, offsets, height)
+    pixels = int(native.run_area(starts, ends))
+    overlap = bad = on_edge = None
+    growth = 0
+    if previous is not None:
+        cancel.check()
+        overlap = native.run_overlap(
+            starts, ends, offsets, labels, count, *prev_runs)
+        bad = np.flatnonzero((overlap < min_overlap) & (np.arange(count + 1) > 0))
+        if len(bad):
+            # Native `run_border` still reports bin 0; the dense path clears
+            # it after `_border_flags`, so do the same here.
+            on_edge = native.run_border(
+                starts, ends, offsets, labels, count, width)
+            on_edge[0] = False
+        if check_growth:
+            cancel.check()
+            growth = _growth_pixels_from_runs(
+                previous, mask, (starts, ends, offsets), prev_runs,
+                grid, settings, decimate, native)
+    voids = None
+    if track_voids:
+        cancel.check()
+        vs, ve, vo = native.complement_runs(starts, ends, offsets, width)
+        vlabels, vtotal = native.run_ccl(vs, ve, vo, height)
+        vcounts = native.run_counts(vs, ve, vlabels, vtotal, height * width)
+        voutside = native.run_border(vs, ve, vo, vlabels, vtotal, width)
+        voids = _RunLayer(vs, ve, vo, vlabels, vtotal, width, height,
+                          counts=vcounts, outside=voutside)
+    field = _RunLayer(starts, ends, offsets, labels, count, width, height)
+    return field, count, pixels, overlap, bad, on_edge, growth, voids
+
+
 def _analyze_layer(previous, mask, grid, settings, decimate, min_overlap, track_voids,
                    check_growth, cancel):
     """Everything about one layer that does not depend on layer order.
@@ -384,10 +630,26 @@ def _analyze_layer(previous, mask, grid, settings, decimate, min_overlap, track_
     distance transform — instead of just the island labeling, and scipy
     releases the GIL throughout, so plain threads do scale here.
 
+    When native row-RLE kernels are available and the layer is sparse enough,
+    both CCLs, counts, border, overlap, growth coarse decimation and void
+    pair inputs stay in run space. `labels` / `voids` in the returned 8-tuple
+    may then be `_RunLayer` payloads rather than dense arrays; `_consume`
+    unpacks the same shape either way. The dense path remains the fallback
+    below `RUN_DENSITY_FLOOR`, when `extract_runs` refuses, and when
+    `VOXELMILL_NATIVE_RUNS=0`.
+
     Returns raw evidence only. Every accumulator, diagnostic and union-find
     merge stays with the caller, in layer order.
     """
     cancel.check()
+    mask = np.ascontiguousarray(mask)
+    native = _native_runs()
+    if native is not None:
+        prepared = _analyze_layer_runs(
+            previous, mask, grid, settings, decimate, min_overlap,
+            track_voids, check_growth, cancel, native)
+        if prepared is not None:
+            return prepared
     labels, count = _label_occupancy(mask)
     pixels = int(mask.sum())
     overlap = bad = on_edge = None
@@ -411,7 +673,7 @@ def _analyze_layer(previous, mask, grid, settings, decimate, min_overlap, track_
             on_edge[0] = False
         if check_growth:
             growth = _growth_pixels(previous, mask, grid, settings, decimate)
-    voids = void_components(mask) if track_voids else None
+    voids = _dense_void_components(mask) if track_voids else None
     return labels, count, pixels, overlap, bad, on_edge, growth, voids
 
 
