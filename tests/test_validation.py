@@ -439,3 +439,108 @@ def test_merge_union_sequence_matches_reference_under_key_table_cap():
         validation.MERGE_KEY_TABLE_CAP = saved
     assert capped.calls == reference.calls
     assert capped.finish() == reference.finish()
+
+
+# --- island diagnostics: the per-component pixel count ---------------------
+#
+# `_label_occupancy` no longer returns a full-panel `np.bincount` of the label
+# image; the `pixels` field of a `raster_island` diagnostic is computed per
+# diagnostic instead, from the same `labels == component` mask the diagnostic's
+# position already needed. These tests pin that the published numbers are
+# exactly what the eager bincount produced -- the bracket fixture reports zero
+# islands, so nothing else in the suite exercises the materialization path.
+
+def _island_masks():
+    """Layers whose islands have distinct, hand-countable pixel areas."""
+    base = np.zeros((40, 40), np.uint8)
+    base[0:6, 0:6] = 1                      # supported column, never an island
+    masks = [base.copy(), base.copy()]
+
+    third = base.copy()
+    third[10, 10] = 1                       # 1 px
+    third[10:12, 20:22] = 1                 # 4 px
+    third[20:23, 10:14] = 1                 # 12 px
+    third[30:34, 20] = 1                    # 7 px L
+    third[33, 21:24] = 1                    # ...
+    masks.append(third)
+
+    fourth = base.copy()
+    fourth[5, 20:29] = 1                    # 15 px plus
+    fourth[2:9, 24] = 1                     # ...
+    fourth[25:30, 30:34] = 1                # 20 px
+    masks.append(fourth)
+    return masks
+
+
+def _eager_island_pixels(masks, grid):
+    """What the removed full-panel bincount would have said, per (layer, position)."""
+    from voxelmill.validation import CROSS
+    expected = {}
+    for index, mask in enumerate(masks):
+        labels, count = ndi.label(np.asarray(mask) != 0, CROSS)
+        counts = np.bincount(labels.ravel(), minlength=count + 1)
+        for component in range(1, count + 1):
+            row, col = np.argwhere(labels == component)[0]
+            expected[(index, tuple(grid.xy(int(row), int(col))))] = int(counts[component])
+    return expected
+
+
+def test_island_diagnostic_pixels_match_the_eager_bincount():
+    masks = _island_masks()
+    grid = RasterGrid(40, 40, 0, 0, 1., 1.)
+    expected = _eager_island_pixels(masks, grid)
+    report = analyze_layers([Layer(i, i + .5, m) for i, m in enumerate(masks)],
+                            grid, resolve_settings(), track_voids=False)
+
+    islands = [d for d in report.diagnostics if d.code == 'raster_island']
+    assert report.checks['raster_connectivity'] == 'fail'
+    assert len(islands) == 6, 'the fixture must actually materialize the lazy path'
+    # Every diagnostic names a real component, at the component's first pixel in
+    # C order, carrying that component's exact area.
+    for diagnostic in islands:
+        key = (diagnostic.layer, tuple(diagnostic.position_mm[:2]))
+        assert key in expected, f'{key} is not the first pixel of any component'
+        assert diagnostic.details['pixels'] == expected[key]
+    assert sorted(d.details['pixels'] for d in islands) == [1, 4, 7, 12, 15, 20]
+    assert report.metrics['island_components'] == 6
+
+
+def test_island_diagnostic_pixels_survive_the_worker_pool_and_the_example_cap():
+    """Same numbers off the pool, and when only the first few slots are filled."""
+    masks = _island_masks()
+    grid = RasterGrid(40, 40, 0, 0, 1., 1.)
+    expected = _eager_island_pixels(masks, grid)
+    layers = lambda: [Layer(i, i + .5, m) for i, m in enumerate(masks)]
+
+    def islands(workers, **kwargs):
+        settings = resolve_settings(overrides={'resources': {'workers': workers}})
+        report = analyze_layers(layers(), grid, settings, track_voids=False, **kwargs)
+        return [(d.layer, tuple(d.position_mm[:2]), d.details['pixels'])
+                for d in report.diagnostics if d.code == 'raster_island'], report
+
+    pooled, pooled_report = islands(8)
+    serial, serial_report = islands(1)
+    capped, capped_report = islands(8, max_examples=2)
+    assert pooled_report.metrics['analysis_workers'] > 1, 'the pool path must be taken'
+    assert serial_report.metrics['analysis_workers'] == 1, 'the serial path must be taken'
+    assert serial == pooled
+    assert len(capped) == 2
+    assert capped == pooled[:2]
+    # The cap bounds the diagnostics, never the accumulated evidence.
+    assert capped_report.metrics['island_components'] == pooled_report.metrics['island_components'] == 6
+    for layer, position, pixels in pooled:
+        assert pixels == expected[(layer, position)]
+
+
+def test_island_extent_matches_argwhere_and_bincount_on_a_random_label_field():
+    """The two expressions `_island_extent` replaced, checked component by component."""
+    from voxelmill.validation import CROSS, _island_extent
+    rng = np.random.default_rng(20260917)
+    field = rng.random((61, 47)) < .35
+    labels, count = ndi.label(field, CROSS)
+    counts = np.bincount(labels.ravel(), minlength=count + 1)
+    assert count > 30, 'the field must contain many components to be worth checking'
+    for component in range(1, count + 1):
+        row, col, pixels = _island_extent(labels, component)
+        assert [row, col] == list(np.argwhere(labels == component)[0])
+        assert pixels == int(counts[component])

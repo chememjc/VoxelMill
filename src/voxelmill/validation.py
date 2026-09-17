@@ -250,10 +250,32 @@ class VoidForest:
 
 
 def _label_occupancy(occupied):
-    """Connected components on one binary layer; safe to run off the main thread."""
-    labels, count = ndi.label(occupied, CROSS)
-    counts = np.bincount(labels.ravel(), minlength=count + 1)
-    return labels, count, counts
+    """Connected components on one binary layer; safe to run off the main thread.
+
+    Deliberately does *not* return per-component pixel counts. A full-panel
+    `np.bincount` here ran on every layer of every pass and fed exactly one
+    consumer: the `pixels` field of at most `max_examples` (128) `raster_island`
+    diagnostics. `_island_extent` computes that number for the handful of
+    components a diagnostic actually names, from the same equality mask the
+    diagnostic's position already needs.
+    """
+    return ndi.label(occupied, CROSS)
+
+
+def _island_extent(labels, component):
+    """First pixel (C order) and pixel count of one labeled component.
+
+    Called only from the bounded diagnostic loop, so the cost is paid at most
+    `max_examples` times over a whole build instead of once per layer. The
+    component's first pixel was already being found with a full-panel
+    ``labels == component`` pass; this reuses that one mask for the count
+    instead of paying a separate `bincount` over every label on every layer.
+    """
+    hits = labels == component
+    # `argwhere` lists indices in C order, so its first row is the first set
+    # pixel -- which is what `argmax` on the boolean mask returns directly.
+    row, col = divmod(int(np.argmax(hits)), labels.shape[1])
+    return row, col, int(np.count_nonzero(hits))
 
 
 def _border_flags(labels, size):
@@ -290,8 +312,10 @@ def _layer_worker_cap(budget, grid):
     base = panel * 48
     budget.require(base + panel * 24, 'layer analysis buffers')
     # Each in-flight layer now carries more than its island labels: the void
-    # labels, both count vectors, its own occupancy and a reference to its
-    # predecessor's, plus the growth transform's decimated scratch.
+    # labels, the void count vector, the overlap counts, its own occupancy and a
+    # reference to its predecessor's, plus the growth transform's decimated
+    # scratch. The island label counts are no longer among them (they are
+    # computed per diagnostic instead), so the reservation is now conservative.
     per_worker = panel * 24
     ceiling = int(budget.memory_gib * 1024 ** 3 * 0.8)
     return max(1, min(workers, (ceiling - base) // per_worker))
@@ -364,7 +388,7 @@ def _analyze_layer(previous, mask, grid, settings, decimate, min_overlap, track_
     merge stays with the caller, in layer order.
     """
     cancel.check()
-    labels, count, counts = _label_occupancy(mask)
+    labels, count = _label_occupancy(mask)
     pixels = int(mask.sum())
     overlap = bad = on_edge = None
     growth = 0
@@ -388,7 +412,7 @@ def _analyze_layer(previous, mask, grid, settings, decimate, min_overlap, track_
         if check_growth:
             growth = _growth_pixels(previous, mask, grid, settings, decimate)
     voids = void_components(mask) if track_voids else None
-    return labels, count, counts, pixels, overlap, bad, on_edge, growth, voids
+    return labels, count, pixels, overlap, bad, on_edge, growth, voids
 
 
 def analyze_layers(layers, grid, settings, *, cancel=None, budget=None, progress=no_progress,
@@ -430,7 +454,7 @@ def analyze_layers(layers, grid, settings, *, cancel=None, budget=None, progress
         """Fold one layer's evidence into the report, strictly in layer order."""
         nonlocal total_pixels, layer_count, births, growth_count, nonempty, edge_births
         cancel.check()
-        labels, count, counts, pixels, overlap, bad, on_edge, growth, voids = prepared
+        labels, count, pixels, overlap, bad, on_edge, growth, voids = prepared
         total_pixels += pixels
         nonempty += int(count > 0)
         if bad is not None:
@@ -440,11 +464,11 @@ def analyze_layers(layers, grid, settings, *, cancel=None, budget=None, progress
                 report.checks['overlap'] = 'fail'
                 edge_births += int(on_edge[bad].sum())
                 for component in bad[:max(0, max_examples - len(report.diagnostics))]:
-                    row, col = np.argwhere(labels == component)[0]
+                    row, col, component_pixels = _island_extent(labels, component)
                     report.diagnostics.append(Diagnostic(
                         'raster_island', 'Component has insufficient face overlap with preceding layer',
                         layer=layer.index, position_mm=grid.xy(int(row), int(col)) + [layer.z_mm],
-                        details={'pixels': int(counts[component]), 'overlap_pixels': int(overlap[component]),
+                        details={'pixels': component_pixels, 'overlap_pixels': int(overlap[component]),
                                  'touches_crop_edge': bool(on_edge[component])}))
         growth_count += growth
         if growth:
