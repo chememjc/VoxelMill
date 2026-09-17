@@ -22,6 +22,8 @@ CMakeCache.txt
 
 # Immutable originals and generated print data; see README.md
 inputstl/
+# ...including when it is a symlink to the originals, which `inputstl/` misses.
+inputstl
 output/
 .scratch/
 *.goo

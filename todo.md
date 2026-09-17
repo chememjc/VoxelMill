@@ -1,210 +1,206 @@
-# Implementation ledger
+# VoxelMill v0.2.0 — implementation ledger
 
-## Restart here — 2026-09-11
+Live task list. Items are removed when done and added as they arise.
+Rationale, measurements and design live in the phase notes below; verified
+lessons go in `gotchas.md`.
 
-Baseline this round: 872 passed, 13 skipped. Finished at 990 passed,
-13 skipped.
+## Headline number
 
-### Naming and language sweep
-- [x] Project archive extension `.chop` -> `.voxmil` across code, tests, docs,
-      schemas and packaging. No backwards compatibility; `.chop` is simply gone.
-      Historical evidence (`reports/**`, `docs/implementation-history-*.md`)
-      is left unedited.
-- [x] Save dialogs append the extension when the typed name has none.
-- [x] British -> US spelling everywhere: centre/center, colour/color,
-      normalise/normalize, analyse/analyze, behaviour/behavior, grey/gray.
+`prepare fixtures/shapes/overhang_bracket.stl --max-passes 1 --allow-unresolved`
 
-### Project fidelity
-- [x] Reopened projects show original file names, not the SHA-256 stem of the
-      extracted mesh.
-- [x] Report tab populates for a Check islands run (it only set the badge).
+| Stage | Wall | Peak RSS | Note |
+| --- | --- | --- | --- |
+| v0.1.0 baseline | 73.7 s | 636 MB | measured 2026-09-17 |
+| + CPU pinning fix (workers=2) | 61.3 s | 656 MB | -17%, affinity change only |
+| + workers=4 | 61.2 s | 731 MB | no gain; consumer loop is serial |
+| + workers=8 / 16 / 24 | 61.6 / 61.0 / 60.5 s | 0.9-1.1 GB | flat; only RSS grows |
 
-### Print checks
-- [x] Check print submenu: islands, enclosed voids, overhangs, suction cups,
-      drainage; plus Check all and Check some (checkbox dialog, OK/Cancel).
-- [x] Layer view: jump to previous/next layer carrying an issue.
-- [x] Layer view: issue pixels colored per issue type.
-- [x] View menu toggles per issue type, all enabled by default.
+Record a new row after every Phase 2 item so the curve is visible.
 
-### Attachments
-- [x] Attachment placement prevents islands by construction: detect, place an
-      attachment under each island, re-check locally, then one full pass.
-      `attachments.max_island_passes` preference, default 5.
-- [x] Progress line naming the stage during Compute attachments.
+## Where the time actually goes (cProfile, 85.5 s under profiler)
 
-### Object manipulation
-- [x] FreeCAD-style translate/rotate gizmo (3 arrows, 3 rings), shown only
-      while a part is selected in the 3D view and hidden on a click-away.
-- [x] Relative / absolute motion mode, absolute measured from the import pose.
-- [x] Live 3D preview while a slider drags; rebuild only on release.
-- [x] Per-part scale and mirror controls in the object panel.
-- [x] Drop to plate (zero the lift against the current rotated low point).
-- [x] Zoom to selected.
-- [x] Multi-select in the object list; moves apply to every selected part.
-- [x] Arrow-key nudge using the snap increment.
-- [x] Per-object auto-orient.
+| Cost | Where | Calls |
+| --- | --- | --- |
+| 83.1 s (97 %) | `validation.analyze_layers` (validation.py:268) | 2 |
+| 74.5 s | `_consume` per-layer body (validation.py:291) | 1800 |
+| 31.6 s | `_growth_pixels` (validation.py:247) | 1798 |
+| 29.7 s | `VoidTracker.add` (validation.py:122) | 1800 |
+| 27.4 s tottime | `numpy.ufunc.reduce` — dense `.any()` | 46167 |
+| 24.7 s | via `block_any` (validation.py:47) | 32617 |
+| 8.2 s | `np.unique` border labels (validation.py:124) | 25184 |
+| 7.7 s | `scipy.ndimage.label` | 1804 |
+| 5.7 s | thread-lock acquire — prefetch pool idle-waiting | 760 |
+| 5.4 s | `distance_transform_edt` | 1879 |
+| 1.3 s | `raster.slice_coverage` — the actual rasterizer | 2700 |
 
-### Session state
-- [x] Remember window geometry and dock layout between sessions.
+Rasterization is 1.5 % of the run. `validation.py` is the target.
 
-### Gizmo and rotation defects (2026-09-11, second pass)
-- [x] Gizmo observers set VTK's abort flag, so a drag no longer fights the
-      trackball camera underneath it.
-- [x] Press-hold-drag-release: a move with the button up ends the drag rather
-      than tracking on, and Escape or a right-click cancels it outright.
-- [x] Ring drags accumulate each frame's wrapped increment, so a full turn
-      reads as 360 rather than 0 and 1.5 turns as 540.
-- [x] Rotation wraps into (-180, 180] instead of clamping. In-range angles
-      pass through bit-for-bit so an applied orientation candidate stays exact.
-- [x] Every long-running operation clears outstanding preview transforms
-      first. An abandoned drag used to leave the actor showing a rotation the
-      document never accepted, which is what made supports look like they
-      ignored the rotation.
-- [x] Confirmed by measurement that the router itself always honored rotation.
+## Phase 0 — fork, baseline, ledgers
 
-### Close-out
-- [x] Tests for every feature above.
-- [x] Documentation rewritten against the code.
+- [x] Fork the committed v0.1.0 tree to `/home3/voxelmill`, `git init`.
+- [x] Link `inputstl/` to the immutable originals (gitignored).
+- [x] Build venv and native module for the new tree.
+- [x] Version 0.1.0 -> 0.2.0 in `pyproject.toml` and `src/voxelmill/__init__.py`.
+- [x] Start this ledger and carry `gotchas.md` forward.
+- [x] Fix the CPU pinning bug in `resources.py`: it took
+      `sorted(sched_getaffinity(0))[:workers]`, so the default `workers=2`
+      pinned every thread to cpu0+cpu1 — the two SMT siblings of one P-core on
+      a 24C/32T i9-13900HX. New `topology.py` detects the P/E split on Linux,
+      macOS and Windows and `select_cpus` spreads the mask across distinct
+      physical cores, fastest class first. 73.7 s -> 61.3 s.
+      Added `--workers auto` and `--worker-policy performance|efficiency|all`,
+      the matching `resources.worker_policy` setting, a GUI dropdown for it,
+      docs, and `tests/test_topology.py` (20 tests).
+      Default left at `workers=2`: the sweep shows no gain from raising it.
+- [ ] Freeze the equivalence baseline: pytest pass/skip counts,
+      `scripts/benchmark.py --output reports/bench/v020-baseline.json`, and
+      golden `prepare`/`slice` outputs for all 16 `fixtures/shapes/*.stl`
+      under `reports/golden/v010/`.
 
-## Restart here — 2026-09-10
+## Phase 1 — instrument
 
-The program is now **VoxelMill** (`voxelmill` for every command, module, path,
-environment variable and icon basename; `VoxelMill` only as the displayed
-product name). The old name survives only in historical evidence:
-`reports/**` and `docs/implementation-history-2026-09-09.md` record runs that
-really executed as `chopchop` and were deliberately left unedited.
+- [ ] `--timing` flag emitting a unified per-stage breakdown into the report.
+      Unify the scattered `seconds` fields (pipeline.py:653, hollow.py:571,
+      supports.py:947, validation.py:378, goo.py:1335) behind one stage-timer
+      context manager in `contracts.py`.
+- [ ] `scripts/equivalence.py`: run a command under v0.1.0 and v0.2.0, diff the
+      JSON reports structurally, byte-compare `.goo`/`.ctb` layer payloads.
+      This is the "behaves identically" gate for every later phase.
+      The volatile fields to normalize, measured by diffing two real runs, are
+      wider than just a top-level `seconds`:
+        * `seconds` at every depth (`passes[].supports.seconds`,
+          `passes[].validation.metrics.seconds`, `validation.metrics.drainage.seconds`,
+          `supports.analysis.seconds`, `inspection_seconds`, ...)
+        * `peak_rss_bytes`, `scratch_bytes`, `analysis_workers`
+        * every `path` value: the output path and the per-run scratch directory
+          (`/tmp/voxelmill-prepare-<random>/prepared.stl`)
+        * `settings.resources.*`, which just echoes the invocation
+        * in `.goo`/`.ctb` headers: `file_create_time` and `software_version`
+      Everything else compared exactly. Verified: runs at workers 4, 8 and 16
+      differ in none of the substantive fields and produce byte-identical STL
+      output, so the determinism gate is meaningful today.
 
-AppImage packaging is in this round. Physical printing is still blocked on FEP
-replacement; read-only status, history, and camera checks are allowed. Do not
-start, upload, move, or print.
+## Phase 2 — architecture (still Python-orchestrated)
 
-- [x] Rename chopchop -> voxelmill across code, tests, scripts, docs and
-      packaging. `ChopError` is `VoxelMillError`; `CHOPCHOP_*` is `VOXELMILL_*`;
-      the CUDA/TBB compile definitions and CUDA C symbols are `VOXELMILL_*` /
-      `voxelmill_cuda_*`. No compatibility aliases: the old console script,
-      environment variables and `~/.config/chopchop` are gone. Suite is
-      unchanged at 757 passed / 13 skipped, CUDA still compiles and reports one
-      device, and the packed editor AppImage runs.
-- [x] Editor placement rework. Object panel replaces the added-objects combo:
-      every part with its role, attachment state and visibility, plus move and
-      rotate rows whose slider and absolute field are two views of one number.
-      Rotation snaps when dragged or nudged and is exact when typed; the
-      increment is an editor preference (default 5 deg) in
-      `~/.config/voxelmill/editor.json`, not in the settings table.
-- [x] Attachments are an explicit editor step: nothing on import, File >
-      Compute attachments (Ctrl+R), and each row reads none/stale/routed.
-      Moving a part in XY marks them stale; Z or rotation drops them and says
-      why. The CLI default is untouched.
-- [x] Multiple parts: Duplicate (N copies, reusing the loaded mesh), Arrange
-      (Ctrl+L) over a new deterministic packer in `arrange.py` that refuses
-      rather than overlapping and centres the packed group, drag-and-drop STL
-      onto the window, and per-part attachment settings controls beside the
-      overlay JSON.
-- [x] Tool strip over the 3D view (Select / Add point / Remove point / Paint
-      enforced / Paint blocked). The Shift/Ctrl/Alt modifiers still work.
-- [x] Layer view: vertical bottom-to-top layer slider, zoom slider, wheel for
-      layers, Ctrl+wheel zoom about the cursor, drag to pan, and a per-pixel
-      black gutter at 5x and above. Only the visible crop is rendered, so cost
-      is bounded by the viewport rather than the zoom factor.
-- [x] Paint is one record per plate object in that object's own frame, so it
-      travels with the part. `.chop` schema is 2; schema 1 is refused rather
-      than converted because its marks carry no part attribution.
-- [x] `voxelmill prepare project.chop` restores added parts. They were the one
-      edit the command dropped, so a multi-part plate silently prepared as its
-      primary part; `--project` now records `edits.extra_models` and the
-      archive embeds each mesh.
-- [x] Documentation swept against the code for this round: gui, architecture,
-      cli, configuration, and the gotchas log.
+Strictly in this order. Sparse layers before threading, or the threading gets
+written twice.
 
-## Restart here — 2026-09-09
+- [ ] 1a. Widen the prefetch stage in `analyze_layers` to cover everything that
+      is order-independent. Measured: raising `--workers` from 2 to 4 changes
+      nothing (61.3 s vs 61.2 s), because the pool only prefetches
+      `_label_occupancy` (7.7 s of 85 s) while `_consume` runs serially on the
+      main thread and carries `_growth_pixels` (31.6 s), `forest.add` (29.7 s)
+      and the dense `.any()` reductions (27.4 s).
+      The dependency in `_consume` is only *pairwise* — layer i needs layer
+      i-1's mask, not the whole prefix — so per-layer work splits cleanly:
+        * parallel, per layer: `occupancy_mask`, `label(occupied)`,
+          `label(~occupied)` for the void forest, `block_any` decimation,
+          overlap bincount against the previous mask, `_growth_pixels`.
+        * serial, in layer order: counter accumulation, diagnostic append,
+          and the `VoidForest` union-find merge.
+      The scipy calls do release the GIL, measured on this machine with 8
+      threads: `distance_transform_edt` 4.3x, `binary_erosion` 5.0x,
+      `ndi.label` 3.3x. NumPy's `.any()` does not scale. So the 31.6 s of
+      `_growth_pixels` is reachable from plain Python threads right now — this
+      item does not have to wait for the native port, and should land before it.
+- [ ] 1b. Cheap NumPy wins in `validation.py`: `np.bincount` + boolean mask
+      instead of `np.unique(np.concatenate(border))` (validation.py:124); hoist
+      `block_any`'s padding allocation out of the per-layer loop
+      (validation.py:47); stop re-deriving `occupancy_mask` where the caller
+      already holds it.
+- [ ] 2. Sparse/RLE layer representation end-to-end, from `Rasterizer::slice`
+      through validation, union and GOO encode. Kills the dense `.any()`
+      reductions — emptiness becomes O(1). Touches native/raster.cpp, raster.py,
+      validation.py, assembly.py, goo.py.
+- [ ] 3. Port the per-layer analysis kernels to native code over RLE layers:
+      CCL, the cross-layer union-find `VoidTracker`, block-max decimation, the
+      growth/EDT check. One kernel at a time, each A/B-tested against scipy.
+- [ ] 4. Parallelize across layers with `tbb::parallel_for` per the threading
+      design: topology from `topology.py` via `vm_set_topology`, dynamic
+      work-stealing across P/E cores, worker count capped by the memory budget,
+      deterministic cross-layer `VoidTracker` merge.
+- [ ] 5. Stop running `analyze_layers` twice inside `prepare` — share one
+      analysis between `pipeline._reslice` and `island_guard.scan_assembly_islands`.
+      Keep GOO's three independent passes (gotchas.md: the verify pass must
+      re-raster from source).
+- [ ] 6. Persist the Z-interval structure on the `Rasterizer` across passes
+      instead of rebuilding it (native/raster.cpp:53-66).
+- [ ] 7. Fold `UnionLayerStream`'s per-group slices into one native call
+      (assembly.py:239-268).
+- [ ] 8. Port the pure-Python voxel loops: `hollow._bottom_open`,
+      `hollow._infill_mask` hex branch.
+- [ ] 9. Cache the support KD-tree across island-guard replan passes.
 
-Do not print: the FEP film needs replacement. Read-only printer status,
-attributes, history, and camera access are authorized and have been exercised;
-no upload, motion, settings, or print command is allowed.
-Keep physical scale/calibration unchanged until measured print results exist.
+Run `scripts/equivalence.py` after each item. Commit each item separately.
 
-Prior implementation evidence is preserved in
-[the historical ledger](docs/implementation-history-2026-09-09.md). That file
-contains superseded checklists; this file is the current work list.
+## Phase 3 — extract `libvoxelmill_core` (C++17 + C ABI)
 
-## Review and implementation in progress
+- [ ] CMake restructure: logic into `libvoxelmill_core`, `_native` becomes
+      bindings only, add a `voxelmill` executable target.
+- [ ] Vendor Manifold's C++ library via `FetchContent`, pinned to match the
+      `manifold3d==3.3.2` wheel. Highest-risk item: ~38 call sites depend on it
+      and only the Python wheel exists on this machine. Do not reimplement CSG.
+- [ ] Port stages behind `VOXELMILL_NATIVE_<STAGE>=0/1` env switches so both
+      paths can be A/B'd in one build. Replace in order: `ndimage.label` ->
+      native CCL; `distance_transform_edt` -> Felzenszwalb-Huttenlocher EDT;
+      `cKDTree` -> native KD-tree; `ConvexHull`/`Delaunay` -> Qhull;
+      `csgraph.connected_components` -> adjacency-list CCL.
+- [ ] Remove each switch once its native path has been green for a full run.
 
-- [x] Reproduce Grok baseline: 651 passed, 10 skipped (68.27 s).
-- [x] Fix tree support thickness clearance, branch slope and stale support graph.
-      Independent geometry/connectivity and obstruction regressions added.
-- [x] Multi-object graphical placement, shared supports, portable project meshes,
-      model-solid collision checks, CLI `--add-model-spec`, File menu Quit.
-      Opening a single STL no longer crashes in `_finish_place`.
-- [x] CTB GUI layer access and `slice`/export to CTB. Reader/writer/verify/
-      convert for unencrypted v3 are implemented; encrypted and v4/v5 stay
-      rejected. Layers-tab source id remains `goo` with `format=ctb`.
-- [x] Default CUDA selection with CPU fallback, preferences and CLI
-      `--acceleration`/`--cuda-device`. Morphology uses the selected backend;
-      native CUDA compiled and one device is available on this machine.
-- [x] Original-fixture baseline: 9 sample tests pass (67.20 s).
-- [x] Full suite this round: 689 passed, 10 skipped (70.05 s).
-- [x] `VOXELMILL_SAMPLES=1`: 9 sample tests passed (69.59 s). xvfb VTK render
-      passed. CLI AppImage staged and packed (59 MiB). Full editor AppImage
-      packed (406 MiB) with PySide6/VTK; `gui --help` and editor imports
-      succeed from the image.
-- [x] Clean CMake reconfigure finds nvcc 11.5 when venv pybind11 3.0.4 is on
-      `pybind11_DIR`; `cuda_morphology.cu` is on the native link line.
+## Phase 4 — standalone native CLI
 
-## Remaining software work from plan2
+- [ ] `vm_cli_main(argc, argv)` in the core; the binary is a one-line `main`,
+      and `voxelmill.cli:main` becomes a thin binding onto the same symbol so
+      the 29 in-process test files keep working unchanged.
+- [ ] Option table (~40 shared flags, 27 subcommands, ~150-180 flags total),
+      `--set section.key=value` merge, config/profile precedence and provenance,
+      TOML reader, JSON writer preserving `allow_nan=False` and key order,
+      `.voxmil` ZIP with `project.py`'s bomb/member-count preflight checks.
+- [ ] Completions and man pages from a static option table; output must stay
+      byte-identical (`tests/test_shellhelp.py` runs a real subprocess).
+- [ ] Point `gui/operations.py:210` at the binary instead of
+      `sys.executable -m voxelmill.cli`.
 
-- [x] N13 budget-driven voxel coarsening within the existing deviation limit
-      (derived pitch may coarsen up to the no-headroom ceiling; explicit
-      `voxel_size_mm` still raises).
-- [x] N15 bounded tolerant welding (`repair.weld_tolerance_mm`, default 0,
-      cap 0.05 mm, spatial hash). `inspect_mesh` remains exact.
-- [x] C8 `voxelmill cap` fills near-planar open boundary loops; non-planar
-      holes are refused. Marked q00 skull sample reaches honest
-      `cap_incomplete` topology refusal; no fabricated cap is emitted.
-- [x] E7 TSMC retract=lift sums and stage-2 speed checks. B4 coverage
-      greyscale AA (`process.antialias_levels` 1/2/4). B5 remains uncalibrated.
-- [x] F1 threaded label prefetch in `analyze_layers` (memory-capped). F2/F3/F4
-      still wait on a prepare-on-original profile.
-- [x] C2 `voxelmill hollow`, C4 drain/vent pairs, C9 `voxelmill thickness`,
-      C3 grid/hex/gyroid infill.
-- [x] G3 typed settings table, G1 Simple/Advanced/Expert, G9 wizard (TTY only),
-      G6 History menu, G7 notifications, G8 theme/shortcuts, G11 docks, G10
-      autosave recovery (`offer_recovery`).
-- [x] A8 resin-embedded `support_presets` consumed by `--support-preset`.
-- [x] E8 `voxelmill calibrate exposure|tolerance` (offline GOO + JSON map).
-- [ ] Real float-valve correction/orientation acceptance; retain all failing
-      validations and source parity evidence without relaxing thresholds.
-- [x] Full-resolution skull/temporal-bone GUI coverage (right temporal bone
-      and skull q00 render/scrub under isolated XDG cache); bounded/tiled
-      full-panel analysis. Original GUI evidence does not claim print
-      acceptance or corrected support routing.
-- [ ] Synchronize externally published roadmap when its editing tool is available.
-- [x] Relocatable AppImage (`scripts/build_appimage.py`). CLI-only (~59 MiB)
-      and full editor (~406 MiB packed with PySide6/VTK; double-click opens
-      `gui`). Host OpenGL is still required. CUDA is not bundled.
-- [x] Per-object `overrides.support` on `--add-model-spec` / added objects;
-      contour and open-boundary contact sampling (`--contour-supports`,
-      `--boundary-supports`). Face sampling remains the default downward
-      lattice. Tree clustering is unchanged.
-- [x] Read-only printer monitor (`voxelmill monitor` and File > Printer
-      monitor): status/attributes telemetry, RTSP camera with FFmpeg/UDP
-      fallback, batched print history, and time-lapse downloads. No upload,
-      motion, settings, or print controls are exposed.
-- [x] Read-only Cmd 258 storage sweep against the idle Mars 5 Ultra, merged
-      into `reports/plan2/printer-monitor-2026-09-10.json`. `storage()` reads
-      capacity from the root listing (`/local`, 6.74 GB, 63.8% used) and keeps
-      unknown sizes `None`. Recorded firmware behaviour: `/usb/` returns
-      unnamed placeholder records when no disk is attached, names carry a
-      doubled separator, and `..` in `Url` is not sanitized. Nothing outside
-      `/local/` was opened or downloaded.
-- [x] AppImage icon package uses the dark full-color design by default, with
-      scalable SVG and hicolor PNG sizes; light and symbolic variants remain
-      available for appropriate small/icon contexts.
+## Phase 5 — optional CUDA
 
-## Needs physical evidence or unavailable specifications
+Re-profile first; phases 2-3 reshape the distribution. Every path opt-in via the
+existing `--acceleration auto|cpu|cuda` contract, identical results to CPU, and
+the build and tests must pass with no GPU and no CUDA compiler.
 
-- [ ] Replace FEP before any printing; physical GOO mirroring, support mechanics
-      (D6), LED uniformity (E6), printer acceptance (H4), time calibration (I3),
-      orientation weight fitting (C10), and a passing float-valve print.
-- [ ] B3 additional printer profiles require verified specifications.
-- [ ] CHITUBOX spacing, skate elongation, whole-small-pillar maximum length
-      and missing transition geometry remain unmeasured; do not invent them.
+- [ ] Per-layer connected-component labeling on GPU (best fit; batches across
+      layers).
+- [ ] Batched EDT (PBA+).
+- [ ] Make `native/cuda_morphology.cu` separable and shared-memory aware; it is
+      currently one thread per pixel with a brute-force footprint scan.
+- [ ] Share one device-resident batched-layer buffer between the CCL and EDT
+      kernels so PCIe transfer does not eat the win.
+- [ ] Probably skip: GPU rasterization (1.5 % of runtime), GPU orientation
+      search (not the bottleneck).
+
+## Phase 6 — bracing flags, docs, release
+
+- [ ] Add `--brace-spacing-mm`, `--brace-start-height-mm`,
+      `--brace-diameter-mm`, `--brace-max-distance-mm` alongside
+      `--auto-bracing` (cli.py:884), wired through `_overrides`. The GUI needs
+      no change — both its surfaces are generated from `config.DEFAULTS`.
+- [ ] CLI tests for the four new flags; update docs/cli.md, docs/configuration.md.
+- [ ] Update README.md, docs/architecture.md, docs/packaging.md for the
+      core/binary split. Tag v0.2.0.
+
+## Verified findings (do not re-derive)
+
+- Support "bridging" is called **bracing** here: `support.auto_bracing` plus
+  `brace_spacing_mm`, `brace_start_height_mm`, `brace_diameter_mm`,
+  `brace_max_distance_mm` (config.py:71,118,119; `supports._brace`
+  supports.py:1258). The GUI exposes all five by construction — both
+  `settings_table.build_descriptors()` and `ConfigurationEditor` are generated
+  from `config.DEFAULTS`, and tests assert 1:1 coverage. The CLI has a named
+  flag only for `auto_bracing`; the four sizing parameters are reachable only
+  through the generic `--set`. That asymmetry is the one real gap. -> Phase 6.
+- Python startup is not a bottleneck: `import voxelmill.cli` is 0.10 s,
+  `numpy+scipy+manifold3d` 0.20 s. A standalone binary saves ~0.3 s per run.
+- The hot kernels are already C++ (native/raster.cpp, mesh.cpp, voxel.cpp,
+  goo.cpp, ctb.cpp, distance.cpp, intersections.cpp). Rewriting them in C gains
+  nothing; the win is architectural.
+- `native/module.cpp:29-35` binds `tbb::global_control` as a worker *ceiling*.
+  No kernel anywhere calls `tbb::parallel_for`. Nothing is actually parallel.

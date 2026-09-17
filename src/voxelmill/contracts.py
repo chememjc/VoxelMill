@@ -40,6 +40,10 @@ class ResourceBudget:
     scratch_dir: str | None = None
     acceleration: str = 'auto'
     cuda_device: int = 0
+    # Which class of core to prefer when pinning. 'performance' for foreground
+    # work, 'efficiency' for background jobs that must not stall an editor,
+    # 'all' to decline to restrict the process at all.
+    worker_policy: str = 'performance'
     # Carried on the resources table so settings can splat into this dataclass.
     # It is not a memory limit; hooks.py reads settings, not the budget.
     post_slice_hook: str | None = None
@@ -48,6 +52,8 @@ class ResourceBudget:
             raise VoxelMillError("resource_budget", "Memory must be >= 0.25 GiB and workers between 1 and 32")
         if self.acceleration not in ('auto', 'cpu', 'cuda') or self.cuda_device < 0:
             raise VoxelMillError("resource_budget", "Acceleration must be auto, cpu, or cuda and CUDA device nonnegative")
+        if self.worker_policy not in ('performance', 'efficiency', 'all'):
+            raise VoxelMillError("resource_budget", "Worker policy must be performance, efficiency, or all")
     def require(self, estimated_bytes: int, operation: str):
         if estimated_bytes > self.memory_gib * 1024**3 * 0.8:
             raise VoxelMillError("memory_budget", f"{operation} exceeds working memory budget", {"estimated_bytes": estimated_bytes})

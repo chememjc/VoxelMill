@@ -18,6 +18,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGING = ROOT / 'packaging' / 'appimage'
+VERSION = (ROOT / 'src' / 'voxelmill' / '__init__.py').read_text().split(
+    '__version__ = "')[1].split('"')[0]
 SKIP_LIBS = {
     'linux-vdso.so.1', 'ld-linux-x86-64.so.2', 'libc.so.6', 'libm.so.6',
     'libpthread.so.0', 'libdl.so.2', 'librt.so.1', 'libresolv.so.2',
@@ -46,7 +48,7 @@ def _ignore_site(_directory, names):
         'pip', 'pip-22.0.2.dist-info', '__pycache__', 'tests',
         '_distutils_hack', 'distutils-precedence.pth',
         '_voxelmill_editable.pth', '_voxelmill_editable.py',
-        'voxelmill-0.1.0.dist-info',
+        f'voxelmill-{VERSION}.dist-info',
         # Editor runtime does not need WebEngine, QML or designer tools.
         'QtWebEngine', 'QtWebEngineCore', 'QtWebEngineWidgets', 'QtWebEngineQuick',
         'Qt6WebEngine', 'Qt6WebEngineCore', 'Qt6WebEngineWidgets',
@@ -199,7 +201,7 @@ def pack_appdir(appdir: Path, output: Path, tool: Path):
     output.parent.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env.setdefault('ARCH', 'x86_64')
-    env.setdefault('VERSION', '0.1.0')
+    env.setdefault('VERSION', VERSION)
     subprocess.run([str(tool), '--no-appstream', str(appdir), str(output)],
                    check=True, env=env)
 

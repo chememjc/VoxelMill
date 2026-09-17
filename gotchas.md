@@ -1076,3 +1076,87 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   a ring drag must accumulate `wrap_angle` of each frame's *increment*: taking
   `wrap_angle` of the total against the drag's start caps a drag at half a
   turn and flips its sign past that.
+
+## v0.2.0 — native core and threading
+
+- **`prepare` spends 97% of its time in `validation.py`, not in the
+  rasterizer.** A cProfile of `prepare fixtures/shapes/overhang_bracket.stl`
+  (85.5 s under the profiler) puts 83.1 s inside `analyze_layers`: 74.5 s in
+  the `_consume` per-layer body, 31.6 s in `_growth_pixels`, 29.7 s in
+  `VoidTracker.add`, and 27.4 s of *tottime* in `numpy.ufunc.reduce` — dense
+  `.any()` reductions, 32 617 of them reached through `block_any`.
+  `raster.slice_coverage`, the actual scan conversion, is 1.3 s. Optimize the
+  per-layer analysis; do not start with the rasterizer, and do not put it on a
+  GPU on the assumption that scan conversion is the cost.
+
+- **`execution_limits` pinned every thread to one physical core.** It took
+  `sorted(os.sched_getaffinity(0))[:budget.workers]`, and cpu numbering puts
+  SMT siblings adjacently, so the default `workers=2` selected cpu0 and cpu1 —
+  the two hyperthreads of a single P-core, with 23 cores idle. Selecting two
+  *distinct* cores instead took the bracket `prepare` from 73.7 s to 61.3 s
+  with no other change. Choose cpus through `topology.select_cpus`, never by
+  taking the lowest N.
+
+- **An average SMT factor describes no real core on a hybrid CPU.**
+  32 logical / 24 physical rounds to 1, which is wrong for the P-cores (2) and
+  right for the E-cores by accident. Report the widest core instead.
+
+- **`.goo` files are never byte-identical between two runs.** The header
+  carries `file_create_time` from `time.strftime` at write time, plus
+  `software_version`. Any equivalence check between versions has to normalize
+  those two fields and compare the layer payloads, not the whole file.
+
+- **`header_from_settings` hardcoded the version string.** It wrote
+  `software_version='0.1.0'` into every GOO header as a default argument, so a
+  release bump silently left stale provenance in the output. It now defaults to
+  `voxelmill.__version__`; `scripts/build_appimage.py` had the same literal in
+  two places and now reads the package version too.
+
+- **Python startup is not a bottleneck worth rewriting for.**
+  `import voxelmill.cli` is 0.10 s and `numpy + scipy + manifold3d` is 0.20 s,
+  against runs measured in tens of seconds. Heavy imports are already lazy. A
+  standalone native binary is worth building for deployment and for owning the
+  scheduling, not for process startup.
+
+- **Nothing in `native/` is actually parallel.** `native/module.cpp` binds
+  `tbb::global_control` as `WorkerLimit`, which is a concurrency *ceiling*; no
+  kernel in `mesh.cpp`, `raster.cpp`, `voxel.cpp`, `intersections.cpp` or
+  `distance.cpp` calls `tbb::parallel_for`. Linking TBB is not using it.
+
+- **Only the `manifold3d` Python wheel exists on this machine — no C++
+  headers.** Moving boolean operations into a native core means vendoring
+  upstream Manifold through CMake `FetchContent` at a version matching the
+  pinned wheel, which is build-system work, not a code port. Roughly 38 call
+  sites across `geometry.py`, `assembly.py`, `bases.py`, `ops.py`, `hollow.py`,
+  `repair.py`, `support_segments.py` and `pipeline.py` depend on it behaving
+  identically.
+
+- **Support "bridging" is called bracing in this codebase.** The feature is
+  `supports._brace`, gated by `support.auto_bracing` and sized by
+  `brace_spacing_mm`, `brace_start_height_mm`, `brace_diameter_mm` and
+  `brace_max_distance_mm`. Grep for `bridge` and you will find only a GUI/CLI
+  docstring. Both GUI surfaces expose all five by construction — they are
+  generated from `config.DEFAULTS` — so a missing bracing control can only ever
+  be a CLI gap.
+
+- **Raising `--workers` does nothing, because only the prefetch is parallel.**
+  The bracket `prepare` takes 61.3, 61.2, 61.6, 61.0 and 60.5 s at 2, 4, 8, 16
+  and 24 workers, while peak RSS climbs from 656 MB to over 1 GB. The pool in
+  `analyze_layers` submits only `_label_occupancy`; `_consume` runs on the main
+  thread and carries `_growth_pixels`, `forest.add` and the dense reductions.
+  Worker count is not a tuning knob until that loop is restructured, so leave
+  the default at 2 rather than paying the memory for nothing.
+
+- **`scipy.ndimage` releases the GIL; NumPy reductions do not.** Measured with
+  8 Python threads on layer-sized masks: `distance_transform_edt` 4.3x,
+  `binary_erosion` 5.0x, `ndi.label` 3.3x, and `ndarray.any()` 0.28x — slower
+  than serial. Per-layer scipy work can therefore be threaded in Python before
+  any native port; the dense `.any()` reductions cannot, and have to be
+  removed by making layers sparse instead of by threading them.
+
+- **Report JSON is deterministic across worker counts, but not textually
+  stable.** Runs at 4, 8 and 16 workers produced byte-identical STL output and
+  no substantive report difference. What does differ, and must be normalized by
+  any equivalence check: `seconds` at every nesting depth, `peak_rss_bytes`,
+  `scratch_bytes`, `analysis_workers`, the output path, the per-run scratch
+  directory `/tmp/voxelmill-prepare-<random>/`, and `settings.resources.*`.

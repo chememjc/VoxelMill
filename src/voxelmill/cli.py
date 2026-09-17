@@ -62,6 +62,30 @@ def _rotation(value):
         raise VoxelMillError('invalid_option', '--rotate expects finite numeric angles or auto') from exc
 
 
+def _workers(value):
+    """Resolve `--workers`, where `auto` means one worker per physical core.
+
+    Resolved here rather than as an argparse `type=` callable: those run inside
+    `parse_args`, which `main` does not wrap, so a bad value would surface as a
+    traceback instead of the JSON error envelope every other option produces.
+    The settings table keeps a plain int; `auto` never reaches it.
+
+    One worker per physical core rather than per logical cpu, because the layer
+    analysis this sizes is memory-bandwidth-bound and an SMT sibling contends
+    for the same cache instead of adding throughput.
+    """
+    if value is None:
+        return None
+    if str(value).strip().lower() == 'auto':
+        from .topology import default_workers
+        return default_workers()
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise VoxelMillError('invalid_option',
+                             f'--workers expects an integer from 1 to 32 or auto, got {value!r}') from None
+
+
 def _overrides(args):
     changes = {}
     if getattr(args, 'process_preset', None):
@@ -96,11 +120,12 @@ def _overrides(args):
     put('repair', 'voxel_size_mm', args.repair_voxel_mm)
     put('repair', 'aggressiveness', args.repair)
     put('assembly', 'clip_to_build_volume', args.clip_to_build_volume)
+    put('resources', 'worker_policy', getattr(args, 'worker_policy', None))
     put('process', 'layer_height_mm', args.layer_height_mm)
     put('process', 'elephant_foot_compensation_mm', args.elephant_foot_mm)
     put('process', 'elephant_foot_layers', args.elephant_foot_layers)
     put('resources', 'memory_gib', args.memory_gib)
-    put('resources', 'workers', args.workers)
+    put('resources', 'workers', _workers(args.workers))
     put('resources', 'scratch_dir', args.scratch_dir)
     put('resources', 'acceleration', getattr(args, 'acceleration', None))
     put('resources', 'cuda_device', getattr(args, 'cuda_device', None))
@@ -953,7 +978,13 @@ def build_parser():
     common.add_argument('--memory-gib', type=float,
                         help='address-space ceiling for this run; exceeding it raises '
                              'memory_budget rather than inviting the OOM killer')
-    common.add_argument('--workers', type=int, help='CPU workers, 1 to 32')
+    common.add_argument('--workers',
+                        help='CPU workers, 1 to 32, or auto for one per physical core')
+    common.add_argument('--worker-policy',
+                        choices=('performance', 'efficiency', 'all'),
+                        help='which cores to pin workers to; performance keeps foreground '
+                             'runs off the efficiency cores, efficiency leaves the fast '
+                             'cores free for an interactive session, all declines to pin')
     common.add_argument('--scratch-dir',
                         help='directory for placed-triangle memmaps and staged exports; '
                              'defaults to the system temporary directory')

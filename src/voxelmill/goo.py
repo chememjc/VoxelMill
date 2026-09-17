@@ -147,8 +147,10 @@ def preview_from_heightmap(heights, size):
 
 
 def header_from_settings(settings, layer_count, *, volume_mm3=0.0, print_time_s=0,
-                         software='voxelmill', software_version='0.1.0', created=None):
+                         software='voxelmill', software_version=None, created=None):
     """Map resolved settings onto GOO header values. Motion comes from the profile."""
+    if software_version is None:
+        from . import __version__ as software_version
     printer, process, resin = settings['printer'], settings['process'], settings['resin']
     if not 1 <= layer_count <= MAX_LAYERS:
         raise VoxelMillError('goo_layers', f'Layer count must be between 1 and {MAX_LAYERS}')

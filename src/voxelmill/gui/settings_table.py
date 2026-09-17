@@ -62,6 +62,7 @@ ENUM_CHOICES = {
     'repair.support_void_policy': SUPPORT_VOID_POLICIES,
     'assembly.union': ('auto', 'exact', 'raster'),
     'resources.acceleration': ('auto', 'cpu', 'cuda'),
+    'resources.worker_policy': ('performance', 'efficiency', 'all'),
     'hollow.mode': ('inner', 'outer'),
     'hollow.infill': ('none', 'gyroid', 'grid'),
 }
@@ -119,6 +120,7 @@ OVERRIDES: dict[str, dict[str, Any]] = {
     'resources.memory_gib': {'tier': 'advanced', 'unit': 'GiB', 'range': (0.25, 1024.0)},
     'resources.workers': {'tier': 'advanced', 'range': (1, 256)},
     'resources.acceleration': {'tier': 'advanced'},
+    'resources.worker_policy': {'tier': 'advanced'},
     'resources.cuda_device': {'tier': 'advanced', 'range': (0, 16)},
     'resources.post_slice_hook': {'tier': 'expert', 'risk': 'caution'},
     'resources.scratch_dir': {'tier': 'expert'},
