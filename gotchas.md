@@ -1226,3 +1226,47 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   embed the tree root, which differs by construction between the two sides.
   Normalizing only `path` made every `prepare` and `slice` compare as DIFFERS
   for a reason that had nothing to do with the code under test.
+
+- **A green equivalence tally is not coverage — read the step columns.** The
+  harness stopped a scenario at the first nonzero returncode, and `prepare`
+  exits 2 on many fixtures, so six of the thirteen never reached `slice` and
+  the GOO encoder was compared on two shapes while the summary line said
+  "13/13 scenarios matching". `--allow-unresolved` waives *unresolved islands
+  only*; `torus` still fails `enclosed_voids` and `drainage_bottlenecks` and
+  exits 2 while writing a perfectly good `prepared.stl`. Any harness that
+  treats "both sides failed identically" as a match has to keep comparing
+  after that point, or the failure path becomes a coverage hole that reports
+  itself as a pass.
+
+- **`prepare` writes its output alongside a failing verdict.** A nonzero exit
+  means validation found something, not that nothing was produced. The written
+  mesh is complete and worth comparing; skipping it because the command
+  "failed" discards the most direct evidence that two trees compute the same
+  geometry.
+
+- **The golden-comparison path does not work yet.** `main` guards for a
+  missing old root (equivalence.py:543) and there is a new-vs-golden diff
+  block (equivalence.py:465), but `evaluate_scenario` returns
+  `'shape missing under old root'` with `ok=False` before either can matter,
+  because `old_steps is None` is treated as an error unconditionally. Goldens
+  can be recorded, but a golden-only run still fails. Fix `evaluate_scenario`
+  before relying on goldens to skip the slow side.
+
+- **A check that was skipped must not report `pass`.** `checks` entries are
+  initialized optimistically and only downgraded on failure, so gating a
+  computation off leaves its verdict reading as verified. `track_voids=False`
+  already handled this by forcing `'not_run'`; `check_growth=False` had to do
+  the same, and drop `growth_violation_pixels` rather than publish a 0 that
+  looks like a measurement. Any new "skip this work" flag inherits this
+  obligation.
+
+- **`pipeline._reslice` and `island_guard.scan_assembly_islands` cannot share
+  one `analyze_layers`.** They look redundant and are not. The island guard
+  rasterizes each assembly group separately and ORs them (assembly.py:270);
+  the reslice re-reads the *written* STL as one flat soup under the nonzero
+  winding rule, where overlapping shells can cancel (raster.py:125-127). That
+  divergence is exactly what `RasterParity` exists to detect, `write_stl`
+  downcasts every vertex to float32 on the way out (mesh.py:293), and
+  pipeline.py:3-9 states the reslice exists to describe the file actually
+  written rather than the in-memory solid. Make each call cheaper; do not
+  merge them.
