@@ -1,0 +1,1354 @@
+"""Support detection, routing and geometry for a single placed part.
+
+The analysis is driven by two independent sources of evidence, because neither
+alone is sufficient:
+
+* the mesh itself, for downward-facing area that must be contacted at the
+  configured spacing, and
+* an internal raster of the placed model, for pixel islands that are born with
+  no material beneath them at all, which a face sampler can miss on spikes.
+
+Routing prefers a vertical pillar to the plate, then an angled branch from a
+free neighbouring column, then a contact onto model material that is already
+printed lower down. Unroutable contacts that already have material in a 3x3
+printer-pitch neighbourhood one layer below are dropped when
+``support.drop_attached_unroutable`` is on (the default): they are near-vertical
+walls sampled on both sides of the surface and do not need a pillar. Island
+births and manual/correction contacts are never dropped. Everything else the
+router could not solve is reported. Mechanical limits (slenderness, span,
+bracing, anchor load) are configured heuristics and are labeled as such; only
+the raster island and connectivity findings are exact for the documented masks.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+import math
+import time
+
+import numpy as np
+from scipy import ndimage as ndi
+
+from .contracts import (CancellationToken, VoxelMillError, Diagnostic, ResourceBudget,
+                        SupportEdge, SupportGraph, SupportNode, no_progress)
+from .geometry import cylinder_between
+from .bases import build_base
+from .raster import RasterGrid
+from .contact_parameters import (contact_key, normalize_contact_parameters,
+                                  parameters_for_contact)
+from .paint import apply_paint, normalize_paint
+
+CROSS = ndi.generate_binary_structure(2, 1)
+
+
+@dataclass
+class ColumnField:
+    """Run-length occupancy of the placed model on a coarse analysis grid.
+
+    ``lo``/``hi`` are half-open layer indices per column, stored CSR-style so a
+    column's runs are ``lo[ptr[c]:ptr[c+1]]``. Runs are ascending and disjoint.
+    """
+    grid: RasterGrid
+    z0: float
+    dz: float
+    layers: int
+    ptr: np.ndarray
+    lo: np.ndarray
+    hi: np.ndarray
+    islands: list = field(default_factory=list)
+    metrics: dict = field(default_factory=dict)
+    first_material: np.ndarray = None
+    #: Per run, whether the empty space immediately ABOVE it ever reaches the
+    #: exterior. A contact on the underside of run r sits in the gap above run
+    #: r-1; runs with index 0 sit above the open plate side.
+    gap_exterior: np.ndarray = None
+
+    def __post_init__(self):
+        # Layer index of the lowest material in each column, or ``layers`` when
+        # the column is empty. A column is free to the plate below layer k
+        # exactly when this value is at least k, which makes the routing test a
+        # single array lookup instead of a run search.
+        if self.first_material is None:
+            first = np.full(self.grid.width * self.grid.height, self.layers, dtype=np.int32)
+            counts = np.diff(self.ptr)
+            occupied = np.flatnonzero(counts > 0)
+            if len(occupied):
+                first[occupied] = self.lo[self.ptr[occupied]]
+            self.first_material = first.reshape(self.grid.height, self.grid.width)
+
+    def column(self, row, col):
+        return int(row) * self.grid.width + int(col)
+
+    def index_of(self, x, y):
+        c = int(math.floor((x - self.grid.x0) / self.grid.dx))
+        r = int(math.floor((y - self.grid.y0) / self.grid.dy))
+        if not (0 <= c < self.grid.width and 0 <= r < self.grid.height):
+            return None
+        return r * self.grid.width + c
+
+    def layer_of(self, z):
+        return int(math.floor((z - self.z0) / self.dz))
+
+    def z_of(self, index):
+        return self.z0 + index * self.dz
+
+    def runs(self, column):
+        start, stop = int(self.ptr[column]), int(self.ptr[column + 1])
+        return self.lo[start:stop], self.hi[start:stop]
+
+    def reachable(self, column, layer_index):
+        """True when the empty space just below ``layer_index`` drains outside.
+
+        A contact inside a sealed cavity can be neither reached nor removed, so
+        no support may be routed to it however printable the route looks.
+        """
+        if self.gap_exterior is None:
+            return True
+        start, stop = int(self.ptr[column]), int(self.ptr[column + 1])
+        lo = self.lo[start:stop]
+        position = int(np.searchsorted(lo, layer_index, side='right'))
+        if position <= 1:
+            return True  # open plate-side air below the lowest run
+        return bool(self.gap_exterior[start + position - 2])
+
+    def blocked(self, column, lo_index, hi_index):
+        """True when any run overlaps the half-open layer span."""
+        lo, hi = self.runs(column)
+        if not len(lo) or hi_index <= lo_index:
+            return False
+        position = np.searchsorted(lo, hi_index, side='left')
+        return bool(position > 0 and hi[position - 1] > lo_index)
+
+    def top_below(self, column, index):
+        """Highest run top that is at or below ``index``; None when free."""
+        lo, hi = self.runs(column)
+        position = np.searchsorted(hi, index, side='right')
+        return int(hi[position - 1]) if position else None
+
+
+def build_column_field(triangles, bounds, settings, *, pitch_mm=None, budget=None,
+                       cancel=None, progress=no_progress):
+    """Raster the placed model once and keep only per-column runs and islands."""
+    from . import _native
+    budget = budget or ResourceBudget(**settings['resources'])
+    cancel = cancel or CancellationToken()
+    bounds = np.asarray(bounds, dtype=float)
+    printer_pitch = min(settings['printer']['pixel_pitch_mm'])
+    pitch = float(pitch_mm) if pitch_mm else max(printer_pitch, min(settings['support']['spacing_mm'] / 20.0, 0.15))
+    dz = float(settings['process']['layer_height_mm'])
+    x0 = bounds[0][0] - 2 * pitch
+    y0 = bounds[0][1] - 2 * pitch
+    width = int(math.ceil((bounds[1][0] - bounds[0][0]) / pitch)) + 4
+    height = int(math.ceil((bounds[1][1] - bounds[0][1]) / pitch)) + 4
+    grid = RasterGrid(width, height, x0, y0, pitch, pitch)
+    layers = max(1, int(math.ceil((bounds[1][2] - 1e-9) / dz)))
+    budget.require(width * height * 40 + len(triangles) * 80 + 128 * 1024**2, 'support column analysis')
+    raster = _native.Rasterizer(np.asarray(triangles), cancel.check)
+    previous = np.zeros(width * height, dtype=bool)
+    open_columns, open_layers, close_columns, close_layers, close_nodes = [], [], [], [], []
+    islands, odd_rows, negative = [], 0, 0
+    started = time.monotonic()
+    from .validation import VoidForest
+    forest = VoidForest(pitch * pitch * dz, budget)
+    for index in range(layers):
+        cancel.check()
+        result = raster.slice(bounds[0][2] + (index + 0.5) * dz if bounds[0][2] > 0 else (index + 0.5) * dz,
+                              width, height, x0, y0, pitch, pitch, cancel.check, 'nonzero')
+        odd_rows += result['odd_rows']
+        negative += result['negative_winding_crossings']
+        mask = result['mask'] != 0
+        flat = mask.ravel()
+        opened = np.flatnonzero(flat & ~previous)
+        closed = np.flatnonzero(~flat & previous)
+        if len(opened):
+            open_columns.append(opened)
+            open_layers.append(np.full(len(opened), index, dtype=np.int32))
+        empty_labels, empty_ids = forest.add(result['mask'], index, cancel)
+        if len(closed):
+            close_columns.append(closed)
+            close_layers.append(np.full(len(closed), index, dtype=np.int32))
+            # The component a column falls into the moment its run ends is the
+            # empty region directly above that run.
+            close_nodes.append(empty_ids[empty_labels.ravel()[closed]])
+        if len(opened):
+            labels, count = ndi.label(mask, CROSS)
+            if count:
+                overlap = np.bincount(labels.ravel()[previous], minlength=count + 1)
+                for component in np.flatnonzero(overlap[1:] == 0) + 1:
+                    pixels = np.argwhere(labels == component)
+                    row, col = pixels[len(pixels) // 2]
+                    islands.append({'layer': index, 'z_mm': bounds[0][2] + index * dz if bounds[0][2] > 0 else index * dz,
+                                    'pixels': int(len(pixels)),
+                                    'position_mm': grid.xy(int(row), int(col))})
+        previous = flat
+        progress('support_analysis', index + 1, layers)
+    remaining = np.flatnonzero(previous)
+    if len(remaining):
+        close_columns.append(remaining)
+        close_layers.append(np.full(len(remaining), layers, dtype=np.int32))
+        # Air beyond the last layer is open, so those gaps drain by definition.
+        close_nodes.append(np.full(len(remaining), -1, dtype=np.int64))
+    voids = forest.finish()
+
+    def _stack(columns, values):
+        if not columns:
+            return np.empty(0, np.int64), np.empty(0, np.int32)
+        return np.concatenate(columns).astype(np.int64), np.concatenate(values)
+
+    opened_c, opened_k = _stack(open_columns, open_layers)
+    closed_c, closed_k = _stack(close_columns, close_layers)
+    order = np.lexsort((opened_k, opened_c))
+    opened_c, opened_k = opened_c[order], opened_k[order]
+    nodes = np.concatenate(close_nodes).astype(np.int64) if close_nodes else np.empty(0, np.int64)
+    order = np.lexsort((closed_k, closed_c))
+    closed_c, closed_k, nodes = closed_c[order], closed_k[order], nodes[order]
+    exterior = np.ones(len(nodes), dtype=bool)
+    for position, node in enumerate(nodes):
+        if node >= 0:
+            exterior[position] = bool(forest.exterior[forest.find(int(node))])
+    if len(opened_c) != len(closed_c) or not np.array_equal(opened_c, closed_c):
+        raise VoxelMillError('support_analysis', 'Column run bookkeeping did not balance')
+    counts = np.bincount(opened_c, minlength=width * height)
+    ptr = np.zeros(width * height + 1, dtype=np.int64)
+    np.cumsum(counts, out=ptr[1:])
+    metrics = {'analysis_pitch_mm': pitch, 'layer_height_mm': dz, 'layers': layers,
+               'columns': width * height, 'runs': int(len(opened_c)),
+               'open_contour_rows': odd_rows, 'negative_winding_crossings': negative,
+               'raster_islands': len(islands), 'sealed_gaps': int((~exterior).sum()),
+               'enclosed_void_volume_mm3': voids['volume_mm3'],
+               'seconds': time.monotonic() - started}
+    return ColumnField(grid, bounds[0][2] if bounds[0][2] > 0 else 0.0, dz, layers, ptr,
+                       opened_k.astype(np.int32), closed_k.astype(np.int32), islands, metrics,
+                       gap_exterior=exterior)
+
+
+def downward_contacts(triangles, settings, *, cancel=None, progress=no_progress,
+                      max_lattice_faces=200000):
+    """Samples on downward faces shallower than the configured overhang angle.
+
+    ``overhang_angle_deg`` is measured from the plate: a face inclined at alpha
+    has vertical normal component ``-cos(alpha)``, so a face needs support
+    exactly when ``alpha`` is below the setting. A vertical wall (alpha = 90)
+    never qualifies; a horizontal ceiling (alpha = 0) always does.
+    """
+    cancel = cancel or CancellationToken()
+    support = settings['support']
+    limit = math.cos(math.radians(float(support['overhang_angle_deg'])))
+    spacing = float(support['spacing_mm'])
+    points, areas = [], 0.0
+    for start in range(0, len(triangles), 65536):
+        cancel.check()
+        chunk = np.asarray(triangles[start:start + 65536], dtype=np.float64)
+        normals = np.cross(chunk[:, 1] - chunk[:, 0], chunk[:, 2] - chunk[:, 0])
+        norm = np.linalg.norm(normals, axis=1)
+        valid = norm > 0
+        unit_z = np.zeros(len(chunk))
+        unit_z[valid] = normals[valid, 2] / norm[valid]
+        selected = valid & (unit_z < -limit)
+        if not selected.any():
+            continue
+        faces = chunk[selected]
+        areas += float(norm[selected].sum() / 2)
+        points.append(faces.mean(axis=1))
+        # A face wider than the spacing needs a lattice of contacts, not a
+        # centroid: a single flat underside is often one pair of triangles, and
+        # sampling it once leaves its whole perimeter unsupported.
+        areas_selected = norm[selected] / 2
+        big = np.flatnonzero(areas_selected > spacing * spacing / 2)
+        for index in big[:max_lattice_faces]:
+            cancel.check()
+            steps = int(min(64, max(1, math.ceil(math.sqrt(2 * areas_selected[index]) / spacing))))
+            lattice = np.array([(i, j, steps - i - j) for i in range(steps + 1)
+                                for j in range(steps - i + 1)], dtype=np.float64) / steps
+            points.append(lattice @ faces[index])
+        if support.get('contour_supports'):
+            contour = _perimeter_samples(faces, spacing)
+            if len(contour):
+                points.append(contour)
+        progress('overhang_scan', min(start + 65536, len(triangles)), len(triangles))
+    if support.get('boundary_supports'):
+        boundary = _open_boundary_samples(triangles, spacing)
+        if len(boundary):
+            points.append(boundary)
+    if not points:
+        return np.empty((0, 3)), areas
+    return np.concatenate(points), areas
+
+
+def _sample_segment(start, end, spacing):
+    start = np.asarray(start, dtype=np.float64)
+    end = np.asarray(end, dtype=np.float64)
+    length = float(np.linalg.norm(end - start))
+    steps = max(1, int(math.ceil(length / max(float(spacing), 1e-9))))
+    ts = np.linspace(0.0, 1.0, steps + 1)
+    return (1.0 - ts)[:, None] * start + ts[:, None] * end
+
+
+def _perimeter_samples(faces, spacing):
+    """Samples along edges that belong to only one downward face (the contour)."""
+    faces = np.asarray(faces, dtype=np.float64).reshape(-1, 3, 3)
+    if not len(faces):
+        return np.empty((0, 3))
+    counts = {}
+    segments = []
+    for face in faces:
+        for i in range(3):
+            a, b = face[i], face[(i + 1) % 3]
+            ra, rb = tuple(np.round(a, 5)), tuple(np.round(b, 5))
+            key = (ra, rb) if ra <= rb else (rb, ra)
+            counts[key] = counts.get(key, 0) + 1
+            segments.append((key, a, b))
+    points = []
+    for key, a, b in segments:
+        if counts[key] != 1:
+            continue
+        points.append(_sample_segment(a, b, spacing))
+    if not points:
+        return np.empty((0, 3))
+    return np.concatenate(points)
+
+
+def _open_boundary_samples(triangles, spacing, min_z=0.2):
+    """Samples along open mesh boundary edges that sit above the plate."""
+    from .ops import _directed_boundary_edges
+    tris = np.asarray(triangles, dtype=np.float64).reshape(-1, 3, 3)
+    if not len(tris):
+        return np.empty((0, 3))
+    rounded = np.round(tris.reshape(-1, 3), 5)
+    uniq, inverse = np.unique(rounded, axis=0, return_inverse=True)
+    directed, _count = _directed_boundary_edges(inverse.reshape(-1, 3))
+    points = []
+    for a, b in directed:
+        pa, pb = uniq[a], uniq[b]
+        if (float(pa[2]) + float(pb[2])) / 2 < min_z:
+            continue
+        points.append(_sample_segment(pa, pb, spacing))
+    if not points:
+        return np.empty((0, 3))
+    return np.concatenate(points)
+
+
+def _cells(points, spacing):
+    return np.rint(np.asarray(points, dtype=float) / spacing).astype(np.int64)
+
+
+def _thin(candidates, mandatory, spacing):
+    """Keep the lowest candidate per spacing-sized cell; mandatory always kept.
+
+    Vectorised: at full resolution a bone yields millions of downward-face
+    samples, and a Python loop over them dominates the whole run.
+    """
+    mandatory = np.asarray(mandatory, dtype=float).reshape(-1, 3)
+    candidates = np.asarray(candidates, dtype=float).reshape(-1, 3)
+    if not len(candidates):
+        return mandatory
+    order = np.argsort(candidates[:, 2], kind='stable')
+    ordered = candidates[order]
+    cells = _cells(ordered, spacing)
+    if len(mandatory):
+        taken = _cells(mandatory, spacing)
+        keys = np.concatenate((taken, cells))
+        _, first = np.unique(keys, axis=0, return_index=True)
+        chosen = np.sort(first[first >= len(taken)]) - len(taken)
+    else:
+        _, first = np.unique(cells, axis=0, return_index=True)
+        chosen = np.sort(first)
+    return np.concatenate((mandatory, ordered[chosen])) if len(mandatory) else ordered[chosen]
+
+
+@dataclass
+class SupportPlan:
+    graph: SupportGraph
+    feet: np.ndarray
+    solids: list
+    diagnostics: list
+    metrics: dict
+
+
+def _free_to_plate(field, column, top_index, clearance):
+    row, col = divmod(int(column), field.grid.width)
+    return bool(field.first_material[row, col] >= max(0, top_index - clearance))
+
+
+def _segment_clear(field, start, end, clearance, samples=16):
+    """Sample an angled branch against the column runs of the placed model."""
+    for step in range(samples + 1):
+        t = step / samples
+        x = start[0] + (end[0] - start[0]) * t
+        y = start[1] + (end[1] - start[1]) * t
+        z = start[2] + (end[2] - start[2]) * t
+        column = field.index_of(x, y)
+        if column is None:
+            return False
+        index = field.layer_of(z)
+        if field.blocked(column, max(0, index - clearance), index + clearance + 1):
+            return False
+    return True
+
+
+def select_contacts(triangles, field, settings, *, cancel=None, progress=no_progress,
+                    extra_contacts=(), removed_contacts=(), removal_radius_mm=None,
+                    paint=None, object_groups=None):
+    """Choose contact points. Returns ``(contacts, metrics)``.
+
+    Automatic candidates come from downward faces and from raster island births.
+    ``extra_contacts`` are kept unconditionally, which is what a correction pass
+    and a manual GUI edit both need; ``removed_contacts`` suppress automatic ones
+    within ``removal_radius_mm`` so a deletion survives a regeneration.
+    Painted blockers drop automatic samples (and their coverage requirement);
+    painted enforcers become extra contacts. Island births are never blocked.
+    ``object_groups`` samples each part with its own support overlay, then the
+    combined field still routes and validates the whole plate.
+    """
+    cancel = cancel or CancellationToken()
+    paint = normalize_paint(paint)
+    override_records = []
+    if object_groups:
+        sample_blocks, candidate_blocks, spacings, enforced_blocks = [], [], [], []
+        downward_area = 0.0
+        automatic_any = False
+        paint_metrics = {'blocked_marks': 0, 'enforced_marks': 0, 'samples_blocked': 0,
+                         'enforced_contacts': 0, 'automatic': False, 'block_wins_over_enforce': True}
+        from .contact_parameters import PERSONAL_FIELDS
+        for group in object_groups:
+            group_settings = group['settings']
+            spacing = float(group_settings['support']['spacing_mm'])
+            spacings.append(spacing)
+            samples, area = downward_contacts(
+                group['triangles'], group_settings, cancel=cancel, progress=progress)
+            samples, enforced, group_paint = apply_paint(samples, paint, spacing)
+            paint_metrics['blocked_marks'] = group_paint['blocked_marks']
+            paint_metrics['enforced_marks'] = group_paint['enforced_marks']
+            paint_metrics['samples_blocked'] += group_paint['samples_blocked']
+            paint_metrics['enforced_contacts'] += group_paint['enforced_contacts']
+            original = int(len(samples) + group_paint['samples_blocked'])
+            if original:
+                area *= len(samples) / original
+            sample_blocks.append(samples)
+            downward_area += area
+            enforced_blocks.append(enforced)
+            if group_settings['support']['automatic']:
+                automatic_any = True
+                thinned = _thin(samples, [], spacing)
+                candidate_blocks.append(thinned)
+                keys = tuple(group.get('override_keys') or ())
+                params = {key: group_settings['support'][key]
+                          for key in keys if key in PERSONAL_FIELDS}
+                if params:
+                    for point in np.asarray(thinned, dtype=float).reshape(-1, 3):
+                        override_records.append({
+                            'position_mm': [float(value) for value in point],
+                            'parameters': dict(params)})
+        samples = (np.concatenate(sample_blocks) if sample_blocks
+                   else np.empty((0, 3)))
+        candidates = (np.concatenate(candidate_blocks) if candidate_blocks
+                      else np.empty((0, 3)))
+        enforced = (np.concatenate(enforced_blocks) if enforced_blocks
+                    else np.empty((0, 3)))
+        spacing = min(spacings) if spacings else float(settings['support']['spacing_mm'])
+    else:
+        spacing = float(settings['support']['spacing_mm'])
+        automatic_any = bool(settings['support']['automatic'])
+        # Sample the downward faces even when automatic selection is off. They
+        # are what coverage is measured against, and a manual-only run is
+        # exactly when an uncovered overhang is likely, so the check must still
+        # be answerable.
+        samples, downward_area = downward_contacts(
+            triangles, settings, cancel=cancel, progress=progress)
+        samples, enforced, paint_metrics = apply_paint(samples, paint, spacing)
+        original = int(len(samples) + paint_metrics['samples_blocked'])
+        if original:
+            downward_area *= len(samples) / original
+        candidates = samples if automatic_any else np.empty((0, 3))
+    if automatic_any:
+        mandatory = [np.array([*island['position_mm'], island['z_mm']]) for island in field.islands]
+    else:
+        candidates, mandatory = np.empty((0, 3)), []
+    mandatory.extend(np.asarray(point, dtype=float) for point in extra_contacts)
+    mandatory.extend(np.asarray(point, dtype=float) for point in enforced)
+    contacts = _thin(candidates, mandatory, spacing)
+    removed = np.asarray(list(removed_contacts), dtype=float).reshape(-1, 3)
+    kept = np.asarray(list(extra_contacts), dtype=float).reshape(-1, 3)
+    if len(removed) and len(contacts):
+        radius = float(removal_radius_mm if removal_radius_mm is not None else spacing / 2)
+        from scipy.spatial import cKDTree
+        near = cKDTree(removed).query(contacts, distance_upper_bound=radius)[0]
+        survives = ~np.isfinite(near)
+        if len(kept):
+            protected = cKDTree(kept).query(contacts, distance_upper_bound=1e-9)[0]
+            survives |= np.isfinite(protected)
+        contacts = contacts[survives]
+    metrics = {'downward_face_area_mm2': downward_area, 'downward_samples': int(len(samples)),
+               'manual_contacts': int(len(kept)), 'suppressed_contacts': int(len(removed)),
+               'paint': paint_metrics, 'object_contact_parameters': override_records,
+               'object_groups': int(len(object_groups) if object_groups else 0)}
+    metrics.update(contact_coverage(samples, contacts, settings, downward_area))
+    return contacts, metrics
+
+
+def contact_coverage(samples, contacts, settings, downward_area_mm2):
+    """How far the downward faces sit from a contact, and what each one carries.
+
+    Coverage is the distance from every sampled downward face point to its
+    nearest contact; the load is that face area divided among contacts by
+    nearest assignment. Both are geometric: they say a contact was placed within
+    reach of an overhang and how much area leans on it, never that the resulting
+    pillar is strong enough. That needs calibration against real prints.
+    """
+    support = settings['support']
+    spacing = float(support['spacing_mm'])
+    gap_limit = float(support['max_contact_gap_mm']) or spacing
+    load_limit = float(support['max_contact_load_mm2']) or 4 * spacing ** 2
+    samples = np.asarray(samples, dtype=float).reshape(-1, 3)
+    contacts = np.asarray(contacts, dtype=float).reshape(-1, 3)
+    result = {'coverage_gap_limit_mm': gap_limit, 'contact_load_limit_mm2': load_limit,
+              'coverage_basis': 'sampled downward faces; geometric reach, not strength'}
+    if not len(samples):
+        return {**result, 'coverage': 'not_applicable', 'anchor_load': 'not_applicable'}
+    if not len(contacts):
+        return {**result, 'coverage': 'fail', 'anchor_load': 'not_applicable',
+                'uncovered_samples': int(len(samples)), 'uncovered_fraction': 1.0,
+                'max_contact_gap_mm': None, 'coverage_reason': 'no contacts for downward samples'}
+    from scipy.spatial import cKDTree
+    tree = cKDTree(contacts)
+    distance, nearest = tree.query(samples)
+    uncovered = int((distance > gap_limit).sum())
+    carried = np.bincount(nearest, minlength=len(contacts))
+    per_contact = carried * (float(downward_area_mm2) / len(samples))
+    overloaded = int((per_contact > load_limit).sum())
+    return {**result,
+            'max_contact_gap_mm': float(distance.max()),
+            'mean_contact_gap_mm': float(distance.mean()),
+            'uncovered_samples': uncovered,
+            'uncovered_fraction': uncovered / len(samples),
+            'coverage': 'fail' if uncovered else 'pass',
+            'max_contact_load_mm2_actual': float(per_contact.max()),
+            'overloaded_contacts': overloaded,
+            'anchor_load': 'fail' if overloaded else 'pass'}
+
+
+def _model_anchor_clear(field, column, x, y, surface_z, length, depth, radius, clearance, cancel):
+    """Bound a new bottom connector on the existing column analysis grid.
+
+    The lower endpoint must stay in the central column's immediately preceding
+    material run. Above that surface the full connector envelope plus XY
+    clearance must be empty. This is deliberately conservative for a taper,
+    and only as accurate as the column lattice.
+    """
+    low, high = field.runs(column)
+    # surface_z was produced by z_of(run_top); floor can lose one index on
+    # a floating-point round trip (for example 43 * .05 / .05).
+    top = int(round((surface_z - field.z0) / field.dz))
+    position = int(np.searchsorted(high, top, side='right')) - 1
+    if position < 0 or surface_z - depth < field.z_of(low[position]) - 1e-9:
+        return False
+    if not length:
+        return True
+    grid = field.grid
+    reach = radius + float(clearance)
+    c0 = max(0, int(math.floor((x - reach - grid.x0) / grid.dx)))
+    c1 = min(grid.width, int(math.ceil((x + reach - grid.x0) / grid.dx)))
+    r0 = max(0, int(math.floor((y - reach - grid.y0) / grid.dy)))
+    r1 = min(grid.height, int(math.ceil((y + reach - grid.y0) / grid.dy)))
+    last = int(math.ceil((surface_z + length - field.z0) / field.dz - 1e-9))
+    for row in range(r0, r1):
+        cancel.check()
+        for col in range(c0, c1):
+            # Distance to the nearest point of this cell, not its center.
+            dx = max(grid.x0 + col * grid.dx - x, x - (grid.x0 + (col + 1) * grid.dx), 0.)
+            dy = max(grid.y0 + row * grid.dy - y, y - (grid.y0 + (row + 1) * grid.dy), 0.)
+            if dx * dx + dy * dy <= reach * reach and field.blocked(field.column(row, col), top, last):
+                return False
+    return True
+
+
+def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8, max_diagnostics=256,
+                   contact_parameters=()):
+    """Route given contacts to the plate or to already-printed model material."""
+    cancel = cancel or CancellationToken()
+    global_support = settings['support']
+    normalized_parameters = normalize_contact_parameters(contact_parameters, settings)
+    support = global_support
+    started = time.monotonic()
+    spacing = float(support['spacing_mm'])
+    pillar_r = float(support['pillar_diameter_mm']) / 2
+    contact_r = float(support['contact_diameter_mm']) / 2
+    # The tip cone's lower radius is its own parameter. It defaulted to the
+    # pillar radius, and in the known-good CHITUBOX profile the two are equal,
+    # which is exactly why conflating them went unnoticed.
+    tip_base_r = (float(support['tip_base_diameter_mm']) / 2
+                  if support['tip_base_diameter_mm'] else pillar_r)
+    small_r = float(support['small_pillar_diameter_mm']) / 2
+    small_limit = float(support['small_pillar_max_length_mm'])
+    small_mode = support['small_pillar_mode']
+    branch_tangent = math.tan(math.radians(float(support['pillar_angle_deg'])))
+    tip = float(support['tip_length_mm'])
+    min_tip = float(support['min_tip_length_mm'])
+    penetration = float(support['penetration_mm'])
+    anchor_length = float(support['model_anchor_length_mm'])
+    anchor_depth = float(support['model_anchor_penetration_mm'])
+    global_pillar_r = pillar_r
+    global_anchor_length, global_anchor_depth = anchor_length, anchor_depth
+    global_small_r, global_small_limit = small_r, small_limit
+    global_tip, global_min_tip = tip, min_tip
+    global_tip_base_r = tip_base_r
+    clearance = max(1, int(math.ceil(float(support['support_clearance_mm']) / field.dz)))
+    contacts = np.asarray(contacts, dtype=float).reshape(-1, 3)
+    diagnostics, solids = [], []
+    graph = SupportGraph()
+    feet, pillars, foot_radii = [], [], []
+    routed = {'vertical': 0, 'branched': 0, 'model_anchor': 0}
+    failures = sealed = shortened = small_pillars = policy_blocked = 0
+    unroutable_positions = []
+    tree_jobs = []
+    heights = []
+    tips_used = []
+    anchor_rejected = 0
+    anchor_examples = []
+    small_models = 0
+    matched_override_keys = set()
+    for order, point in enumerate(contacts):
+        cancel.check()
+        local_parameters = parameters_for_contact(normalized_parameters, point)
+        key = contact_key(point)
+        if key in normalized_parameters.by_position:
+            matched_override_keys.add(key)
+        support = dict(global_support)
+        support.update(local_parameters)
+        pillar_r = float(support['pillar_diameter_mm']) / 2
+        contact_r = float(support['contact_diameter_mm']) / 2
+        tip_base_r = (float(support['tip_base_diameter_mm']) / 2
+                      if support['tip_base_diameter_mm'] else pillar_r)
+        small_r = float(support['small_pillar_diameter_mm']) / 2
+        small_limit = float(support['small_pillar_max_length_mm'])
+        small_mode = support['small_pillar_mode']
+        branch_tangent = math.tan(math.radians(float(support['pillar_angle_deg'])))
+        tip = float(support['tip_length_mm'])
+        min_tip = float(support['min_tip_length_mm'])
+        penetration = float(support['penetration_mm'])
+        anchor_length = float(support['model_anchor_length_mm'])
+        anchor_depth = float(support['model_anchor_penetration_mm'])
+        clearance = max(1, int(math.ceil(float(support['support_clearance_mm']) / field.dz)))
+        x, y, z = (float(v) for v in point)
+        column = field.index_of(x, y)
+        if column is None:
+            diagnostics.append(Diagnostic('support_outside_analysis',
+                                          'Contact fell outside the analysis grid', position_mm=[x, y, z]))
+            failures += 1
+            continue
+        contact_index = field.layer_of(z)
+        if not field.reachable(column, contact_index):
+            if len(diagnostics) < max_diagnostics:
+                diagnostics.append(Diagnostic(
+                    'support_in_sealed_cavity',
+                    'Contact lies in empty space that never reaches the exterior; no support there '
+                    'could be reached or removed', severity='warning', position_mm=[x, y, z]))
+            sealed += 1
+            continue
+        # Too close to the plate for a full tapered tip means the cone simply
+        # starts at the plate; the contact is still reached.
+        tip_used = tip
+        base_z = max(0.0, z - tip)
+        kind = None
+        anchor = None
+        elbow = None
+        is_small_model = False
+        if _free_to_plate(field, column, contact_index, clearance):
+            kind, anchor = 'vertical', (x, y, 0.0)
+        else:
+            best = None
+            radius = max(1, int(math.ceil(min(2 * spacing, max(0.0, base_z)) / field.grid.dx)))
+            row, col = divmod(column, field.grid.width)
+            r0, r1 = max(0, row - radius), min(field.grid.height, row + radius + 1)
+            c0, c1 = max(0, col - radius), min(field.grid.width, col + radius + 1)
+            window = field.first_material[r0:r1, c0:c1] >= max(0, contact_index - clearance)
+            if window.any():
+                rows, cols = np.nonzero(window)
+                px = field.grid.x0 + (cols + c0 + .5) * field.grid.dx
+                py = field.grid.y0 + (rows + r0 + .5) * field.grid.dy
+                lateral = np.hypot(px - x, py - y)
+                # A branch runs at support.pillar_angle_deg from horizontal, so
+                # reaching sideways by `lateral` costs `lateral * tan(angle)` of
+                # drop. At the historical 45 degrees that is one lateral
+                # distance; a steeper angle buys stiffness and costs reach.
+                drop = lateral * branch_tangent
+                usable = (lateral > 1e-9) & (lateral <= 2 * spacing) & (drop < base_z)
+                for pick in np.argsort(np.where(usable, lateral, np.inf))[:branch_attempts]:
+                    if not usable[pick]:
+                        break
+                    nx, ny, distance = float(px[pick]), float(py[pick]), float(lateral[pick])
+                    elbow_z = base_z - float(drop[pick])
+                    if _segment_clear(field, (nx, ny, elbow_z), (x, y, base_z), clearance):
+                        best = (distance, nx, ny, elbow_z)
+                        break
+            if best is not None:
+                kind = 'branched'
+                anchor = (best[1], best[2], 0.0)
+                elbow = (best[1], best[2], best[3])
+        # Evaluate a model anchor even when a plate branch exists. At zero
+        # avoidance both candidates compete on total centerline length; at one
+        # the historical plate-first order is preserved exactly.
+        below = field.top_below(column, contact_index)
+        model_anchor = None
+        candidate_small = False
+        if below is not None:
+            anchor_z = field.z_of(below)
+            gap = z - anchor_z
+            candidate_small = small_mode == 'model' and small_r > 0 and 1e-9 < gap <= small_limit
+            if candidate_small:
+                low_runs, high_runs = field.runs(column)
+                at_top = int(np.searchsorted(high_runs, field.layer_of(z), side='right'))
+                upper_fits = (at_top < len(low_runs) and field.z_of(low_runs[at_top]) <= z + 1e-9 and
+                              z + support['small_pillar_upper_depth_mm'] <= field.z_of(high_runs[at_top]) + 1e-9)
+                if upper_fits and _model_anchor_clear(field, column, x, y, anchor_z, gap,
+                        support['small_pillar_lower_depth_mm'], small_r,
+                        support['support_clearance_mm'], cancel):
+                    model_anchor = (x, y, anchor_z)
+                else:
+                    anchor_rejected += 1
+            elif gap >= min_tip + anchor_length:
+                candidate_run = max(0., gap - tip - anchor_length)
+                candidate_r = small_r if small_mode == 'middle' and small_r > 0 and candidate_run <= small_limit else pillar_r
+                bottom_r = float(support['model_anchor_diameter_mm']) / 2 or candidate_r
+                # Only the new connector is examined here; the historical
+                # direct attachment remains unchanged when both dimensions are 0.
+                if (not (anchor_length or anchor_depth) or _model_anchor_clear(
+                        field, column, x, y, anchor_z, anchor_length, anchor_depth,
+                        max(bottom_r, candidate_r), support['support_clearance_mm'], cancel)):
+                    model_anchor = (x, y, anchor_z)
+                else:
+                    anchor_rejected += 1
+            elif anchor_length:
+                anchor_rejected += 1
+        if model_anchor is not None:
+            if not support['allow_part_to_part']:
+                if kind is None:
+                    policy_blocked += 1
+            else:
+                plate_length = (math.inf if kind is None else
+                                (elbow[2] + math.dist(elbow, (x, y, base_z)) + tip
+                                 if elbow is not None else z))
+                avoidance = float(support['part_to_part_avoidance'])
+                choose_model = kind is None or (avoidance < 1 and
+                    z - model_anchor[2] < plate_length * (1 - avoidance))
+                if choose_model:
+                    kind, anchor, elbow = 'model_anchor', model_anchor, None
+                    is_small_model = candidate_small
+                    gap = z - anchor[2]
+                    if not is_small_model and gap <= tip + anchor_length:
+                        tip_used, base_z = gap - anchor_length, anchor[2] + anchor_length
+                        shortened += 1
+        if kind is None:
+            # Internal overhangs inside a porous part are genuinely unreachable;
+            # they are counted in full and sampled in the diagnostics.
+            unroutable_positions.append([x, y, z])
+            if len(diagnostics) < max_diagnostics:
+                diagnostics.append(Diagnostic('support_unroutable',
+                                              'No permitted collision-free route to plate or model',
+                                              severity='warning', position_mm=[x, y, z]))
+            failures += 1
+            continue
+        routed[kind] += 1
+        if is_small_model:
+            from .support_segments import small_model_pillar
+            if local_parameters:
+                graph.overrides.append({'contact': f'contact{order}', 'reason': 'effective_parameters',
+                                        'parameters': dict(local_parameters)})
+            solids.append(small_model_pillar(anchor, (x, y, z), small_r,
+                          support['small_pillar_shape'], support['small_pillar_upper_depth_mm'],
+                          support['small_pillar_lower_depth_mm']))
+            foot, head = f'foot{order}', f'contact{order}'
+            graph.nodes.extend([SupportNode(foot, list(anchor), 'model_anchor'),
+                                SupportNode(head, [x, y, z], 'contact')])
+            graph.edges.append(SupportEdge(foot, head, small_r, 'small_model'))
+            small_pillars += 1
+            small_models += 1
+            heights.append(gap)
+            slenderness = gap / (2 * small_r)
+            if slenderness > float(support['max_slenderness']):
+                if len(diagnostics) < max_diagnostics:
+                    diagnostics.append(Diagnostic('support_slenderness',
+                        'Small model pillar exceeds the configured slenderness limit (heuristic)',
+                        severity='warning', position_mm=[x, y, z],
+                        details={'slenderness': slenderness, 'limit': float(support['max_slenderness'])}))
+                graph.overrides.append({'contact': head, 'reason': 'slenderness', 'value': slenderness})
+            continue
+        # A short run may use the thinner pillar class. The length is known
+        # before any geometry or graph edge is emitted, so the choice is made
+        # once and the whole pillar, elbow included, is built at that radius.
+        run_length = (elbow[2] + math.dist(elbow, (x, y, base_z)) if elbow is not None
+                      else max(0., base_z - anchor[2] - (anchor_length if kind == 'model_anchor' else 0.)))
+        if small_mode == 'middle' and small_r > 0 and run_length <= small_limit:
+            run_r = small_r
+            small_pillars += 1
+        else:
+            run_r = pillar_r
+        foot = f'foot{order}'
+        junction = f'joint{order}'
+        head = f'contact{order}'
+        if local_parameters:
+            graph.overrides.append({'contact': head, 'reason': 'effective_parameters',
+                                    'parameters': dict(local_parameters)})
+        graph.nodes.append(SupportNode(foot, [anchor[0], anchor[1], anchor[2]],
+                                       'foot' if kind != 'model_anchor' else 'model_anchor'))
+        graph.nodes.append(SupportNode(junction, [x, y, base_z], 'junction'))
+        graph.nodes.append(SupportNode(head, [x, y, z], 'contact'))
+        middle_start = foot
+        if kind == 'model_anchor' and anchor_length:
+            middle_start = f'anchor_joint{order}'
+            graph.nodes.append(SupportNode(middle_start, [x, y, anchor[2] + anchor_length], 'anchor_junction'))
+            graph.edges.append(SupportEdge(foot, middle_start,
+                               float(support['model_anchor_diameter_mm']) / 2 or run_r, 'bottom'))
+        graph.edges.append(SupportEdge(middle_start, junction, run_r, kind))
+        graph.edges.append(SupportEdge(junction, head, contact_r, 'tip'))
+        if elbow is not None:
+            graph.nodes.append(SupportNode(f'elbow{order}', list(elbow), 'elbow'))
+            if elbow[2] > 1e-9:
+                solids.append(cylinder_between(anchor, elbow, run_r))
+                pillars.append((anchor[0], anchor[1], elbow[2], run_r))
+            solids.append(cylinder_between(elbow, (x, y, base_z), run_r))
+            length = run_length
+        else:
+            length = run_length
+            middle_z = anchor[2]
+            if kind == 'model_anchor':
+                middle_z += anchor_length
+                if anchor_length:
+                    bottom_r = float(support['model_anchor_diameter_mm']) / 2 or run_r
+                    upper_r = run_r if support['model_anchor_shape'] == 'cone' else bottom_r
+                    solids.append(cylinder_between((x, y, anchor[2] - anchor_depth),
+                                                  (x, y, middle_z), bottom_r, upper_r))
+                    # A buried collar joins face-adjacent segments in volume
+                    # without changing their outside surface (including when
+                    # a shortened tip starts directly on the bottom segment).
+                    collar_h = min(anchor_length + anchor_depth, z + penetration - middle_z) * .01
+                    collar_r = min(bottom_r, upper_r, run_r, tip_base_r, contact_r) * .5
+                    solids.append(cylinder_between((x, y, middle_z - collar_h),
+                                                  (x, y, middle_z + collar_h), collar_r))
+                else:
+                    middle_z -= anchor_depth
+                if len(anchor_examples) < max_diagnostics:
+                    anchor_examples.append({'contact': head, 'surface_z_mm': anchor[2],
+                        'bottom_z_mm': anchor[2] - anchor_depth,
+                        'junction_z_mm': anchor[2] + anchor_length,
+                        'diameter_mm': float(support['model_anchor_diameter_mm']) or run_r * 2})
+            if base_z - middle_z > 1e-9:
+                if kind == 'vertical' and support['tree_supports'] and base_z > 1e-9:
+                    tree_jobs.append({'x': x, 'y': y, 'base_z': base_z, 'run_r': run_r,
+                                      'middle_z': middle_z, 'order': order})
+                else:
+                    solids.append(cylinder_between((x, y, middle_z), (x, y, base_z), run_r))
+                    if kind == 'vertical':
+                        pillars.append((x, y, base_z, run_r))
+        heights.append(length)
+        if support['break_point_diameter_mm']:
+            tip_span = float(z + penetration - base_z)
+            if support['break_point_diameter_mm'] > tip_span:
+                diagnostics.append(Diagnostic('support_invalid_break_point',
+                    'Break-point ball does not fit the shortened tip segment', severity='warning',
+                    position_mm=[x, y, z], details={'diameter_mm': support['break_point_diameter_mm'],
+                                                    'tip_span_mm': tip_span}))
+                failures += 1
+                continue
+        from .support_segments import tip_segment
+        solids.append(tip_segment((x, y, base_z), (x, y, z + penetration), tip_base_r, contact_r,
+                                  support['tip_shape'], support['break_point_diameter_mm']))
+        tips_used.append(tip_used)
+        if kind != 'model_anchor':
+            if not (kind == 'vertical' and support['tree_supports'] and base_z > 1e-9):
+                feet.append((anchor[0], anchor[1]))
+                foot_radii.append(contact_r if kind == 'vertical' and base_z <= 1e-9 else run_r)
+        slenderness = length / (2 * run_r) if run_r > 0 else math.inf
+        if slenderness > float(support['max_slenderness']):
+            if len(diagnostics) < max_diagnostics:
+                diagnostics.append(Diagnostic('support_slenderness',
+                                          'Pillar exceeds the configured slenderness limit (heuristic)',
+                                              severity='warning', position_mm=[x, y, z],
+                                              details={'slenderness': slenderness,
+                                                       'limit': float(support['max_slenderness'])}))
+            graph.overrides.append({'contact': head, 'reason': 'slenderness', 'value': slenderness})
+
+    support = global_support
+    pillar_r = global_pillar_r
+    anchor_length, anchor_depth = global_anchor_length, global_anchor_depth
+    small_r, small_limit = global_small_r, global_small_limit
+    tip, min_tip = global_tip, global_min_tip
+    tip_base_r = global_tip_base_r
+    unmatched = [row for row in normalized_parameters
+                  if contact_key(row['position_mm']) not in matched_override_keys]
+    for row in unmatched[:max_diagnostics]:
+        diagnostics.append(Diagnostic('contact_parameters_unmatched',
+            'Authored contact parameters did not match a routed contact; orientation or coordinates may have changed',
+            severity='warning', position_mm=list(row['position_mm']), details={'parameters': row['parameters']}))
+    tree_metrics = _emit_tree_supports(tree_jobs, solids, pillars, feet, foot_radii,
+                                       field, settings, cancel=cancel, graph=graph)
+    brace_evidence = {'collision_rejected': 0}
+    braces = (_brace(pillars, settings, solids, field=field, evidence=brace_evidence,
+                     cancel=cancel) if support['auto_bracing'] else 0)
+    raft = None
+    base = build_base(feet, settings, pillar_r, foot_radii=foot_radii, cancel=cancel)
+    raft = base['solid']
+    if not feet and len(contacts):
+        diagnostics.append(Diagnostic('support_no_feet',
+                                      'Every routed support anchors on the model; no base was generated',
+                                      severity='warning'))
+    metrics = {
+        'contacts_requested': int(len(contacts)),
+        'contacts_routed': int(sum(routed.values())),
+        'contacts_failed': failures,
+        'unroutable_positions': unroutable_positions,
+        'contacts_dropped_attached': 0,
+        'tree': tree_metrics,
+        'contacts_in_sealed_cavities': sealed,
+        'routing': routed,
+        'allow_part_to_part': support['allow_part_to_part'],
+        'part_to_part_avoidance': support['part_to_part_avoidance'],
+        'contacts_blocked_by_policy': policy_blocked,
+        'contact_parameters': {'authored': len(normalized_parameters),
+                               'matched': len(matched_override_keys),
+                               'unmatched': len(unmatched)},
+        'model_anchor': {'shape': support['model_anchor_shape'] if anchor_length else 'direct',
+                         'length_mm': anchor_length, 'penetration_mm': anchor_depth,
+                         'diameter_mm': float(support['model_anchor_diameter_mm']),
+                         'diameter_basis': 'configured endpoint diameter; 0 derives the chosen middle diameter',
+                         'candidates_rejected': anchor_rejected, 'examples': anchor_examples,
+                         'examples_capped_at': max_diagnostics,
+                         'clearance_basis': 'column-grid footprint and central-column penetration; not exact surface clearance'},
+        'contacts_with_shortened_tip': int(shortened),
+        'min_tip_used_mm': min(tips_used, default=0.0),
+        'tip_length_mm': tip,
+        'min_tip_length_mm': min_tip,
+        'braces': braces,
+        'braces_collision_rejected': brace_evidence['collision_rejected'],
+        'brace_diameter_mm': float(support['brace_diameter_mm']) or pillar_r,
+        'brace_max_distance_mm': (float(support['brace_max_distance_mm'])
+                                  or spacing * 1.5),
+        'braces_capped': brace_evidence.get('capped', False),
+        'brace_candidates_examined': brace_evidence.get('examined', 0),
+        'brace_spacing_mm': brace_geometry(settings, pillar_r)[0],
+        'brace_start_height_mm': brace_geometry(settings, pillar_r)[1],
+        'tip_base_diameter_mm': tip_base_r * 2,
+        'pillar_angle_deg': float(support['pillar_angle_deg']),
+        'small_pillars': int(small_pillars),
+        'small_model_pillars': small_models,
+        'small_pillar': {'mode': small_mode, 'shape': support['small_pillar_shape'],
+                         'diameter_mm': small_r * 2, 'max_length_mm': small_limit,
+                         'upper_depth_mm': support['small_pillar_upper_depth_mm'],
+                         'lower_depth_mm': support['small_pillar_lower_depth_mm'],
+                         'selection_basis': ('whole surface-to-surface gap, model anchors only'
+                                             if small_mode == 'model' else 'middle centerline length'),
+                         'enabled': bool(small_r and small_limit)},
+        'base': base['record'],
+        'raster_islands': len(field.islands),
+        'spacing_mm': spacing,
+        'overhang_angle_deg': float(support['overhang_angle_deg']),
+        'max_pillar_length_mm': max(heights, default=0.0),
+        'diagnostics_capped_at': max_diagnostics,
+        'mechanics': 'configured heuristic limits; not a strength proof',
+        'seconds': time.monotonic() - started,
+        'analysis': field.metrics,
+    }
+    graph.diagnostics = [d.__dict__ for d in diagnostics]
+    return SupportPlan(graph, np.asarray(feet, dtype=float).reshape(-1, 2), solids, diagnostics, metrics), raft
+
+
+def _emit_tree_supports(jobs, solids, pillars, feet, foot_radii, field, settings, *, cancel=None, graph=None):
+    """Replace nearby vertical shafts with one trunk and branches.
+
+    Clusters whose trunk column is not free, or whose branches collide, keep
+    independent pillars. Tips are already emitted; this only owns the shafts.
+    """
+    cancel = cancel or CancellationToken()
+    support = settings['support']
+    if not jobs or not support.get('tree_supports'):
+        for job in jobs:
+            solids.append(cylinder_between((job['x'], job['y'], job['middle_z']),
+                                           (job['x'], job['y'], job['base_z']), job['run_r']))
+            pillars.append((job['x'], job['y'], job['base_z'], job['run_r']))
+            feet.append((job['x'], job['y']))
+            foot_radii.append(job['run_r'])
+        return {'enabled': bool(support.get('tree_supports')), 'clusters': 0,
+                'trunks': 0, 'contacts_in_trees': 0, 'kept_independent': len(jobs)}
+    spacing = float(support['spacing_mm'])
+    radius = float(support['tree_cluster_mm']) or 2 * spacing
+    points = np.array([[job['x'], job['y']] for job in jobs], dtype=float)
+    from scipy.spatial import cKDTree
+    tree = cKDTree(points)
+    assigned = np.full(len(jobs), -1, dtype=int)
+    clusters = []
+    for index in range(len(jobs)):
+        cancel.check()
+        if assigned[index] >= 0:
+            continue
+        members = [int(i) for i in tree.query_ball_point(points[index], radius)]
+        label = len(clusters)
+        for member in members:
+            if assigned[member] < 0:
+                assigned[member] = label
+        clusters.append([member for member in members if assigned[member] == label])
+    trunks = independent = 0
+    contacts_in_trees = 0
+    clearance_mm = float(support['support_clearance_mm'])
+    branch_tangent = math.tan(math.radians(float(support['pillar_angle_deg'])))
+    for members in clusters:
+        group = [jobs[i] for i in members]
+        if len(group) < 2:
+            job = group[0]
+            solids.append(cylinder_between((job['x'], job['y'], job['middle_z']),
+                                           (job['x'], job['y'], job['base_z']), job['run_r']))
+            pillars.append((job['x'], job['y'], job['base_z'], job['run_r']))
+            feet.append((job['x'], job['y']))
+            foot_radii.append(job['run_r'])
+            independent += 1
+            continue
+        tx, ty = float(np.mean([job['x'] for job in group])), float(np.mean([job['y'] for job in group]))
+        # Leave enough rise for every branch to meet the configured angle.
+        trunk_top = min(job['base_z'] - math.hypot(job['x'] - tx, job['y'] - ty)
+                        * branch_tangent for job in group)
+        run_r = max(job['run_r'] for job in group)
+        column = field.index_of(tx, ty)
+        free = (trunk_top > run_r and column is not None
+                and _brace_clear(field, (tx, ty, 0.0), (tx, ty, trunk_top),
+                                 run_r, clearance_mm, cancel))
+        branches_clear = free
+        if free:
+            for job in group:
+                if not _brace_clear(field, (tx, ty, trunk_top),
+                                    (job['x'], job['y'], job['base_z']),
+                                    job['run_r'], clearance_mm, cancel):
+                    branches_clear = False
+                    break
+        if not branches_clear:
+            for job in group:
+                solids.append(cylinder_between((job['x'], job['y'], job['middle_z']),
+                                               (job['x'], job['y'], job['base_z']), job['run_r']))
+                pillars.append((job['x'], job['y'], job['base_z'], job['run_r']))
+                feet.append((job['x'], job['y']))
+                foot_radii.append(job['run_r'])
+                independent += 1
+            continue
+        solids.append(cylinder_between((tx, ty, 0.0), (tx, ty, trunk_top), run_r))
+        pillars.append((tx, ty, trunk_top, run_r))
+        feet.append((tx, ty))
+        foot_radii.append(run_r)
+        for job in group:
+            if math.hypot(job['x'] - tx, job['y'] - ty) > 1e-9:
+                solids.append(cylinder_between((tx, ty, trunk_top),
+                                               (job['x'], job['y'], job['base_z']), job['run_r']))
+            elif job['base_z'] - trunk_top > 1e-9:
+                solids.append(cylinder_between((tx, ty, trunk_top),
+                                               (tx, ty, job['base_z']), job['run_r']))
+        if graph is not None:
+            old_feet = {f"foot{job['order']}" for job in group}
+            graph.nodes[:] = [node for node in graph.nodes if node.id not in old_feet]
+            graph.edges[:] = [edge for edge in graph.edges if edge.start not in old_feet]
+            foot_id, joint_id = f'tree_foot{trunks}', f'tree_joint{trunks}'
+            graph.nodes.extend([SupportNode(foot_id, [tx, ty, 0.0], 'foot'),
+                                SupportNode(joint_id, [tx, ty, trunk_top], 'junction')])
+            graph.edges.append(SupportEdge(foot_id, joint_id, run_r, 'tree_trunk'))
+            for job in group:
+                graph.edges.append(SupportEdge(joint_id, f"joint{job['order']}",
+                                               job['run_r'], 'tree_branch'))
+        trunks += 1
+        contacts_in_trees += len(group)
+    return {'enabled': True, 'clusters': len(clusters), 'trunks': trunks,
+            'contacts_in_trees': contacts_in_trees, 'kept_independent': independent}
+
+
+def brace_geometry(settings, pillar_radius):
+    """Cross-brace spacing and first-brace height, each with its own setting.
+
+    Both defaulted to one derived number, ``max_slenderness * 2 * r``, which
+    made the spacing between braces and the height of the lowest one the same
+    quantity by construction. The reference configuration sets them 30 mm and
+    3 mm apart, so they cannot be one number. Zero on either still derives the
+    old value, so an untouched profile keeps its geometry.
+    """
+    support = settings['support']
+    derived = float(support['max_slenderness']) * 2 * float(pillar_radius)
+    spacing = float(support['brace_spacing_mm']) or derived
+    start = float(support['brace_start_height_mm']) or derived
+    return spacing, start
+
+
+def plan_supports(triangles, bounds, settings, *, field=None, budget=None, cancel=None,
+                  progress=no_progress, extra_contacts=(), removed_contacts=(),
+                  branch_attempts=8, max_diagnostics=256, contact_parameters=(),
+                  paint=None, object_groups=None):
+    """Detect, route and size supports. Returns ``(SupportPlan, raft_or_None)``."""
+    cancel = cancel or CancellationToken()
+    budget = budget or ResourceBudget(**settings['resources'])
+    if field is None:
+        field = build_column_field(triangles, bounds, settings, budget=budget, cancel=cancel,
+                                   progress=progress)
+    contacts, selection = select_contacts(triangles, field, settings, cancel=cancel, progress=progress,
+                                          extra_contacts=extra_contacts,
+                                          removed_contacts=removed_contacts, paint=paint,
+                                          object_groups=object_groups)
+    records = list(contact_parameters)
+    extra_records = selection.pop('object_contact_parameters', []) or []
+    selection['object_override_contacts'] = len(extra_records)
+    if extra_records:
+        from .contact_parameters import contact_key, normalize_contact_parameters
+        seen = {contact_key(row['position_mm']) for row in records}
+        merged = list(records)
+        for row in extra_records:
+            key = contact_key(row['position_mm'])
+            if key not in seen:
+                merged.append(row)
+                seen.add(key)
+        records = normalize_contact_parameters(merged, settings)
+    plan, raft = route_contacts(contacts, field, settings, cancel=cancel,
+                                branch_attempts=branch_attempts, max_diagnostics=max_diagnostics,
+                                contact_parameters=records)
+    plan.metrics.update(selection)
+    if settings['support']['drop_attached_unroutable']:
+        protected = [tuple(point) for point in extra_contacts]
+        protected.extend((*island['position_mm'], island['z_mm']) for island in field.islands)
+        apply_attached_unroutable_drops(plan, triangles, settings, protected=protected,
+                                        cancel=cancel)
+    return plan, raft
+
+
+def attached_below(triangles, contacts, settings, *, cancel=None):
+    """Printer-pitch 3x3 occupancy one layer below each contact.
+
+    The router uses a coarser analysis grid, so a sample on a near-vertical wall
+    can sit just outside the occupied cell and still rest on material that the
+    layer analysis will treat as connected. This asks the same question on the
+    printer lattice ``raster_connectivity`` uses. Measurement, then a drop
+    decision in ``apply_attached_unroutable_drops``; it does not emit geometry.
+    """
+    from . import _native
+
+    cancel = cancel or CancellationToken()
+    contacts = np.asarray(list(contacts), dtype=float).reshape(-1, 3)
+    height = float(settings['process']['layer_height_mm'])
+    if not len(contacts):
+        return []
+    from .geometry import triangle_bounds
+    bounds = triangle_bounds(np.asarray(triangles))
+    grid = RasterGrid.for_bounds(bounds, settings, crop=True)
+    order = sorted(range(len(contacts)), key=lambda i: contacts[i][2])
+    raster = _native.Rasterizer(np.asarray(triangles, dtype=np.float32), cancel.check)
+    results = [None] * len(contacts)
+    cache_index, cache_mask = None, None
+    for position in order:
+        cancel.check()
+        x, y, z = (float(v) for v in contacts[position])
+        index = max(0, int(math.floor(z / height)))
+        below = index - 1
+        if below < 0:
+            results[position] = False
+            continue
+        if cache_index != below:
+            cache_mask = raster.slice((below + 0.5) * height, grid.width, grid.height,
+                                      grid.x0, grid.y0, grid.dx, grid.dy,
+                                      cancel.check, 'nonzero')['mask']
+            cache_index = below
+        col = int(math.floor((x - grid.x0) / grid.dx))
+        row = int(math.floor((y - grid.y0) / grid.dy))
+        if not (0 <= row < grid.height and 0 <= col < grid.width):
+            results[position] = False
+            continue
+        r0, r1 = max(0, row - 1), min(grid.height, row + 2)
+        c0, c1 = max(0, col - 1), min(grid.width, col + 2)
+        results[position] = bool(cache_mask[r0:r1, c0:c1].any())
+    return results
+
+
+def apply_attached_unroutable_drops(plan, triangles, settings, *, protected=(), cancel=None):
+    """Reclassify unroutable contacts that already rest on printed material.
+
+    Island births and manual/correction contacts in ``protected`` stay failed.
+    True free overhangs stay failed. Coverage is left against the original
+    selection so attached wall samples do not become uncovered by the drop.
+    """
+    positions = list(plan.metrics.get('unroutable_positions') or [])
+    if not positions:
+        plan.metrics['contacts_dropped_attached'] = 0
+        return plan
+    protected_keys = {contact_key(point) for point in protected}
+    attached = attached_below(triangles, positions, settings, cancel=cancel)
+    dropped_keys = set()
+    kept = []
+    for point, is_attached in zip(positions, attached):
+        key = contact_key(point)
+        if is_attached and key not in protected_keys:
+            dropped_keys.add(key)
+        else:
+            kept.append(point)
+    if not dropped_keys:
+        plan.metrics['contacts_dropped_attached'] = 0
+        return plan
+    plan.metrics['unroutable_positions'] = kept
+    plan.metrics['contacts_failed'] = int(plan.metrics.get('contacts_failed', 0)) - len(dropped_keys)
+    plan.metrics['contacts_dropped_attached'] = len(dropped_keys)
+    rewritten = []
+    for diagnostic in plan.diagnostics:
+        if (diagnostic.code == 'support_unroutable'
+                and contact_key(diagnostic.position_mm) in dropped_keys):
+            rewritten.append(Diagnostic(
+                'support_dropped_attached',
+                'Unroutable contact already has material one printer layer below; no pillar emitted',
+                severity='warning', position_mm=list(diagnostic.position_mm),
+                details={'basis': '3x3 printer-pitch neighbourhood one layer below',
+                         'reason': 'near-vertical or already-attached surface'}))
+        else:
+            rewritten.append(diagnostic)
+    for key in dropped_keys:
+        if not any(d.code == 'support_dropped_attached' and contact_key(d.position_mm) == key
+                   for d in rewritten):
+            rewritten.append(Diagnostic(
+                'support_dropped_attached',
+                'Unroutable contact already has material one printer layer below; no pillar emitted',
+                severity='warning', position_mm=list(key),
+                details={'basis': '3x3 printer-pitch neighbourhood one layer below'}))
+    plan.diagnostics[:] = rewritten
+    plan.graph.diagnostics = [d.__dict__ for d in plan.diagnostics]
+    return plan
+
+
+def _brace_clear(field, start, end, radius, clearance, cancel=None):
+    """Conservative capsule clearance against occupied column-grid cells.
+
+    Examine every XY cell intersecting the strut plus clearance and every Z
+    layer its section spans. This uses the existing analysis lattice, whose
+    sub-grid limitations remain; it is not a mechanical strength proof.
+    """
+    reach = float(radius) + float(clearance)
+    cancel = cancel or CancellationToken()
+    grid = field.grid
+    x0, x1 = min(start[0], end[0]) - reach, max(start[0], end[0]) + reach
+    y0, y1 = min(start[1], end[1]) - reach, max(start[1], end[1]) + reach
+    c0 = max(0, int(math.floor((x0 - grid.x0) / grid.dx)))
+    c1 = min(grid.width, int(math.ceil((x1 - grid.x0) / grid.dx)))
+    r0 = max(0, int(math.floor((y0 - grid.y0) / grid.dy)))
+    r1 = min(grid.height, int(math.ceil((y1 - grid.y0) / grid.dy)))
+    direction = np.asarray(end[:2]) - start[:2]
+    length2 = float(direction @ direction)
+    allowance = reach + math.hypot(grid.dx, grid.dy) / 2
+    for row in range(r0, r1):
+        cancel.check()
+        for col in range(c0, c1):
+            point = np.array([grid.x0 + (col + .5) * grid.dx,
+                              grid.y0 + (row + .5) * grid.dy])
+            if length2 <= 1e-20:
+                if np.linalg.norm(point - start[:2]) > allowance:
+                    continue
+                t0, t1 = 0.0, 1.0
+            else:
+                t = float((point - start[:2]) @ direction / length2)
+                distance2 = float(np.sum((point - (start[:2] + t * direction)) ** 2))
+                if distance2 > allowance ** 2:
+                    continue
+                span = math.sqrt(max(0.0, allowance ** 2 - distance2) / length2)
+                t0, t1 = max(0.0, t - span), min(1.0, t + span)
+                if t0 > t1:
+                    continue
+            z_a = start[2] + t0 * (end[2] - start[2])
+            z_b = start[2] + t1 * (end[2] - start[2])
+            lo = max(0, field.layer_of(min(z_a, z_b) - reach))
+            hi = field.layer_of(max(z_a, z_b) + reach) + 1
+            if hi > lo:
+                if field.blocked(row * grid.width + col, lo, hi):
+                    return False
+    return True
+
+
+def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None, cancel=None):
+    """Tie tall neighbouring vertical pillars together at regular heights.
+
+    Bracing is a stiffness heuristic keyed to the configured slenderness limit.
+    It is not a strength calculation and does not certify that a pillar
+    survives peel; that requires physical calibration.
+    """
+    support = settings['support']
+    cancel = cancel or CancellationToken()
+    evidence = evidence if evidence is not None else {}
+    evidence.setdefault('collision_rejected', 0)
+    evidence.setdefault('examined', 0)
+    evidence.setdefault('capped', False)
+    pillar_r = float(support['pillar_diameter_mm']) / 2
+    interval, start = brace_geometry(settings, pillar_r)
+    if interval <= 0 or start < 0 or len(pillars) < 2:
+        return 0
+    # Each pillar carries its own radius so a thin one is braced with a strut
+    # proportional to itself rather than to the nominal diameter.
+    positions = np.asarray([p if len(p) == 4 else (*p, pillar_r) for p in pillars], dtype=float)
+    tall = positions[positions[:, 2] > start]
+    if len(tall) < 2:
+        return 0
+    from scipy.spatial import cKDTree
+    tree = cKDTree(tall[:, :2])
+    # Brace each pillar to its two nearest neighbours only. Bracing every pair
+    # within the radius produces tens of thousands of struts on a porous part,
+    # which costs geometry without adding stiffness the extra links do not share.
+    neighbours = tree.query(tall[:, :2], k=min(3, len(tall)),
+                            distance_upper_bound=(float(support['brace_max_distance_mm'])
+                                                  or float(support['spacing_mm']) * 1.5))[1]
+    pairs = {(min(int(a), int(b)), max(int(a), int(b)))
+             for a, row in enumerate(np.atleast_2d(neighbours)) for b in row[1:]
+             if b < len(tall) and int(b) != a}
+    added = 0
+    for a, b in sorted(pairs):
+        pa, pb = tall[a], tall[b]
+        if math.hypot(pa[0] - pb[0], pa[1] - pb[1]) < 1e-6:
+            continue
+        strut_r = (float(support['brace_diameter_mm']) / 2 or min(pa[3], pb[3]) * 0.5)
+        level = start
+        while level < min(pa[2], pb[2]) - 1e-6:
+            cancel.check()
+            if evidence['examined'] >= limit:
+                evidence['capped'] = True
+                return added
+            evidence['examined'] += 1
+            left, right = (pa[0], pa[1], level), (pb[0], pb[1], level)
+            if field is not None and not _brace_clear(field, left, right, strut_r,
+                                                       support['support_clearance_mm'], cancel):
+                evidence['collision_rejected'] += 1
+            else:
+                solids.append(cylinder_between(left, right, strut_r))
+                added += 1
+            next_level = level + interval
+            if next_level <= level:
+                raise VoxelMillError('invalid_support', 'Brace spacing is too small to advance the height')
+            level = next_level
+    return added
+
+
+def apply_support_validation(report, plan, settings):
+    """Carry routing evidence into export decisions, including capped failures.
+
+    Slenderness and brace evidence remain mechanical heuristics. Failed requested
+    routes are blockers even if raster overlap happens to connect the whole part.
+    """
+    report.diagnostics.extend(plan.diagnostics)
+    failed = plan.metrics.get('contacts_failed', 0)
+    sealed = plan.metrics.get('contacts_in_sealed_cavities', 0)
+    report.checks['support_routes'] = 'fail' if failed or sealed else 'pass'
+    report.metrics['supports'] = plan.metrics
+    if failed or sealed:
+        report.diagnostics.append(Diagnostic(
+            'incomplete_support_routes', 'Some requested contacts could not be routed or removed',
+            details={'unroutable': failed, 'sealed': sealed}))
+    slender = any(d.code == 'support_slenderness' for d in plan.diagnostics)
+    report.checks['support_slenderness'] = 'warn' if slender else 'pass'
+    coverage = plan.metrics.get('coverage', 'not_run')
+    report.checks['support_coverage'] = coverage
+    if coverage == 'fail':
+        report.diagnostics.append(Diagnostic(
+            'support_coverage', 'Downward faces lie farther from a contact than the configured gap',
+            details={key: plan.metrics.get(key) for key in (
+                'uncovered_samples', 'uncovered_fraction', 'max_contact_gap_mm',
+                'coverage_gap_limit_mm', 'coverage_basis')}))
+    load = plan.metrics.get('anchor_load', 'not_run')
+    # A load limit is a geometric share of area, not a strength result, so an
+    # exceedance is a warning until the pillar mechanics are calibrated.
+    report.checks['support_anchor_load'] = 'warn' if load == 'fail' else load
+    if load == 'fail':
+        report.diagnostics.append(Diagnostic(
+            'support_anchor_load', 'A contact carries more downward area than the configured limit',
+            severity='warning',
+            details={key: plan.metrics.get(key) for key in (
+                'overloaded_contacts', 'max_contact_load_mm2_actual', 'contact_load_limit_mm2')}))
+    return report

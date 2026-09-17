@@ -1,0 +1,61 @@
+{
+  "goo": "right_temporal_bone_mars5_oriented.stl_0.05_3.25_2026_08_16_21_52_00.goo",
+  "stl": "inputstl/right_temporal_bone_mars5_oriented.stl",
+  "software": "CHITUBOX Basic v2.3.1",
+  "machine": "ELEGOO Mars 5 Ultra",
+  "mirror_x_flag": 1,
+  "mirror_y_flag": 0,
+  "per_layer": [
+    {
+      "layer": 808,
+      "reference_pixels": 2596430,
+      "flip": "flip_xy",
+      "iou": 0.050660578837800875,
+      "z_model_mm": 13.64804458618164,
+      "z_goo_mm": 40.44967269897461,
+      "candidate_pixels": 678520
+    },
+    {
+      "layer": 1112,
+      "reference_pixels": 3212825,
+      "flip": "identity",
+      "iou": 0.2705213609020097,
+      "z_model_mm": 22.84781265258789,
+      "z_goo_mm": 55.64944076538086,
+      "candidate_pixels": 2409967
+    },
+    {
+      "layer": 1415,
+      "reference_pixels": 1481794,
+      "flip": "flip_y",
+      "iou": 0.09857451953671885,
+      "z_model_mm": 43.74810028076172,
+      "z_goo_mm": 70.79972839355469,
+      "candidate_pixels": 986815
+    },
+    {
+      "layer": 1718,
+      "reference_pixels": 1157400,
+      "flip": "identity",
+      "iou": 0.1423734869550814,
+      "z_model_mm": 53.149024963378906,
+      "z_goo_mm": 85.95065307617188,
+      "candidate_pixels": 2090963
+    }
+  ],
+  "best_flip_by_layer": {
+    "808": "flip_xy",
+    "1112": "identity",
+    "1415": "flip_y",
+    "1718": "identity"
+  },
+  "mean_iou_by_flip": {
+    "flip_xy": 0.0507,
+    "identity": 0.2064,
+    "flip_y": 0.0986
+  },
+  "conclusive": false,
+  "conclusion": "inconclusive: the sampled layers do not agree on one flip, or the best overlap is too weak to be a shape match. The slicer posed the model itself, so a Z window around a shared top is not enough to recover that pose",
+  "establishes": "which axis flip of our own raster best matches the stored pixels, with centroids aligned; it is shape evidence, not a pose recovery",
+  "does_not_establish": "the physical orientation on the LCD, or that a firmware honours the mirror flags it is given"
+}

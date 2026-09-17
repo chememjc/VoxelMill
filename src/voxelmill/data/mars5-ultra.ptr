@@ -1,0 +1,39 @@
+schema_version = 1
+
+[printer]
+id = "mars5-ultra"
+name = "Elegoo Mars 5 Ultra"
+build_mm = [153.36, 77.76, 165.0]
+pixels = [8520, 4320]
+pixel_pitch_mm = [0.018, 0.018]
+edge_clearance_mm = 2.0
+# Canonical raster coordinates; GOO firmware orientation needs calibration.
+image_mirror_x = false
+image_mirror_y = false
+# Configurable software range; firmware/profile calibration remains required.
+layer_height_range_mm = [0.01, 0.2]
+output_formats = ["goo"]
+
+[printer.motion]
+# Values observed in the immutable Mars 5 Ultra reference GOO (2026-09-06).
+# They permit a reproducible export but are not a hardware-calibrated motion
+# recipe. Review and override them manually before a physical print; no printer
+# connection or calibration has verified their units or tilt-release behaviour.
+bottom_lift_height = 0.05
+bottom_lift_speed = 0.05
+lift_height = 0.05
+lift_speed = 0.05
+bottom_retract_height = 0.05
+bottom_retract_speed = 0.05
+retract_height = 0.05
+retract_speed = 0.05
+bottom_lift_height2 = 0.0
+bottom_lift_speed2 = 0.0
+lift_height2 = 0.0
+lift_speed2 = 0.0
+bottom_retract_height2 = 0.0
+bottom_retract_speed2 = 0.0
+retract_height2 = 0.0
+retract_speed2 = 0.0
+bottom_light_pwm = 255
+light_pwm = 255

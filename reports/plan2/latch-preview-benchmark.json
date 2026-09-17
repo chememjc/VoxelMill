@@ -1,0 +1,135 @@
+{
+  "source": "inputstl/Latch_fat_finger.stl",
+  "results": [
+    {
+      "mode": "fresh",
+      "triangles": 25236,
+      "layers": [
+        {
+          "index": 0,
+          "seconds": 0.003802368000833667,
+          "mask_sha256": "016e82e61328fce58cf2d154443711565137078368bb6c6e2980a1b26760facf",
+          "filled_pixels": 1980002,
+          "open_rows": 0
+        },
+        {
+          "index": 154,
+          "seconds": 0.003954173998863553,
+          "mask_sha256": "ca3b0d198eb868f7b972b6624524e3af3b6c2bae08609a17ef72e0b7bc91a34f",
+          "filled_pixels": 347808,
+          "open_rows": 0
+        },
+        {
+          "index": 308,
+          "seconds": 0.003927079000277445,
+          "mask_sha256": "7ae0e6363c770d7e0ce40338af1189d1416cfd137ec1f75efcdc79f11722fc91",
+          "filled_pixels": 429410,
+          "open_rows": 0
+        },
+        {
+          "index": 462,
+          "seconds": 0.0032907889999478357,
+          "mask_sha256": "03b3967f6512f38e4221c6c06cefb6ebccc464d914a44e103fb9821b0bb23f1a",
+          "filled_pixels": 936810,
+          "open_rows": 0
+        },
+        {
+          "index": 616,
+          "seconds": 0.003465775000222493,
+          "mask_sha256": "ee63832e0d8150451b3c333adeba388c5b76e77d856985eae958eee0f6aa9abc",
+          "filled_pixels": 270,
+          "open_rows": 0
+        },
+        {
+          "index": 308,
+          "seconds": 0.0035929759997088695,
+          "mask_sha256": "7ae0e6363c770d7e0ce40338af1189d1416cfd137ec1f75efcdc79f11722fc91",
+          "filled_pixels": 429410,
+          "open_rows": 0
+        },
+        {
+          "index": 154,
+          "seconds": 0.0034470659993530717,
+          "mask_sha256": "ca3b0d198eb868f7b972b6624524e3af3b6c2bae08609a17ef72e0b7bc91a34f",
+          "filled_pixels": 347808,
+          "open_rows": 0
+        },
+        {
+          "index": 0,
+          "seconds": 0.0032675250004103873,
+          "mask_sha256": "016e82e61328fce58cf2d154443711565137078368bb6c6e2980a1b26760facf",
+          "filled_pixels": 1980002,
+          "open_rows": 0
+        }
+      ],
+      "preview_seconds": 0.02874775199961732,
+      "peak_rss_bytes": 298369024
+    },
+    {
+      "mode": "reused",
+      "triangles": 25236,
+      "layers": [
+        {
+          "index": 0,
+          "seconds": 0.0038766090001445264,
+          "mask_sha256": "016e82e61328fce58cf2d154443711565137078368bb6c6e2980a1b26760facf",
+          "filled_pixels": 1980002,
+          "open_rows": 0
+        },
+        {
+          "index": 154,
+          "seconds": 0.0009921970013238024,
+          "mask_sha256": "ca3b0d198eb868f7b972b6624524e3af3b6c2bae08609a17ef72e0b7bc91a34f",
+          "filled_pixels": 347808,
+          "open_rows": 0
+        },
+        {
+          "index": 308,
+          "seconds": 0.0005363919990486465,
+          "mask_sha256": "7ae0e6363c770d7e0ce40338af1189d1416cfd137ec1f75efcdc79f11722fc91",
+          "filled_pixels": 429410,
+          "open_rows": 0
+        },
+        {
+          "index": 462,
+          "seconds": 0.00038077700082794763,
+          "mask_sha256": "03b3967f6512f38e4221c6c06cefb6ebccc464d914a44e103fb9821b0bb23f1a",
+          "filled_pixels": 936810,
+          "open_rows": 0
+        },
+        {
+          "index": 616,
+          "seconds": 0.0002399910008534789,
+          "mask_sha256": "ee63832e0d8150451b3c333adeba388c5b76e77d856985eae958eee0f6aa9abc",
+          "filled_pixels": 270,
+          "open_rows": 0
+        },
+        {
+          "index": 308,
+          "seconds": 0.0005234920008660993,
+          "mask_sha256": "7ae0e6363c770d7e0ce40338af1189d1416cfd137ec1f75efcdc79f11722fc91",
+          "filled_pixels": 429410,
+          "open_rows": 0
+        },
+        {
+          "index": 154,
+          "seconds": 0.0005609179988823598,
+          "mask_sha256": "ca3b0d198eb868f7b972b6624524e3af3b6c2bae08609a17ef72e0b7bc91a34f",
+          "filled_pixels": 347808,
+          "open_rows": 0
+        },
+        {
+          "index": 0,
+          "seconds": 0.00030089299980318174,
+          "mask_sha256": "016e82e61328fce58cf2d154443711565137078368bb6c6e2980a1b26760facf",
+          "filled_pixels": 1980002,
+          "open_rows": 0
+        }
+      ],
+      "preview_seconds": 0.007411269001750043,
+      "peak_rss_bytes": 314949632
+    }
+  ],
+  "all_pixels_equal": true,
+  "speedup": 3.8789243775700273
+}

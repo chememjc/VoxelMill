@@ -1,0 +1,756 @@
+{
+  "source": "inputstl/floatvalveR7-nut.stl",
+  "sha256": "158d3b8c08c305bb9bc2add332ec2c58409bd8534a751d38224bda488a93e3a8",
+  "triangle_count": 78028,
+  "seconds": 0.7441973259992665,
+  "peak_rss_kib": 80072,
+  "selected_rank": 2,
+  "ranked_candidates": [
+    {
+      "rank": 1,
+      "rotation_deg": [
+        89.69918484932866,
+        -30.469717465727975,
+        -179.66821443093062
+      ],
+      "matrix": [
+        [
+          -0.8618828384274507,
+          0.5070978070653228,
+          -0.003128401154157393,
+          43.13230841485657
+        ],
+        [
+          -0.004991004343441524,
+          -0.002313768977903464,
+          0.9999848680598925,
+          -6.107423805349276
+        ],
+        [
+          0.5070828952941367,
+          0.8618854103317085,
+          0.0045251251317535175,
+          -4.532785165075403
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "bounds": [
+        [
+          -15.875950766635722,
+          -6.430165582653673,
+          4.999999999999998
+        ],
+        [
+          15.875950766635722,
+          6.430165582653673,
+          36.753132250751456
+        ]
+      ],
+      "center_offset_mm": [
+        0.0,
+        0.0
+      ],
+      "model_lift_mm": 5.0,
+      "total": 0.9458864840037591,
+      "cheap_composite": 0.23979926895639617,
+      "score_terms": {
+        "downward_area": {
+          "value": 0.0870384395582841,
+          "weight": 1.0,
+          "contribution": 0.0870384395582841,
+          "counted": true
+        },
+        "support_volume_proxy": {
+          "value": 0.016749958073898376,
+          "weight": 1.0,
+          "contribution": 0.016749958073898376,
+          "counted": true
+        },
+        "height": {
+          "value": 0.19244322576213005,
+          "weight": 0.6,
+          "contribution": 0.11546593545727803,
+          "counted": true
+        },
+        "peel_footprint": {
+          "value": 0.034241559778226065,
+          "weight": 0.6,
+          "contribution": 0.020544935866935638,
+          "counted": true
+        },
+        "trapped": {
+          "value": 0.003142817404546841,
+          "weight": 4.0,
+          "contribution": 0.012571269618187364,
+          "counted": true
+        },
+        "enclosed_cavity": {
+          "value": 0.0,
+          "weight": 4.0,
+          "contribution": 0.0,
+          "counted": true
+        },
+        "support_access": {
+          "value": 0.4538492543329302,
+          "weight": 1.5,
+          "contribution": 0.6807738814993953,
+          "counted": true
+        },
+        "stability": {
+          "value": 0.015927579912225345,
+          "weight": 0.8,
+          "contribution": 0.012742063929780277,
+          "counted": true
+        }
+      },
+      "assessment": {
+        "status": "complete",
+        "analysis_pitch_mm": 0.5,
+        "analysis_grid": [
+          66,
+          28,
+          66
+        ],
+        "trapped_resin_mm3": 40.75,
+        "enclosed_cavity_count": 0,
+        "enclosed_cavity_mm3": 0.0,
+        "support_accessible_fraction": 0.5461507456670698,
+        "downward_face_cells": 2481,
+        "centre_of_mass_overhang": 0.015927579912225345,
+        "overhang_basis": "lever arm to supportable area, over the part XY half-extent",
+        "footprint_mm2": 338.75,
+        "unclosed_rows": 0,
+        "occupancy_closed": true,
+        "basis": "coarse single-sample occupancy; a ranking aid, not validation",
+        "seconds": 0.01651669199054595
+      },
+      "assessment_status": "complete",
+      "ranking_basis": "assessed",
+      "full_resolution_bounds": true,
+      "search": {
+        "mode": "auto",
+        "candidate_count": 2928,
+        "sample_triangle_count": 19507,
+        "hull_points": 721,
+        "full_resolution_bounds": true,
+        "xy_support_reserve_mm": 2.6,
+        "reserve_relaxed": false,
+        "nominal_xy_support_reserve_mm": 2.6,
+        "score": [
+          0.23979926895639617,
+          0.0870384395582841,
+          0.19244322576213005,
+          0.034241559778226065
+        ],
+        "score_fields": [
+          "composite",
+          "downward_area_fraction",
+          "height_fraction",
+          "plate_footprint_fraction"
+        ],
+        "score_weights": {
+          "downward_area": 1.0,
+          "support_volume": 1.0,
+          "height": 0.6,
+          "peel_footprint": 0.6
+        },
+        "score_terms": {
+          "downward_area": {
+            "value": 0.0870384395582841,
+            "weight": 1.0,
+            "contribution": 0.0870384395582841,
+            "counted": true
+          },
+          "support_volume_proxy": {
+            "value": 0.016749958073898376,
+            "weight": 1.0,
+            "contribution": 0.016749958073898376,
+            "counted": true
+          },
+          "height": {
+            "value": 0.19244322576213005,
+            "weight": 0.6,
+            "contribution": 0.11546593545727803,
+            "counted": true
+          },
+          "peel_footprint": {
+            "value": 0.034241559778226065,
+            "weight": 0.6,
+            "contribution": 0.020544935866935638,
+            "counted": true
+          },
+          "trapped": {
+            "value": 0.003142817404546841,
+            "weight": 4.0,
+            "contribution": 0.012571269618187364,
+            "counted": true
+          },
+          "enclosed_cavity": {
+            "value": 0.0,
+            "weight": 4.0,
+            "contribution": 0.0,
+            "counted": true
+          },
+          "support_access": {
+            "value": 0.4538492543329302,
+            "weight": 1.5,
+            "contribution": 0.6807738814993953,
+            "counted": true
+          },
+          "stability": {
+            "value": 0.015927579912225345,
+            "weight": 0.8,
+            "contribution": 0.012742063929780277,
+            "counted": true
+          }
+        },
+        "unassessed": [
+          "actual_support_volume"
+        ],
+        "finalist_min_separation_deg": 20.0,
+        "verifications_used": 2,
+        "verification_limit": 128,
+        "requires_support_envelope_recheck": true,
+        "assessment": {
+          "status": "complete",
+          "analysis_pitch_mm": 0.5,
+          "analysis_grid": [
+            66,
+            28,
+            66
+          ],
+          "trapped_resin_mm3": 40.75,
+          "enclosed_cavity_count": 0,
+          "enclosed_cavity_mm3": 0.0,
+          "support_accessible_fraction": 0.5461507456670698,
+          "downward_face_cells": 2481,
+          "centre_of_mass_overhang": 0.015927579912225345,
+          "overhang_basis": "lever arm to supportable area, over the part XY half-extent",
+          "footprint_mm2": 338.75,
+          "unclosed_rows": 0,
+          "occupancy_closed": true,
+          "basis": "coarse single-sample occupancy; a ranking aid, not validation",
+          "seconds": 0.01651669199054595
+        },
+        "finalist_score": {
+          "total": 0.9458864840037591,
+          "cheap_composite": 0.23979926895639617,
+          "trapped_fraction": 0.003142817404546841,
+          "enclosed_fraction": 0.0,
+          "void_terms_counted": true,
+          "inaccessible_fraction": 0.4538492543329302,
+          "centre_of_mass_overhang": 0.015927579912225345,
+          "weights": {
+            "trapped": 4.0,
+            "enclosed_cavity": 4.0,
+            "support_access": 1.5,
+            "stability": 0.8
+          }
+        }
+      }
+    },
+    {
+      "rank": 2,
+      "rotation_deg": [
+        89.69918484932866,
+        -30.469717465727975,
+        0.3317855690694099
+      ],
+      "matrix": [
+        [
+          0.8618828384274507,
+          -0.5070978070653228,
+          0.0031284011541576635,
+          -43.13230841485657
+        ],
+        [
+          0.004991004343441757,
+          0.002313768977903327,
+          -0.9999848680598925,
+          6.1074238053492635
+        ],
+        [
+          0.5070828952941367,
+          0.8618854103317085,
+          0.0045251251317535175,
+          -4.532785165075403
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "bounds": [
+        [
+          -15.87595076663572,
+          -6.430165582653675,
+          4.999999999999998
+        ],
+        [
+          15.87595076663572,
+          6.430165582653675,
+          36.753132250751456
+        ]
+      ],
+      "center_offset_mm": [
+        0.0,
+        0.0
+      ],
+      "model_lift_mm": 5.0,
+      "total": 0.9510715552120714,
+      "cheap_composite": 0.23979926895639614,
+      "score_terms": {
+        "downward_area": {
+          "value": 0.0870384395582841,
+          "weight": 1.0,
+          "contribution": 0.0870384395582841,
+          "counted": true
+        },
+        "support_volume_proxy": {
+          "value": 0.016749958073898376,
+          "weight": 1.0,
+          "contribution": 0.016749958073898376,
+          "counted": true
+        },
+        "height": {
+          "value": 0.19244322576213005,
+          "weight": 0.6,
+          "contribution": 0.11546593545727803,
+          "counted": true
+        },
+        "peel_footprint": {
+          "value": 0.03424155977822606,
+          "weight": 0.6,
+          "contribution": 0.020544935866935635,
+          "counted": true
+        },
+        "trapped": {
+          "value": 0.0031042552278039348,
+          "weight": 4.0,
+          "contribution": 0.012417020911215739,
+          "counted": true
+        },
+        "enclosed_cavity": {
+          "value": 0.0,
+          "weight": 4.0,
+          "contribution": 0.0,
+          "counted": true
+        },
+        "support_access": {
+          "value": 0.4517045454545454,
+          "weight": 1.5,
+          "contribution": 0.6775568181818181,
+          "counted": true
+        },
+        "stability": {
+          "value": 0.026623058953301682,
+          "weight": 0.8,
+          "contribution": 0.021298447162641346,
+          "counted": true
+        }
+      },
+      "assessment": {
+        "status": "complete",
+        "analysis_pitch_mm": 0.5,
+        "analysis_grid": [
+          66,
+          28,
+          66
+        ],
+        "trapped_resin_mm3": 40.25,
+        "enclosed_cavity_count": 0,
+        "enclosed_cavity_mm3": 0.0,
+        "support_accessible_fraction": 0.5482954545454546,
+        "downward_face_cells": 2464,
+        "centre_of_mass_overhang": 0.026623058953301682,
+        "overhang_basis": "lever arm to supportable area, over the part XY half-extent",
+        "footprint_mm2": 337.75,
+        "unclosed_rows": 0,
+        "occupancy_closed": true,
+        "basis": "coarse single-sample occupancy; a ranking aid, not validation",
+        "seconds": 0.01691816899983678
+      },
+      "assessment_status": "complete",
+      "ranking_basis": "assessed",
+      "full_resolution_bounds": true,
+      "search": {
+        "mode": "auto",
+        "candidate_count": 2928,
+        "sample_triangle_count": 19507,
+        "hull_points": 721,
+        "full_resolution_bounds": true,
+        "xy_support_reserve_mm": 2.6,
+        "reserve_relaxed": false,
+        "nominal_xy_support_reserve_mm": 2.6,
+        "score": [
+          0.23979926895639614,
+          0.0870384395582841,
+          0.19244322576213005,
+          0.03424155977822606
+        ],
+        "score_fields": [
+          "composite",
+          "downward_area_fraction",
+          "height_fraction",
+          "plate_footprint_fraction"
+        ],
+        "score_weights": {
+          "downward_area": 1.0,
+          "support_volume": 1.0,
+          "height": 0.6,
+          "peel_footprint": 0.6
+        },
+        "score_terms": {
+          "downward_area": {
+            "value": 0.0870384395582841,
+            "weight": 1.0,
+            "contribution": 0.0870384395582841,
+            "counted": true
+          },
+          "support_volume_proxy": {
+            "value": 0.016749958073898376,
+            "weight": 1.0,
+            "contribution": 0.016749958073898376,
+            "counted": true
+          },
+          "height": {
+            "value": 0.19244322576213005,
+            "weight": 0.6,
+            "contribution": 0.11546593545727803,
+            "counted": true
+          },
+          "peel_footprint": {
+            "value": 0.03424155977822606,
+            "weight": 0.6,
+            "contribution": 0.020544935866935635,
+            "counted": true
+          },
+          "trapped": {
+            "value": 0.0031042552278039348,
+            "weight": 4.0,
+            "contribution": 0.012417020911215739,
+            "counted": true
+          },
+          "enclosed_cavity": {
+            "value": 0.0,
+            "weight": 4.0,
+            "contribution": 0.0,
+            "counted": true
+          },
+          "support_access": {
+            "value": 0.4517045454545454,
+            "weight": 1.5,
+            "contribution": 0.6775568181818181,
+            "counted": true
+          },
+          "stability": {
+            "value": 0.026623058953301682,
+            "weight": 0.8,
+            "contribution": 0.021298447162641346,
+            "counted": true
+          }
+        },
+        "unassessed": [
+          "actual_support_volume"
+        ],
+        "finalist_min_separation_deg": 20.0,
+        "verifications_used": 1,
+        "verification_limit": 128,
+        "requires_support_envelope_recheck": true,
+        "assessment": {
+          "status": "complete",
+          "analysis_pitch_mm": 0.5,
+          "analysis_grid": [
+            66,
+            28,
+            66
+          ],
+          "trapped_resin_mm3": 40.25,
+          "enclosed_cavity_count": 0,
+          "enclosed_cavity_mm3": 0.0,
+          "support_accessible_fraction": 0.5482954545454546,
+          "downward_face_cells": 2464,
+          "centre_of_mass_overhang": 0.026623058953301682,
+          "overhang_basis": "lever arm to supportable area, over the part XY half-extent",
+          "footprint_mm2": 337.75,
+          "unclosed_rows": 0,
+          "occupancy_closed": true,
+          "basis": "coarse single-sample occupancy; a ranking aid, not validation",
+          "seconds": 0.01691816899983678
+        },
+        "finalist_score": {
+          "total": 0.9510715552120714,
+          "cheap_composite": 0.23979926895639614,
+          "trapped_fraction": 0.0031042552278039348,
+          "enclosed_fraction": 0.0,
+          "void_terms_counted": true,
+          "inaccessible_fraction": 0.4517045454545454,
+          "centre_of_mass_overhang": 0.026623058953301682,
+          "weights": {
+            "trapped": 4.0,
+            "enclosed_cavity": 4.0,
+            "support_access": 1.5,
+            "stability": 0.8
+          }
+        }
+      }
+    },
+    {
+      "rank": 3,
+      "rotation_deg": [
+        89.70054290522465,
+        -30.470429729193736,
+        -89.6204445023455
+      ],
+      "matrix": [
+        [
+          0.0057095491509313884,
+          0.0018672061151409937,
+          -0.9999819571321358,
+          6.070224850055373
+        ],
+        [
+          -0.8618720740069853,
+          0.5071101799690096,
+          -0.003974093443312552,
+          43.14208763959968
+        ],
+        [
+          0.5070936097954604,
+          0.8618792136448832,
+          0.004504663304525816,
+          -4.533081633415485
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "bounds": [
+        [
+          -6.439431108711476,
+          -15.876323831796405,
+          5.0
+        ],
+        [
+          6.439431108711476,
+          15.876323831796405,
+          36.7531114956271
+        ]
+      ],
+      "center_offset_mm": [
+        0.0,
+        0.0
+      ],
+      "model_lift_mm": 5.0,
+      "total": 0.955762076113306,
+      "cheap_composite": 0.23982535522611284,
+      "score_terms": {
+        "downward_area": {
+          "value": 0.08703515643059581,
+          "weight": 1.0,
+          "contribution": 0.08703515643059581,
+          "counted": true
+        },
+        "support_volume_proxy": {
+          "value": 0.01674931531018215,
+          "weight": 1.0,
+          "contribution": 0.01674931531018215,
+          "counted": true
+        },
+        "height": {
+          "value": 0.1924430999734976,
+          "weight": 0.6,
+          "contribution": 0.11546585998409856,
+          "counted": true
+        },
+        "peel_footprint": {
+          "value": 0.0342917058353939,
+          "weight": 0.6,
+          "contribution": 0.02057502350123634,
+          "counted": true
+        },
+        "trapped": {
+          "value": 0.0031093442369350332,
+          "weight": 4.0,
+          "contribution": 0.012437376947740133,
+          "counted": true
+        },
+        "enclosed_cavity": {
+          "value": 0.0,
+          "weight": 4.0,
+          "contribution": 0.0,
+          "counted": true
+        },
+        "support_access": {
+          "value": 0.4548022598870056,
+          "weight": 1.5,
+          "contribution": 0.6822033898305084,
+          "counted": true
+        },
+        "stability": {
+          "value": 0.026619942636180678,
+          "weight": 0.8,
+          "contribution": 0.021295954108944543,
+          "counted": true
+        }
+      },
+      "assessment": {
+        "status": "complete",
+        "analysis_pitch_mm": 0.5,
+        "analysis_grid": [
+          28,
+          66,
+          66
+        ],
+        "trapped_resin_mm3": 40.375,
+        "enclosed_cavity_count": 0,
+        "enclosed_cavity_mm3": 0.0,
+        "support_accessible_fraction": 0.5451977401129944,
+        "downward_face_cells": 2478,
+        "centre_of_mass_overhang": 0.026619942636180678,
+        "overhang_basis": "lever arm to supportable area, over the part XY half-extent",
+        "footprint_mm2": 337.75,
+        "unclosed_rows": 0,
+        "occupancy_closed": true,
+        "basis": "coarse single-sample occupancy; a ranking aid, not validation",
+        "seconds": 0.016716058991733007
+      },
+      "assessment_status": "complete",
+      "ranking_basis": "assessed",
+      "full_resolution_bounds": true,
+      "search": {
+        "mode": "auto",
+        "candidate_count": 2928,
+        "sample_triangle_count": 19507,
+        "hull_points": 721,
+        "full_resolution_bounds": true,
+        "xy_support_reserve_mm": 2.6,
+        "reserve_relaxed": false,
+        "nominal_xy_support_reserve_mm": 2.6,
+        "score": [
+          0.23982535522611284,
+          0.08703515643059581,
+          0.1924430999734976,
+          0.0342917058353939
+        ],
+        "score_fields": [
+          "composite",
+          "downward_area_fraction",
+          "height_fraction",
+          "plate_footprint_fraction"
+        ],
+        "score_weights": {
+          "downward_area": 1.0,
+          "support_volume": 1.0,
+          "height": 0.6,
+          "peel_footprint": 0.6
+        },
+        "score_terms": {
+          "downward_area": {
+            "value": 0.08703515643059581,
+            "weight": 1.0,
+            "contribution": 0.08703515643059581,
+            "counted": true
+          },
+          "support_volume_proxy": {
+            "value": 0.01674931531018215,
+            "weight": 1.0,
+            "contribution": 0.01674931531018215,
+            "counted": true
+          },
+          "height": {
+            "value": 0.1924430999734976,
+            "weight": 0.6,
+            "contribution": 0.11546585998409856,
+            "counted": true
+          },
+          "peel_footprint": {
+            "value": 0.0342917058353939,
+            "weight": 0.6,
+            "contribution": 0.02057502350123634,
+            "counted": true
+          },
+          "trapped": {
+            "value": 0.0031093442369350332,
+            "weight": 4.0,
+            "contribution": 0.012437376947740133,
+            "counted": true
+          },
+          "enclosed_cavity": {
+            "value": 0.0,
+            "weight": 4.0,
+            "contribution": 0.0,
+            "counted": true
+          },
+          "support_access": {
+            "value": 0.4548022598870056,
+            "weight": 1.5,
+            "contribution": 0.6822033898305084,
+            "counted": true
+          },
+          "stability": {
+            "value": 0.026619942636180678,
+            "weight": 0.8,
+            "contribution": 0.021295954108944543,
+            "counted": true
+          }
+        },
+        "unassessed": [
+          "actual_support_volume"
+        ],
+        "finalist_min_separation_deg": 20.0,
+        "verifications_used": 3,
+        "verification_limit": 128,
+        "requires_support_envelope_recheck": true,
+        "assessment": {
+          "status": "complete",
+          "analysis_pitch_mm": 0.5,
+          "analysis_grid": [
+            28,
+            66,
+            66
+          ],
+          "trapped_resin_mm3": 40.375,
+          "enclosed_cavity_count": 0,
+          "enclosed_cavity_mm3": 0.0,
+          "support_accessible_fraction": 0.5451977401129944,
+          "downward_face_cells": 2478,
+          "centre_of_mass_overhang": 0.026619942636180678,
+          "overhang_basis": "lever arm to supportable area, over the part XY half-extent",
+          "footprint_mm2": 337.75,
+          "unclosed_rows": 0,
+          "occupancy_closed": true,
+          "basis": "coarse single-sample occupancy; a ranking aid, not validation",
+          "seconds": 0.016716058991733007
+        },
+        "finalist_score": {
+          "total": 0.955762076113306,
+          "cheap_composite": 0.23982535522611284,
+          "trapped_fraction": 0.0031093442369350332,
+          "enclosed_fraction": 0.0,
+          "void_terms_counted": true,
+          "inaccessible_fraction": 0.4548022598870056,
+          "centre_of_mass_overhang": 0.026619942636180678,
+          "weights": {
+            "trapped": 4.0,
+            "enclosed_cavity": 4.0,
+            "support_access": 1.5,
+            "stability": 0.8
+          }
+        }
+      }
+    }
+  ],
+  "limits": "lower scores rank first; unavailable assessments follow assessed poses; finite search, sampled scoring, full-resolution model bounds; supports still need an envelope and routing check",
+  "weight_calibration": "unfitted heuristic weights; not calibrated to physical prints"
+}

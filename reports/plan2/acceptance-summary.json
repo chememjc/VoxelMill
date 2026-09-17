@@ -1,0 +1,422 @@
+{
+  "purpose": "plan2 Tier 0.1 real-part acceptance measurements",
+  "run_options": {
+    "settings": "resolve_settings() defaults",
+    "rotation_deg": [
+      0,
+      0,
+      0
+    ],
+    "model_lift_mm": 5,
+    "max_passes": 1,
+    "allow_unresolved": false,
+    "drainage": true,
+    "track_voids": true
+  },
+  "peak_rss_scope": "process high-water mark; nut, cover, body ran sequentially in one process; not isolated benchmarks",
+  "parts": [
+    {
+      "part": "nut",
+      "status": "complete",
+      "source": "inputstl/floatvalveR7-nut.stl",
+      "source_sha256": "158d3b8c08c305bb9bc2add332ec2c58409bd8534a751d38224bda488a93e3a8",
+      "triangles": 78028,
+      "assembly": {
+        "union": "raster",
+        "exact_union_attempted": true,
+        "exact_union_blocked_by": [
+          {
+            "code": "self_intersections",
+            "message": "Input contains intersecting surfaces; choose explicit aggressive repair",
+            "details": {
+              "self_intersections_status": "complete",
+              "self_intersections": 8,
+              "intersection_candidate_pairs": 1264328,
+              "intersection_examples": [
+                [
+                  54491,
+                  56070
+                ],
+                [
+                  54493,
+                  56070
+                ],
+                [
+                  54493,
+                  56071
+                ],
+                [
+                  54553,
+                  56070
+                ],
+                [
+                  54556,
+                  56070
+                ],
+                [
+                  56070,
+                  56071
+                ],
+                [
+                  56070,
+                  56072
+                ],
+                [
+                  56071,
+                  56072
+                ]
+              ],
+              "intersection_skipped_invalid_triangles": 0,
+              "intersection_method": "CGAL exact predicates; all AABB candidates; legal shared subfaces excluded",
+              "findings": {
+                "degenerate_triangles": {
+                  "status": "pass",
+                  "count": 0
+                },
+                "weld": {
+                  "status": "pass"
+                },
+                "manifold": {
+                  "status": "pass"
+                },
+                "self_intersections": {
+                  "status": "fail",
+                  "count": 8
+                }
+              }
+            }
+          }
+        ],
+        "groups": [
+          {
+            "name": "model",
+            "triangles": 78028,
+            "orientation": "untrusted"
+          },
+          {
+            "name": "supports_and_raft",
+            "triangles": 20556,
+            "orientation": "closed_positive"
+          }
+        ],
+        "max_displacement_mm": 0.0,
+        "establishes": "independent occupancy OR on the printer lattice; exported carrier requires raster parity",
+        "does_not_establish": "the exported STL is not a certified valid closed solid; it is not boolean-resolved or repaired"
+      },
+      "validation": {
+        "passed": false,
+        "checks": {
+          "raster_connectivity": "pass",
+          "overlap": "pass",
+          "growth_span": "pass",
+          "enclosed_voids": "pass",
+          "transient_traps": "warn",
+          "closed_surface": "pass",
+          "union_raster_parity": "pass",
+          "plate_fit": "pass",
+          "support_routes": "fail",
+          "support_slenderness": "pass",
+          "support_coverage": "fail",
+          "support_anchor_load": "pass",
+          "drainage_bottlenecks": "fail"
+        },
+        "parity": {
+          "mismatched_pixels": 0,
+          "mismatched_layers": 0,
+          "examples": [],
+          "reference_open_rows": 0
+        },
+        "reopened": {
+          "path": "/tmp/chopchop-prepare-6k5bj_3w/prepared.stl",
+          "sha256": "1b79c5b3e80a36cab23058b72e9d4209fe0e464837404ad1dd4169678b01a086",
+          "triangles": 98584,
+          "bounds": [
+            [
+              -18.14650535583496,
+              -17.367542266845703,
+              0.0
+            ],
+            [
+              17.352888107299805,
+              17.38364028930664,
+              17.700000762939453
+            ]
+          ],
+          "open_rows": 0,
+          "open_layers": 0,
+          "negative_winding_crossings": 0,
+          "grid": [
+            1976,
+            1933
+          ],
+          "crop_origin_px": [
+            3250,
+            1194
+          ]
+        },
+        "supports": {
+          "contacts_requested": 229,
+          "contacts_routed": 110,
+          "contacts_failed": 119,
+          "contacts_in_sealed_cavities": 0,
+          "uncovered_samples": 4,
+          "uncovered_fraction": 0.0002754820936639118
+        },
+        "drainage": {
+          "enclosed_components": 0,
+          "bottlenecked_components": 3,
+          "unclosed_rows": 0,
+          "seconds": 0.7805158200208098
+        }
+      },
+      "export": {
+        "written": false,
+        "path": "output/plan2/nut-supported.stl",
+        "reason": "validation did not pass; rerun with --allow-unresolved to keep a warned export",
+        "failed_checks": [
+          "support_routes",
+          "support_coverage",
+          "drainage_bottlenecks"
+        ]
+      },
+      "seconds": 32.47458519297652,
+      "peak_rss_bytes": 294178816,
+      "scratch_bytes": 7738292,
+      "full_report": "output/plan2/nut-prepare.json"
+    },
+    {
+      "part": "cover",
+      "status": "complete",
+      "source": "inputstl/floatvalveR7-cover.stl",
+      "source_sha256": "c3ced8d82edd115b2e7441f3b40e2ede0cd2c72bd573ff6b7140d03bf62c34f3",
+      "triangles": 89410,
+      "assembly": {
+        "union": "exact",
+        "exact_union_attempted": true,
+        "exact_union_blocked_by": [],
+        "groups": [
+          {
+            "name": "model",
+            "triangles": 89410,
+            "orientation": "accepted_solid"
+          },
+          {
+            "name": "supports_and_raft",
+            "triangles": 72468,
+            "orientation": "closed_positive"
+          }
+        ],
+        "max_displacement_mm": 0.0,
+        "establishes": "boolean-resolved solid",
+        "does_not_establish": "physical printability"
+      },
+      "validation": {
+        "passed": false,
+        "checks": {
+          "raster_connectivity": "pass",
+          "overlap": "pass",
+          "growth_span": "fail",
+          "enclosed_voids": "fail",
+          "transient_traps": "warn",
+          "closed_surface": "pass",
+          "plate_fit": "pass",
+          "support_routes": "fail",
+          "support_slenderness": "pass",
+          "support_coverage": "pass",
+          "support_anchor_load": "pass",
+          "drainage_bottlenecks": "fail"
+        },
+        "parity": null,
+        "reopened": {
+          "path": "/tmp/chopchop-prepare-sb7mxbxc/prepared.stl",
+          "sha256": "78bc65209d227e7170d4833d9428ed5bba1b68135f89fa6e0904ae6dc48ddcf5",
+          "triangles": 163694,
+          "bounds": [
+            [
+              -29.98170280456543,
+              -29.992923736572266,
+              0.0
+            ],
+            [
+              30.056076049804688,
+              29.66004753112793,
+              30.399999618530273
+            ]
+          ],
+          "open_rows": 0,
+          "open_layers": 0,
+          "negative_winding_crossings": 0,
+          "grid": [
+            3338,
+            3317
+          ],
+          "crop_origin_px": [
+            2593,
+            492
+          ]
+        },
+        "supports": {
+          "contacts_requested": 773,
+          "contacts_routed": 389,
+          "contacts_failed": 384,
+          "contacts_in_sealed_cavities": 0,
+          "uncovered_samples": 0,
+          "uncovered_fraction": 0.0
+        },
+        "drainage": {
+          "enclosed_components": 3,
+          "bottlenecked_components": 11,
+          "unclosed_rows": 0,
+          "seconds": 9.000231515150517
+        }
+      },
+      "export": {
+        "written": false,
+        "path": "output/plan2/cover-supported.stl",
+        "reason": "validation did not pass; rerun with --allow-unresolved to keep a warned export",
+        "failed_checks": [
+          "growth_span",
+          "enclosed_voids",
+          "support_routes",
+          "drainage_bottlenecks"
+        ]
+      },
+      "seconds": 166.9146155549679,
+      "peak_rss_bytes": 1335169024,
+      "scratch_bytes": 11403544,
+      "full_report": "output/plan2/cover-prepare.json"
+    },
+    {
+      "part": "body",
+      "status": "complete",
+      "source": "inputstl/floatvalveR7-body.stl",
+      "source_sha256": "c5163818203274b00a61300585b0f8f842668dc1574af9064736f59196198d79",
+      "triangles": 989834,
+      "assembly": {
+        "union": "raster",
+        "exact_union_attempted": true,
+        "exact_union_blocked_by": [
+          {
+            "code": "degenerate_triangles",
+            "message": "Input contains zero-area triangles; no triangles were silently removed",
+            "details": {
+              "count": 4064,
+              "findings": {
+                "degenerate_triangles": {
+                  "status": "fail",
+                  "count": 4064
+                },
+                "weld": {
+                  "status": "not_run"
+                },
+                "manifold": {
+                  "status": "not_run"
+                },
+                "self_intersections": {
+                  "status": "not_run",
+                  "reason": "skipped because degenerate triangles were found"
+                }
+              }
+            }
+          }
+        ],
+        "groups": [
+          {
+            "name": "model",
+            "triangles": 989834,
+            "orientation": "untrusted"
+          },
+          {
+            "name": "supports_and_raft",
+            "triangles": 107534,
+            "orientation": "closed_positive"
+          }
+        ],
+        "max_displacement_mm": 0.0,
+        "establishes": "independent occupancy OR on the printer lattice; exported carrier requires raster parity",
+        "does_not_establish": "the exported STL is not a certified valid closed solid; it is not boolean-resolved or repaired"
+      },
+      "validation": {
+        "passed": false,
+        "checks": {
+          "raster_connectivity": "pass",
+          "overlap": "pass",
+          "growth_span": "pass",
+          "enclosed_voids": "fail",
+          "transient_traps": "warn",
+          "closed_surface": "pass",
+          "union_raster_parity": "pass",
+          "plate_fit": "pass",
+          "support_routes": "fail",
+          "support_slenderness": "pass",
+          "support_coverage": "fail",
+          "support_anchor_load": "warn",
+          "drainage_bottlenecks": "fail"
+        },
+        "parity": {
+          "mismatched_pixels": 0,
+          "mismatched_layers": 0,
+          "examples": [],
+          "reference_open_rows": 0
+        },
+        "reopened": {
+          "path": "/tmp/chopchop-prepare-b1lwvgvy/prepared.stl",
+          "sha256": "db11b132cf9b40376e4fdff6e086067bf6983da6a8a54b7d345a14b36baa55ff",
+          "triangles": 1097368,
+          "bounds": [
+            [
+              -29.063180923461914,
+              -28.723939895629883,
+              0.0
+            ],
+            [
+              28.766260147094727,
+              28.39573097229004,
+              85.43008422851562
+            ]
+          ],
+          "open_rows": 0,
+          "open_layers": 0,
+          "negative_winding_crossings": 0,
+          "grid": [
+            3216,
+            3176
+          ],
+          "crop_origin_px": [
+            2644,
+            563
+          ]
+        },
+        "supports": {
+          "contacts_requested": 1085,
+          "contacts_routed": 516,
+          "contacts_failed": 569,
+          "contacts_in_sealed_cavities": 0,
+          "uncovered_samples": 30,
+          "uncovered_fraction": 0.00016353318906071987
+        },
+        "drainage": {
+          "enclosed_components": 21,
+          "bottlenecked_components": 110,
+          "unclosed_rows": 0,
+          "seconds": 196.04567932989448
+        }
+      },
+      "export": {
+        "written": false,
+        "path": "output/plan2/body-supported.stl",
+        "reason": "validation did not pass; rerun with --allow-unresolved to keep a warned export",
+        "failed_checks": [
+          "enclosed_voids",
+          "support_routes",
+          "support_coverage",
+          "drainage_bottlenecks"
+        ]
+      },
+      "seconds": 624.5462720349897,
+      "peak_rss_bytes": 2689671168,
+      "scratch_bytes": 90502508,
+      "full_report": "output/plan2/body-prepare.json"
+    }
+  ]
+}

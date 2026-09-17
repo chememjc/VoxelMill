@@ -1,0 +1,47 @@
+# Virtualenv and Python caches
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+htmlcov/
+
+# Build artifacts (scikit-build-core / CMake / pybind11)
+build/
+_skbuild/
+dist/
+*.egg-info/
+*.whl
+*.so
+*.pyd
+CMakeFiles/
+CMakeCache.txt
+.cmake/
+
+# Immutable originals and generated print data; see README.md
+inputstl/
+output/
+.scratch/
+*.goo
+*.voxmil
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+
+# Local scratch
+deleteme.*
+*.backup
+*.log
+*.orig
+*.rej
+packaging/appimage/appimagetool
+
+# Committed test geometry must survive the broad rules above
+!fixtures/shapes/
+!fixtures/shapes/**

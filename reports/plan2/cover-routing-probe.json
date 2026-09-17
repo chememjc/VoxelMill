@@ -1,0 +1,542 @@
+{
+  "schema_version": 1,
+  "probe": "routing",
+  "source": "inputstl/floatvalveR7-cover.stl",
+  "source_sha256": "c3ced8d82edd115b2e7441f3b40e2ede0cd2c72bd573ff6b7140d03bf62c34f3",
+  "lift_mm": 5.0,
+  "placement": {
+    "matrix": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        60.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        17.699999809265137
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "center_offset_mm": [
+      0.0,
+      0.0
+    ],
+    "model_lift_mm": 5.0,
+    "bounds": [
+      [
+        -27.75,
+        -27.75,
+        5.0
+      ],
+      [
+        27.75,
+        27.75,
+        30.399999618530273
+      ]
+    ],
+    "search": {
+      "mode": "explicit",
+      "full_resolution_bounds": true,
+      "xy_support_reserve_mm": 2.6,
+      "reserve_relaxed": false,
+      "nominal_xy_support_reserve_mm": 2.6,
+      "requires_support_envelope_recheck": true
+    }
+  },
+  "settings": {
+    "schema_version": 1,
+    "printer": {
+      "id": "mars5-ultra",
+      "name": "Elegoo Mars 5 Ultra",
+      "build_mm": [
+        153.36,
+        77.76,
+        165.0
+      ],
+      "pixels": [
+        8520,
+        4320
+      ],
+      "pixel_pitch_mm": [
+        0.018,
+        0.018
+      ],
+      "edge_clearance_mm": 2.0,
+      "image_mirror_x": false,
+      "image_mirror_y": false,
+      "layer_height_range_mm": [
+        0.01,
+        0.2
+      ],
+      "output_formats": [
+        "goo"
+      ],
+      "motion": {
+        "bottom_lift_height": 0.05,
+        "bottom_lift_speed": 0.05,
+        "lift_height": 0.05,
+        "lift_speed": 0.05,
+        "bottom_retract_height": 0.05,
+        "bottom_retract_speed": 0.05,
+        "retract_height": 0.05,
+        "retract_speed": 0.05,
+        "bottom_lift_height2": 0.0,
+        "bottom_lift_speed2": 0.0,
+        "lift_height2": 0.0,
+        "lift_speed2": 0.0,
+        "bottom_retract_height2": 0.0,
+        "bottom_retract_speed2": 0.0,
+        "retract_height2": 0.0,
+        "retract_speed2": 0.0,
+        "bottom_light_pwm": 255,
+        "light_pwm": 255
+      }
+    },
+    "resin": {
+      "id": "sunlu-abs-like-gray",
+      "name": "Sunlu ABS-like gray"
+    },
+    "process": {
+      "layer_height_mm": 0.05,
+      "bottom_exposure_s": 35.0,
+      "normal_exposure_s": 3.5,
+      "bottom_layers": 4,
+      "transition_layers": 5,
+      "bottom_rest_after_exposure_s": 1.0,
+      "normal_rest_after_exposure_s": 1.0,
+      "bottom_settle_before_exposure_s": 0.5,
+      "normal_settle_before_exposure_s": 0.5,
+      "bottom_wait_after_lift_s": 0.0,
+      "normal_wait_after_lift_s": 0.0
+    },
+    "support": {
+      "automatic": true,
+      "auto_bracing": true,
+      "spacing_mm": 3.0,
+      "contact_diameter_mm": 0.4,
+      "penetration_mm": 0.15,
+      "pillar_diameter_mm": 1.2,
+      "tip_length_mm": 2.0,
+      "min_tip_length_mm": 0.3,
+      "raft_thickness_mm": 1.0,
+      "raft_expansion_mm": 2.0,
+      "max_slenderness": 40.0,
+      "max_span_mm": 3.0,
+      "min_overlap_pixels": 1,
+      "overhang_angle_deg": 45.0,
+      "support_clearance_mm": 0.3,
+      "max_contact_gap_mm": 0.0,
+      "max_contact_load_mm2": 0.0
+    },
+    "repair": {
+      "seal_voids": true,
+      "min_orifice_area_mm2": 1.0,
+      "aggressiveness": "conservative",
+      "max_deviation_mm": 0.05,
+      "remove_tiny_features": false,
+      "auto_drain_holes": false,
+      "voxel_size_mm": 0.0,
+      "smooth_iterations": 0,
+      "min_void_volume_mm3": 0.0
+    },
+    "assembly": {
+      "union": "auto",
+      "require_raster_parity": true,
+      "max_parity_examples": 16,
+      "clip_to_build_volume": false
+    },
+    "resources": {
+      "memory_gib": 32.0,
+      "workers": 2,
+      "scratch_dir": null
+    }
+  },
+  "field": {
+    "analysis_pitch_mm": 0.15,
+    "layer_height_mm": 0.05,
+    "layers": 608,
+    "columns": 139876,
+    "runs": 154635,
+    "open_contour_rows": 0,
+    "negative_winding_crossings": 0,
+    "raster_islands": 8,
+    "sealed_gaps": 0,
+    "enclosed_void_volume_mm3": 0.0,
+    "seconds": 1.2257909840000139
+  },
+  "selection": {
+    "downward_face_area_mm2": 3546.957847004672,
+    "downward_samples": 18424,
+    "manual_contacts": 0,
+    "suppressed_contacts": 0,
+    "coverage_gap_limit_mm": 3.0,
+    "contact_load_limit_mm2": 36.0,
+    "coverage_basis": "sampled downward faces; geometric reach, not strength",
+    "max_contact_gap_mm": 2.9752866079524005,
+    "mean_contact_gap_mm": 1.1099807233016512,
+    "uncovered_samples": 0,
+    "uncovered_fraction": 0.0,
+    "coverage": "pass",
+    "max_contact_load_mm2_actual": 23.679755491835362,
+    "overloaded_contacts": 0,
+    "anchor_load": "pass"
+  },
+  "router_metrics": {
+    "contacts_requested": 773,
+    "contacts_routed": 722,
+    "contacts_failed": 51,
+    "contacts_in_sealed_cavities": 0,
+    "routing": {
+      "vertical": 385,
+      "branched": 4,
+      "model_anchor": 333
+    },
+    "contacts_with_shortened_tip": 333,
+    "min_tip_used_mm": 0.3614606221516894,
+    "tip_length_mm": 2.0,
+    "min_tip_length_mm": 0.3,
+    "braces": 0,
+    "braces_capped": false,
+    "raster_islands": 8,
+    "spacing_mm": 3.0,
+    "overhang_angle_deg": 45.0,
+    "max_pillar_length_mm": 16.900583677617618,
+    "diagnostics_capped_at": 256,
+    "mechanics": "configured heuristic limits; not a strength proof",
+    "seconds": 0.20188211699996828,
+    "analysis": {
+      "analysis_pitch_mm": 0.15,
+      "layer_height_mm": 0.05,
+      "layers": 608,
+      "columns": 139876,
+      "runs": 154635,
+      "open_contour_rows": 0,
+      "negative_winding_crossings": 0,
+      "raster_islands": 8,
+      "sealed_gaps": 0,
+      "enclosed_void_volume_mm3": 0.0,
+      "seconds": 1.2257909840000139
+    }
+  },
+  "reclassified": {
+    "vertical": 385,
+    "model_anchor_shortened_tip": 333,
+    "failed": 51,
+    "branched": 4
+  },
+  "agrees_with_router": {
+    "router_routed": 722,
+    "probe_routed": 722,
+    "router_failed": 51,
+    "probe_failed": 51
+  },
+  "binding_constraints": {
+    "no material below and no vertical route: first_material disagrees with the contact": 51
+  },
+  "failed_gap_below_mm": {
+    "count": 0,
+    "min": null,
+    "max": null,
+    "median": null,
+    "under_tip_length": 0
+  },
+  "what_if": {
+    "basis": "each variation measured alone against the same failed contacts",
+    "branch_attempts": 64,
+    "min_tip_mm": 0.3,
+    "nudge_cells": 2,
+    "failed_contacts": 51,
+    "recovered_by": {
+      "nudge_to_free_column": 9
+    },
+    "recovered_by_any": 9,
+    "still_failing": 42,
+    "caveat": "a recovered route is a geometric route, not a proof that the support holds or can be removed"
+  },
+  "exact_attachment": {
+    "basis": "printer-pitch raster of the placed model, one layer below each contact",
+    "failed_contacts_examined": 51,
+    "own_pixel_occupied_below": 37,
+    "any_of_3x3_occupied_below": 50,
+    "means": "an occupied pixel one layer below is the same attachment raster_connectivity certifies; such an overhang rests on material printed before it",
+    "does_not_establish": "that the attached material is strong enough, or that the sample should be dropped from the coverage basis"
+  },
+  "examples": {
+    "no material below and no vertical route: first_material disagrees with the contact": [
+      {
+        "position_mm": [
+          25.5825678507487,
+          -7.8159511884053545,
+          7.8015947341918945
+        ],
+        "tip_length_mm": 2.0,
+        "layer_index": 56,
+        "base_z_mm": 5.8015947341918945,
+        "material_below_layer": null,
+        "gap_below_mm": null,
+        "branch_search_radius_cells": 39,
+        "free_neighbours_in_window": 3310,
+        "neighbours_within_spacing": 2720,
+        "neighbours_under_45_deg": 2558,
+        "nearest_free_neighbour_mm": 1.0274073357744806,
+        "branch_segments_blocked": 8,
+        "min_tip_length_mm": 0.3,
+        "outcome": "failed",
+        "binding_constraint": "no material below and no vertical route: first_material disagrees with the contact"
+      },
+      {
+        "position_mm": [
+          25.715077718098957,
+          -7.3682834307352705,
+          7.821849822998047
+        ],
+        "tip_length_mm": 2.0,
+        "layer_index": 56,
+        "base_z_mm": 5.821849822998047,
+        "material_below_layer": null,
+        "gap_below_mm": null,
+        "branch_search_radius_cells": 39,
+        "free_neighbours_in_window": 3236,
+        "neighbours_within_spacing": 2654,
+        "neighbours_under_45_deg": 2511,
+        "nearest_free_neighbour_mm": 1.0414990353655695,
+        "branch_segments_blocked": 8,
+        "min_tip_length_mm": 0.3,
+        "outcome": "failed",
+        "binding_constraint": "no material below and no vertical route: first_material disagrees with the contact"
+      },
+      {
+        "position_mm": [
+          -7.825874328613281,
+          25.57953389485677,
+          7.882615089416504
+        ],
+        "tip_length_mm": 2.0,
+        "layer_index": 57,
+        "base_z_mm": 5.882615089416504,
+        "material_below_layer": null,
+        "gap_below_mm": null,
+        "branch_search_radius_cells": 40,
+        "free_neighbours_in_window": 3474,
+        "neighbours_within_spacing": 2730,
+        "neighbours_under_45_deg": 2628,
+        "nearest_free_neighbour_mm": 1.0251760733150324,
+        "branch_segments_blocked": 8,
+        "min_tip_length_mm": 0.3,
+        "outcome": "failed",
+        "binding_constraint": "no material below and no vertical route: first_material disagrees with the contact"
+      },
+      {
+        "position_mm": [
+          -14.170883178710938,
+          -22.6879456837972,
+          8.105422019958496
+        ],
+        "tip_length_mm": 2.0,
+        "layer_index": 62,
+        "base_z_mm": 6.105422019958496,
+        "material_below_layer": null,
+        "gap_below_mm": null,
+        "branch_search_radius_cells": 40,
+        "free_neighbours_in_window": 4854,
+        "neighbours_within_spacing": 3851,
+        "neighbours_under_45_deg": 3851,
+        "nearest_free_neighbour_mm": 1.0412938484846543,
+        "branch_segments_blocked": 8,
+        "min_tip_length_mm": 0.3,
+        "outcome": "failed",
+        "binding_constraint": "no material below and no vertical route: first_material disagrees with the contact"
+      },
+      {
+        "position_mm": [
+          -7.8159535725911455,
+          -25.58256721496582,
+          8.409250259399414
+        ],
+        "tip_length_mm": 2.0,
+        "layer_index": 68,
+        "base_z_mm": 6.409250259399414,
+        "material_below_layer": null,
+        "gap_below_mm": null,
+        "branch_search_radius_cells": 40,
+        "free_neighbours_in_window": 3474,
+        "neighbours_within_spacing": 2726,
+        "neighbours_under_45_deg": 2726,
+        "nearest_free_neighbour_mm": 1.02740670674353,
+        "branch_segments_blocked": 8,
+        "min_tip_length_mm": 0.3,
+        "outcome": "failed",
+        "binding_constraint": "no material below and no vertical route: first_material disagrees with the contact"
+      },
+      {
+        "position_mm": [
+          -7.3682810465494795,
+          -25.715077718098957,
+          8.429505348205566
+        ],
+        "tip_length_mm": 2.0,
+        "layer_index": 68,
+        "base_z_mm": 6.429505348205566,
+        "material_below_layer": null,
+        "gap_below_mm": null,
+        "branch_search_radius_cells": 40,
+        "free_neighbours_in_window": 3397,
+        "neighbours_within_spacing": 2663,
+        "neighbours_under_45_deg": 2663,
+        "nearest_free_neighbour_mm": 1.0415001953365115,
+        "branch_segments_blocked": 8,
+        "min_tip_length_mm": 0.3,
+        "outcome": "failed",
+        "binding_constraint": "no material below and no vertical route: first_material disagrees with the contact"
+      },
+      {
+        "position_mm": [
+          25.579535166422527,
+          7.825872739156087,
+          8.490270614624023
+        ],
+        "tip_length_mm": 2.0,
+        "layer_index": 69,
+        "base_z_mm": 6.490270614624023,
+        "material_below_layer": null,
+        "gap_below_mm": null,
+        "branch_search_radius_cells": 40,
+        "free_neighbours_in_window": 3474,
+        "neighbours_within_spacing": 2730,
+        "neighbours_under_45_deg": 2730,
+        "nearest_free_neighbour_mm": 1.025175736491785,
+        "branch_segments_blocked": 8,
+        "min_tip_length_mm": 0.3,
+        "outcome": "failed",
+        "binding_constraint": "no material below and no vertical route: first_material disagrees with the contact"
+      },
+      {
+        "position_mm": [
+          -25.5825678507487,
+          7.8159511884053545,
+          9.016905784606934
+        ],
+        "tip_length_mm": 2.0,
+        "layer_index": 80,
+        "base_z_mm": 7.016905784606934,
+        "material_below_layer": null,
+        "gap_below_mm": null,
+        "branch_search_radius_cells": 40,
+        "free_neighbours_in_window": 3474,
+        "neighbours_within_spacing": 2726,
+        "neighbours_under_45_deg": 2726,
+        "nearest_free_neighbour_mm": 1.027407335774482,
+        "branch_segments_blocked": 8,
+        "min_tip_length_mm": 0.3,
+        "outcome": "failed",
+        "binding_constraint": "no material below and no vertical route: first_material disagrees with the contact"
+      },
+      {
+        "position_mm": [
+          7.8258717854817705,
+          -25.57953389485677,
+          9.097926139831543
+        ],
+        "tip_length_mm": 2.0,
+        "layer_index": 81,
+        "base_z_mm": 7.097926139831543,
+        "material_below_layer": null,
+        "gap_below_mm": null,
+        "branch_search_radius_cells": 40,
+        "free_neighbours_in_window": 3474,
+        "neighbours_within_spacing": 2730,
+        "neighbours_under_45_deg": 2730,
+        "nearest_free_neighbour_mm": 1.0251773114874052,
+        "branch_segments_blocked": 8,
+        "min_tip_length_mm": 0.3,
+        "outcome": "failed",
+        "binding_constraint": "no material below and no vertical route: first_material disagrees with the contact"
+      },
+      {
+        "position_mm": [
+          7.815951029459636,
+          25.58256721496582,
+          9.624561309814453
+        ],
+        "tip_length_mm": 2.0,
+        "layer_index": 92,
+        "base_z_mm": 7.624561309814453,
+        "material_below_layer": null,
+        "gap_below_mm": null,
+        "branch_search_radius_cells": 40,
+        "free_neighbours_in_window": 3474,
+        "neighbours_within_spacing": 2726,
+        "neighbours_under_45_deg": 2726,
+        "nearest_free_neighbour_mm": 1.0274079667844038,
+        "branch_segments_blocked": 8,
+        "min_tip_length_mm": 0.3,
+        "outcome": "failed",
+        "binding_constraint": "no material below and no vertical route: first_material disagrees with the contact"
+      },
+      {
+        "position_mm": [
+          -25.57953389485677,
+          -7.825872739156087,
+          9.705581665039062
+        ],
+        "tip_length_mm": 2.0,
+        "layer_index": 94,
+        "base_z_mm": 7.7055816650390625,
+        "material_below_layer": null,
+        "gap_below_mm": null,
+        "branch_search_radius_cells": 40,
+        "free_neighbours_in_window": 3474,
+        "neighbours_within_spacing": 2730,
+        "neighbours_under_45_deg": 2730,
+        "nearest_free_neighbour_mm": 1.0251768471722036,
+        "branch_segments_blocked": 8,
+        "min_tip_length_mm": 0.3,
+        "outcome": "failed",
+        "binding_constraint": "no material below and no vertical route: first_material disagrees with the contact"
+      },
+      {
+        "position_mm": [
+          -14.564684549967447,
+          -22.43717384338379,
+          10.515789031982422
+        ],
+        "tip_length_mm": 2.0,
+        "layer_index": 110,
+        "base_z_mm": 8.515789031982422,
+        "material_below_layer": null,
+        "gap_below_mm": null,
+        "branch_search_radius_cells": 40,
+        "free_neighbours_in_window": 5003,
+        "neighbours_within_spacing": 3908,
+        "neighbours_under_45_deg": 3908,
+        "nearest_free_neighbour_mm": 1.0240396197969324,
+        "branch_segments_blocked": 8,
+        "min_tip_length_mm": 0.3,
+        "outcome": "failed",
+        "binding_constraint": "no material below and no vertical route: first_material disagrees with the contact"
+      }
+    ]
+  },
+  "seconds": 1.81128051900032,
+  "establishes": "which router constraint rejected each contact, on this pose and these settings",
+  "does_not_establish": "that a rejected contact is or is not physically supportable"
+}

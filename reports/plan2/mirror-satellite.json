@@ -1,0 +1,61 @@
+{
+  "goo": "right_temporal_bone_mars5_oriented_1_202609061627_04h20m_77ml_uvtools-good.goo",
+  "stl": "inputstl/right_temporal_bone_mars5_oriented.stl",
+  "software": "ELEGOO SatelLite",
+  "machine": "ELEGOO Mars 5 Ultra",
+  "mirror_x_flag": 0,
+  "mirror_y_flag": 1,
+  "per_layer": [
+    {
+      "layer": 732,
+      "reference_pixels": 5346317,
+      "flip": "flip_xy",
+      "iou": 0.12032808489521199,
+      "z_model_mm": 19.349952697753906,
+      "z_goo_mm": 36.650001525878906,
+      "candidate_pixels": 1471574
+    },
+    {
+      "layer": 1007,
+      "reference_pixels": 3514112,
+      "flip": "flip_y",
+      "iou": 0.1013902060416915,
+      "z_model_mm": 30.349952697753906,
+      "z_goo_mm": 50.400001525878906,
+      "candidate_pixels": 1209201
+    },
+    {
+      "layer": 1282,
+      "reference_pixels": 1435359,
+      "flip": "flip_x",
+      "iou": 0.1282376552486402,
+      "z_model_mm": 45.599952697753906,
+      "z_goo_mm": 64.1500015258789,
+      "candidate_pixels": 1554399
+    },
+    {
+      "layer": 1557,
+      "reference_pixels": 1160737,
+      "flip": "flip_y",
+      "iou": 0.0741091124973039,
+      "z_model_mm": 54.599952697753906,
+      "z_goo_mm": 77.9000015258789,
+      "candidate_pixels": 1689013
+    }
+  ],
+  "best_flip_by_layer": {
+    "732": "flip_xy",
+    "1007": "flip_y",
+    "1282": "flip_x",
+    "1557": "flip_y"
+  },
+  "mean_iou_by_flip": {
+    "flip_xy": 0.1203,
+    "flip_y": 0.0877,
+    "flip_x": 0.1282
+  },
+  "conclusive": false,
+  "conclusion": "inconclusive: the sampled layers do not agree on one flip, or the best overlap is too weak to be a shape match. The slicer posed the model itself, so a Z window around a shared top is not enough to recover that pose",
+  "establishes": "which axis flip of our own raster best matches the stored pixels, with centroids aligned; it is shape evidence, not a pose recovery",
+  "does_not_establish": "the physical orientation on the LCD, or that a firmware honours the mirror flags it is given"
+}

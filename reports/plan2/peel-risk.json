@@ -1,0 +1,142 @@
+{
+  "scope": "isolated full-resolution surface screening; original poses; no physical acceptance",
+  "runs": [
+    {
+      "source": "inputstl/floatvalveR7-nut.stl",
+      "sha256": "158d3b8c08c305bb9bc2add332ec2c58409bd8534a751d38224bda488a93e3a8",
+      "triangles": 78028,
+      "settings": {
+        "enabled": true,
+        "max_angle_deg": 10.0,
+        "area_threshold_mm2": 100.0,
+        "reference_lift_speed": 0.05
+      },
+      "seconds": 0.068890819005901,
+      "peak_rss_kib": 66176,
+      "peel_risk": {
+        "status": "complete",
+        "source_triangle_count": 78028,
+        "candidate_triangle_count": 14440,
+        "threshold_area_mm2": 100.0,
+        "max_angle_deg": 10.0,
+        "reference_lift_speed": 0.05,
+        "build_z_mm": 165.0,
+        "layer_height_mm": 0.05,
+        "bottom_layer_top_mm": 0.2,
+        "bottom_lift_speed": 0.05,
+        "normal_lift_speed": 0.05,
+        "heuristic": "uncalibrated geometry score; not a force or failure prediction",
+        "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
+        "basis": "oriented STL winding; exact shared-edge connectivity; native profile speed units; physical plate Z=0",
+        "limitations": [
+          "summed projected surface area is not instantaneous peel contact area",
+          "does not model resin, film, tilt release or actual suction pressure",
+          "open, duplicate and nonmanifold surfaces require independent validation"
+        ],
+        "region_count": 3621,
+        "total_region_count": 3621,
+        "threshold_region_count": 2,
+        "maximum_projected_area_mm2": 232.96532753417034,
+        "maximum_score": 2.4948468685365635,
+        "regions": [
+          {
+            "triangle_count": 366,
+            "area_mm2": 232.96532753417034,
+            "projected_area_mm2": 232.96532753417034,
+            "bounds": [
+              [
+                34.125,
+                -15.875,
+                11.699999809265137
+              ],
+              [
+                65.875,
+                15.875,
+                11.699999809265137
+              ]
+            ],
+            "z_layer_span": [
+              233,
+              233
+            ],
+            "bottom_layer_intersection": false,
+            "normal_layer_intersection": true,
+            "lift_speed": 0.05,
+            "mean_z_mm": 11.699999809265142,
+            "score": 2.4948468685365635,
+            "threshold": true
+          },
+          {
+            "triangle_count": 1410,
+            "area_mm2": 207.50343017222332,
+            "projected_area_mm2": 207.50343017222332,
+            "bounds": [
+              [
+                35.335304260253906,
+                -12.699999809265137,
+                0.0
+              ],
+              [
+                64.6646957397461,
+                12.699999809265137,
+                2.1682737202932678e-11
+              ]
+            ],
+            "z_layer_span": [
+              0,
+              0
+            ],
+            "bottom_layer_intersection": true,
+            "normal_layer_intersection": false,
+            "lift_speed": 0.05,
+            "mean_z_mm": 6.482028229465411e-15,
+            "score": 2.075034301722233,
+            "threshold": true
+          }
+        ],
+        "regions_truncated": false
+      }
+    },
+    {
+      "source": "inputstl/right_temporal_bone_mars5_oriented.stl",
+      "sha256": "f26003fbe8236ba6cd044176711814be5f0806bb2de873a8fdf9957008053ba1",
+      "triangles": 5999999,
+      "settings": {
+        "enabled": true,
+        "max_angle_deg": 10.0,
+        "area_threshold_mm2": 100.0,
+        "reference_lift_speed": 0.05
+      },
+      "seconds": 1.7887325750052696,
+      "peak_rss_kib": 561784,
+      "peel_risk": {
+        "status": "complete",
+        "source_triangle_count": 5999999,
+        "candidate_triangle_count": 368142,
+        "threshold_area_mm2": 100.0,
+        "max_angle_deg": 10.0,
+        "reference_lift_speed": 0.05,
+        "build_z_mm": 165.0,
+        "layer_height_mm": 0.05,
+        "bottom_layer_top_mm": 0.2,
+        "bottom_lift_speed": 0.05,
+        "normal_lift_speed": 0.05,
+        "heuristic": "uncalibrated geometry score; not a force or failure prediction",
+        "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
+        "basis": "oriented STL winding; exact shared-edge connectivity; native profile speed units; physical plate Z=0",
+        "limitations": [
+          "summed projected surface area is not instantaneous peel contact area",
+          "does not model resin, film, tilt release or actual suction pressure",
+          "open, duplicate and nonmanifold surfaces require independent validation"
+        ],
+        "region_count": 87098,
+        "total_region_count": 87098,
+        "threshold_region_count": 0,
+        "maximum_projected_area_mm2": 75.28475575440098,
+        "maximum_score": 0.7551285945473885,
+        "regions": [],
+        "regions_truncated": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+"""Application execution preferences backed by the portable settings table."""
+from copy import deepcopy
+
+from PySide6 import QtCore, QtWidgets
+
+from ..acceleration import cuda_status, resolve_backend
+from ..config import validate_settings
+from ..contracts import VoxelMillError
+from .appprefs import (DEFAULT_TRANSLATE_STEP_MM, SNAP_ANGLE_CHOICES,
+                       load_preferences, save_preferences)
+
+
+class PreferencesDialog(QtWidgets.QDialog):
+    settings_applied = QtCore.Signal(object)
+    #: Editor preferences change nothing about the output, so they are applied
+    #: and persisted separately from the settings table.
+    editor_preferences_applied = QtCore.Signal(object)
+
+    def __init__(self, document, parent=None, *, headless=False):
+        super().__init__(parent)
+        self.document = document
+        self.applied = None
+        self.setWindowTitle('Preferences')
+        form = QtWidgets.QFormLayout(self)
+        resources = document.settings['resources']
+        self.acceleration = QtWidgets.QComboBox()
+        self.acceleration.setObjectName('acceleration_backend')
+        self.acceleration.addItems(['auto', 'cpu', 'cuda'])
+        self.acceleration.setCurrentText(resources['acceleration'])
+        self.acceleration.setToolTip(
+            'Config key: resources.acceleration. CLI: --acceleration auto|cpu|cuda. '
+            'Auto uses CUDA only after a successful runtime and device probe.')
+        self.cuda_device = QtWidgets.QSpinBox()
+        self.cuda_device.setRange(0, 255)
+        self.cuda_device.setValue(resources['cuda_device'])
+        self.cuda_device.setToolTip('Config key: resources.cuda_device. CLI: --cuda-device N.')
+        self.workers = QtWidgets.QSpinBox()
+        self.workers.setRange(1, 32)
+        self.workers.setValue(resources['workers'])
+        self.memory = QtWidgets.QDoubleSpinBox()
+        self.memory.setRange(.25, 1024)
+        self.memory.setValue(resources['memory_gib'])
+        self.memory.setSuffix(' GiB')
+        self.status = QtWidgets.QLabel()
+        self.status.setObjectName('acceleration_status')
+        self.status.setWordWrap(True)
+        self.editor_preferences = load_preferences()
+        self.snap_angle = QtWidgets.QComboBox()
+        self.snap_angle.setObjectName('snap_angle_deg')
+        for choice in SNAP_ANGLE_CHOICES:
+            self.snap_angle.addItem('off' if not choice else f'{choice:g} deg', choice)
+        stored = self.snap_angle.findData(self.editor_preferences['snap_angle_deg'])
+        self.snap_angle.setCurrentIndex(stored if stored >= 0 else 0)
+        self.snap_angle.setToolTip(
+            'Increment a rotation snaps to when a part is dragged in the 3D view or nudged '
+            'with the +/- buttons. A typed angle is always taken exactly. This is an editor '
+            'preference: it is not stored in a profile or a project.')
+        form.addRow('Acceleration', self.acceleration)
+        form.addRow('CUDA device', self.cuda_device)
+        form.addRow('CPU workers', self.workers)
+        self.translate_step = QtWidgets.QDoubleSpinBox()
+        self.translate_step.setObjectName('translate_step_mm')
+        self.translate_step.setDecimals(3)
+        self.translate_step.setRange(0.001, 50.0)
+        self.translate_step.setSuffix(' mm')
+        self.translate_step.setValue(self.editor_preferences['translate_step_mm'])
+        self.translate_step.setToolTip(
+            'Distance one arrow-key press or one +/- button moves the selected part. '
+            'Shift moves ten times as far. Editor preference: not stored in a profile '
+            'or a project.')
+        self.island_passes = QtWidgets.QSpinBox()
+        self.island_passes.setObjectName('max_island_passes')
+        self.island_passes.setRange(1, 10)
+        self.island_passes.setValue(document.settings['support']['max_island_passes'])
+        self.island_passes.setToolTip(
+            'Config key: support.max_island_passes. CLI: --max-passes. How many times '
+            'Compute attachments may place attachments under the islands it found and '
+            'look again. The last pass always rescans the whole build.')
+        form.addRow('Memory ceiling', self.memory)
+        form.addRow('Rotation snap', self.snap_angle)
+        form.addRow('Nudge step', self.translate_step)
+        form.addRow('Island correction passes', self.island_passes)
+        form.addRow('Detected', self.status)
+        buttons = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Apply | QtWidgets.QDialogButtonBox.Close)
+        buttons.button(QtWidgets.QDialogButtonBox.Apply).clicked.connect(self.apply)
+        buttons.rejected.connect(self.reject)
+        form.addRow(buttons)
+        self.acceleration.currentTextChanged.connect(self._refresh)
+        self.cuda_device.valueChanged.connect(self._refresh)
+        self._refresh()
+
+    def settings(self):
+        settings = deepcopy(self.document.settings)
+        settings['resources'].update({
+            'acceleration': self.acceleration.currentText(),
+            'cuda_device': self.cuda_device.value(),
+            'workers': self.workers.value(),
+            'memory_gib': self.memory.value(),
+        })
+        settings['support']['max_island_passes'] = self.island_passes.value()
+        return validate_settings(settings)
+
+    def _refresh(self, *_):
+        status = cuda_status()
+        probe = {'acceleration': self.acceleration.currentText(),
+                 'cuda_device': self.cuda_device.value()}
+        try:
+            selected = resolve_backend(probe)
+            suffix = f'; selected backend: {selected}'
+        except VoxelMillError as error:
+            suffix = f'; {error}'
+        compiled = 'CUDA build' if status['compiled'] else 'CPU-only build'
+        self.status.setText(
+            f"{compiled}; {status['device_count']} CUDA device(s); "
+            f"{status.get('reason') or 'runtime ready'}{suffix}")
+
+    def apply(self):
+        try:
+            settings = self.settings()
+            # Resolve now so an explicit CUDA choice cannot be stored when it
+            # cannot run. Auto remains portable and falls back to CPU.
+            resolve_backend(settings['resources'])
+        except VoxelMillError as error:
+            self.status.setText(str(error))
+            return None
+        self.document.set_settings(settings)
+        self.applied = deepcopy(settings)
+        self.settings_applied.emit(self.applied)
+        # Merge rather than replace: the stored file also holds the motion mode
+        # and the window layout, and rebuilding it from these two fields alone
+        # would discard them every time someone touched Apply.
+        self.editor_preferences = {**load_preferences(),
+                                   'snap_angle_deg': float(self.snap_angle.currentData()),
+                                   'translate_step_mm': float(self.translate_step.value())}
+        save_preferences(self.editor_preferences)
+        self.editor_preferences_applied.emit(dict(self.editor_preferences))
+        self._refresh()
+        return settings

@@ -1,0 +1,290 @@
+{
+  "source": "inputstl/floatvalveR7-body.stl",
+  "source_sha256": "c5163818203274b00a61300585b0f8f842668dc1574af9064736f59196198d79",
+  "placement": {
+    "matrix": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        47.330081939697266
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "center_offset_mm": [
+      0.0,
+      0.0
+    ],
+    "model_lift_mm": 5.0,
+    "bounds": [
+      [
+        -26.5,
+        -26.5,
+        5.0
+      ],
+      [
+        26.5,
+        26.5,
+        85.43008041381836
+      ]
+    ],
+    "search": {
+      "mode": "explicit",
+      "full_resolution_bounds": true,
+      "xy_support_reserve_mm": 2.6,
+      "reserve_relaxed": false,
+      "nominal_xy_support_reserve_mm": 2.6,
+      "requires_support_envelope_recheck": true
+    }
+  },
+  "settings": {
+    "schema_version": 1,
+    "printer": {
+      "id": "mars5-ultra",
+      "name": "Elegoo Mars 5 Ultra",
+      "build_mm": [
+        153.36,
+        77.76,
+        165.0
+      ],
+      "pixels": [
+        8520,
+        4320
+      ],
+      "pixel_pitch_mm": [
+        0.018,
+        0.018
+      ],
+      "edge_clearance_mm": 2.0,
+      "image_mirror_x": false,
+      "image_mirror_y": false,
+      "layer_height_range_mm": [
+        0.01,
+        0.2
+      ],
+      "output_formats": [
+        "goo"
+      ],
+      "motion": {
+        "bottom_lift_height": 0.05,
+        "bottom_lift_speed": 0.05,
+        "lift_height": 0.05,
+        "lift_speed": 0.05,
+        "bottom_retract_height": 0.05,
+        "bottom_retract_speed": 0.05,
+        "retract_height": 0.05,
+        "retract_speed": 0.05,
+        "bottom_lift_height2": 0.0,
+        "bottom_lift_speed2": 0.0,
+        "lift_height2": 0.0,
+        "lift_speed2": 0.0,
+        "bottom_retract_height2": 0.0,
+        "bottom_retract_speed2": 0.0,
+        "retract_height2": 0.0,
+        "retract_speed2": 0.0,
+        "bottom_light_pwm": 255,
+        "light_pwm": 255
+      }
+    },
+    "resin": {
+      "id": "sunlu-abs-like-gray",
+      "name": "Sunlu ABS-like gray"
+    },
+    "process": {
+      "layer_height_mm": 0.05,
+      "bottom_exposure_s": 35.0,
+      "normal_exposure_s": 3.5,
+      "bottom_layers": 4,
+      "transition_layers": 5,
+      "bottom_rest_after_exposure_s": 1.0,
+      "normal_rest_after_exposure_s": 1.0,
+      "bottom_settle_before_exposure_s": 0.5,
+      "normal_settle_before_exposure_s": 0.5,
+      "bottom_wait_after_lift_s": 0.0,
+      "normal_wait_after_lift_s": 0.0
+    },
+    "support": {
+      "automatic": true,
+      "auto_bracing": true,
+      "spacing_mm": 3.0,
+      "contact_diameter_mm": 0.4,
+      "penetration_mm": 0.15,
+      "pillar_diameter_mm": 1.2,
+      "tip_length_mm": 2.0,
+      "raft_thickness_mm": 1.0,
+      "raft_expansion_mm": 2.0,
+      "max_slenderness": 40.0,
+      "max_span_mm": 3.0,
+      "min_overlap_pixels": 1,
+      "overhang_angle_deg": 45.0,
+      "support_clearance_mm": 0.3,
+      "max_contact_gap_mm": 0.0,
+      "max_contact_load_mm2": 0.0
+    },
+    "repair": {
+      "seal_voids": true,
+      "min_orifice_area_mm2": 1.0,
+      "aggressiveness": "conservative",
+      "max_deviation_mm": 0.05,
+      "remove_tiny_features": false,
+      "auto_drain_holes": false,
+      "voxel_size_mm": 0.0,
+      "smooth_iterations": 0,
+      "min_void_volume_mm3": 0.0
+    },
+    "assembly": {
+      "union": "auto",
+      "require_raster_parity": true,
+      "max_parity_examples": 16
+    },
+    "resources": {
+      "memory_gib": 32.0,
+      "workers": 2,
+      "scratch_dir": null
+    }
+  },
+  "field": {
+    "analysis_pitch_mm": 0.15,
+    "layer_height_mm": 0.05,
+    "layers": 1709,
+    "columns": 128164,
+    "runs": 159228,
+    "open_contour_rows": 0,
+    "negative_winding_crossings": 0,
+    "raster_islands": 3,
+    "sealed_gaps": 0,
+    "enclosed_void_volume_mm3": 0.0,
+    "seconds": 3.1452016930561513
+  },
+  "selection": {
+    "downward_face_area_mm2": 3818.8106420028707,
+    "downward_samples": 183449,
+    "manual_contacts": 0,
+    "suppressed_contacts": 0,
+    "coverage_gap_limit_mm": 3.0,
+    "contact_load_limit_mm2": 36.0,
+    "coverage_basis": "sampled downward faces; geometric reach, not strength",
+    "max_contact_gap_mm": 3.2610454691515014,
+    "mean_contact_gap_mm": 1.1720155762895157,
+    "uncovered_samples": 30,
+    "uncovered_fraction": 0.00016353318906071987,
+    "coverage": "fail",
+    "max_contact_load_mm2_actual": 125.19189093974491,
+    "overloaded_contacts": 21,
+    "anchor_load": "fail"
+  },
+  "routing": {
+    "contacts_requested": 1085,
+    "contacts_routed": 516,
+    "contacts_failed": 569,
+    "contacts_in_sealed_cavities": 0,
+    "routing": {
+      "vertical": 516,
+      "branched": 0,
+      "model_anchor": 0
+    },
+    "braces": 132,
+    "braces_capped": false,
+    "raster_islands": 3,
+    "spacing_mm": 3.0,
+    "overhang_angle_deg": 45.0,
+    "max_pillar_length_mm": 82.4034423828125,
+    "diagnostics_capped_at": 256,
+    "mechanics": "configured heuristic limits; not a strength proof",
+    "seconds": 0.22952421591617167,
+    "analysis": {
+      "analysis_pitch_mm": 0.15,
+      "layer_height_mm": 0.05,
+      "layers": 1709,
+      "columns": 128164,
+      "runs": 159228,
+      "open_contour_rows": 0,
+      "negative_winding_crossings": 0,
+      "raster_islands": 3,
+      "sealed_gaps": 0,
+      "enclosed_void_volume_mm3": 0.0,
+      "seconds": 3.1452016930561513
+    }
+  },
+  "proposed_filter": {
+    "rule": "drop a sample if its column is occupied at both k-1 and k+1",
+    "samples_dropped": 11887,
+    "coverage": {
+      "coverage_gap_limit_mm": 3.0,
+      "contact_load_limit_mm2": 36.0,
+      "coverage_basis": "sampled downward faces; geometric reach, not strength",
+      "max_contact_gap_mm": 3.2610454691515014,
+      "mean_contact_gap_mm": 1.1724026850772693,
+      "uncovered_samples": 24,
+      "uncovered_fraction": 0.00013989111807976125,
+      "coverage": "fail",
+      "max_contact_load_mm2_actual": 130.50492996154642,
+      "overloaded_contacts": 21,
+      "anchor_load": "fail"
+    },
+    "load_area_basis": "unfiltered downward area; conservative estimate only",
+    "routing": {
+      "contacts_requested": 1084,
+      "contacts_routed": 523,
+      "contacts_failed": 561,
+      "contacts_in_sealed_cavities": 0,
+      "routing": {
+        "vertical": 523,
+        "branched": 0,
+        "model_anchor": 0
+      },
+      "braces": 139,
+      "braces_capped": false,
+      "raster_islands": 3,
+      "spacing_mm": 3.0,
+      "overhang_angle_deg": 45.0,
+      "max_pillar_length_mm": 82.4034423828125,
+      "diagnostics_capped_at": 256,
+      "mechanics": "configured heuristic limits; not a strength proof",
+      "seconds": 0.2283021619077772,
+      "analysis": {
+        "analysis_pitch_mm": 0.15,
+        "layer_height_mm": 0.05,
+        "layers": 1709,
+        "columns": 128164,
+        "runs": 159228,
+        "open_contour_rows": 0,
+        "negative_winding_crossings": 0,
+        "raster_islands": 3,
+        "sealed_gaps": 0,
+        "enclosed_void_volume_mm3": 0.0,
+        "seconds": 3.1452016930561513
+      }
+    }
+  },
+  "full_raster": {
+    "layers": 1709,
+    "open_rows": 0,
+    "open_layers": 0,
+    "negative_winding_crossings": 0,
+    "filled_pixels": 897588326
+  },
+  "seconds": 6.523032675962895
+}

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=VoxelMill
+Comment=Evidence-driven resin-print preparation
+Exec=voxelmill %F
+Icon=voxelmill
+Categories=Graphics;Engineering;
+Terminal=false
+StartupWMClass=voxelmill
+MimeType=model/stl;application/sla;

@@ -1,0 +1,94 @@
+{
+  "date": "2026-09-08",
+  "scope": "read-only SDCP hardware inspection; no upload, print, motion, camera, or settings commands",
+  "discovery": {
+    "name": "Mars5UltraSLA",
+    "machine_name": "Mars 5 Ultra",
+    "brand_name": "ELEGOO",
+    "host": "192.168.1.71",
+    "mainboard_id": "ba95517be2550100",
+    "protocol_version": "V3.0.0",
+    "firmware_version": "V1.4.3"
+  },
+  "queries": {
+    "udp_discovery": "success",
+    "websocket_connect": "success",
+    "status_refresh": "success",
+    "attributes_refresh": "success",
+    "file_list_cmd_258": "success",
+    "file_count": 53,
+    "ping": "timeout; printer accepted the WebSocket connection and answered Cmd 0/1/258, but did not return text pong"
+  },
+  "status": {
+    "machine_status": [0],
+    "machine_status_name": "idle",
+    "print_status": 0,
+    "print_status_name": "idle",
+    "filename": "left_temporal_bone_mars5_oriented_1_202609062230_05h05m_91ml_uvtools.goo",
+    "task_id": "",
+    "current_layer": 2159,
+    "total_layer": 2159,
+    "current_ticks": 19264811,
+    "total_ticks": 19263604,
+    "error_number": 0,
+    "release_film": 64168,
+    "uv_led_temperature_c": 30.04157829284668,
+    "time_lapse_status": 1
+  },
+  "attributes": {
+    "resolution": "8520x4320",
+    "build_size_mm": "218.88x128.88x220",
+    "supported_file_types": ["CTB", "GOO"],
+    "capabilities": ["FILE_TRANSFER", "PRINT_CONTROL", "VIDEO_STREAM"],
+    "camera_status": 1,
+    "network_status": "wlan",
+    "device_status": {
+      "lcd": 1,
+      "release_film": 0,
+      "rotate_motor": 1,
+      "strain_gauge": 1,
+      "uv_led_temperature_sensor": 1,
+      "z_motor": 1
+    },
+    "remaining_memory_bytes": 2439118848,
+    "release_film_max": 60000,
+    "maximum_video_streams": 2,
+    "active_video_streams": 0
+  },
+  "lessons": [
+    "The firmware responds to SDCP WebSocket command/status and attributes requests, but the text heartbeat ping can time out; ping must not be treated as the sole liveness test.",
+    "An idle printer can retain the previous completed filename and layer counters while TaskId is empty; machine status and task identity must be interpreted together.",
+    "Cmd 258 returns 53 printable local files with names prefixed by /local//.",
+    "The adapter sends the four-byte text payload ping and accepts either pong or the JSON-string form quoted pong; the SDCP reference leaves whether quotes belong on the wire unspecified. The live firmware timed out on this optional heartbeat while answering Cmd 0, Cmd 1, and Cmd 258."
+  ],
+  "build_size_interpretation": {
+    "live_attribute_XYZsize_mm": [218.88, 128.88, 220.0],
+    "configured_print_envelope_mm": [153.36, 77.76, 165.0],
+    "configured_pixels": [8520, 4320],
+    "identity_evidence": {
+      "discovery_name": "Mars5UltraSLA",
+      "discovery_machine_name": "Mars 5 Ultra",
+      "discovery_brand_name": "ELEGOO",
+      "discovery_firmware": "V1.4.3",
+      "attributes_name": "Mars5UltraSLA",
+      "attributes_machine_name": "Mars 5 Ultra",
+      "attributes_brand_name": "ELEGOO",
+      "attributes_resolution": "8520x4320",
+      "attributes_mainboard_id": "ba95517be2550100"
+    },
+    "observation": "The SDCP attributes field is explicitly described as maximum print dimensions, but its live XYZsize is much larger than the LCD build envelope and matches neither the configured printable volume nor the public Mars 5 Ultra build volume.",
+    "inference": "The field is inconsistent with the configured and official 153.36 x 77.76 x 165 mm print envelope. Its meaning or cause is unverified; stale or incorrect firmware data remains possible. The profile remains unchanged and the slicer continues to use the documented print envelope.",
+    "official_reference": "https://www.elegoo.com/products/mars-5-ultra-9k-7inch-monochrome-lcd-resin-3d-printer",
+    "official_reference_claim": "ELEGOO's Mars 5 Ultra product page lists build volume 153.36 x 77.76 x 165 mm and 8520 x 4320 XY resolution, matching the configured profile and live resolution, but does not explain SDCP XYZsize."
+  },
+  "counter_observations": {
+    "status_release_film": 64168,
+    "attribute_release_film_max": 60000,
+    "attribute_device_status_release_film": 0,
+    "interpretation": "The live status counter exceeds the advertised maximum while the device-status flag is 0. This records firmware values only and does not establish physical film wear, replacement need, or sensor correctness."
+  },
+  "physical_limits": [
+    "No print, upload, exposure, motion, camera stream, pause, resume, cancel, or settings mutation was attempted.",
+    "No physical print acceptance, orientation, motion timing, or resin/process calibration can be established from these read-only queries."
+  ]
+}

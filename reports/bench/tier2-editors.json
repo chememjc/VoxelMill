@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "command": "benchmark",
+  "python": "3.10.12",
+  "samples_included": false,
+  "repeats": 1,
+  "results": {
+    "inspect_small": {
+      "argv": [
+        "inspect",
+        "/home3/noisecancelingcodex/fixtures/shapes/sphere.stl",
+        "--report",
+        "/tmp/chopchop-bench/inspect.json"
+      ],
+      "runs": 1,
+      "seconds": 0.19085085800179513,
+      "seconds_max": 0.19085085800179513,
+      "peak_rss_bytes": 55336960,
+      "exit_code": 0
+    },
+    "prepare_small": {
+      "argv": [
+        "prepare",
+        "/home3/noisecancelingcodex/fixtures/shapes/sphere.stl",
+        "--max-passes",
+        "1",
+        "--allow-unresolved",
+        "--output",
+        "/tmp/chopchop-bench/small.stl",
+        "--report",
+        "/tmp/chopchop-bench/small.json"
+      ],
+      "runs": 1,
+      "seconds": 11.797308189998148,
+      "seconds_max": 11.797308189998148,
+      "peak_rss_bytes": 167960576,
+      "exit_code": 2
+    },
+    "validate_small": {
+      "argv": [
+        "validate",
+        "/tmp/chopchop-bench/small.stl",
+        "--report",
+        "/tmp/chopchop-bench/validate.json"
+      ],
+      "runs": 1,
+      "seconds": 11.515725273999124,
+      "seconds_max": 11.515725273999124,
+      "peak_rss_bytes": 154419200,
+      "exit_code": 2
+    },
+    "slice_small": {
+      "argv": [
+        "slice",
+        "/tmp/chopchop-bench/small.stl",
+        "--output",
+        "/tmp/chopchop-bench/small.goo",
+        "--allow-unresolved",
+        "--report",
+        "/tmp/chopchop-bench/slice.json"
+      ],
+      "runs": 1,
+      "seconds": 32.84272398199755,
+      "seconds_max": 32.84272398199755,
+      "peak_rss_bytes": 173867008,
+      "exit_code": 2
+    },
+    "verify_small": {
+      "argv": [
+        "verify",
+        "/tmp/chopchop-bench/small.goo",
+        "--report",
+        "/tmp/chopchop-bench/verify.json"
+      ],
+      "runs": 1,
+      "seconds": 16.138666495000507,
+      "seconds_max": 16.138666495000507,
+      "peak_rss_bytes": 135860224,
+      "exit_code": 2
+    },
+    "prepare_bracket": {
+      "argv": [
+        "prepare",
+        "/home3/noisecancelingcodex/fixtures/shapes/overhang_bracket.stl",
+        "--max-passes",
+        "1",
+        "--allow-unresolved",
+        "--output",
+        "/tmp/chopchop-bench/bracket.stl",
+        "--report",
+        "/tmp/chopchop-bench/bracket.json"
+      ],
+      "runs": 1,
+      "seconds": 60.99521919499966,
+      "seconds_max": 60.99521919499966,
+      "peak_rss_bytes": 546156544,
+      "exit_code": 2
+    }
+  },
+  "measurement": "each scenario in a fresh process reporting its own RUSAGE_SELF peak; seconds is the minimum over repeats and peak_rss_bytes the maximum",
+  "does_not_establish": "a like-for-like comparison across machines, or that a wall-time change is a code change rather than machine load"
+}

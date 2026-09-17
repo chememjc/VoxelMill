@@ -1,0 +1,62 @@
+MIT License
+
+Copyright (c) 2026 chememjc <chememjc@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+SCOPE OF THIS LICENSE
+================================================================================
+
+The MIT terms above cover every file in this repository: the Python package
+under src/voxelmill/, the C++ sources under native/, the build and measurement
+scripts under scripts/, the documentation under docs/, the schemas, the icon
+artwork under icons/ and packaging/, and the test fixtures under fixtures/.
+All of it is original work by the copyright holder above. No third-party source
+code is vendored into this repository.
+
+This license does NOT cover the third-party libraries that VoxelMill depends
+on, links against, or bundles into a distributable AppImage. Those keep their
+own licenses. Every one of them is inventoried, with its license text and any
+obligation it places on a redistributor, in:
+
+    licenses/THIRD-PARTY.md
+
+None of those dependencies is copyleft in a way that conflicts with MIT. The
+LGPL components (Qt via PySide6, and the system C/C++ runtimes) are used
+through dynamic linking only, which imposes notice and relinking obligations on
+a binary distribution but places no condition on this source code. Those
+obligations, and how the AppImage build satisfies them, are set out in
+licenses/THIRD-PARTY.md under "AppImage distribution obligations".
+
+================================================================================
+FILE FORMAT INTEROPERABILITY
+================================================================================
+
+VoxelMill reads and writes the ELEGOO GOO and CHITUBOX CTB slice formats, and
+speaks the SDCP printer protocol. These implementations are original, written
+from published format specifications and verified against reference files; see
+docs/goo-format.md for the sources, revisions and verification method. File
+formats and protocols are not themselves subject to copyright, and no code was
+taken from any other implementation of them.
+
+ELEGOO, CHITUBOX, Mars, Sunlu and Jayo are trademarks of their respective
+owners. VoxelMill is not affiliated with, endorsed by, or sponsored by any of
+them. Those names appear here only to identify the hardware, materials and
+formats VoxelMill interoperates with.

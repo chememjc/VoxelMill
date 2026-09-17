@@ -1,0 +1,512 @@
+{
+  "schema_version": 1,
+  "generated_utc": "2026-09-07T18:04:53Z",
+  "method": "scripts/make_test_shapes.py; manifold3d CSG and raw triangle arrays, written with voxelmill.mesh.write_stl and measured with voxelmill.mesh.inspect_mesh",
+  "shapes": [
+    {
+      "path": "fixtures/shapes/cone.stl",
+      "note": "A 10 mm radius, 20 mm tall cone.",
+      "sha256": "1685dab8951b4f5a6fdbe012b19173f1d9dec55aaa8ba24b2ed14320e5e9d8dc",
+      "triangle_count": 126,
+      "bounds": [
+        [
+          -10.0,
+          -10.0,
+          0.0
+        ],
+        [
+          10.0,
+          10.0,
+          20.0
+        ]
+      ],
+      "signed_volume_mm3": 2091.032334,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 65,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/cube.stl",
+      "note": "A 20 mm cube.",
+      "sha256": "bd969851d00d6d2613c8df299c59a3b5a8dd93c45158be864ec91faaf776e355",
+      "triangle_count": 12,
+      "bounds": [
+        [
+          -10.0,
+          -10.0,
+          0.0
+        ],
+        [
+          10.0,
+          10.0,
+          20.0
+        ]
+      ],
+      "signed_volume_mm3": 8000.0,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 8,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/cylinder.stl",
+      "note": "An upright 8 mm radius, 25 mm tall cylinder.",
+      "sha256": "dcb1712b9da3d804d40690f01b3f36efca8822a063b323d84860843abc91f03b",
+      "triangle_count": 252,
+      "bounds": [
+        [
+          -8.0,
+          -8.0,
+          0.0
+        ],
+        [
+          8.0,
+          8.0,
+          25.0
+        ]
+      ],
+      "signed_volume_mm3": 5018.477506,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 128,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/drained_cup.stl",
+      "note": "The sealed shell with a drain hole through the lid: the passing control.",
+      "sha256": "31f975c55bbfe3ccb946dd6c706d772ae83488c2f4517329a31332999ce73357",
+      "triangle_count": 764,
+      "bounds": [
+        [
+          -12.0,
+          -12.0,
+          0.0
+        ],
+        [
+          12.0,
+          12.0,
+          30.0
+        ]
+      ],
+      "signed_volume_mm3": 6919.226388,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 384,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/hollow_cup.stl",
+      "note": "Sealed shell: the cavity has no path to the outside, so resin is trapped.",
+      "sha256": "64ab1a7398a9bae7152edf15d2ed0a67e45bc5a25f838afc746b2bf027c3b3f1",
+      "triangle_count": 504,
+      "bounds": [
+        [
+          -12.0,
+          -12.0,
+          0.0
+        ],
+        [
+          12.0,
+          12.0,
+          30.0
+        ]
+      ],
+      "signed_volume_mm3": 6944.318776,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 2,
+      "unique_vertices": 256,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/overhang_bracket.stl",
+      "note": "Column, an unsupported horizontal shelf and a 45 degree ramp.",
+      "sha256": "ff27289fd9a3607916aa6767bb7e35c7f45533385e83977a299a36b905485368",
+      "triangle_count": 36,
+      "bounds": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          40.0,
+          20.0,
+          40.0
+        ]
+      ],
+      "signed_volume_mm3": 15000.0,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 20,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/pin_array.stl",
+      "note": "Base plate plus pins that start in mid-air: islands on their first layer.",
+      "sha256": "87999589c2430ca71e2c11875fa5b4737d613874bda81b64db2191a293170630",
+      "triangle_count": 2280,
+      "bounds": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          30.0,
+          30.0,
+          16.0
+        ]
+      ],
+      "signed_volume_mm3": 2181.090566,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 10,
+      "unique_vertices": 1160,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/sphere.stl",
+      "note": "A 10 mm radius sphere, tangent to the plate.",
+      "sha256": "c87a601b52fa065540103d10209150aabde50429f3dbd4cf51f852305f552212",
+      "triangle_count": 2048,
+      "bounds": [
+        [
+          -10.0,
+          -10.0,
+          0.0
+        ],
+        [
+          10.0,
+          10.0,
+          20.0
+        ]
+      ],
+      "signed_volume_mm3": 4165.136493,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 1026,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/stepped_pyramid.stl",
+      "note": "Five slabs: the cross-section area changes abruptly between layers.",
+      "sha256": "4deaa45c65a291446757c6bcf23258371b4ada646c99f56ab4b0a41792d30269",
+      "triangle_count": 76,
+      "bounds": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          30.0,
+          30.0,
+          20.0
+        ]
+      ],
+      "signed_volume_mm3": 9000.0,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 40,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/thin_wall.stl",
+      "note": "A 0.3 mm fin on a base: near the 0.018 mm pixel pitch, far below a support.",
+      "sha256": "35286117faf5f30aad79c83f43dec5fe57f474065cea6d80de774cbffdb4d9e1",
+      "triangle_count": 28,
+      "bounds": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          30.0,
+          10.0,
+          17.0
+        ]
+      ],
+      "signed_volume_mm3": 735.000086,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 16,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/torus.stl",
+      "note": "A genus one solid: components and Euler counts are not trivial here.",
+      "sha256": "461e1b588fcc6fd0e863714026ea381dbaa6f82f424b38c983eac517916932af",
+      "triangle_count": 3072,
+      "bounds": [
+        [
+          -16.0,
+          -16.0,
+          0.0
+        ],
+        [
+          16.0,
+          16.0,
+          8.0
+        ]
+      ],
+      "signed_volume_mm3": 3754.878078,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 1536,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/tetrahedron.stl",
+      "note": "The four-triangle solid used by tests/test_mesh.py, scaled to millimetres.",
+      "sha256": "cebf824656db42d418caf93f09671f2271c173079d55f721777aa9742dda1e1c",
+      "triangle_count": 4,
+      "bounds": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          20.0,
+          20.0,
+          20.0
+        ]
+      ],
+      "signed_volume_mm3": 1333.333333,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 4,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/invalid/degenerate.stl",
+      "note": "A valid tetrahedron plus zero-area triangles.",
+      "sha256": "bd3ee0b648a8b8300a55c8a153a22ad82c71d09f1e822f5225f63a023eb9cce3",
+      "triangle_count": 7,
+      "bounds": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          20.0,
+          20.0,
+          20.0
+        ]
+      ],
+      "signed_volume_mm3": 1333.333333,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 3,
+      "invalid_triangles": 3,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 8,
+      "self_intersections_status": "partial_invalid_triangles"
+    },
+    {
+      "path": "fixtures/shapes/invalid/flipped_winding.stl",
+      "note": "Cube with one face wound inward.",
+      "sha256": "ef40fbe0f05bccd5fce67fd719880f063087a206ab05d5fb6118b3818bf3cc99",
+      "triangle_count": 12,
+      "bounds": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          20.0,
+          20.0,
+          20.0
+        ]
+      ],
+      "signed_volume_mm3": 2666.666667,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 4,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 8,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/invalid/nonmanifold_edge.stl",
+      "note": "Three triangles sharing a single edge.",
+      "sha256": "3f47f4a900f50f2eb83c4c041679c217af53294ca82d3ebe853c0a5cf533f9b0",
+      "triangle_count": 3,
+      "bounds": [
+        [
+          0.0,
+          -14.0,
+          -14.0
+        ],
+        [
+          20.0,
+          20.0,
+          20.0
+        ]
+      ],
+      "signed_volume_mm3": 0.0,
+      "boundary_edges": 6,
+      "nonmanifold_edges": 1,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 5,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/invalid/open_box.stl",
+      "note": "Cube missing its top face: an open boundary.",
+      "sha256": "1962988206afe06f44711b16058d7a748bfc744da098440182f129be33591eb9",
+      "triangle_count": 10,
+      "bounds": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          20.0,
+          20.0,
+          20.0
+        ]
+      ],
+      "signed_volume_mm3": 5333.333333,
+      "boundary_edges": 4,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 8,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/invalid/self_intersecting.stl",
+      "note": "Two interpenetrating tetrahedra: closed everywhere, still not a solid.",
+      "sha256": "8de7e5e5105d947e2ff5a714e0c8fb8b3950bea3154c1f26222c25d06d0709d5",
+      "triangle_count": 8,
+      "bounds": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          25.0,
+          25.0,
+          25.0
+        ]
+      ],
+      "signed_volume_mm3": 2666.666667,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 3,
+      "connected_components": 2,
+      "unique_vertices": 8,
+      "self_intersections_status": "complete"
+    },
+    {
+      "path": "fixtures/shapes/cube_ascii.stl",
+      "note": "The 20 mm cube as ASCII text, for the ASCII reader.",
+      "sha256": "8bb830472fb68b0a4bc729dcd66a8db629c65188cb7c98f8a3a87cb907a3c5fd",
+      "triangle_count": 12,
+      "bounds": [
+        [
+          -10.0,
+          -10.0,
+          0.0
+        ],
+        [
+          10.0,
+          10.0,
+          20.0
+        ]
+      ],
+      "signed_volume_mm3": 8000.0,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_winding_edges": 0,
+      "degenerate_triangles": 0,
+      "invalid_triangles": 0,
+      "self_intersections": 0,
+      "connected_components": 1,
+      "unique_vertices": 8,
+      "self_intersections_status": "complete",
+      "source_format": "ascii_stl"
+    }
+  ]
+}
