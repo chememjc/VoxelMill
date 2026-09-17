@@ -18,6 +18,7 @@ lessons go in `gotchas.md`.
 | + parallel `_analyze_layer`, w=8 | **27.8 s** | 782 MB | **2.65x vs v0.1.0**, less RSS than v0.1.0 at w=8 |
 | + parallel `_analyze_layer`, w=24 | 28.4 s | 1.95 GB | past the knee; 2.5x RSS for nothing |
 | + `workers=0` derives 8 (shipping default) | **26.9 s** | 784 MB | **2.74x vs v0.1.0**, no flags needed |
+| + scatter dedup in `VoidForest.merge` | **18.3 s** | 780 MB | **4.02x vs v0.1.0**, 1.38x on top of the above
 
 Record a new row after every Phase 2 item so the curve is visible.
 
@@ -60,6 +61,20 @@ and the merge is where the time went.
 
 **Refuted:** the ledger's `block_any` / `np.pad` concern. Its allocation is
 0.4-0.7 s total, under 1 %, and it is called about twice per layer now, not 18.
+
+**Done since:** `VoidForest.merge` no longer sorts (commit `36fd699`), which
+took the benchmark to 18.3 s. `merge` is still the serial bottleneck at roughly
+9-10 s of that 18.3 s: about 4.4 s in the dedup loop itself, now close to
+memory-bandwidth-bound, and about 5 s elsewhere in `merge` that nobody has
+chased yet. Going further probably means restructuring rather than
+micro-optimizing.
+
+**A cProfile line number is not a diagnosis.** The profile put
+`{ndarray.sort}` at the top and it was the right line, but three different
+sort-free rewrites of it measured 4.40 s, 7.94 s and 20.80 s on the same real
+data. The compaction approach that looked obviously right on paper was 33 %
+slower end to end than the code it replaced, and only benchmarking the variants
+against dumped label arrays found that. Benchmark the candidate, not the theory.
 
 **Not exercised by this fixture at all**, so unmeasurable here: Rasterizer
 Z-interval persistence across passes, the `hollow.py` loops, and support KD-tree

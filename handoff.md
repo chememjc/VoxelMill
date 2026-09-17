@@ -27,9 +27,8 @@ Working tree is clean. Suite: **1031 passed, 13 skipped** (1029 plus the two
 new tests).
 
 **`prepare fixtures/shapes/overhang_bracket.stl --max-passes 1 --allow-unresolved`
-went from 73.7 s to 26.9 s — 2.74x — with no C written yet.** Nothing since
-commit 3 has moved that number measurably; the work since has gone into making
-the equivalence gate trustworthy, which it now is.
+went from 73.7 s to 18.3 s — 4.02x — with no C written yet.** The equivalence
+gate that guards it is now trustworthy too, which it was not this morning.
 
 | Stage | Wall | Peak RSS |
 | --- | --- | --- |
@@ -38,6 +37,7 @@ the equivalence gate trustworthy, which it now is.
 | + parallel analysis, 2 workers | 52.1 s | 609 MB |
 | + derived default (8 workers) | **26.9 s** | 784 MB |
 | + `check_growth` on the island guard | within noise of 26.9 s | 767 MB |
+| + scatter dedup in `VoidForest.merge` | **18.3 s** | 780 MB |
 
 ## The finding that should shape the rest of the work
 
