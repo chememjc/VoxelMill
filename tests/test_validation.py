@@ -80,6 +80,45 @@ def test_enclosed_chamber_stays_separate_from_neck_failure():
     assert result['bottlenecked_components'] == 0
 
 
+def test_check_growth_false_skips_growth_but_not_island_evidence():
+    """The island guard's optimization: growth is pure waste for it.
+
+    Layer 2 both fails overlap (it shares no columns with layer 1, so it is
+    a raster island) and fails growth (its nearest layer-1 material is 15 mm
+    away, far past the 3 mm default ``max_span_mm``). ``check_growth=False``
+    must leave every island-derived accumulator, check and diagnostic exactly
+    as it is with growth checked, and must never let the skipped check read
+    as a verified 'pass'.
+    """
+    masks = [np.zeros((10, 40), np.uint8) for _ in range(3)]
+    masks[0][:, 0:5] = 1
+    masks[1][:, 0:5] = 1
+    masks[2][:, 20:25] = 1  # 15 mm from the nearest layer-1 material
+    settings = resolve_settings()
+    grid = RasterGrid(40, 10, 0, 0, 1., 1.)
+    layers = lambda: [Layer(i, i + .5, a) for i, a in enumerate(masks)]
+
+    checked = analyze_layers(layers(), grid, settings, track_voids=False, check_growth=True)
+    skipped = analyze_layers(layers(), grid, settings, track_voids=False, check_growth=False)
+
+    # Growth really did fire in the checked run, and is honestly reported as
+    # skipped -- never as a 'pass' it never verified -- in the other.
+    assert checked.checks['growth_span'] == 'fail'
+    assert checked.metrics['growth_violation_pixels'] > 0
+    assert skipped.checks['growth_span'] == 'not_run'
+    assert 'growth_violation_pixels' not in skipped.metrics
+
+    # Every island-derived field is untouched by skipping growth.
+    assert checked.checks['raster_connectivity'] == skipped.checks['raster_connectivity'] == 'fail'
+    assert checked.checks['overlap'] == skipped.checks['overlap'] == 'fail'
+    for key in ('island_components', 'island_components_on_crop_edge',
+                'layer_count', 'nonempty_layers'):
+        assert checked.metrics[key] == skipped.metrics[key]
+    islands = lambda report: [(d.layer, tuple(d.position_mm), d.details)
+                              for d in report.diagnostics if d.code == 'raster_island']
+    assert islands(checked) == islands(skipped)
+
+
 def test_one_pixel_cavity_is_not_silently_ignored_by_default():
     masks = [np.zeros((7, 7), np.uint8) for _ in range(5)]
     for mask in masks:

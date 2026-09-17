@@ -302,7 +302,8 @@ def _growth_pixels(previous, mask, grid, settings, decimate):
     return int(np.count_nonzero(mask & ~previous))
 
 
-def _analyze_layer(previous, mask, grid, settings, decimate, min_overlap, track_voids, cancel):
+def _analyze_layer(previous, mask, grid, settings, decimate, min_overlap, track_voids,
+                   check_growth, cancel):
     """Everything about one layer that does not depend on layer order.
 
     The only cross-layer input is the immediately preceding layer's occupancy,
@@ -337,13 +338,14 @@ def _analyze_layer(previous, mask, grid, settings, decimate, min_overlap, track_
             # as islands. On a full-panel grid this is only evidence.
             on_edge = _border_flags(labels, count + 1)
             on_edge[0] = False
-        growth = _growth_pixels(previous, mask, grid, settings, decimate)
+        if check_growth:
+            growth = _growth_pixels(previous, mask, grid, settings, decimate)
     voids = void_components(mask) if track_voids else None
     return labels, count, counts, pixels, overlap, bad, on_edge, growth, voids
 
 
 def analyze_layers(layers, grid, settings, *, cancel=None, budget=None, progress=no_progress,
-                   growth_decimation=8, max_examples=128, track_voids=True):
+                   growth_decimation=8, max_examples=128, track_voids=True, check_growth=True):
     """Exact per-layer connectivity plus empty-space tracking over the build.
 
     Layer i depends only on layer i-1, never on the whole prefix, so almost all
@@ -354,6 +356,15 @@ def analyze_layers(layers, grid, settings, *, cancel=None, budget=None, progress
     identity is temporal. Concurrency is capped so the in-flight full-panel
     copies fit the memory budget. Every nonzero grayscale AA sample is material
     for topology.
+
+    ``check_growth=False`` skips ``_growth_pixels`` entirely, the same way
+    ``track_voids=False`` skips void tracking: for a caller that only reads
+    connectivity/island evidence (``island_guard.scan_assembly_islands``),
+    the growth distance transform is pure waste. The skipped check reports
+    itself honestly as ``checks['growth_span'] = 'not_run'`` and
+    ``metrics['growth_violation_pixels']`` is left out rather than published
+    as a misleading 0. Every other caller keeps the default, so their reports
+    are unaffected.
     """
     cancel = cancel or CancellationToken()
     budget = budget or ResourceBudget(**settings.get('resources', {}))
@@ -411,7 +422,7 @@ def analyze_layers(layers, grid, settings, *, cancel=None, budget=None, progress
         return mask
 
     min_overlap = settings['support']['min_overlap_pixels']
-    args = (grid, settings, decimate, min_overlap, track_voids, cancel)
+    args = (grid, settings, decimate, min_overlap, track_voids, check_growth, cancel)
     if workers <= 1:
         previous = None
         for layer in layers:
@@ -439,13 +450,21 @@ def analyze_layers(layers, grid, settings, *, cancel=None, budget=None, progress
                 layer_i, future_i = pending.popleft()
                 _consume(layer_i, future_i.result())
 
+    if not check_growth:
+        # Never let an unrun check read as verified: 'pass' was only ever
+        # true by construction, so it has to be corrected the same way
+        # track_voids corrects 'enclosed_voids'/'transient_traps' below. The
+        # metric it would have produced is a result of that check, so it is
+        # left out entirely rather than published as a misleading zero.
+        report.checks['growth_span'] = 'not_run'
+    growth_metrics = {'growth_violation_pixels': growth_count} if check_growth else {}
     if not track_voids:
         report.checks['enclosed_voids'] = 'not_run'
         report.checks['transient_traps'] = 'not_run'
         report.metrics.update(
             layer_count=layer_count, nonempty_layers=nonempty, island_components=births,
-            island_components_on_crop_edge=edge_births,
-            growth_violation_pixels=growth_count, exposed_pixels=total_pixels,
+            island_components_on_crop_edge=edge_births, **growth_metrics,
+            exposed_pixels=total_pixels,
             raster_volume_mm3=total_pixels * grid.dx * grid.dy * layer_height,
             growth_decimation=decimate, diagnostic_examples_capped=max_examples,
             pixel_pitch_mm=[grid.dx, grid.dy], layer_height_mm=layer_height,
@@ -472,8 +491,8 @@ def analyze_layers(layers, grid, settings, *, cancel=None, budget=None, progress
         report.fail('empty_raster', 'No material was encoded at the configured pixel centers and layer heights')
     report.metrics.update(
         layer_count=layer_count, nonempty_layers=nonempty, island_components=births,
-        island_components_on_crop_edge=edge_births,
-        growth_violation_pixels=growth_count, exposed_pixels=total_pixels,
+        island_components_on_crop_edge=edge_births, **growth_metrics,
+        exposed_pixels=total_pixels,
         raster_volume_mm3=total_pixels * grid.dx * grid.dy * layer_height,
         growth_decimation=decimate, diagnostic_examples_capped=max_examples,
         pixel_pitch_mm=[grid.dx, grid.dy], layer_height_mm=layer_height,

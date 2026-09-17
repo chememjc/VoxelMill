@@ -63,6 +63,13 @@ def scan_assembly_islands(union, settings, *, crop_bounds=None, layer_range=None
     edge and would read as unsupported, so those components are dropped as
     unknown rather than counted. That is what makes a cropped scan usable at
     all, and why it can never be the last word.
+
+    This also skips the growth/span check (``check_growth=False``): only
+    ``island_components``, ``island_components_on_crop_edge`` and
+    ``raster_island`` diagnostics are read out of the report below, and
+    growth is a separate distance-transform pass over every layer pair that
+    this function never looks at, on every one of the 1..max_passes+1 calls
+    a `route_without_islands` search makes.
     """
     cancel = cancel or CancellationToken()
     budget = budget or ResourceBudget(**settings['resources'])
@@ -81,7 +88,7 @@ def scan_assembly_islands(union, settings, *, crop_bounds=None, layer_range=None
                               layer_range=layer_range, budget=budget, cancel=cancel,
                               progress=progress)
     report = analyze_layers(stream, grid, settings, cancel=cancel, budget=budget,
-                            progress=progress, track_voids=False)
+                            progress=progress, track_voids=False, check_growth=False)
     diagnostics = [d for d in report.diagnostics if d.code == 'raster_island' and d.position_mm]
     if local:
         diagnostics = [d for d in diagnostics if not d.details.get('touches_crop_edge')]
