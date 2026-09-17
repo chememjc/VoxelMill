@@ -4,6 +4,46 @@ Live task list. Items are removed when done and added as they arise.
 Rationale, measurements and design live in the phase notes below; verified
 lessons go in `gotchas.md`.
 
+## Now
+
+Phase 2 item 2 (RLE internals) is done. Remaining, re-profile before picking:
+
+- [ ] Re-profile `prepare overhang_bracket` now that validation is 0.93 s of
+      a 3.45 s run. The ~10 s floor argument is stale.
+- [ ] Phase 1 `--timing` flag (unrelated to `timing.py` print-time estimates).
+- [ ] Phase 2 items 6–9 only if the new profile says they matter:
+      Rasterizer Z-interval persistence, UnionLayerStream fold, hollow voxel
+      loops, support KD-tree cache. This fixture never hollows or retries.
+- [ ] Close or independently verify item 5 (do not share `_reslice` and
+      island-guard analyses). 5b is the third `analyze_layers` behind a
+      non-default policy.
+- [ ] Phase 3+ (`libvoxelmill_core`, standalone CLI, CUDA) need a rescope:
+      a standalone binary saves ~0.3 s against a 3.45 s run.
+- [ ] Phase 6: README / architecture / packaging for the core split; tag
+      v0.2.0. Bracing CLI flags already shipped.
+
+- [x] Rebuild `_native` with `native/runs.cpp` via `scripts/rebuild.sh -j2`.
+      DONE (`b43a452`).
+- [x] Kernel tests in `tests/test_runs.py`: every bind_runs symbol against
+      scipy/numpy on random fields and real-shaped panels. Load-bearing:
+      `run_ccl` numbering == `ndi.label`; `run_pairs` union-key sequence
+      including 64-row cross-chunk duplicates. DONE: 15 passed.
+- [x] Wire the kernels through `validation.py` internals as **one** coherent
+      change. Dense path is the fallback below `RUN_DENSITY_FLOOR` (6 px/run)
+      and when `VOXELMILL_NATIVE_RUNS=0`. `Layer.mask` and `analyze_layers`
+      signature unchanged. `VoidForest.add` stays dense for `supports.py`.
+- [x] `test_merge_union_sequence_matches_reference` stays green — union
+      call sequence including cross-chunk duplicates is the result.
+- [x] Equivalence vs `/home3/noisecancelingcodex`. Golden-only: all 13
+      recorded shapes match. Live old-vs-new: cube, pin_array,
+      overhang_bracket, torus, open_box match on inspect/prepare/prepared.stl
+      /slice (STL + GOO). Invalid fixtures have no goldens, so golden-only
+      reports them as missing rather than as content diffs.
+- [x] Re-measure `prepare fixtures/shapes/overhang_bracket.stl --max-passes 1
+      --allow-unresolved`: **3.45 s / 545 MB**, trapped volume still
+      `2.0886070650760757e-15`.
+- [x] Kernels+tests committed as `b43a452`. Integration follows.
+
 ## Headline number
 
 `prepare fixtures/shapes/overhang_bracket.stl --max-passes 1 --allow-unresolved`
@@ -20,6 +60,7 @@ lessons go in `gotchas.md`.
 | + `workers=0` derives 8 (shipping default) | **26.9 s** | 784 MB | **2.74x vs v0.1.0**, no flags needed |
 | + scatter dedup in `VoidForest.merge` | **18.3 s** | 780 MB | **4.02x vs v0.1.0**, 1.38x on top of the above
 | + island counts computed per diagnostic | **12.9 s** | 824 MB | **5.71x vs v0.1.0**, 1.43x on top of the above
+| + RLE per-layer analysis in `validation.py` | **3.45 s** | 545 MB | **21.4x vs v0.1.0**, 3.7x on top of 12.9 s; validation 0.93 s |
 
 Record a new row after every Phase 2 item so the curve is visible.
 
@@ -202,16 +243,18 @@ written twice.
       `ndi.label` 3.3x. NumPy's `.any()` does not scale. So the 31.6 s of
       `_growth_pixels` is reachable from plain Python threads right now — this
       item does not have to wait for the native port, and should land before it.
-- [ ] 1b. Remaining cheap NumPy wins in `validation.py`. Two of the three are
-      already done as part of 1a: the border `np.unique` is gone (scatter into
-      a flags array instead), and `occupancy_mask` is now derived once per
-      layer and passed to both the island labeling and the void labeling
-      rather than recomputed inside `VoidForest.add`.
-      Left: `block_any` (validation.py:47) still allocates a fresh padded
-      array per call through `np.pad`, and it is called ~18 times per layer.
-      Re-profile first — after the 2.74x the shape of the run has changed and
-      this may no longer be worth doing.
-- [ ] 2. **RLE per-layer analysis — scoped to `validation.py` internals.**
+- [-] 1b. Remaining cheap NumPy wins in `validation.py`. **Retired by
+      measurement, do not do this as a standalone item.** Two of the three
+      were already done as part of 1a. The leftover `block_any` pad was
+      re-profiled: 0.4-0.7 s total, under 1 %, and it is called about twice
+      per layer now, not 18. Item 2's `run_block_any` supersedes it on the
+      RLE path anyway.
+- [x] 2. **RLE per-layer analysis — scoped to `validation.py` internals.**
+      DONE. Native kernels in `native/runs.cpp` (`b43a452`); wired through
+      `_analyze_layer` / `void_components` / `VoidForest.merge` as one
+      change. Dense fallback below 6 px/run and via `VOXELMILL_NATIVE_RUNS=0`.
+      Bracket 12.9 s -> 3.45 s, RSS 824 -> 545 MB. Trapped-volume residue
+      unchanged. Original assessment follows.
       Assessed in depth; `scratchpad/rle_assessment.md` has the data. The
       plan's "end-to-end, from `Rasterizer::slice` through validation, union and
       GOO encode" framing is **rejected**: that is most of the files for about a
@@ -253,14 +296,14 @@ written twice.
       as the permanent fallback for pathological density (run space loses below
       about 6 px/run; real fixtures sit two orders clear).
 
-      Scope: ~10 functions and ~300 lines in validation.py plus a new
-      `native/runs.cpp` (~250-300 lines; a working C draft exists at
-      `scratchpad/rle/runs.c`). Estimated 2-4 days.
+      Scope: ~10 functions and ~300 lines in validation.py plus
+      `native/runs.cpp` (589 lines written, CMake/module.cpp wired, not yet
+      rebuilt or called from Python). The `scratchpad/rle/` draft is gone;
+      it was promoted into `native/runs.cpp`. Estimated 2-4 days; kernels
+      are the first half.
 
-- [ ] 3. Port the per-layer analysis kernels to native code over RLE layers.
-      Folded into item 2 above — the kernels and the representation are the
-      same change, and splitting them is what the 1.06x partial-conversion
-      measurement warns against.
+- [x] 3. Port the per-layer analysis kernels to native code over RLE layers.
+      Folded into item 2; not a separate change.
 
 - [-] 4. Parallelize across layers with `tbb::parallel_for` — **retired by
       measurement, do not do this.** The pool is bandwidth-limited, not
@@ -313,18 +356,14 @@ written twice.
       a strict reduction on every input. **18.39 s -> 12.88 s (-30 %)**, user
       CPU 82.0 -> 63.7 s. RSS unchanged: the prototype's 795 -> 660 MB was
       noise, the removed vector was per component, not per pixel.
-- [ ] 5d. Fused native kernel for `merge`'s overlap-pair extraction.
-      Superseded by item 2 if that lands: the run-space extraction is 193x and
-      byte-identical, against this kernel's 3.8x. Keep only as the fallback if
-      item 2 is abandoned. Worth about -0.5 s on its own after the island-count
-      change.
+- [-] 5d. Fused native kernel for `merge`'s overlap-pair extraction.
+      **Superseded by item 2.** `run_pairs` is the 193x byte-identical
+      extraction; the 3.8x dense fused kernel was never shipped.
 
-**The ~10 s floor, and why it caps nearly every remaining item.** Deleting
-`merge`'s extraction outright stops the run at 10.24 s; eliminating *all* pool
-work would also stop it at about 10 s. Neither side alone clears that floor, so
-every single-sided candidate — item 5d, item 7, more workers — is capped there.
-Item 2 is the only remaining change that removes work from both sides at once,
-which is the argument for doing it and for not bothering with the rest first.
+**The ~10 s floor is gone.** Item 2 removed work from both the serial merge
+and the pool; the bracket run is 3.45 s with validation at 0.93 s. Re-profile
+before spending on items 6–9. The old argument that every single-sided
+candidate was capped at 10 s no longer applies.
 
 - [ ] 6. Persist the Z-interval structure on the `Rasterizer` across passes
       instead of rebuilding it (native/raster.cpp:53-66).
@@ -351,25 +390,20 @@ which is the argument for doing it and for not bothering with the rest first.
       the same way. All 13 scenarios now match on all four columns, where
       before six never reached `slice` at all.
 
-- [ ] Extend `scripts/equivalence.py` coverage: `find_shapes` globs
-      `fixtures/shapes/*.stl`, which is 13 scenarios and misses the five error
-      fixtures in `fixtures/shapes/invalid/` (degenerate, flipped_winding,
-      nonmanifold_edge, open_box, self_intersecting). Those exercise the
-      failure paths and diagnostic payloads, which are exactly the parts a
-      rewrite is most likely to get subtly wrong. The harness already treats
-      "both sides failed the same way" as a match, so they just need globbing.
+- [x] Extend `scripts/equivalence.py` coverage: `find_shapes` now globs
+      top-level shapes and `fixtures/shapes/invalid/` (degenerate,
+      flipped_winding, nonmanifold_edge, open_box, self_intersecting).
+      DONE in `de1cb64`; all five match old-vs-new. No goldens under
+      `reports/golden/v010/` for those five (old-vs-new only).
 
 - [x] Record v0.1.0 goldens once. DONE: `reports/golden/v010/` holds
       normalized inspect/prepare/slice reports for all 13 scenarios (39 files,
       1.7 MB), committed.
 
-- [ ] Make the golden-only comparison actually work. `main` guards for a
-      missing old root (equivalence.py:543) and there is a new-vs-golden diff
-      block (equivalence.py:465), but `evaluate_scenario` returns
-      `'shape missing under old root'` with `ok=False` before either can
-      matter, because `old_steps is None` is unconditionally an error. Until
-      this is fixed the goldens save nothing and every check still pays for
-      the slow tree.
+- [x] Make the golden-only comparison actually work. DONE in `de1cb64`:
+      when `old_steps is None` and the old root is absent,
+      `evaluate_scenario` calls `_evaluate_golden_only`. Default golden
+      dir for that path is `reports/golden/v010`.
 
 Run `scripts/equivalence.py` after each item. Commit each item separately.
 

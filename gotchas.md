@@ -1244,13 +1244,14 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   "failed" discards the most direct evidence that two trees compute the same
   geometry.
 
-- **The golden-comparison path does not work yet.** `main` guards for a
-  missing old root (equivalence.py:543) and there is a new-vs-golden diff
-  block (equivalence.py:465), but `evaluate_scenario` returns
-  `'shape missing under old root'` with `ok=False` before either can matter,
-  because `old_steps is None` is treated as an error unconditionally. Goldens
-  can be recorded, but a golden-only run still fails. Fix `evaluate_scenario`
-  before relying on goldens to skip the slow side.
+- **Golden-only comparison needs the old root to be absent, not empty.**
+  `evaluate_scenario` used to treat `old_steps is None` as an error, so the
+  golden diff block was dead code and every check still paid for the v0.1.0
+  tree. That is fixed: a missing old root now runs `_evaluate_golden_only`
+  against `reports/golden/v010`. A shape that exists under an *existing* old
+  root but has no files there is still an error, so a mis-pointed `--old-root`
+  cannot silently skip into goldens. The five `fixtures/shapes/invalid/`
+  cases are covered old-vs-new only; they have no goldens yet.
 
 - **A check that was skipped must not report `pass`.** `checks` entries are
   initialized optimistically and only downgraded on failure, so gating a
@@ -1339,3 +1340,19 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   diagnostics, so anything touching island reporting is unmeasured and untested
   by the headline benchmark. Check what a fixture actually reports before
   trusting it to cover a change.
+
+- **A partial RLE conversion that scatters dense labels at the boundary is
+  not a speedup.** Computing CCL/counts/overlap in run space and then writing
+  a full-panel int32 label image cost 15.6 s over 900 layers against 0.11 s
+  for the run kernels, and measured 1.06x end to end. The unit of value is
+  keeping the whole per-layer path — both CCLs, overlap, border, extent, and
+  `VoidForest.merge` pair extraction — in run space. `run_scatter` is for
+  tests and the rare mixed-representation merge, never the hot path.
+  `VOXELMILL_NATIVE_RUNS=0` is the A/B kill-switch; it must not change
+  results, only representation.
+
+- **`VoidForest.add` is not the `analyze_layers` path.** `supports.py`
+  indexes `empty_ids[empty_labels.ravel()[closed]]` and needs a dense 2-D
+  label array. Leaving `add` on dense components while `analyze_layers`
+  stays in run space is deliberate. Scattering at `add`'s return would also
+  work, but changing the return shape would not.

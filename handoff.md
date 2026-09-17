@@ -1,8 +1,20 @@
 # VoxelMill v0.2.0 — handoff
 
-State as of 2026-09-17. Read this, then `todo.md` for the task ledger and
-`gotchas.md` for verified lessons. The approved plan lives outside the repo at
-`~/.claude/plans/twinkly-orbiting-grove.md`.
+State as of 2026-09-17 after the RLE validation path. Read `todo.md` for the
+task ledger and `gotchas.md` for verified lessons. The approved plan lives
+outside the repo at `~/.claude/plans/twinkly-orbiting-grove.md`.
+
+**Headline:** `prepare fixtures/shapes/overhang_bracket.stl --max-passes 1
+--allow-unresolved` is **3.45 s / 545 MB** (was 73.7 s / 636 MB in v0.1.0,
+12.9 s / 824 MB before RLE). `peak_present_trapped_volume_mm3` is still
+`2.0886070650760757e-15`. Equivalence vs `/home3/noisecancelingcodex` holds
+on the 13 golden shapes and a live sample (cube, pin_array, overhang_bracket,
+torus, open_box) including STL and GOO.
+
+**Kill-switch:** `VOXELMILL_NATIVE_RUNS=0` forces the dense per-layer path.
+
+Next: re-profile (the 10 s floor is gone), then Phase 1 `--timing` or Phase 2
+items 6–9 only if the new profile says they matter. Phases 3–5 need a rescope.
 
 ## Where things stand
 
