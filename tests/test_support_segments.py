@@ -333,6 +333,23 @@ def test_the_base_and_branch_angle_reach_the_settings_from_the_command_line():
     assert resolved['base_touch_diameter_mm'] == 10.0
 
 
+def test_the_brace_sizing_flags_reach_the_settings_from_the_command_line():
+    from voxelmill.cli import _settings, build_parser
+    args = build_parser().parse_args(['prepare', 'in.stl',
+                                      '--brace-spacing-mm', '30',
+                                      '--brace-start-height-mm', '3',
+                                      '--brace-diameter-mm', '0.8',
+                                      '--brace-max-distance-mm', '12'])
+    resolved = _settings(args)['support']
+    assert resolved['brace_spacing_mm'] == 30.0
+    assert resolved['brace_start_height_mm'] == 3.0
+    assert resolved['brace_diameter_mm'] == 0.8
+    assert resolved['brace_max_distance_mm'] == 12.0
+    assert all(isinstance(resolved[key], float) for key in (
+        'brace_spacing_mm', 'brace_start_height_mm',
+        'brace_diameter_mm', 'brace_max_distance_mm'))
+
+
 def test_the_editor_exposes_the_base_type_and_the_new_preset():
     pytest.importorskip('PySide6')
     import os

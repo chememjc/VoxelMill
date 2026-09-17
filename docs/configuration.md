@@ -165,7 +165,10 @@ pillars use their own depth/shape settings instead of these bottom settings.
 between cross-braces and the height of the lowest one. The reference
 configuration sets them 30 mm and 3 mm apart, which one number cannot
 express. Either left at `0` (the default) still derives that same value,
-so an untouched profile braces exactly as before.
+so an untouched profile braces exactly as before. Both are ordinary
+`support` keys, reachable through `--set section.key=value` or the dedicated
+`--brace-spacing-mm`/`--brace-start-height-mm` CLI shortcuts (see
+[cli.md](cli.md)), or the GUI's resolved-settings JSON.
 
 `support.tree_cluster_mm` (default `0`, which derives `2 * spacing_mm`) is the
 radius `tree_supports` clusters nearby vertical plate supports within before
@@ -185,10 +188,13 @@ reach the existing failure gates.
 `brace_diameter_mm` sets the cross-brace diameter when nonzero; `0` derives it
 from the thinner of the two connected pillars. `brace_max_distance_mm` limits
 which pillar neighbours can be connected and defaults to `1.5 * spacing_mm`.
-Before a brace is emitted, its capsule is checked against occupied model
-columns on the support analysis grid. A collision rejects that candidate and
-increments `braces_collision_rejected`; the grid test is a clearance heuristic,
-not a mechanical strength proof.
+Both are ordinary `support` keys, reachable through `--set section.key=value`
+or the dedicated `--brace-diameter-mm`/`--brace-max-distance-mm` CLI shortcuts
+(see [cli.md](cli.md)), or the GUI's resolved-settings JSON. Before a brace is
+emitted, its capsule is checked against occupied model columns on the support
+analysis grid. A collision rejects that candidate and increments
+`braces_collision_rejected`; the grid test is a clearance heuristic, not a
+mechanical strength proof.
 
 `base_type` chooses what routed supports land on: `plate` (default) is the
 legacy convex hull raft, `none` emits actual 24-sided bare-foot sections,

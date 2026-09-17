@@ -37,6 +37,10 @@ These are accepted by every command except `goo-info`.
 | `--contour-supports` / `--no-contour-supports` | Also sample the outer perimeter of downward-face clusters. Off by default. |
 | `--boundary-supports` / `--no-boundary-supports` | Also sample open mesh boundary edges (crop cuts). Closed solids add none. Off by default. |
 | `--auto-bracing` / `--no-auto-bracing` | Automatic bracing, switched independently of contacts. |
+| `--brace-spacing-mm` | Vertical gap between cross-braces, `support.brace_spacing_mm`. `0` (default) derives `max_slenderness * 2 * pillar_radius`, same as `--brace-start-height-mm`; setting either separates them. |
+| `--brace-start-height-mm` | Height of the lowest cross-brace above the plate, `support.brace_start_height_mm`. `0` (default) derives `max_slenderness * 2 * pillar_radius`. |
+| `--brace-diameter-mm` | Cross-brace diameter, `support.brace_diameter_mm`. `0` (default) derives it from the thinner of the two connected pillars. |
+| `--brace-max-distance-mm` | Farthest a pillar neighbour may be and still be braced, `support.brace_max_distance_mm`. `0` (default) derives `1.5 * spacing_mm`. |
 | `--part-to-part-supports` / `--no-part-to-part-supports` | Allow or forbid support anchors on model material. |
 | `--part-to-part-avoidance VALUE` | Route preference from `0` (equal length competition) to `1` (historical plate preference); intermediate values require a proportionally shorter model route. |
 | `--peel-analysis` / `--no-peel-analysis` | Enable or skip the uncalibrated downward-surface peel advisory. Skipping reports `not_run`. Thresholds use `--set peel.KEY=VALUE`. |
