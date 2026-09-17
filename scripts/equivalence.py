@@ -68,6 +68,16 @@ VOLATILE_SUBTREES = {'resources'}
 
 STEPS = ('inspect', 'prepare', 'slice')
 
+#: Columns shown in the summary table. Same as STEPS plus `prepared_stl`,
+#: which is not a pipeline step -- it is a derived comparison (a content hash
+#: of prepare's output) that is evaluated independently of whether `prepare`
+#: itself returned 0, so it gets its own column instead of being folded into
+#: the `prepare` one. Only print_summary (and the various "nothing ran"
+#: step_status dicts, for cosmetic completeness) use this; everything that
+#: actually drives subprocesses or golden-report comparisons still uses
+#: STEPS, since prepared_stl has no JSON report of its own.
+DISPLAY_STEPS = ('inspect', 'prepare', 'prepared_stl', 'slice')
+
 
 def normalize(value, key=None):
     """Recursively strip volatile fields and canonicalize path strings.
@@ -269,9 +279,18 @@ def _read_json(path):
 def run_scenario_steps(root, shape, work_dir, workers=None):
     """Run inspect -> prepare -> slice for one shape under one tree.
 
-    Stops early (recording no further steps) once a step's returncode is
+    Stops early (recording no further steps) once inspect's returncode is
     nonzero, since prepare needs inspect's *files* only implicitly (both
-    just take the shape path) but slice genuinely needs prepare's output.
+    just take the shape path). prepare is different: it exits nonzero on
+    plenty of fixtures even with --allow-unresolved (that flag only waives
+    unresolved islands -- e.g. torus separately fails the enclosed_voids and
+    drainage_bottlenecks validation checks), but it still WRITES a complete,
+    valid prepared.stl in that case. So slice is attempted whenever
+    prepared.stl exists on disk, regardless of prepare's returncode -- only
+    a prepare that produced nothing at all blocks slice. Whether a nonzero
+    prepare is actually *comparable* across the two trees (same returncode,
+    both wrote the file) is decided later in evaluate_scenario; this
+    function just tries whatever it has enough input to try.
     Returns {step: {'process': {...}, 'report': dict|None}}.
     """
     worker_flags = ['--workers', str(workers)] if workers is not None else []
@@ -289,7 +308,7 @@ def run_scenario_steps(root, shape, work_dir, workers=None):
                             *worker_flags], work_dir)
     steps['prepare'] = {'process': result, 'report': _read_json(prepare_report),
                         'output': prepared if prepared.exists() else None}
-    if result['returncode'] != 0:
+    if result['returncode'] != 0 and not prepared.exists():
         return steps
 
     out_goo = work_dir / 'out.goo'
@@ -327,7 +346,7 @@ def evaluate_scenario(raw, new_root, golden_dir, update_golden, verbose):
 
     if update_golden:
         if new_steps is None:
-            step_status = {step: 'skip' for step in STEPS}
+            step_status = {step: 'skip' for step in DISPLAY_STEPS}
             report_lines.append(f'{name}: shape missing under new root, nothing to write')
             return {'name': name, 'step_status': step_status, 'lines': report_lines, 'ok': True}
         for step in STEPS:
@@ -340,15 +359,19 @@ def evaluate_scenario(raw, new_root, golden_dir, update_golden, verbose):
                 golden_path.parent.mkdir(parents=True, exist_ok=True)
                 golden_path.write_text(json.dumps(normalize(info['report']), indent=2, sort_keys=True) + '\n')
             step_status[step] = 'wrote'
+        # prepared_stl has no JSON report to write to the golden set (it is
+        # a direct old-vs-new hash compare, and golden mode does not involve
+        # old-root at all) -- always 'skip' here, just for a tidy column.
+        step_status['prepared_stl'] = 'skip'
         return {'name': name, 'step_status': step_status, 'lines': report_lines, 'ok': True}
 
     ok = True
     if old_steps is None and new_steps is None:
-        return {'name': name, 'step_status': {s: 'skip' for s in STEPS},
+        return {'name': name, 'step_status': {s: 'skip' for s in DISPLAY_STEPS},
                 'lines': [f'{name}: shape missing under both roots'], 'ok': True}
     if old_steps is None or new_steps is None:
         missing = 'old' if old_steps is None else 'new'
-        return {'name': name, 'step_status': {s: 'error' for s in STEPS},
+        return {'name': name, 'step_status': {s: 'error' for s in DISPLAY_STEPS},
                 'lines': [f'{name}: shape missing under {missing} root'], 'ok': False}
 
     for step in STEPS:
@@ -375,13 +398,23 @@ def evaluate_scenario(raw, new_root, golden_dir, update_golden, verbose):
                 break
             continue
         if old_rc != 0:
-            # Both sides failed the SAME way: expected for fixtures/shapes/invalid/.
-            # That is a match, not something to report on, and there is no
-            # report to diff or later step to run.
+            # Both sides failed the SAME way. For most steps that is the end
+            # of the story (expected for fixtures/shapes/invalid/: no report,
+            # no output, nothing left to compare). `prepare` is the
+            # exception -- it deliberately keeps writing a usable
+            # prepared.stl (and a complete prepare.json) alongside a failing
+            # validation verdict, so when BOTH sides produced that file,
+            # fall through to the same report comparison the success path
+            # uses below, and keep going to `slice` instead of stopping
+            # here. (prepared.stl itself is compared separately, after this
+            # loop, regardless of returncode -- see the prepared_stl block.)
             step_status[step] = 'match'
             if verbose:
                 report_lines.append(f'{name}.{step}: both sides failed with returncode {old_rc} (expected)')
-            break
+            has_comparable_output = (step in ('prepare', 'slice')
+                                     and old_info.get('output') and new_info.get('output'))
+            if not has_comparable_output:
+                break
 
         step_ok = True
         if old_info['report'] is None or new_info['report'] is None:
@@ -393,20 +426,41 @@ def evaluate_scenario(raw, new_root, golden_dir, update_golden, verbose):
             step_ok = matched
             report_lines.extend(lines)
 
-        if step in ('prepare', 'slice') and old_info.get('output') and new_info.get('output'):
-            comparer = compare_stl if step == 'prepare' else compare_goo
-            if step == 'prepare':
-                matched_bin, lines = comparer(old_info['output'], new_info['output'])
-            else:
-                matched_bin, lines = comparer(old_info['output'], new_info['output'], new_root)
+        if step == 'slice' and old_info.get('output') and new_info.get('output'):
+            matched_bin, lines = compare_goo(old_info['output'], new_info['output'], new_root)
             step_ok = step_ok and matched_bin
             report_lines.extend(f'{name}.{step}: {line}' for line in lines)
-        elif step in ('prepare', 'slice') and bool(old_info.get('output')) != bool(new_info.get('output')):
+        elif step == 'slice' and bool(old_info.get('output')) != bool(new_info.get('output')):
             step_ok = False
             report_lines.append(f'{name}.{step}: output file present on only one side')
 
         step_status[step] = 'match' if step_ok else 'differ'
         ok = ok and step_ok
+
+    # prepared.stl is compared independently of the `prepare` step's
+    # returncode -- it is written whenever prepare produced output at all,
+    # even alongside a failing validation verdict (see run_scenario_steps),
+    # and the STL is known to be deterministic and byte-identical across
+    # runs, so a plain content hash is the correct and most direct check of
+    # whether the two trees computed the same geometry. Reported as its own
+    # column rather than folded into `prepare` because the two measure
+    # different things: `prepare` is "did the CLI invocation behave the same
+    # way" (returncode + JSON report), this is "is the mesh it wrote
+    # byte-identical".
+    old_prepare, new_prepare = old_steps.get('prepare'), new_steps.get('prepare')
+    old_stl = old_prepare.get('output') if old_prepare else None
+    new_stl = new_prepare.get('output') if new_prepare else None
+    if old_stl and new_stl:
+        matched_bin, lines = compare_stl(old_stl, new_stl)
+        step_status['prepared_stl'] = 'match' if matched_bin else 'differ'
+        report_lines.extend(f'{name}.prepared_stl: {line}' for line in lines)
+        ok = ok and matched_bin
+    elif bool(old_stl) != bool(new_stl):
+        step_status['prepared_stl'] = 'differ'
+        report_lines.append(f'{name}.prepared_stl: output file present on only one side')
+        ok = False
+    else:
+        step_status['prepared_stl'] = 'skip'
 
     if golden_dir_has_content(golden_dir):
         for step in STEPS:
@@ -433,12 +487,12 @@ def golden_dir_has_content(golden_dir):
 
 def print_summary(evaluations, update_golden):
     """Readable terminal table: one row per scenario, plus a total line."""
-    header = f'{"scenario":<28} ' + ' '.join(f'{s:<10}' for s in STEPS) + '  result'
+    header = f'{"scenario":<28} ' + ' '.join(f'{s:<13}' for s in DISPLAY_STEPS) + '  result'
     print(header)
     print('-' * len(header))
     total_ok = 0
     for ev in evaluations:
-        cells = ' '.join(f'{ev["step_status"].get(s, "-"):<10}' for s in STEPS)
+        cells = ' '.join(f'{ev["step_status"].get(s, "-"):<13}' for s in DISPLAY_STEPS)
         result = 'WROTE' if update_golden else ('OK' if ev['ok'] else 'DIFFERS')
         print(f'{ev["name"]:<28} {cells}  {result}')
         total_ok += int(ev['ok'])
