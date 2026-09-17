@@ -69,6 +69,48 @@ memory-bandwidth-bound, and about 5 s elsewhere in `merge` that nobody has
 chased yet. Going further probably means restructuring rather than
 micro-optimizing.
 
+### Second re-measure, after the scatter fix (18.4 s run)
+
+Line-by-line `perf_counter` fences inside `merge`, verified non-perturbing
+(they reproduced the baseline report exactly, `2.0886070650760757e-15` residue
+included):
+
+| statement | `--workers 1` | 8 workers |
+| --- | --- | --- |
+| `np.multiply` / `np.add` / `seen[chunk] = True` | **4.504 s** | **9.871 s (97.6 % of merge)** |
+| everything else in `merge` | 0.19 s | 0.19 s |
+
+**There was no "~5 s elsewhere in `merge`" — that guess was wrong.** Outside the
+three dedup passes `merge` is 1.9 % of itself. The 4.4-vs-9.9 s gap is
+*environmental*: the identical loop costs 4.50 s solo and 9.87 s while eight
+pool threads compete for memory. Reproduced standalone at 4.40 s idle, 5.20 s
+under compute-only load, 9.68 s under memory streamers.
+
+**The union-find is free.** 24,234 `union` calls, 104,010 `find` calls,
+0.053 s — 0.5 % of `merge`, 0.3 % of the run. The cost here was always bytes,
+never the algorithm. Do not "optimize" the union-find.
+
+**The dedup loop is saturated for the bytes it touches.** 41 B/px touched, 8 of
+which must leave cache; 29.0 GB/s solo against this machine's measured
+single-core ceilings (copy 54.4, scale 27.3, add 34.4, pure read 26.1,
+int32->int64 widen 18.5 GB/s). Reshaping the NumPy passes is pointless — int32
+keys measured 18 % *slower*, 2-D scatter and bincount dedup worse. Only a fused
+native kernel that reads 8 B/px once beats it (measured 21.8 GB/s, 84 % of the
+read ceiling, 3.8x, byte-identical keys on 18 dumped layers).
+
+**Whole-run split at 18.2 s:** `merge` 10.15 s (55.8 %, serial),
+`slice_coverage` 2.59 s (14.2 %, serial), main blocked on the pool 1.32 s,
+`UnionLayerStream` 1.10 s, `occupancy_mask` 0.86 s, drainage 0.71 s. Pool: 88.8
+thread-seconds of compute against 44.7 idle.
+
+**More threads do not pay, and this retires Phase 2 item 4.** Parallel speedup
+is 3.52x (64.76 s at `--workers 1`), up from 2.90x. Worker sweep: 22.61 / 19.06
+/ **18.38** / 19.44 / 19.60 / 19.33 s at 4 / 6 / 8 / 12 / 16 / 24 — and still
+flat at 8 even with `merge` made nearly free (11.63 / 11.88 / 11.67 at 8 / 12 /
+16). **The pool is bandwidth-limited, not thread-limited**, so
+`tbb::parallel_for` across layers has nothing left to win. Touch fewer pixels
+instead.
+
 **A cProfile line number is not a diagnosis.** The profile put
 `{ndarray.sort}` at the top and it was the right line, but three different
 sort-free rewrites of it measured 4.40 s, 7.94 s and 20.80 s on the same real
@@ -175,10 +217,15 @@ written twice.
 - [ ] 3. Port the per-layer analysis kernels to native code over RLE layers:
       CCL, the cross-layer union-find `VoidTracker`, block-max decimation, the
       growth/EDT check. One kernel at a time, each A/B-tested against scipy.
-- [ ] 4. Parallelize across layers with `tbb::parallel_for` per the threading
-      design: topology from `topology.py` via `vm_set_topology`, dynamic
-      work-stealing across P/E cores, worker count capped by the memory budget,
-      deterministic cross-layer `VoidTracker` merge.
+- [-] 4. Parallelize across layers with `tbb::parallel_for` — **retired by
+      measurement, do not do this.** The pool is bandwidth-limited, not
+      thread-limited: the worker sweep is flat past 8 (22.61 / 19.06 / 18.38 /
+      19.44 / 19.60 / 19.33 s at 4 / 6 / 8 / 12 / 16 / 24) and stays flat at 8
+      even with `merge` made nearly free. 33 % of pool thread-time is already
+      idle waiting. More workers move no more bytes per second. The remaining
+      win is touching fewer pixels (item 2), not scheduling the same pixels
+      harder. Revisit only if the RLE work makes the per-layer data small
+      enough to fit cache, which would change the regime.
 - [~] 5. Stop running `analyze_layers` twice inside `prepare` -- **evidence says
       the two calls are NOT interchangeable; do not cache one into the other.**
       `island_guard.scan_assembly_islands` (island_guard.py:70-84) analyzes the
@@ -209,6 +256,28 @@ written twice.
       `repair.support_void_policy != 'fail'` (non-default). It analyzes the
       pre-export model group, so it shares a data source with the island guard
       and is a more plausible sharing candidate than the reslice.
+- [ ] 5c. Make `_label_occupancy`'s full-panel `np.bincount`
+      (validation.py:255) lazy. It runs on every layer of every pass (1,800
+      calls, 22.4 thread-seconds, about a quarter of all pool CPU) and feeds
+      exactly one consumer: the `pixels` field of at most 128 `raster_island`
+      diagnostics (validation.py:447). Prototype measured **18.38 s -> 12.16 s
+      (-34 %)**, user CPU 79.8 -> 59.5 s, RSS 795 -> 660 MB, byte-identical STL
+      and report. Watch the blind spot: the bracket fixture reports zero
+      islands, so the materialization path needs a synthetic test.
+
+- [ ] 5d. Fused native kernel for the overlap-pair extraction in
+      `VoidForest.merge`. Reads 8 B/px once instead of touching 41; measured
+      21.8 GB/s, 84 % of this machine's read ceiling, 3.8x on the loop,
+      byte-identical key sequence on 18 dumped layers. Worth **-1.9 s alone but
+      only -0.5 s after 5c**, because deleting the extraction outright stops
+      the run at 16.21 s stock / 10.24 s with lazy counts — that is the ceiling.
+      Sequence it after 5c and re-measure before deciding it is worth the C.
+      Moving the extraction to the worker pool instead is order-feasible (pairs
+      depend only on `labels[i]`, `labels[i-1]`, and the id mapping applies
+      afterwards) but strictly worse: same ceiling, adds bandwidth-hungry work
+      to a pool that is already 83 % busy and does not scale past 8, and costs a
+      second pool stage plus a changed `merge` signature.
+
 - [ ] 6. Persist the Z-interval structure on the `Rasterizer` across passes
       instead of rebuilding it (native/raster.cpp:53-66).
 - [ ] 7. Fold `UnionLayerStream`'s per-group slices into one native call
