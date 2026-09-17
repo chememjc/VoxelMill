@@ -1308,3 +1308,34 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   with `--workers 1` for honest CPU attribution, and separately instrument the
   pool threads (give each its own `cProfile.Profile` via a `Thread.run` patch and
   merge with `pstats.Stats(*files)`) to get wall-clock truth.
+
+- **Ask whether the work can be deleted before working out how to defer it.** A
+  full-panel `np.bincount` ran on every layer to feed the `pixels` field of at
+  most 128 diagnostics, and the obvious fix was a lazy proxy. The better fix was
+  to notice that the consumer already held the label array and was already
+  paying a full-panel `labels == component` pass to locate the island: the count
+  falls out of that same mask for free. The proxy would have shipped a
+  duck-typed object where an ndarray used to be, with a cache and a lifetime
+  question across a thread-pool boundary, to buy about 50 ms of amortization
+  over a whole build. Deleting the work needed no new type at all.
+
+- **`np.argwhere(mask)[0]` materializes every hit to read the first one.**
+  `np.argmax(mask)` short-circuits and allocates nothing; `divmod` by the row
+  width recovers the same C-order coordinates. Measured 4.81 ms -> 0.45 ms on a
+  3.54 Mpx panel with the component in the final row, which is the worst case
+  for the scan.
+
+- **A test can assert on a field and still be no coverage.**
+  `tests/test_raster.py:45` asserted `d.details.get('pixels') == 1` on a
+  single-pixel island — a value that survives almost any wrong implementation of
+  the count, including one that returns a constant. The eager-bincount removal
+  was checked against it, passed, and was still unverified until three tests
+  with hand-countable distinct areas (1, 4, 7, 12, 15, 20 px) were added and
+  mutation-checked by perturbing the count. Prefer fixtures whose expected
+  values are distinct and wrong-by-construction if the code is wrong.
+
+- **The benchmark fixture does not exercise the diagnostic paths.**
+  `overhang_bracket` reports `island_components: 0` and zero `raster_island`
+  diagnostics, so anything touching island reporting is unmeasured and untested
+  by the headline benchmark. Check what a fixture actually reports before
+  trusting it to cover a change.

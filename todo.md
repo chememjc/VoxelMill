@@ -19,6 +19,7 @@ lessons go in `gotchas.md`.
 | + parallel `_analyze_layer`, w=24 | 28.4 s | 1.95 GB | past the knee; 2.5x RSS for nothing |
 | + `workers=0` derives 8 (shipping default) | **26.9 s** | 784 MB | **2.74x vs v0.1.0**, no flags needed |
 | + scatter dedup in `VoidForest.merge` | **18.3 s** | 780 MB | **4.02x vs v0.1.0**, 1.38x on top of the above
+| + island counts computed per diagnostic | **12.9 s** | 824 MB | **5.71x vs v0.1.0**, 1.43x on top of the above
 
 Record a new row after every Phase 2 item so the curve is visible.
 
@@ -256,15 +257,18 @@ written twice.
       `repair.support_void_policy != 'fail'` (non-default). It analyzes the
       pre-export model group, so it shares a data source with the island guard
       and is a more plausible sharing candidate than the reslice.
-- [ ] 5c. Make `_label_occupancy`'s full-panel `np.bincount`
-      (validation.py:255) lazy. It runs on every layer of every pass (1,800
-      calls, 22.4 thread-seconds, about a quarter of all pool CPU) and feeds
-      exactly one consumer: the `pixels` field of at most 128 `raster_island`
-      diagnostics (validation.py:447). Prototype measured **18.38 s -> 12.16 s
-      (-34 %)**, user CPU 79.8 -> 59.5 s, RSS 795 -> 660 MB, byte-identical STL
-      and report. Watch the blind spot: the bracket fixture reports zero
-      islands, so the materialization path needs a synthetic test.
-
+- [x] 5c. Stop computing per-layer island pixel counts eagerly. DONE
+      (`6e3802d`), and the fix was better than the plan: the work is *deleted*,
+      not deferred. The diagnostic site already held `labels` and was already
+      paying a full-panel `labels == component` pass for the island's position,
+      so `_island_extent` takes the count off that same mask. No lazy proxy, no
+      cache, no lifetime question. `argmax` on the boolean also replaced
+      `argwhere(...)[0]`, which had been materializing an index array for the
+      whole component to read one row (4.81 ms -> 0.45 ms on a 3.54 Mpx panel).
+      New worst case is 128 calls at 57 ms against 1,800 bincounts at 13.9 s --
+      a strict reduction on every input. **18.39 s -> 12.88 s (-30 %)**, user
+      CPU 82.0 -> 63.7 s. RSS unchanged: the prototype's 795 -> 660 MB was
+      noise, the removed vector was per component, not per pixel.
 - [ ] 5d. Fused native kernel for the overlap-pair extraction in
       `VoidForest.merge`. Reads 8 B/px once instead of touching 41; measured
       21.8 GB/s, 84 % of this machine's read ceiling, 3.8x on the loop,
