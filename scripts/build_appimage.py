@@ -15,6 +15,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import sysconfig
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGING = ROOT / 'packaging' / 'appimage'
@@ -135,17 +136,35 @@ def stage_appdir(appdir: Path, *, gui: bool):
     bindir.mkdir(parents=True)
     lib.mkdir(parents=True)
 
+    # Bundle the running interpreter's own prefix. Hardcoding Debian
+    # /usr/lib/python3.10 next to a python.org binary (GitHub setup-python)
+    # drops C-extension modules that Debian built in (math, etc.).
     python = Path(sys.executable).resolve()
     _copy_file(python, bindir / 'python3.10')
     os.chmod(bindir / 'python3.10', os.stat(bindir / 'python3.10').st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-    libpython = Path('/usr/lib/x86_64-linux-gnu/libpython3.10.so.1.0')
-    if libpython.is_file():
-        _copy_file(libpython, lib / libpython.name)
 
-    stdlib = Path('/usr/lib/python3.10')
+    stdlib = Path(sysconfig.get_path('stdlib'))
+    platstdlib = Path(sysconfig.get_path('platstdlib'))
     if not stdlib.is_dir():
-        raise SystemExit(f'CPython stdlib not found at {stdlib}')
+        raise SystemExit(f'CPython stdlib not found at {stdlib} (base_prefix={sys.base_prefix})')
     _copy_tree(stdlib, py, ignore=_ignore_python_stdlib)
+    if platstdlib != stdlib and platstdlib.is_dir():
+        dyn = platstdlib / 'lib-dynload'
+        if dyn.is_dir():
+            _copy_tree(dyn, py / 'lib-dynload', ignore=_ignore_python_stdlib)
+
+    libdir = Path(sysconfig.get_config_var('LIBDIR') or Path(sys.base_exec_prefix) / 'lib')
+    ldlibrary = sysconfig.get_config_var('LDLIBRARY') or 'libpython3.10.so'
+    libpython_candidates = [
+        libdir / ldlibrary,
+        libdir / 'libpython3.10.so.1.0',
+        Path(sys.base_exec_prefix) / 'lib' / ldlibrary,
+        Path('/usr/lib/x86_64-linux-gnu/libpython3.10.so.1.0'),
+    ]
+    for libpython in libpython_candidates:
+        if libpython.is_file():
+            _copy_file(libpython, lib / libpython.name)
+            break
 
     # The development venv is --system-site-packages; numpy/scipy/PySide6 live
     # in the user site, VTK in the venv. Copy by import path, not by scanning
@@ -194,7 +213,25 @@ def stage_appdir(appdir: Path, *, gui: bool):
     if plugins.is_dir():
         binaries.extend(plugins.rglob('*.so'))
     collect_needed_libs(binaries, lib)
+    _verify_staged_python(appdir)
     return appdir
+
+
+def _verify_staged_python(appdir: Path):
+    """Fail the build if the bundled interpreter cannot import math/_native."""
+    usr = appdir / 'usr'
+    lib = usr / 'lib'
+    env = os.environ.copy()
+    env['PYTHONHOME'] = str(usr)
+    env['PYTHONNOUSERSITE'] = '1'
+    env['PYTHONPATH'] = str(lib / 'python3.10' / 'site-packages')
+    extra = [str(lib), str(lib / 'python3.10' / 'lib-dynload')]
+    env['LD_LIBRARY_PATH'] = ':'.join(extra + ([env['LD_LIBRARY_PATH']] if env.get('LD_LIBRARY_PATH') else []))
+    env.pop('VIRTUAL_ENV', None)
+    python = usr / 'bin' / 'python3.10'
+    subprocess.run(
+        [str(python), '-c', 'import math, voxelmill; from voxelmill import _native'],
+        check=True, env=env, cwd='/tmp')
 
 
 def pack_appdir(appdir: Path, output: Path, tool: Path):
