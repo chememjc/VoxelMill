@@ -2,7 +2,7 @@
 
 A staged Linux application for single-part resin-print preparation. Implementation status, evidence and remaining stage gates are tracked in [plan.md](plan.md).
 
-v0.3.0 keeps a Python CLI and optional GUI, with hot geometry and raster work in
+v0.4.0 keeps a Python CLI and optional GUI, with hot geometry and raster work in
 the C++ `_native` kernels. The Linux AppImage is the ship vehicle; macOS and
 Windows port analysis lives in [platforms.md](platforms.md).
 

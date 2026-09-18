@@ -1,11 +1,12 @@
 # Platforms
 
-Analysis only. VoxelMill ships as a Linux AppImage today; this page records
-what a macOS (x86_64 and arm64) or Windows port would require and what must
-stay as it is. Nothing here is an implementation plan, and v0.2.0 does not
-ship macOS or Windows binaries.
+VoxelMill ships as a Linux AppImage (v0.3.0). macOS and Windows portables are
+built on GitHub Actions for `v0.4*` tags (see
+[`.github/workflows/release.yml`](.github/workflows/release.yml) and
+[docs/packaging.md](docs/packaging.md)). This page records OS differences and
+what must stay as it is.
 
-Related reading: [docs/packaging.md](docs/packaging.md) (AppImage staging),
+Related reading: [docs/packaging.md](docs/packaging.md) (AppImage and PyInstaller),
 [licenses/THIRD-PARTY.md](licenses/THIRD-PARTY.md) (dependency inventory),
 [LICENSE](LICENSE) (SCOPE OF THIS LICENSE).
 
@@ -26,17 +27,17 @@ with a uniform fallback; affinity and address-space ceilings do not.
 
 ## Status
 
-| Vehicle | Role in v0.2.0 |
+| Vehicle | Role |
 |---|---|
-| Linux x86_64 AppImage (`scripts/build_appimage.py`) | Only ship vehicle. Verify existing scripts; do not redesign. |
-| macOS x86_64 `.app` / notarized DMG | Not started. Weeks of work (codesign, notarization, VTK). |
-| macOS arm64 `.app` / notarized DMG | Not started. Same as x86_64 plus universal or arm64-native wheels. |
-| Windows `.exe` / MSI or portable zip | Not started. Weeks of work (MSVC, no `RLIMIT_AS`, VTK DLLs). |
+| Linux x86_64 AppImage (`scripts/build_appimage.py`) | Ship vehicle for v0.3.0; Actions job on `ubuntu-22.04`. |
+| macOS arm64 `.app` / DMG (PyInstaller) | Actions `macos-14`; thin arm64 only (not universal2). Unsigned. |
+| macOS x86_64 `.app` / DMG (PyInstaller) | Actions `macos-15-intel`; thin x86_64. Unsigned. |
+| Windows onedir zip (PyInstaller `VoxelMill.exe`) | Actions `windows-latest`; unzip and run. Unsigned. |
 
-Effort summary: Linux AppImage is "verify the scripts that already exist".
-A first macOS or Windows distributor build is measured in weeks, not days,
-dominated by signing, GUI/OpenGL packaging, and FreeCAD discovery — not by
-rewriting the pipeline.
+Do **not** PyInstaller on Linux for release — keep the AppImage. Two thin Mac
+DMGs are intentional: VTK/PySide6 wheels are not universal2. Codesign and
+notarization remain follow-up work; until then macOS users need
+`xattr -dr com.apple.quarantine` on the `.app`.
 
 ## Comparison
 

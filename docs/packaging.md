@@ -13,8 +13,28 @@ VoxelMill, and the runtime site-packages into `AppDir/usr`. `AppRun` sets
 `PYTHONHOME` and `PYTHONNOUSERSITE` so a host venv cannot leak in.
 
 Linux x86_64 AppImage is the v0.3.0 ship vehicle. macOS and Windows
-drag-and-drop packages are built on GitHub Actions (see
-[`../platforms.md`](../platforms.md)).
+portable packages are built on GitHub Actions from tag `v0.4*` (workflow
+[`.github/workflows/release.yml`](../.github/workflows/release.yml); see
+also [`../platforms.md`](../platforms.md)).
+
+## macOS and Windows portables (PyInstaller)
+
+Linux stays on the AppImage path above. macOS and Windows use
+`packaging/pyinstaller.spec` via `scripts/build_pyinstaller.py` (no
+Homebrew). Output is under `output/portable/`.
+
+- **Two thin Mac DMGs**, not a universal2 binary: VTK and PySide6 wheels are
+  architecture-specific, so Actions builds arm64 on `macos-14` and x86_64 on
+  `macos-15-intel`, each producing its own `.app` then `hdiutil` DMG.
+- **Unsigned.** After download, clear Gatekeeper quarantine before first open:
+
+  ```sh
+  xattr -dr com.apple.quarantine /path/to/VoxelMill.app
+  # or on the DMG mount / copied app
+  ```
+
+- **Windows:** unzip `VoxelMill-windows-x64.zip` and run `VoxelMill.exe`
+  (`console=True` so `VoxelMill.exe prepare …` and other CLI subcommands work).
 
 ### Icons
 
@@ -50,8 +70,8 @@ chmod +x packaging/appimage/appimagetool
 
 `--cli-only` omits VTK and PySide6. The editor then fails at import with a
 missing-module error rather than a missing system package. A CLI-only image
-was smoke-tested at v0.2.0 (`--version` reports `0.2.0`; the staged
-`voxelmill._native` exposes `extract_runs`).
+was smoke-tested at v0.3.0 (`--version` reports `0.3.0`; the staged
+`voxelmill._native` exposes `extract_runs` and `distance_transform_edt`).
 
 A full editor image (the default, without `--cli-only`) opens the GUI when
 double-clicked or when given a single existing file. `--help`, `prepare`,

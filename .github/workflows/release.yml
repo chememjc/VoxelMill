@@ -1,0 +1,135 @@
+# Portable release artifacts for v0.4.x tags (and manual dispatch).
+# Linux: AppImage. macOS/Windows: PyInstaller onedir (.app + DMG / zip).
+# No Homebrew. Version in the tree stays whatever is committed (do not bump here).
+
+name: release
+
+"on":
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v0.4*'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  portable:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # AppDir/AppRun pin CPython 3.10; Mac/Win use 3.11.
+          - name: linux-appimage
+            os: ubuntu-22.04
+            python: '3.10'
+            kind: appimage
+          - name: macos-arm
+            os: macos-14
+            python: '3.11'
+            kind: mac
+            dmg: VoxelMill-macos-arm64.dmg
+            artifact: VoxelMill-macos-arm64-dmg
+          - name: macos-intel
+            os: macos-15-intel
+            python: '3.11'
+            kind: mac
+            dmg: VoxelMill-macos-x86_64.dmg
+            artifact: VoxelMill-macos-x86_64-dmg
+          - name: windows
+            os: windows-latest
+            python: '3.11'
+            kind: windows
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: MSVC environment
+        if: matrix.kind == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install build deps (Linux AppImage)
+        if: matrix.kind == 'appimage'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ninja cmake pybind11==3.0.4 scikit-build-core==0.11.6
+
+      - name: Install build deps (PyInstaller)
+        if: matrix.kind != 'appimage'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ninja cmake pybind11==3.0.4 scikit-build-core==0.11.6 pyinstaller
+
+      - name: Install VoxelMill (CPU-only native)
+        env:
+          CMAKE_ARGS: '-DCMAKE_CUDA_COMPILER='
+        run: |
+          python -m pip install --no-build-isolation -e '.[gui]'
+
+      - name: Fetch appimagetool
+        if: matrix.kind == 'appimage'
+        run: |
+          mkdir -p packaging/appimage
+          curl -fsSL -o packaging/appimage/appimagetool \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x packaging/appimage/appimagetool
+
+      - name: Build AppImage
+        if: matrix.kind == 'appimage'
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: |
+          scripts/make_appimage.sh
+          test -f output/appimage/VoxelMill-x86_64.AppImage
+
+      - name: PyInstaller
+        if: matrix.kind != 'appimage'
+        run: python scripts/build_pyinstaller.py
+
+      - name: Make DMG
+        if: matrix.kind == 'mac'
+        run: |
+          set -euo pipefail
+          APP=output/portable/VoxelMill.app
+          test -d "$APP"
+          hdiutil create -volname VoxelMill -srcfolder "$APP" -ov -format UDZO \
+            "output/portable/${{ matrix.dmg }}"
+
+      - name: Zip onedir
+        if: matrix.kind == 'windows'
+        shell: pwsh
+        run: |
+          $dir = "output/portable/VoxelMill"
+          if (-not (Test-Path $dir)) { throw "missing $dir" }
+          Compress-Archive -Path $dir -DestinationPath "output/portable/VoxelMill-windows-x64.zip" -Force
+
+      - name: Upload Linux AppImage
+        if: matrix.kind == 'appimage'
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoxelMill-linux-x86_64-AppImage
+          path: output/appimage/VoxelMill-x86_64.AppImage
+          if-no-files-found: error
+
+      - name: Upload macOS DMG
+        if: matrix.kind == 'mac'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: output/portable/${{ matrix.dmg }}
+          if-no-files-found: error
+
+      - name: Upload Windows zip
+        if: matrix.kind == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoxelMill-windows-x64-zip
+          path: output/portable/VoxelMill-windows-x64.zip
+          if-no-files-found: error

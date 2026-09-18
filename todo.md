@@ -1,4 +1,4 @@
-# VoxelMill v0.2.0 — implementation ledger
+# VoxelMill — implementation ledger
 
 Live task list. Items are removed when done and added as they arise.
 Rationale, measurements and design live in the phase notes below; verified
