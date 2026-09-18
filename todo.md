@@ -6,12 +6,15 @@ lessons go in `gotchas.md`.
 
 ## Now
 
-Headline after S2+S3 is **2.32 s / 350 MB** (was 73.7 s / 636 MB). Stop before tagging.
+Headline **2.32 s / 350 MB**. Stay on `master`; no release branch until a later stable.
 
-- [x] Sanitize public tree (no machine-absolute paths; vestigial C-CLI work cancelled).
-- [ ] Linux suite green.
-- [ ] AppImage 0.3.0.
-- [ ] Actions 0.4.0.
+- [x] Sanitize public tree (no machine-absolute paths; vestigial C-CLI cancelled).
+- [x] Linux suite: 744+326 passed; golden 13/13.
+- [x] FreeCAD path in editor.json; Import STEP disabled until found.
+- [x] AppImage 0.3.0 (`output/appimage/VoxelMill-x86_64.AppImage`, 406 MiB, CUDA off).
+- [ ] GitHub Actions green for Linux AppImage + Mac DMGs + Windows zip (`workflow_dispatch`, then tag `v5.0.0`).
+- [ ] Smoke the Intel DMG on `imac` (download artifact; do not compile there).
+- [ ] Alpha GitHub Release `v5.0.0` with binaries and install notes.
 
 ## Headline number
 

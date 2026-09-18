@@ -1,6 +1,7 @@
-# Portable release artifacts for v0.4.x tags (and manual dispatch).
+# Portable release artifacts for v5.x tags (and manual dispatch).
 # Linux: AppImage. macOS/Windows: PyInstaller onedir (.app + DMG / zip).
 # No Homebrew. Version in the tree stays whatever is committed (do not bump here).
+# Tag a release only after a workflow_dispatch run is green.
 
 name: release
 
@@ -8,7 +9,11 @@ name: release
   workflow_dispatch:
   push:
     tags:
+      - 'v5*'
       - 'v0.4*'
+
+permissions:
+  contents: read
 
 defaults:
   run:
@@ -27,33 +32,33 @@ jobs:
             os: ubuntu-22.04
             python: '3.10'
             kind: appimage
+            generator: Ninja
           - name: macos-arm
             os: macos-14
             python: '3.11'
             kind: mac
+            generator: Ninja
             dmg: VoxelMill-macos-arm64.dmg
             artifact: VoxelMill-macos-arm64-dmg
           - name: macos-intel
             os: macos-15-intel
             python: '3.11'
             kind: mac
+            generator: Ninja
             dmg: VoxelMill-macos-x86_64.dmg
             artifact: VoxelMill-macos-x86_64-dmg
           - name: windows
             os: windows-latest
             python: '3.11'
             kind: windows
+            generator: Visual Studio 17 2022
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
-
-      - name: MSVC environment
-        if: matrix.kind == 'windows'
-        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Install build deps (Linux AppImage)
         if: matrix.kind == 'appimage'
@@ -65,12 +70,19 @@ jobs:
         if: matrix.kind != 'appimage'
         run: |
           python -m pip install --upgrade pip
-          python -m pip install ninja cmake pybind11==3.0.4 scikit-build-core==0.11.6 pyinstaller
+          python -m pip install cmake pybind11==3.0.4 scikit-build-core==0.11.6 'pyinstaller>=6.3,<7'
+          if [ "${{ matrix.kind }}" != "windows" ]; then
+            python -m pip install ninja
+          fi
 
       - name: Install VoxelMill (CPU-only native)
         env:
           CMAKE_ARGS: '-DCMAKE_CUDA_COMPILER='
+          CMAKE_GENERATOR: ${{ matrix.generator }}
         run: |
+          if [ "${{ matrix.kind }}" = "windows" ]; then
+            export CMAKE_GENERATOR_PLATFORM=x64
+          fi
           python -m pip install --no-build-isolation -e '.[gui]'
 
       - name: Fetch appimagetool
@@ -89,6 +101,15 @@ jobs:
           scripts/make_appimage.sh
           test -f output/appimage/VoxelMill-x86_64.AppImage
 
+      - name: Smoke AppImage
+        if: matrix.kind == 'appimage'
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: |
+          chmod +x output/appimage/VoxelMill-x86_64.AppImage
+          output/appimage/VoxelMill-x86_64.AppImage --version
+          output/appimage/VoxelMill-x86_64.AppImage --help | head -40
+
       - name: PyInstaller
         if: matrix.kind != 'appimage'
         run: python scripts/build_pyinstaller.py
@@ -99,6 +120,7 @@ jobs:
           set -euo pipefail
           APP=output/portable/VoxelMill.app
           test -d "$APP"
+          "$APP/Contents/MacOS/VoxelMill" --version
           hdiutil create -volname VoxelMill -srcfolder "$APP" -ov -format UDZO \
             "output/portable/${{ matrix.dmg }}"
 
@@ -108,11 +130,12 @@ jobs:
         run: |
           $dir = "output/portable/VoxelMill"
           if (-not (Test-Path $dir)) { throw "missing $dir" }
+          & "$dir\VoxelMill.exe" --version
           Compress-Archive -Path $dir -DestinationPath "output/portable/VoxelMill-windows-x64.zip" -Force
 
       - name: Upload Linux AppImage
         if: matrix.kind == 'appimage'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: VoxelMill-linux-x86_64-AppImage
           path: output/appimage/VoxelMill-x86_64.AppImage
@@ -120,7 +143,7 @@ jobs:
 
       - name: Upload macOS DMG
         if: matrix.kind == 'mac'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact }}
           path: output/portable/${{ matrix.dmg }}
@@ -128,8 +151,55 @@ jobs:
 
       - name: Upload Windows zip
         if: matrix.kind == 'windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: VoxelMill-windows-x64-zip
           path: output/portable/VoxelMill-windows-x64.zip
           if-no-files-found: error
+
+  publish:
+    name: github-release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: portable
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v6
+        with:
+          path: artifacts
+
+      - name: Stage release assets
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          ver="${GITHUB_REF_NAME#v}"
+          cp artifacts/VoxelMill-linux-x86_64-AppImage/VoxelMill-x86_64.AppImage \
+            "dist/VoxelMill-${ver}-linux-x86_64.AppImage"
+          cp artifacts/VoxelMill-macos-arm64-dmg/VoxelMill-macos-arm64.dmg \
+            "dist/VoxelMill-${ver}-macos-arm64.dmg"
+          cp artifacts/VoxelMill-macos-x86_64-dmg/VoxelMill-macos-x86_64.dmg \
+            "dist/VoxelMill-${ver}-macos-x86_64.dmg"
+          cp artifacts/VoxelMill-windows-x64-zip/VoxelMill-windows-x64.zip \
+            "dist/VoxelMill-${ver}-windows-x64.zip"
+          ls -lh dist
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ver="${GITHUB_REF_NAME#v}"
+          python3 -c "
+          from pathlib import Path
+          ver = '''${ver}'''
+          text = Path('packaging/release-notes.md').read_text().replace('{version}', ver)
+          Path('dist/NOTES.md').write_text(text)
+          "
+          gh release create "$GITHUB_REF_NAME" dist/VoxelMill-* \
+            --repo "${{ github.repository }}" \
+            --title "VoxelMill ${ver} (alpha)" \
+            --prerelease \
+            --notes-file dist/NOTES.md

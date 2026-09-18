@@ -12,10 +12,11 @@ to `/usr/bin/python3`. The stager therefore copies CPython, the stdlib,
 VoxelMill, and the runtime site-packages into `AppDir/usr`. `AppRun` sets
 `PYTHONHOME` and `PYTHONNOUSERSITE` so a host venv cannot leak in.
 
-Linux x86_64 AppImage is the v0.3.0 ship vehicle. macOS and Windows
-portable packages are built on GitHub Actions from tag `v0.4*` (workflow
+Linux x86_64 AppImage, macOS DMGs, and the Windows zip are built on GitHub
+Actions from tag `v5*` (workflow
 [`.github/workflows/release.yml`](../.github/workflows/release.yml); see
-also [`../platforms.md`](../platforms.md)).
+also [`../platforms.md`](../platforms.md)). Rehearse with `workflow_dispatch`
+before tagging.
 
 ## macOS and Windows portables (PyInstaller)
 
@@ -70,7 +71,7 @@ chmod +x packaging/appimage/appimagetool
 
 `--cli-only` omits VTK and PySide6. The editor then fails at import with a
 missing-module error rather than a missing system package. A CLI-only image
-was smoke-tested at v0.3.0 (`--version` reports `0.3.0`; the staged
+was smoke-tested at v0.3.0 (`--version` reports the package version; the staged
 `voxelmill._native` exposes `extract_runs` and `distance_transform_edt`).
 
 A full editor image (the default, without `--cli-only`) opens the GUI when

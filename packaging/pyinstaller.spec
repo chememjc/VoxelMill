@@ -108,9 +108,30 @@ if _native is not None and _native.origin and Path(_native.origin).is_file():
     binaries.append((_native.origin, 'voxelmill'))
 
 # Package data (profiles, icons, STEP helper) when collect_all missed the tree.
+# Analysis.datas must be (src, dest) pairs — a Tree() object unpacks as many
+# 3-tuples and raises ValueError: too many values to unpack (expected 2).
 _package_data = SRC / 'voxelmill' / 'data'
 if _package_data.is_dir():
-    datas.append(Tree(str(_package_data), prefix='voxelmill/data'))
+    datas.append((str(_package_data), 'voxelmill/data'))
+
+
+def _pairs(entries):
+    """Keep only (src, dest) pairs; drop Tree/TOC 3-tuples if they leaked in."""
+    out = []
+    for item in entries:
+        if isinstance(item, (list, tuple)) and len(item) == 2:
+            out.append((str(item[0]), str(item[1])))
+    return out
+
+
+datas = _pairs(datas)
+binaries = _pairs(binaries)
+
+_VERSION = '0.0.0'
+for _line in (SRC / 'voxelmill' / '__init__.py').read_text(encoding='utf-8').splitlines():
+    if _line.startswith('__version__'):
+        _VERSION = _line.split('"', 2)[1]
+        break
 
 a = Analysis(
     [ENTRY],
@@ -163,7 +184,7 @@ if sys.platform == 'darwin':
         bundle_identifier='com.voxelmill.VoxelMill',
         info_plist={
             'CFBundleDisplayName': 'VoxelMill',
-            'CFBundleShortVersionString': '0.3.0',
+            'CFBundleShortVersionString': _VERSION,
             'NSHighResolutionCapable': True,
         },
     )

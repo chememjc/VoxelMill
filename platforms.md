@@ -1,7 +1,7 @@
 # Platforms
 
-VoxelMill ships as a Linux AppImage (v0.3.0). macOS and Windows portables are
-built on GitHub Actions for `v0.4*` tags (see
+VoxelMill ships as a Linux AppImage plus GitHub Actions portables for macOS
+and Windows on `v5*` tags (see
 [`.github/workflows/release.yml`](.github/workflows/release.yml) and
 [docs/packaging.md](docs/packaging.md)). This page records OS differences and
 what must stay as it is.
@@ -29,7 +29,7 @@ with a uniform fallback; affinity and address-space ceilings do not.
 
 | Vehicle | Role |
 |---|---|
-| Linux x86_64 AppImage (`scripts/build_appimage.py`) | Ship vehicle for v0.3.0; Actions job on `ubuntu-22.04`. |
+| Linux x86_64 AppImage (`scripts/build_appimage.py`) | Ship vehicle; Actions job on `ubuntu-22.04`. |
 | macOS arm64 `.app` / DMG (PyInstaller) | Actions `macos-14`; thin arm64 only (not universal2). Unsigned. |
 | macOS x86_64 `.app` / DMG (PyInstaller) | Actions `macos-15-intel`; thin x86_64. Unsigned. |
 | Windows onedir zip (PyInstaller `VoxelMill.exe`) | Actions `windows-latest`; unzip and run. Unsigned. |

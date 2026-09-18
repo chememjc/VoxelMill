@@ -15,10 +15,15 @@ import json
 import math
 import os
 from pathlib import Path
-import resource
 import shutil
+import sys
 import tempfile
 import time
+
+try:
+    import resource as _resource
+except ImportError:
+    _resource = None
 
 import numpy as np
 
@@ -677,7 +682,12 @@ def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=
             settings, validation.metrics.get('raster_volume_mm3'))
         report['seconds'] = time.monotonic() - started
         report['timing'] = timer.as_dict()
-        report['peak_rss_bytes'] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
+        if _resource is not None:
+            rss = _resource.getrusage(_resource.RUSAGE_SELF).ru_maxrss
+            # Linux reports kilobytes; macOS reports bytes.
+            report['peak_rss_bytes'] = int(rss) if sys.platform == 'darwin' else int(rss) * 1024
+        else:
+            report['peak_rss_bytes'] = None
         report['scratch_bytes'] = sum(p.stat().st_size for p in Path(scratch.name).rglob('*') if p.is_file())
         return report
     finally:

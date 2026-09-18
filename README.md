@@ -2,9 +2,35 @@
 
 A staged Linux application for single-part resin-print preparation. Implementation status, evidence and remaining stage gates are tracked in [plan.md](plan.md).
 
-v0.4.0 keeps a Python CLI and optional GUI, with hot geometry and raster work in
-the C++ `_native` kernels. The Linux AppImage is the ship vehicle; macOS and
-Windows port analysis lives in [platforms.md](platforms.md).
+v5.0.0 (alpha) keeps a Python CLI and optional GUI, with hot geometry and raster
+work in the C++ `_native` kernels. Portable builds: Linux x86_64 AppImage, two
+thin macOS DMGs (Intel and Apple Silicon), and a Windows x64 zip. See
+[docs/packaging.md](docs/packaging.md) and [platforms.md](platforms.md).
+
+## Install (alpha binaries)
+
+Download the matching asset from the [GitHub Releases](https://github.com/chememjc/VoxelMill/releases) page.
+
+**Linux x86_64**
+
+```sh
+chmod +x VoxelMill-5.0.0-linux-x86_64.AppImage
+./VoxelMill-5.0.0-linux-x86_64.AppImage --help
+./VoxelMill-5.0.0-linux-x86_64.AppImage gui
+```
+
+The editor needs host OpenGL and X11 or Wayland.
+
+**macOS** — Intel (`macos-x86_64.dmg`) or Apple Silicon (`macos-arm64.dmg`). Copy `VoxelMill.app` to Applications. The build is unsigned, so clear quarantine once:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/VoxelMill.app
+open /Applications/VoxelMill.app
+```
+
+If macOS still blocks it: System Settings → Privacy & Security → Open Anyway.
+
+**Windows x64** — unzip `VoxelMill-5.0.0-windows-x64.zip` and run `VoxelMill\VoxelMill.exe` (CLI subcommands work from that same exe). SmartScreen may warn; Open anyway.
 
 The editor's File menu includes dedicated **Printer**, **Resin**, and **Support**
 editors with portable configuration saves. The support editor renders an example
