@@ -13,6 +13,7 @@ mask across distinct physical cores, fastest class first, instead.
 from contextlib import contextmanager
 from pathlib import Path
 import os
+import sys
 try:
     import resource
 except ImportError:
@@ -39,7 +40,9 @@ def execution_limits(budget, *, hard_memory=True):
                         os.sched_setaffinity(tid,cpus)
                     except ProcessLookupError:
                         continue
-        if hard_memory and rlimit_as is not None:
+        # Darwin exposes RLIMIT_AS but setrlimit raises
+        # "current limit exceeds maximum limit". Address-space caps stay Linux.
+        if hard_memory and rlimit_as is not None and sys.platform.startswith('linux'):
             old_limit=resource.getrlimit(rlimit_as)
             limit=int(budget.memory_gib*1024**3)
             if old_limit[1]!=resource.RLIM_INFINITY:

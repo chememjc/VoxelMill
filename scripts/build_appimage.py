@@ -40,7 +40,10 @@ def _copy_tree(src: Path, dest: Path, *, ignore=None):
 
 
 def _ignore_python_stdlib(_directory, names):
-    drop = {'test', 'tests', 'idlelib', 'turtledemo', 'ensurepip', '__pycache__'}
+    # site-packages is not the stdlib. Copying it from setup-python pulls the
+    # build machine's editable .pth (and pip/cmake) into the image.
+    drop = {'test', 'tests', 'idlelib', 'turtledemo', 'ensurepip', '__pycache__',
+            'site-packages'}
     return [name for name in names if name in drop or name.endswith('.pyc')]
 
 
@@ -213,6 +216,11 @@ def stage_appdir(appdir: Path, *, gui: bool):
     if plugins.is_dir():
         binaries.extend(plugins.rglob('*.so'))
     collect_needed_libs(binaries, lib)
+    site = lib / 'python3.10' / 'site-packages'
+    for leftover in ('_voxelmill_editable.pth', '_voxelmill_editable.py'):
+        path = site / leftover
+        if path.exists():
+            path.unlink()
     _verify_staged_python(appdir)
     return appdir
 
@@ -229,9 +237,15 @@ def _verify_staged_python(appdir: Path):
     env['LD_LIBRARY_PATH'] = ':'.join(extra + ([env['LD_LIBRARY_PATH']] if env.get('LD_LIBRARY_PATH') else []))
     env.pop('VIRTUAL_ENV', None)
     python = usr / 'bin' / 'python3.10'
-    subprocess.run(
-        [str(python), '-c', 'import math, voxelmill; from voxelmill import _native'],
-        check=True, env=env, cwd='/tmp')
+    script = (
+        'import math, os, pathlib, voxelmill\n'
+        'from voxelmill import _native\n'
+        'root = pathlib.Path(os.environ["PYTHONHOME"]).resolve()\n'
+        'origin = pathlib.Path(voxelmill.__file__).resolve()\n'
+        'if root not in origin.parents:\n'
+        '    raise SystemExit(f"voxelmill loaded from outside AppDir: {origin}")\n'
+    )
+    subprocess.run([str(python), '-c', script], check=True, env=env, cwd='/tmp')
 
 
 def pack_appdir(appdir: Path, output: Path, tool: Path):

@@ -90,7 +90,13 @@ jobs:
         env:
           CMAKE_ARGS: '-DCMAKE_CUDA_COMPILER='
         run: |
-          python -m pip install --no-build-isolation -e '.[gui]'
+          # AppImage must be a real install. Editable .pth files point at the
+          # runner workspace and survive into the image.
+          if [ "${{ matrix.kind }}" = "appimage" ]; then
+            python -m pip install --no-build-isolation '.[gui]'
+          else
+            python -m pip install --no-build-isolation -e '.[gui]'
+          fi
 
       - name: Fetch appimagetool
         if: matrix.kind == 'appimage'

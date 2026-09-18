@@ -45,6 +45,26 @@ def test_appdir_has_desktop_icon_and_apprun(appdir):
     assert native, 'native extension missing from AppDir'
 
 
+def test_appdir_does_not_redirect_to_the_source_tree(appdir):
+    site = appdir / 'usr' / 'lib' / 'python3.10' / 'site-packages'
+    assert not (site / '_voxelmill_editable.pth').exists()
+    env = os.environ.copy()
+    env.pop('PYTHONPATH', None)
+    env.pop('VIRTUAL_ENV', None)
+    env['PYTHONHOME'] = str(appdir / 'usr')
+    env['PYTHONNOUSERSITE'] = '1'
+    env['PYTHONPATH'] = str(site)
+    env['LD_LIBRARY_PATH'] = str(appdir / 'usr' / 'lib')
+    env['PATH'] = '/usr/bin:/bin'
+    result = subprocess.run(
+        [str(appdir / 'usr' / 'bin' / 'python3.10'), '-c',
+         'import voxelmill; print(voxelmill.__file__)'],
+        capture_output=True, text=True, env=env, cwd='/tmp')
+    assert result.returncode == 0, result.stderr
+    origin = result.stdout.strip()
+    assert str(site / 'voxelmill') in origin, origin
+
+
 def test_appdir_voxelmill_help_does_not_use_the_venv(appdir, monkeypatch):
     monkeypatch.delenv('PYTHONPATH', raising=False)
     monkeypatch.delenv('VIRTUAL_ENV', raising=False)
