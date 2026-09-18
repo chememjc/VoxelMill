@@ -70,106 +70,124 @@ public:
   for(auto id:active)slot[id]=-1;
   active.clear();in=0;out=0;last=-std::numeric_limits<double>::infinity();
  }
- py::dict slice(double z,int width,int height,double x0,double y0,double dx,double dy,py::object callback,const std::string &rule) {
-  if(!std::isfinite(z)||z<last)throw std::invalid_argument("layers must be finite and nondecreasing");
-  if(rule!="nonzero"&&rule!="evenodd")throw std::invalid_argument("rule must be nonzero or evenodd");
-  if(width<1||height<1||static_cast<int64_t>(width)*height>200000000||!std::isfinite(dx)||!std::isfinite(dy)||dx<=0||dy<=0||!std::isfinite(x0)||!std::isfinite(y0))throw std::invalid_argument("invalid raster grid");
-  last=z;
-  const bool nonzero=(rule=="nonzero");
-  py::array_t<uint8_t> mask({height,width});
-  auto *pixels=mask.mutable_data();
-  size_t odd=0,segments=0,filled=0,spans=0,negative=0;
-  {
-   py::gil_scoped_release release;
-   std::memset(pixels,0,static_cast<size_t>(width)*height);
-   while(in<entering.size()&&lo[entering[in]]<=z) {
-    auto id=entering[in++];slot[id]=static_cast<int32_t>(active.size());active.push_back(id);
+ void paint(double z,uint8_t *pixels,int width,int height,double x0,double y0,double dx,double dy,py::object callback,bool nonzero,bool clear,uint8_t on,size_t &odd,size_t &segments,size_t &filled,size_t &spans,size_t &negative) {
+  odd=segments=filled=spans=negative=0;
+  py::gil_scoped_release release;
+  if(clear)std::memset(pixels,0,static_cast<size_t>(width)*height);
+  while(in<entering.size()&&lo[entering[in]]<=z) {
+   auto id=entering[in++];slot[id]=static_cast<int32_t>(active.size());active.push_back(id);
+  }
+  while(out<leaving.size()&&hi[leaving[out]]<=z) {
+   auto id=leaving[out++];auto p=slot[id];
+   if(p>=0){auto back=active.back();active[p]=back;slot[back]=p;active.pop_back();slot[id]=-1;}
+  }
+  crossings.clear();
+  auto clamped_row=[&](double y) {return static_cast<int>(std::clamp(std::ceil((y-y0)/dy-0.5),0.0,static_cast<double>(height)));};
+  for(size_t ai=0;ai<active.size();++ai) {
+   if((ai&8191)==0&&!callback.is_none()){py::gil_scoped_acquire g;callback();}
+   auto id=active[ai];
+   // Half-open edge rule: a closed triangle yields exactly zero or two points.
+   // The cross-section contour runs from the descending to the ascending edge
+   // crossing, which orients it with solid material on its left.
+   double down[2]{},up[2]{};int found=0;
+   for(int a=0;a<3;++a){int c=(a+1)%3;double za=value(id,a,2),zc=value(id,c,2);
+    bool rising=(za<=z&&z<zc),falling=(zc<=z&&z<za);
+    if(!rising&&!falling)continue;
+    // Interpolate along a canonically ordered edge. Two triangles sharing an
+    // edge traverse it in opposite directions, and the two directions round to
+    // different doubles. When that shared crossing lands on a sample row
+    // center, the half-open row rule can drop the row from both segments and
+    // punch a hole straight through solid material. Ordering the endpoints by
+    // coordinate makes both triangles produce bit-identical crossings. This
+    // relies on the shared vertices being welded; unwelded near-duplicates
+    // still differ.
+    int p=a,q=c;
+    if(!vertex_less(id,p,q)){p=c;q=a;}
+    double zp=value(id,p,2),zq=value(id,q,2);
+    double t=(z-zp)/(zq-zp);
+    double *target=rising?up:down;
+    for(int k=0;k<2;++k)target[k]=value(id,p,k)+t*(value(id,q,k)-value(id,p,k));
+    ++found;
    }
-   while(out<leaving.size()&&hi[leaving[out]]<=z) {
-    auto id=leaving[out++];auto p=slot[id];
-    if(p>=0){auto back=active.back();active[p]=back;slot[back]=p;active.pop_back();slot[id]=-1;}
-   }
-   crossings.clear();
-   auto clamped_row=[&](double y) {return static_cast<int>(std::clamp(std::ceil((y-y0)/dy-0.5),0.0,static_cast<double>(height)));};
-   for(size_t ai=0;ai<active.size();++ai) {
-    if((ai&8191)==0&&!callback.is_none()){py::gil_scoped_acquire g;callback();}
-    auto id=active[ai];
-    // Half-open edge rule: a closed triangle yields exactly zero or two points.
-    // The cross-section contour runs from the descending to the ascending edge
-    // crossing, which orients it with solid material on its left.
-    double down[2]{},up[2]{};int found=0;
-    for(int a=0;a<3;++a){int c=(a+1)%3;double za=value(id,a,2),zc=value(id,c,2);
-     bool rising=(za<=z&&z<zc),falling=(zc<=z&&z<za);
-     if(!rising&&!falling)continue;
-     // Interpolate along a canonically ordered edge. Two triangles sharing an
-     // edge traverse it in opposite directions, and the two directions round to
-     // different doubles. When that shared crossing lands on a sample row
-     // center, the half-open row rule can drop the row from both segments and
-     // punch a hole straight through solid material. Ordering the endpoints by
-     // coordinate makes both triangles produce bit-identical crossings. This
-     // relies on the shared vertices being welded; unwelded near-duplicates
-     // still differ.
-     int p=a,q=c;
-     if(!vertex_less(id,p,q)){p=c;q=a;}
-     double zp=value(id,p,2),zq=value(id,q,2);
-     double t=(z-zp)/(zq-zp);
-     double *target=rising?up:down;
-     for(int k=0;k<2;++k)target[k]=value(id,p,k)+t*(value(id,q,k)-value(id,p,k));
-     ++found;
-    }
-    if(found!=2)continue;
-    ++segments;
-    if(down[1]==up[1])continue;
-    const bool ascending=up[1]>down[1];
-    const double *a=ascending?down:up,*c=ascending?up:down;
-    int first=clamped_row(a[1]),end=clamped_row(c[1]);
-    if(crossings.size()+static_cast<size_t>(std::max(0,end-first))>20000000) throw std::runtime_error("single-layer intersection budget exceeded");
-    for(int row=first;row<end;++row){double y=y0+(row+.5)*dy;
-     // Accumulation runs left to right, so the sign is negated relative to a
-     // rightward ray: a correctly oriented solid then reads winding +1 inside.
-     crossings.push_back({row,a[0]+(y-a[1])*(c[0]-a[0])/(c[1]-a[1]),ascending?-1:1});
-    }
-   }
-   // Counting sort by row keeps per-layer work linear in the crossing count.
-   row_start.assign(static_cast<size_t>(height)+1,0);
-   for(const auto &crossing:crossings)row_start[static_cast<size_t>(crossing.row)+1]++;
-   for(int row=0;row<height;++row)row_start[row+1]+=row_start[row];
-   ordered.resize(crossings.size());
-   {
-    std::vector<size_t> cursor(row_start.begin(),row_start.end()-1);
-    for(const auto &crossing:crossings)ordered[cursor[static_cast<size_t>(crossing.row)]++]=crossing;
-   }
-   auto clamped_col=[&](double x) {return static_cast<int>(std::clamp(std::ceil((x-x0)/dx-0.5),0.0,static_cast<double>(width)));};
-   for(int row=0;row<height;++row) {
-    if((row&127)==0&&!callback.is_none()){py::gil_scoped_acquire g;callback();}
-    auto begin=ordered.begin()+static_cast<std::ptrdiff_t>(row_start[row]);
-    auto stop=ordered.begin()+static_cast<std::ptrdiff_t>(row_start[row+1]);
-    if(begin==stop)continue;
-    std::sort(begin,stop,[](const Crossing&l,const Crossing&r){return l.x<r.x;});
-    int winding=0;double span_x=0;
-    for(auto it=begin;it!=stop;++it) {
-     const int before=winding;
-     winding+=nonzero?it->dir:1;
-     const bool was_inside=nonzero?(before!=0):((before&1)!=0),is_inside=nonzero?(winding!=0):((winding&1)!=0);
-     if(!was_inside&&is_inside)span_x=it->x;
-     else if(was_inside&&!is_inside) {
-      int start=clamped_col(span_x),end=clamped_col(it->x);
-      if(end>start){std::memset(pixels+static_cast<size_t>(row)*width+start,1,static_cast<size_t>(end-start));filled+=static_cast<size_t>(end-start);}
-      ++spans;
-     }
-     if(winding<0)++negative;
-    }
-    // An unbalanced row means the cross-section contour is not closed here.
-    // Report it; never extend the last span to the crop edge.
-    if(nonzero?(winding!=0):((winding&1)!=0))++odd;
+   if(found!=2)continue;
+   ++segments;
+   if(down[1]==up[1])continue;
+   const bool ascending=up[1]>down[1];
+   const double *a=ascending?down:up,*c=ascending?up:down;
+   int first=clamped_row(a[1]),end=clamped_row(c[1]);
+   if(crossings.size()+static_cast<size_t>(std::max(0,end-first))>20000000) throw std::runtime_error("single-layer intersection budget exceeded");
+   for(int row=first;row<end;++row){double y=y0+(row+.5)*dy;
+    // Accumulation runs left to right, so the sign is negated relative to a
+    // rightward ray: a correctly oriented solid then reads winding +1 inside.
+    crossings.push_back({row,a[0]+(y-a[1])*(c[0]-a[0])/(c[1]-a[1]),ascending?-1:1});
    }
   }
+  // Counting sort by row keeps per-layer work linear in the crossing count.
+  row_start.assign(static_cast<size_t>(height)+1,0);
+  for(const auto &crossing:crossings)row_start[static_cast<size_t>(crossing.row)+1]++;
+  for(int row=0;row<height;++row)row_start[row+1]+=row_start[row];
+  ordered.resize(crossings.size());
+  {
+   std::vector<size_t> cursor(row_start.begin(),row_start.end()-1);
+   for(const auto &crossing:crossings)ordered[cursor[static_cast<size_t>(crossing.row)]++]=crossing;
+  }
+  auto clamped_col=[&](double x) {return static_cast<int>(std::clamp(std::ceil((x-x0)/dx-0.5),0.0,static_cast<double>(width)));};
+  for(int row=0;row<height;++row) {
+   if((row&127)==0&&!callback.is_none()){py::gil_scoped_acquire g;callback();}
+   auto begin=ordered.begin()+static_cast<std::ptrdiff_t>(row_start[row]);
+   auto stop=ordered.begin()+static_cast<std::ptrdiff_t>(row_start[row+1]);
+   if(begin==stop)continue;
+   std::sort(begin,stop,[](const Crossing&l,const Crossing&r){return l.x<r.x;});
+   int winding=0;double span_x=0;
+   for(auto it=begin;it!=stop;++it) {
+    const int before=winding;
+    winding+=nonzero?it->dir:1;
+    const bool was_inside=nonzero?(before!=0):((before&1)!=0),is_inside=nonzero?(winding!=0):((winding&1)!=0);
+    if(!was_inside&&is_inside)span_x=it->x;
+    else if(was_inside&&!is_inside) {
+     int start=clamped_col(span_x),end=clamped_col(it->x);
+     if(end>start){std::memset(pixels+static_cast<size_t>(row)*width+start,on,static_cast<size_t>(end-start));filled+=static_cast<size_t>(end-start);}
+     ++spans;
+    }
+    if(winding<0)++negative;
+   }
+   // An unbalanced row means the cross-section contour is not closed here.
+   // Report it; never extend the last span to the crop edge.
+   if(nonzero?(winding!=0):((winding&1)!=0))++odd;
+  }
+ }
+ py::dict finish(py::object mask,size_t odd,size_t segments,size_t filled,size_t spans,size_t negative,const std::string &rule) {
   py::dict result;
   result["mask"]=mask;result["odd_rows"]=odd;result["segments"]=segments;
   result["active_triangles"]=active.size();result["filled_pixels"]=filled;
   result["spans"]=spans;result["negative_winding_crossings"]=negative;
   result["rule"]=rule;result["crossings"]=crossings.size();
   return result;
+ }
+ void prepare(double z,int width,int height,double x0,double y0,double dx,double dy,const std::string &rule) {
+  if(!std::isfinite(z)||z<last)throw std::invalid_argument("layers must be finite and nondecreasing");
+  if(rule!="nonzero"&&rule!="evenodd")throw std::invalid_argument("rule must be nonzero or evenodd");
+  if(width<1||height<1||static_cast<int64_t>(width)*height>200000000||!std::isfinite(dx)||!std::isfinite(dy)||dx<=0||dy<=0||!std::isfinite(x0)||!std::isfinite(y0))throw std::invalid_argument("invalid raster grid");
+  last=z;
+ }
+ py::dict slice(double z,int width,int height,double x0,double y0,double dx,double dy,py::object callback,const std::string &rule) {
+  prepare(z,width,height,x0,y0,dx,dy,rule);
+  py::array_t<uint8_t> mask({height,width});
+  size_t odd=0,segments=0,filled=0,spans=0,negative=0;
+  paint(z,mask.mutable_data(),width,height,x0,y0,dx,dy,callback,rule=="nonzero",true,1,odd,segments,filled,spans,negative);
+  return finish(mask,odd,segments,filled,spans,negative,rule);
+ }
+ py::dict slice_into(double z,py::array_t<uint8_t,py::array::c_style> out_mask,double x0,double y0,double dx,double dy,py::object callback,const std::string &rule,const std::string &combine,int value) {
+  if(combine!="replace"&&combine!="or")throw std::invalid_argument("combine must be replace or or");
+  if(value<1||value>255)throw std::invalid_argument("value must be 1..255");
+  if(out_mask.ndim()!=2)throw std::invalid_argument("out_mask must be C-contiguous uint8 (height, width)");
+  if(out_mask.shape(0)>std::numeric_limits<int>::max()||out_mask.shape(1)>std::numeric_limits<int>::max())throw std::invalid_argument("invalid raster grid");
+  int height=static_cast<int>(out_mask.shape(0)),width=static_cast<int>(out_mask.shape(1));
+  if(out_mask.strides(1)!=1||out_mask.strides(0)!=static_cast<py::ssize_t>(width))throw std::invalid_argument("out_mask must be C-contiguous uint8 (height, width)");
+  prepare(z,width,height,x0,y0,dx,dy,rule);
+  size_t odd=0,segments=0,filled=0,spans=0,negative=0;
+  paint(z,out_mask.mutable_data(),width,height,x0,y0,dx,dy,callback,rule=="nonzero",combine=="replace",static_cast<uint8_t>(value),odd,segments,filled,spans,negative);
+  return finish(out_mask,odd,segments,filled,spans,negative,rule);
  }
 };
 void bind_raster(py::module_& m) {
@@ -178,5 +196,6 @@ void bind_raster(py::module_& m) {
  .def_property_readonly("lowest_z",&Rasterizer::lowest)
  .def_property_readonly("highest_z",&Rasterizer::highest)
  .def("reset",&Rasterizer::reset)
- .def("slice",&Rasterizer::slice,py::arg("z"),py::arg("width"),py::arg("height"),py::arg("x0"),py::arg("y0"),py::arg("dx"),py::arg("dy"),py::arg("callback")=py::none(),py::arg("rule")="nonzero");
+ .def("slice",&Rasterizer::slice,py::arg("z"),py::arg("width"),py::arg("height"),py::arg("x0"),py::arg("y0"),py::arg("dx"),py::arg("dy"),py::arg("callback")=py::none(),py::arg("rule")="nonzero")
+ .def("slice_into",&Rasterizer::slice_into,py::arg("z"),py::arg("out_mask"),py::arg("x0"),py::arg("y0"),py::arg("dx"),py::arg("dy"),py::arg("callback")=py::none(),py::arg("rule")="nonzero",py::arg("combine")="replace",py::arg("value")=1);
 }

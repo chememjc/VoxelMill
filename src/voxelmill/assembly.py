@@ -250,24 +250,29 @@ class UnionLayerStream:
         last = min(self.last_index, self.layer_count - 1)
         self.scan_count = max(0, last - self.first_index + 1)
         scanned = 0
+        # Binary groups on an AA lattice OR in as full intensity, not occupancy 1.
+        fill = 255 if levels > 1 else 1
         for index in range(self.first_index, last + 1):
             self.cancel.check()
             z = (index + .5) * self.layer_height
-            if levels <= 1:
-                mask = np.zeros((g.height, g.width), dtype=np.uint8)
-            else:
-                # Coverage lattice; binary support groups OR in as 255.
-                mask = np.zeros((g.height, g.width), dtype=np.uint8)
+            mask = None
             open_rows = 0
             for group, native in zip(self.groups, self.native):
                 group_levels = self._group_levels(group)
-                result = slice_coverage(native, z, g, group_levels,
-                                        self.cancel.check, 'nonzero', budget=self.budget)
-                piece = result['mask']
-                if levels > 1 and group_levels <= 1:
-                    # Binary support/raft occupancy → full LCD intensity.
-                    piece = np.where(piece != 0, np.uint8(255), np.uint8(0))
-                np.maximum(mask, piece, out=mask)
+                if group_levels > 1:
+                    if mask is None:
+                        mask = np.zeros((g.height, g.width), dtype=np.uint8)
+                    result = slice_coverage(native, z, g, group_levels,
+                                            self.cancel.check, 'nonzero', budget=self.budget)
+                    np.maximum(mask, result['mask'], out=mask)
+                else:
+                    if mask is None:
+                        mask = np.empty((g.height, g.width), dtype=np.uint8)
+                        combine = 'replace'
+                    else:
+                        combine = 'or'
+                    result = native.slice_into(z, mask, g.x0, g.y0, g.dx, g.dy,
+                                               self.cancel.check, 'nonzero', combine, fill)
                 open_rows += int(result['odd_rows'])
                 self.negative_winding_crossings += int(result['negative_winding_crossings'])
             self.open_rows += open_rows

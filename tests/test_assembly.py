@@ -9,7 +9,7 @@ from voxelmill.config import resolve_settings
 from voxelmill.contracts import CancellationToken, Canceled, VoxelMillError, ResourceBudget, no_progress
 from voxelmill.mesh import write_stl
 from voxelmill.pipeline import _reslice, prepare
-from voxelmill.raster import MeshLayerStream
+from voxelmill.raster import MeshLayerStream, RasterGrid, slice_coverage
 
 
 def settings(**overrides):
@@ -258,6 +258,70 @@ def test_parity_disabled_is_not_a_passing_validation(tmp_path):
     report = _reslice(path, s, ResourceBudget(), CancellationToken(), no_progress, assembly=union)
     assert report.checks['union_raster_parity'] == 'not_run'
     assert not report.passed
+
+
+def test_two_group_or_matches_numpy_maximum():
+    s = settings()
+    left = triangles(m.Manifold.cube((3, 3, 2)).translate((-3, -1.5, 0)))
+    right = triangles(m.Manifold.cube((3, 3, 2)).translate((0, -1.5, 0)))
+    bounds = np.array([[-3.0, -1.5, 0.0], [3.0, 1.5, 2.0]])
+    grid = RasterGrid(8, 6, -4.0, -3.0, 1.0, 1.0)
+    groups = (PartGroup('model', left, 'untrusted'), PartGroup('other', right, 'untrusted'))
+    stream = UnionLayerStream(groups, bounds, s, grid=grid, layer_count=2)
+    ra, rb = _native.Rasterizer(left), _native.Rasterizer(right)
+    layers = 0
+    for layer in stream:
+        a = ra.slice(layer.z_mm, grid.width, grid.height, grid.x0, grid.y0, grid.dx, grid.dy)['mask']
+        b = rb.slice(layer.z_mm, grid.width, grid.height, grid.x0, grid.y0, grid.dx, grid.dy)['mask']
+        np.testing.assert_array_equal(layer.mask, np.maximum(a, b))
+        layers += 1
+    assert layers == 2
+    assert stream.open_rows == 0
+    assert stream.filled_pixels > 0
+
+
+def test_slice_into_or_matches_maximum_and_keeps_existing():
+    left = triangles(m.Manifold.cube((4, 4, 2)))
+    right = triangles(m.Manifold.cube((4, 4, 2)).translate((2, 2, 0)))
+    expected_a = _native.Rasterizer(left).slice(1.0, 8, 8, -1.0, -1.0, 1.0, 1.0)
+    expected_b = _native.Rasterizer(right).slice(1.0, 8, 8, -1.0, -1.0, 1.0, 1.0)
+    out = np.full((8, 8), 7, dtype=np.uint8)
+    replaced = _native.Rasterizer(left).slice_into(1.0, out, -1.0, -1.0, 1.0, 1.0, None, 'nonzero', 'replace')
+    np.testing.assert_array_equal(out, expected_a['mask'])
+    assert replaced['odd_rows'] == expected_a['odd_rows']
+    assert replaced['mask'] is out
+    _native.Rasterizer(right).slice_into(1.0, out, -1.0, -1.0, 1.0, 1.0, None, 'nonzero', 'or')
+    np.testing.assert_array_equal(out, np.maximum(expected_a['mask'], expected_b['mask']))
+    sentinel = np.zeros((8, 8), dtype=np.uint8)
+    sentinel[0, 0] = 1
+    _native.Rasterizer(left).slice_into(1.0, sentinel, -1.0, -1.0, 1.0, 1.0, None, 'nonzero', 'or')
+    assert sentinel[0, 0] == 1
+
+
+def test_support_named_group_ors_and_aa_writes_full_intensity():
+    left = triangles(m.Manifold.cube((3, 3, 2)).translate((-1.5, -1.5, 0)))
+    support = triangles(m.Manifold.cube((1.5, 1.5, 2)).translate((1.0, -0.75, 0)))
+    bounds = np.array([[-1.5, -1.5, 0.0], [2.5, 1.5, 2.0]])
+    grid = RasterGrid(10, 8, -2.0, -2.0, 0.5, 0.5)
+    groups = (PartGroup('model', left, 'untrusted'),
+              PartGroup('supports_and_raft', support, 'closed_positive'))
+    binary = settings()
+    stream = UnionLayerStream(groups, bounds, binary, grid=grid, layer_count=2)
+    ra, rb = _native.Rasterizer(left), _native.Rasterizer(support)
+    for layer in stream:
+        a = ra.slice(layer.z_mm, grid.width, grid.height, grid.x0, grid.y0, grid.dx, grid.dy)['mask']
+        b = rb.slice(layer.z_mm, grid.width, grid.height, grid.x0, grid.y0, grid.dx, grid.dy)['mask']
+        np.testing.assert_array_equal(layer.mask, np.maximum(a, b))
+    aa = settings(process={'antialias_levels': 2, 'antialias_supports': False})
+    aa_stream = UnionLayerStream(groups, bounds, aa, grid=grid, layer_count=2)
+    rm, rs = _native.Rasterizer(left), _native.Rasterizer(support)
+    for layer in aa_stream:
+        cov = slice_coverage(rm, layer.z_mm, grid, 2, lambda: None, 'nonzero')['mask']
+        piece = slice_coverage(rs, layer.z_mm, grid, 1, lambda: None, 'nonzero')['mask']
+        expected = np.maximum(cov, np.where(piece != 0, np.uint8(255), np.uint8(0)))
+        np.testing.assert_array_equal(layer.mask, expected)
+        if np.any(piece):
+            assert np.all(layer.mask[piece != 0] == 255)
 
 
 def test_cli_reports_raster_banner_and_ptr_accepts_assembly(tmp_path, capsys):
