@@ -89,6 +89,9 @@ def test_a_floating_slab_gains_a_contact_and_the_last_word_is_a_full_scan():
     result = route_without_islands(model, s, replan=pillar_replan(), max_passes=4)
     assert result['resolved'] and result['islands_remaining'] == 0
     assert len(result['contacts']) == 1
+    # Retry loop actually iterates: budget > 1 and more than a single scan.
+    assert result['max_passes'] > 1
+    assert len(result['passes']) > 1
     kinds = [record['scan'] for record in result['passes']]
     # Full first, cropped in the middle, full again to confirm.
     assert kinds[0] == 'full' and 'local' in kinds and kinds[-1] == 'full'

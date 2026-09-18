@@ -49,6 +49,42 @@ def test_invalid_shapes_report_their_defect():
     assert defects['self_intersecting']['self_intersections'] > 0
 
 
+INVALID = [entry for entry in SHAPES if '/invalid/' in entry['path']]
+# README defect each invalid fixture must surface (inspect counter and/or error).
+INVALID_DEFECT = {
+    'open_box': 'boundary_edges',
+    'flipped_winding': 'inconsistent_winding_edges',
+    'nonmanifold_edge': 'nonmanifold_edges',
+    'degenerate': 'degenerate_triangles',
+    'self_intersecting': 'self_intersections',
+}
+
+
+@pytest.mark.parametrize('entry', INVALID, ids=lambda entry: Path(entry['path']).stem)
+def test_invalid_fixtures_fail_inspect_and_solid_conversion(entry):
+    """Each invalid STL names its defect on inspect and refuses solid conversion."""
+    from voxelmill.contracts import VoxelMillError
+    from voxelmill.geometry import mesh_to_manifold
+    from voxelmill.mesh import open_stl
+
+    path = ROOT / entry['path']
+    stem = Path(entry['path']).stem
+    defect = INVALID_DEFECT[stem]
+    result = inspect_mesh(path)
+    assert result[defect] > 0, f'{stem} must report {defect}'
+
+    with open_stl(path) as mesh:
+        triangles = mesh.triangles.copy()
+    with pytest.raises(VoxelMillError) as error:
+        mesh_to_manifold(triangles)
+    named = {defect, 'degenerate_triangles', 'invalid_triangles', 'invalid_solid',
+             'self_intersections', 'boundary_edges', 'nonmanifold_edges',
+             'inconsistent_winding_edges'}
+    blob = f'{error.value.code} {error.value}'.lower()
+    assert error.value.code in named or any(key in blob for key in named), (
+        f'{stem}: conversion error must name a mesh defect, got {error.value.code!r}')
+
+
 def test_ascii_shape_reads_as_ascii():
     entry = next(item for item in SHAPES if item['path'].endswith('cube_ascii.stl'))
     cube = next(item for item in SHAPES if item['path'].endswith('shapes/cube.stl'))

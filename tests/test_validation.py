@@ -542,6 +542,57 @@ def test_island_diagnostic_pixels_survive_the_worker_pool_and_the_example_cap():
         assert pixels == expected[(layer, position)]
 
 
+def test_native_runs_off_matches_default_on_island_masks(monkeypatch):
+    """``VOXELMILL_NATIVE_RUNS=0`` must not change published island/void evidence."""
+    masks = _island_masks()
+    grid = RasterGrid(40, 40, 0, 0, 1., 1.)
+    layers = lambda: [Layer(i, i + .5, m.copy()) for i, m in enumerate(masks)]
+
+    def report(flag):
+        monkeypatch.setenv('VOXELMILL_NATIVE_RUNS', flag)
+        return analyze_layers(layers(), grid, resolve_settings(), track_voids=True)
+
+    dense = report('0')
+    native = report('1')
+    assert dense.checks == native.checks
+    assert dense.metrics['island_components'] == native.metrics['island_components'] == 6
+    assert dense.metrics['enclosed_voids'] == native.metrics['enclosed_voids']
+    assert dense.metrics['transient_traps'] == native.metrics['transient_traps']
+    island_pixels = lambda r: sorted(
+        (d.layer, tuple(d.position_mm), d.details['pixels'])
+        for d in r.diagnostics if d.code == 'raster_island')
+    assert island_pixels(dense) == island_pixels(native)
+
+
+def test_fixture_hollow_cup_fails_drainage_and_drained_cup_passes():
+    """Committed cup fixtures: sealed cavity fails, drain hole passes."""
+    from pathlib import Path
+    from voxelmill.geometry import triangle_bounds
+    from voxelmill.mesh import open_stl
+    from voxelmill.validation import analyze_drainage, drainage_check
+
+    root = Path(__file__).resolve().parents[1] / 'fixtures/shapes'
+    settings = resolve_settings(overrides={'resources': {'workers': 1}})
+
+    def drain(name):
+        with open_stl(root / name) as mesh:
+            triangles = np.asarray(mesh.triangles, dtype=np.float32).copy()
+        return analyze_drainage(triangles, triangle_bounds(triangles), settings,
+                                voxels_per_radius=2.0)
+
+    sealed = drain('hollow_cup.stl')
+    assert sealed['occupancy_closed'] is True
+    assert sealed['enclosed_components'] == 1
+    assert sealed['bottlenecked_components'] == 0
+    assert drainage_check(sealed) == 'fail'
+
+    open_ = drain('drained_cup.stl')
+    assert open_['occupancy_closed'] is True
+    assert open_['enclosed_components'] == 0
+    assert open_['bottlenecked_components'] == 0
+    assert drainage_check(open_) == 'pass'
+
+
 def test_island_extent_matches_argwhere_and_bincount_on_a_random_label_field():
     """The two expressions `_island_extent` replaced, checked component by component."""
     from voxelmill.validation import CROSS, _island_extent

@@ -167,3 +167,38 @@ def test_analyze_layers_workers_1_and_2_match():
     d2 = sorted(r2.diagnostics, key=_diag_sort_key)
     assert [(d.code, d.layer, d.message) for d in d1] == [(d.code, d.layer, d.message) for d in d2]
     assert r2.metrics['analysis_workers'] == 2
+
+
+def test_analyze_layers_workers_1_matches_default_budget():
+    """Serial path agrees with the settings-derived worker budget."""
+    from voxelmill.raster import RasterGrid
+    settings = small_settings()
+    # Force a multi-worker default: small_settings pins workers=1 in resources.
+    settings = resolve_settings(
+        ROOT / 'profiles/mars5-ultra.ptr', ROOT / 'profiles/sunlu-abs-like-gray.res',
+        {'printer': {'build_mm': [3.2, 2.4, 10.0], 'pixels': [32, 24],
+                     'pixel_pitch_mm': [0.1, 0.1], 'edge_clearance_mm': 0.0},
+         'process': {'layer_height_mm': 0.1},
+         'resources': {'workers': 0}})
+    grid = RasterGrid(8, 8, 0, 0, 0.1, 0.1)
+    a = np.zeros((8, 8), np.uint8)
+    a[2:6, 2:6] = 1
+    b = a.copy()
+    b[1, 1] = 1
+    # Tiny enclosed cavity so void / trapped arithmetic is in the path.
+    c = a.copy()
+    c[3:5, 3:5] = 0
+    layers = [Layer(0, 0.05, a), Layer(1, 0.15, b), Layer(2, 0.25, c), Layer(3, 0.35, a.copy())]
+    serial = analyze_layers(deepcopy(layers), grid, settings,
+                            budget=ResourceBudget(workers=1), track_voids=True)
+    default = analyze_layers(deepcopy(layers), grid, settings, track_voids=True)
+    assert default.metrics['analysis_workers'] > 1
+    assert serial.metrics['analysis_workers'] == 1
+    assert serial.checks == default.checks
+    assert serial.metrics['island_components'] == default.metrics['island_components']
+    assert serial.metrics['enclosed_voids'] == default.metrics['enclosed_voids']
+    assert serial.metrics['transient_traps'] == default.metrics['transient_traps']
+    d1 = sorted(serial.diagnostics, key=_diag_sort_key)
+    d2 = sorted(default.diagnostics, key=_diag_sort_key)
+    assert [(d.code, d.layer, d.message, d.details) for d in d1] == [
+        (d.code, d.layer, d.message, d.details) for d in d2]

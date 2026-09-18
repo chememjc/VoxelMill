@@ -9,6 +9,17 @@ AppImage, and states what each one asks of a redistributor.
 Audited 2026-09-12 against the versions pinned in `pyproject.toml` and the
 versions actually installed on the build machine.
 
+Audited again 2026-09-17 for v0.2.0: added original `native/runs.cpp` row-RLE
+/ run-CCL kernels; no new runtime, GUI, or native third-party dependency;
+pybind11 remains 3.0.4 (BSD-3-Clause). `native/runs.cpp` is original VoxelMill
+code. It reproduces dense NumPy / `scipy.ndimage.label` results bit-for-bit
+by design; no SciPy, OpenCV, or other third-party source was copied.
+Behavioral compatibility with `scipy.ndimage.label` component numbering is
+not a license dependency on SciPy beyond the existing BSD runtime dependency
+already listed below. Optional CUDA morphology in `native/cuda_morphology.cu`
+remains original host/device code; only a binary built when `nvcc` is present
+statically incorporates the NVIDIA CUDA runtime under the CUDA Toolkit EULA.
+
 **Nothing below conflicts with the MIT license.** No copyleft component is
 statically linked or derived from. The two LGPL components (Qt via PySide6, and
 the system C/C++ runtimes) are dynamically linked, which places notice and

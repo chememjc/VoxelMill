@@ -41,6 +41,43 @@ def test_grouped_or_is_bit_identical_to_exact_supported_sphere():
         list(grouped)
 
 
+def test_antialias_model_ors_binary_supports_as_full_intensity():
+    """AA model coverage stays gray; binary support tips OR in as 255."""
+    s = settings(process={'antialias_levels': 2, 'antialias_supports': False},
+                 printer={'pixels': [80, 80], 'pixel_pitch_mm': [.1, .1],
+                          'build_mm': [8., 8., 165.], 'edge_clearance_mm': 0})
+    solid = m.Manifold.cube((1.2, 1.2, 1.2)).translate((-0.6, -0.6, 0))
+    tri = triangles(solid)
+    # 45° about Z so the model edge produces partial coverage.
+    c = s45 = np.float32(np.sqrt(0.5))
+    x, y = tri[..., 0].copy(), tri[..., 1].copy()
+    tri[..., 0] = c * x - s45 * y
+    tri[..., 1] = s45 * x + c * y
+    model = prepare_model(tri, s)
+    # Tip outside the cube so its pixels come only from the support group.
+    support = geometry.cylinder_between((2.5, 0, 0), (2.5, 0, 1.2), 0.25)
+    assembly = assemble(model, [support], None)
+    assert [g.name for g in assembly.groups] == ['model', 'supports_and_raft']
+    budget = ResourceBudget(workers=1, memory_gib=1)
+    model_only = list(UnionLayerStream((assembly.groups[0],), assembly.bounds, s,
+                                       budget=budget))
+    union = UnionLayerStream(assembly.groups, assembly.bounds, s, budget=budget)
+    assert union.antialias_levels == 2 and union.antialias_supports is False
+    assert union.antialias_supports_unseparated is False
+    saw_model_gray = saw_support_tip = False
+    for model_layer, union_layer in zip(model_only, union):
+        model_vals = {int(v) for v in np.unique(model_layer.mask)}
+        if any(0 < v < 255 for v in model_vals):
+            saw_model_gray = True
+        only_support = (union_layer.mask != 0) & (model_layer.mask == 0)
+        if only_support.any():
+            tip_vals = {int(v) for v in np.unique(union_layer.mask[only_support])}
+            assert tip_vals == {255}
+            saw_support_tip = True
+        assert np.count_nonzero(union_layer.mask) >= np.count_nonzero(model_layer.mask)
+    assert saw_model_gray and saw_support_tip
+
+
 def test_parity_catches_penetrating_support_cancellation_with_position(tmp_path):
     s = settings(repair={'aggressiveness': 'none'})
     inverted = triangles(m.Manifold.cube((4, 4, 4)).translate((-2, -2, 1)))[:, ::-1].copy()

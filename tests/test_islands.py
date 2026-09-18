@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from voxelmill.cli import main
+from voxelmill.config import resolve_settings
 from voxelmill.mesh import write_stl
 from voxelmill.pipeline import scan_islands, validate_stl
 from voxelmill.validation import island_summary
@@ -100,3 +101,38 @@ def test_the_cli_exits_two_on_islands_and_zero_on_a_clean_part(tmp_path, capsys)
     # The warning names the checks this scan did not make, so a green exit is
     # never mistaken for a passing validation.
     assert 'does not examine' in captured.err
+
+
+def test_pin_array_fixture_births_nine_islands(tmp_path):
+    """Plate plus nine mid-air pins: each pin is its own island birth."""
+    from voxelmill.geometry import triangle_bounds
+    from voxelmill.mesh import open_stl
+    from voxelmill.raster import MeshLayerStream
+    from voxelmill.validation import analyze_layers
+    from voxelmill.contracts import ResourceBudget
+
+    with open_stl(ROOT / 'fixtures/shapes/pin_array.stl') as mesh:
+        triangles = np.asarray(mesh.triangles, dtype=np.float32).copy()
+    # Fixture sits in [0, 30]^2; printer grids are centered on the origin.
+    bounds = triangle_bounds(triangles)
+    triangles[..., 0] -= 0.5 * (bounds[0][0] + bounds[1][0])
+    triangles[..., 1] -= 0.5 * (bounds[0][1] + bounds[1][1])
+    centered = tmp_path / 'pin_array_centered.stl'
+    write_stl(centered, triangles)
+
+    settings = resolve_settings(
+        overrides={'process': {'layer_height_mm': 0.2},
+                   'printer': {'pixels': [200, 200], 'pixel_pitch_mm': [0.2, 0.2],
+                               'build_mm': [40., 40., 165.], 'edge_clearance_mm': 0},
+                   'resources': {'workers': 1}})
+    summary = scan_islands(centered, settings)
+    assert summary['check'] == 'fail'
+    assert summary['island_count'] == 9
+
+    # Same evidence through analyze_layers on a birth-window stream.
+    stream = MeshLayerStream(triangles, triangle_bounds(triangles), settings,
+                             layer_range=(49, 51),
+                             budget=ResourceBudget(workers=1, memory_gib=1))
+    report = analyze_layers(stream, stream.grid, settings, track_voids=False,
+                            budget=ResourceBudget(workers=1, memory_gib=1))
+    assert report.metrics['island_components'] == 9
