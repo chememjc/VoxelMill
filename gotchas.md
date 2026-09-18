@@ -1362,6 +1362,35 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   `VOXELMILL_FREECAD` winning for CI. The first-run Locate prompt is skipped
   when headless, `VOXELMILL_NO_WIZARD`, or stdin is not a TTY.
 
+- **macOS FreeCAD is a `.app` bundle, not a binary.** `Path.is_file()` is
+  false for `/Applications/FreeCAD.app`; the executable is
+  `Contents/MacOS/FreeCADCmd` (prefer, headless `-c`) or `FreeCAD`. A Locate
+  dialog that required `is_file() and X_OK` rejected the bundle the user
+  actually picks, so STEP import stayed disabled. `interpret_freecad_path`
+  expands a bundle, a Windows `FreeCAD*/bin` install dir, or a plain
+  executable. Store the path the user chose; resolve at use.
+
+- **Do not run modal dialogs or VTK `Initialize()` before `window.show()`.**
+  On Darwin a FreeCAD/wizard `QMessageBox` during `MainWindow.__init__`, then
+  `QVTKRenderWindowInteractor.Initialize()` on the still-hidden widget, left
+  the main window never appearing after the prompt. `run()` shows the window,
+  starts VTK, then `complete_startup()`. Tests that construct a window
+  directly skip the prompts on purpose.
+
+- **Empty argv on a GUI build must open the editor.** AppRun already rewrote
+  this; the PyInstaller Mac/Windows entry did not, so double-clicking
+  `VoxelMill.app` / `VoxelMill.exe` printed argparse's required-subcommand
+  help and exited. `_desktop_argv` in `cli.main` now matches AppRun when
+  PySide6 is importable.
+
+- **Do not strip `numpy/_core/tests` out of the AppImage.** A blanket
+  `tests` ignore on `copytree` dropped `numpy._core.tests`. NumPy 2.2's
+  `numpy.testing` imports `numpy._core.tests._natype`, and scipy's
+  array-api compat does `from numpy import *`, so `prepare` died with
+  `ModuleNotFoundError: numpy._core.tests` while `--version`/`--help`
+  stayed green. Stage verification must import `scipy.ndimage` /
+  `voxelmill.pipeline`, not only `math` and `_native`.
+
 - **Mac packages from Actions are thin, not universal2.** VTK and PySide6
   wheels are one arch each. Unsigned `.app` will Gatekeeper-warn; users run
   `xattr -dr com.apple.quarantine` on the app. Do not compile on the iMac;

@@ -87,3 +87,30 @@ def test_apprun_opens_gui_only_when_pyside_is_bundled():
     desktop = (ROOT / 'packaging' / 'appimage' / 'voxelmill.desktop').read_text()
     assert 'Exec=voxelmill %F' in desktop
     assert 'Terminal=false' in desktop
+
+
+def test_site_copy_keeps_numpy_core_tests():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('build_appimage', BUILDER)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert 'tests' not in mod._ignore_site('/opt/numpy/_core', ['tests', '__init__.py', '__pycache__'])
+    assert '__pycache__' in mod._ignore_site('/opt/numpy/_core', ['tests', '__pycache__'])
+    assert 'tests' in mod._ignore_site('/opt/numpy', ['tests', 'linalg'])
+    assert 'tests' in mod._ignore_site('/opt/scipy/ndimage', ['tests', '__init__.py'])
+
+
+def test_cli_rewrites_empty_argv_to_gui_when_pyside_is_present(tmp_path, monkeypatch):
+    from voxelmill.cli import _desktop_argv
+    monkeypatch.setattr('voxelmill.cli._gui_is_importable', lambda: True)
+    assert _desktop_argv([]) == ['gui']
+    assert _desktop_argv(['-psn_0_12345']) == ['gui']
+    stl = tmp_path / 'part.stl'
+    stl.write_bytes(b'solid x\nendsolid x\n')
+    assert _desktop_argv([str(stl)]) == ['gui', str(stl)]
+    assert _desktop_argv(['prepare', str(stl)]) == ['prepare', str(stl)]
+    assert _desktop_argv(['--version']) == ['--version']
+    assert _desktop_argv(['gui']) == ['gui']
+    monkeypatch.setattr('voxelmill.cli._gui_is_importable', lambda: False)
+    assert _desktop_argv([]) == []
+    assert _desktop_argv([str(stl)]) == [str(stl)]

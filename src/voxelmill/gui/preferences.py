@@ -78,9 +78,9 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.freecad_path.setText(self.editor_preferences.get('freecad_path') or '')
         self.freecad_path.setPlaceholderText('optional — only for STEP import')
         self.freecad_path.setToolTip(
-            'Path to a FreeCAD binary or AppImage. Only needed for STEP (.step/.stp) '
-            'import; STL, Prepare, and slice do not use it. Editor preference: not '
-            'stored in a profile or a project.')
+            'Path to a FreeCAD binary, AppImage, or macOS FreeCAD.app bundle. Only '
+            'needed for STEP (.step/.stp) import; STL, Prepare, and slice do not '
+            'use it. Editor preference: not stored in a profile or a project.')
         browse = QtWidgets.QPushButton('Browse…')
         browse.setObjectName('freecad_path_browse')
         browse.clicked.connect(self._browse_freecad)
@@ -122,11 +122,19 @@ class PreferencesDialog(QtWidgets.QDialog):
         return validate_settings(settings)
 
     def _browse_freecad(self):
+        from ..importers import FREECAD_FILE_FILTER, interpret_freecad_path
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self, 'Locate FreeCAD', self.freecad_path.text() or '',
-            'FreeCAD (FreeCAD* freecad* freecadcmd*);;All files (*)')
-        if path:
-            self.freecad_path.setText(path)
+            FREECAD_FILE_FILTER)
+        if not path:
+            return
+        if interpret_freecad_path(path) is None:
+            QtWidgets.QMessageBox.warning(
+                self, 'Locate FreeCAD',
+                f'{path} is not an executable FreeCAD binary.\n'
+                'On macOS choose FreeCAD.app (the application bundle).')
+            return
+        self.freecad_path.setText(path)
 
     def _refresh(self, *_):
         status = cuda_status()

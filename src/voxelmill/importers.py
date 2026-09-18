@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from typing import Any, Iterable
@@ -23,8 +24,15 @@ from .contracts import Canceled, CancellationToken, VoxelMillError
 
 ANGULAR_DEFLECTION_DEG = 15.0
 REPORT_PREFIX = 'VOXELMILL_STEP_REPORT '
-_PATH_NAMES = ('freecad', 'FreeCAD', 'freecadcmd')
+_PATH_NAMES = ('freecad', 'FreeCAD', 'freecadcmd', 'FreeCADCmd')
 _APPIMAGE_GLOBS = ('tools/FreeCAD*.AppImage', 'FreeCAD*.AppImage')
+_BUNDLE_BINARIES = ('FreeCADCmd', 'FreeCAD', 'freecadcmd', 'freecad')
+_WIN_BINARIES = ('FreeCADCmd.exe', 'FreeCAD.exe', 'freecadcmd.exe', 'freecad.exe')
+# QFileDialog name filter: macOS treats FreeCAD.app as a file (a bundle).
+FREECAD_FILE_FILTER = (
+    'FreeCAD (FreeCAD.app FreeCADCmd FreeCAD freecadcmd freecad *.AppImage '
+    'FreeCADCmd.exe FreeCAD.exe);;Applications (*.app);;All files (*)'
+)
 
 
 def helper_script() -> Path:
@@ -36,13 +44,83 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def _is_executable(path: Path) -> bool:
-    return path.is_file() and os.access(path, os.X_OK)
+def _is_runnable_file(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    if os.access(path, os.X_OK):
+        return True
+    return sys.platform == 'win32' and path.suffix.lower() in {'.exe', '.bat', '.cmd', '.com'}
+
+
+def _binaries_in(folder: Path, extra_names: tuple[str, ...] = ()) -> Iterable[Path]:
+    seen: set[str] = set()
+    for name in _BUNDLE_BINARIES + _WIN_BINARIES + extra_names:
+        if name in seen:
+            continue
+        seen.add(name)
+        yield folder / name
+
+
+def interpret_freecad_path(path: str | Path | None) -> Path | None:
+    """Turn a user path (binary, ``.app`` bundle, or install dir) into an executable.
+
+    ``FreeCAD.app`` is a directory on macOS; the binary lives at
+    ``Contents/MacOS/FreeCADCmd`` (preferred, headless) or ``FreeCAD``.
+    Windows installers put ``FreeCADCmd.exe`` under ``bin``. A regular
+    executable file is returned as-is.
+    """
+    if path in (None, ''):
+        return None
+    candidate = Path(path).expanduser()
+    if not candidate.exists():
+        return None
+    if _is_runnable_file(candidate):
+        return candidate.resolve()
+    if not candidate.is_dir():
+        return None
+    extra_names: tuple[str, ...] = ()
+    if candidate.suffix.lower() == '.app':
+        extra_names = (candidate.stem,)
+    search = []
+    if extra_names:
+        search.append(candidate / 'Contents' / 'MacOS')
+    search.extend((candidate, candidate / 'bin', candidate / 'Contents' / 'MacOS'))
+    seen: set[Path] = set()
+    for folder in search:
+        if folder in seen or not folder.is_dir():
+            continue
+        seen.add(folder)
+        for binary in _binaries_in(folder, extra_names):
+            if _is_runnable_file(binary):
+                return binary.resolve()
+        if folder.name == 'MacOS':
+            for extra in sorted(folder.iterdir()):
+                if extra.name.startswith('.') or extra.suffix.lower() == '.dylib':
+                    continue
+                if _is_runnable_file(extra):
+                    return extra.resolve()
+    return None
 
 
 def _appimages_under(root: Path) -> Iterable[Path]:
     for pattern in _APPIMAGE_GLOBS:
         yield from sorted(root.glob(pattern))
+
+
+def _installed_freecad_candidates() -> Iterable[Path]:
+    if sys.platform == 'darwin':
+        for root in (Path('/Applications'), Path.home() / 'Applications'):
+            if root.is_dir():
+                yield from sorted(root.glob('FreeCAD*.app'))
+        return
+    if sys.platform == 'win32':
+        for key in ('PROGRAMFILES', 'PROGRAMFILES(X86)', 'LOCALAPPDATA'):
+            raw = os.environ.get(key)
+            if not raw:
+                continue
+            root = Path(raw)
+            if root.is_dir():
+                yield from sorted(root.glob('FreeCAD*'))
 
 
 def find_freecad(preferred: str | Path | None = None) -> Path | None:
@@ -51,36 +129,40 @@ def find_freecad(preferred: str | Path | None = None) -> Path | None:
     Never raises. Search order matches :func:`resolve_freecad`, except a set but
     invalid ``VOXELMILL_FREECAD`` / ``FREECAD`` yields ``None`` instead of an
     error (callers that need the CI contract should use ``resolve_freecad``).
-    ``preferred`` is typically the editor ``freecad_path`` preference.
+    ``preferred`` is typically the editor ``freecad_path`` preference and may
+    be a macOS ``.app`` bundle or a Windows install directory.
     """
     for key in ('VOXELMILL_FREECAD', 'FREECAD'):
         raw = os.environ.get(key)
         if raw:
-            path = Path(raw).expanduser()
-            if _is_executable(path):
-                return path.resolve()
-            return None
+            return interpret_freecad_path(raw)
 
-    if preferred not in (None, ''):
-        path = Path(preferred).expanduser()
-        if _is_executable(path):
-            return path.resolve()
+    found = interpret_freecad_path(preferred)
+    if found is not None:
+        return found
 
     for name in _PATH_NAMES:
-        found = shutil.which(name)
-        if found:
-            path = Path(found)
-            if _is_executable(path):
-                return path.resolve()
+        found_on_path = shutil.which(name)
+        if found_on_path:
+            resolved = interpret_freecad_path(found_on_path)
+            if resolved is not None:
+                return resolved
+
+    for candidate in _installed_freecad_candidates():
+        resolved = interpret_freecad_path(candidate)
+        if resolved is not None:
+            return resolved
 
     for root in (_repo_root(), Path.cwd()):
         for candidate in _appimages_under(root):
-            if _is_executable(candidate):
-                return candidate.resolve()
+            resolved = interpret_freecad_path(candidate)
+            if resolved is not None:
+                return resolved
 
     for candidate in sorted(Path.home().glob('FreeCAD*.AppImage')):
-        if _is_executable(candidate):
-            return candidate.resolve()
+        resolved = interpret_freecad_path(candidate)
+        if resolved is not None:
+            return resolved
     return None
 
 
@@ -88,17 +170,19 @@ def resolve_freecad(preferred: str | Path | None = None) -> Path:
     """Return an executable FreeCAD binary, or raise ``VoxelMillError('step_import')``.
 
     Search order: ``VOXELMILL_FREECAD`` / ``FREECAD`` (if set, an invalid path
-    still errors — CI contract), then ``preferred`` (editor prefs path), then
-    PATH (``freecad`` / ``FreeCAD`` / ``freecadcmd``), then
-    ``tools/FreeCAD*.AppImage`` and ``FreeCAD*.AppImage`` under the repo root
-    and cwd, then ``~/FreeCAD*.AppImage``.
+    still errors — CI contract), then ``preferred`` (editor prefs path, which
+    may be a ``.app`` bundle), then PATH (``freecad`` / ``FreeCAD`` /
+    ``freecadcmd`` / ``FreeCADCmd``), then platform install locations
+    (``/Applications/FreeCAD*.app``, Windows ``FreeCAD*`` under Program Files),
+    then ``tools/FreeCAD*.AppImage`` and ``FreeCAD*.AppImage`` under the repo
+    root and cwd, then ``~/FreeCAD*.AppImage``.
     """
     for key in ('VOXELMILL_FREECAD', 'FREECAD'):
         raw = os.environ.get(key)
         if raw:
-            path = Path(raw).expanduser()
-            if _is_executable(path):
-                return path.resolve()
+            found = interpret_freecad_path(raw)
+            if found is not None:
+                return found
             raise VoxelMillError(
                 'step_import',
                 f'{key}={raw!r} is not an executable FreeCAD binary',
@@ -109,13 +193,14 @@ def resolve_freecad(preferred: str | Path | None = None) -> Path:
         return found
 
     searched: list[str] = []
+    searched.extend(str(candidate) for candidate in _installed_freecad_candidates())
     for root in (_repo_root(), Path.cwd()):
         searched.extend(str(candidate) for candidate in _appimages_under(root))
     searched.extend(str(candidate) for candidate in sorted(Path.home().glob('FreeCAD*.AppImage')))
     raise VoxelMillError(
         'step_import',
-        'FreeCAD not found; set VOXELMILL_FREECAD to an executable or put '
-        'freecad, FreeCAD, or freecadcmd on PATH',
+        'FreeCAD not found; set VOXELMILL_FREECAD to an executable, a macOS '
+        'FreeCAD.app bundle, or put freecad, FreeCAD, or freecadcmd on PATH',
         {'searched': searched},
     )
 

@@ -192,11 +192,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self._autosave_timer.timeout.connect(self._autosave)
         if not headless:
             self._autosave_timer.start()
+        self._startup_source = source
+        self._startup_completed = False
         self._build_ui()
         self.setAcceptDrops(True)
-        self._maybe_run_wizard(source)
-        self._maybe_prompt_freecad()
-        self._maybe_offer_recovery()
+        # Modal dialogs and VTK Initialize() must wait until the window is
+        # shown. On macOS a FreeCAD/wizard QMessageBox during construction,
+        # or QVTKRenderWindowInteractor.Initialize() on a hidden widget,
+        # leaves the main window never appearing after the prompt.
         if source:
             self.reload()
 
@@ -2376,6 +2379,19 @@ class MainWindow(QtWidgets.QMainWindow):
             dialog.exec()
         return dialog
 
+    def complete_startup(self):
+        """Run first-run prompts after the window is visible.
+
+        Called from :func:`run` after ``show()`` and VTK ``start()``. Tests
+        that construct a window directly skip this on purpose.
+        """
+        if self._startup_completed:
+            return
+        self._startup_completed = True
+        self._maybe_run_wizard(self._startup_source)
+        self._maybe_prompt_freecad()
+        self._maybe_offer_recovery()
+
     def _maybe_run_wizard(self, source):
         from .wizard import FirstRunWizard, wizard_should_run
         if not wizard_should_run(headless=self.headless, source=source):
@@ -2389,6 +2405,27 @@ class MainWindow(QtWidgets.QMainWindow):
             self._refresh_undo()
         return wizard
 
+    def _accept_freecad_path(self, path) -> str | None:
+        """Save a user-picked FreeCAD path if it resolves to a runnable binary.
+
+        The stored preference may be the ``.app`` bundle the user chose; lookup
+        expands it to ``Contents/MacOS/FreeCADCmd`` (or ``FreeCAD``) at use.
+        """
+        from ..importers import interpret_freecad_path
+        if not path:
+            return None
+        candidate = Path(path).expanduser()
+        resolved = interpret_freecad_path(candidate)
+        if resolved is None:
+            self.statusBar().showMessage(
+                f'not an executable FreeCAD binary: {path}', 8000)
+            return None
+        self.editor_preferences['freecad_path'] = str(candidate)
+        save_preferences(self.editor_preferences)
+        self._refresh_step_import_enabled()
+        self.statusBar().showMessage(f'FreeCAD path saved: {candidate}', 5000)
+        return str(resolved)
+
     def _maybe_prompt_freecad(self):
         """Offer to locate FreeCAD once when STEP import would otherwise stay off.
 
@@ -2397,7 +2434,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         if self.headless or os.environ.get('VOXELMILL_NO_WIZARD') or not sys.stdin.isatty():
             return None
-        from ..importers import find_freecad
+        from ..importers import FREECAD_FILE_FILTER, find_freecad
         if find_freecad(preferred=self._freecad_preferred()) is not None:
             return None
         box = QtWidgets.QMessageBox(self)
@@ -2405,7 +2442,8 @@ class MainWindow(QtWidgets.QMainWindow):
         box.setText('STEP import needs FreeCAD.')
         box.setInformativeText(
             'VoxelMill can tessellate .step/.stp files when FreeCAD is available. '
-            'STL, Prepare, and slice do not need it. Locate a FreeCAD binary now, '
+            'STL, Prepare, and slice do not need it. Locate FreeCAD now '
+            '(on macOS pick FreeCAD.app — the bundle, not a file inside it), '
             'or set it later under Preferences.')
         locate = box.addButton('Locate…', QtWidgets.QMessageBox.AcceptRole)
         box.addButton('Not now', QtWidgets.QMessageBox.RejectRole)
@@ -2413,19 +2451,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if box.clickedButton() is not locate:
             return None
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, 'Locate FreeCAD', '',
-            'FreeCAD (FreeCAD* freecad* freecadcmd*);;All files (*)')
-        if not path:
-            return None
-        candidate = Path(path).expanduser()
-        if not (candidate.is_file() and os.access(candidate, os.X_OK)):
-            self.statusBar().showMessage(f'not an executable FreeCAD binary: {path}', 8000)
-            return None
-        self.editor_preferences['freecad_path'] = str(candidate)
-        save_preferences(self.editor_preferences)
-        self._refresh_step_import_enabled()
-        self.statusBar().showMessage(f'FreeCAD path saved: {candidate}', 5000)
-        return str(candidate)
+            self, 'Locate FreeCAD', '', FREECAD_FILE_FILTER)
+        return self._accept_freecad_path(path)
 
     def _maybe_offer_recovery(self):
         path = autosave_path()
@@ -3497,6 +3524,8 @@ def run(settings, args):
     application = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     application.setWindowIcon(application_icon())
     window = MainWindow(settings, getattr(args, 'input', None))
+    window.show()
+    application.processEvents()
     if window.viewport:
         window.viewport.start()
     view = getattr(args, 'view', None)
@@ -3505,5 +3534,5 @@ def run(settings, args):
     goo = getattr(args, 'goo', None)
     if goo:
         window.open_goo(goo)
-    window.show()
+    window.complete_startup()
     return application.exec()

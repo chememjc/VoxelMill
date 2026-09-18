@@ -14,7 +14,9 @@ Headline **2.32 s / 350 MB**. Stay on `master`; no release branch until a later 
 - [x] AppImage 0.3.0 (`output/appimage/VoxelMill-x86_64.AppImage`, 406 MiB, CUDA off).
 - [ ] GitHub Actions green for Linux AppImage + Mac DMGs + Windows zip (`workflow_dispatch`, then tag `v5.0.0`).
 - [ ] Smoke the Intel DMG on `imac` (download artifact; do not compile there).
-- [ ] Alpha GitHub Release `v5.0.0` with binaries and install notes.
+- [x] macOS GUI: resolve `FreeCAD.app` to `Contents/MacOS/FreeCADCmd`; show the window before VTK start / Locate prompt (otherwise the prompt is the last thing that appears).
+- [x] Double-click / empty argv on PyInstaller Mac+Windows rewrites to `gui` (AppRun already did this on Linux).
+- [ ] Alpha GitHub Release `v5.0.0` with binaries and install notes. **Do not tag until the post-FreeCAD-bundle artifacts are smoke-tested.** Confirm tag name (`v5.0.0` vs `v0.5.0`) with the user.
 
 ## Headline number
 

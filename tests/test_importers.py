@@ -11,7 +11,8 @@ import pytest
 from voxelmill.config import resolve_settings
 from voxelmill.contracts import VoxelMillError
 from voxelmill.importers import (
-    apply_step_weld, find_freecad, resolve_freecad, tessellate_step, write_box_step,
+    apply_step_weld, find_freecad, interpret_freecad_path, resolve_freecad,
+    tessellate_step, write_box_step,
 )
 from voxelmill.mesh import open_stl, inspect_mesh, write_stl
 
@@ -65,6 +66,74 @@ def test_find_freecad_uses_preferred(monkeypatch, tmp_path):
     exe.chmod(0o755)
     assert find_freecad(preferred=str(exe)) == exe.resolve()
     assert resolve_freecad(preferred=str(exe)) == exe.resolve()
+
+
+def _fake_app_bundle(root, name='FreeCAD.app', binary='FreeCADCmd'):
+    bundle = root / name
+    exe = bundle / 'Contents' / 'MacOS' / binary
+    exe.parent.mkdir(parents=True)
+    exe.write_text('#!/bin/sh\n')
+    exe.chmod(0o755)
+    return bundle, exe
+
+
+def test_interpret_freecad_path_resolves_macos_app_bundle(tmp_path):
+    bundle, cmd = _fake_app_bundle(tmp_path)
+    # The .app is a directory; the inner FreeCADCmd is what subprocess can exec.
+    assert bundle.is_dir()
+    assert not bundle.is_file()
+    assert interpret_freecad_path(bundle) == cmd.resolve()
+    assert interpret_freecad_path(str(bundle)) == cmd.resolve()
+    assert interpret_freecad_path(cmd) == cmd.resolve()
+
+
+def test_interpret_freecad_path_prefers_freecadcmd_inside_bundle(tmp_path):
+    bundle, cmd = _fake_app_bundle(tmp_path, binary='FreeCADCmd')
+    gui = bundle / 'Contents' / 'MacOS' / 'FreeCAD'
+    gui.write_text('#!/bin/sh\n')
+    gui.chmod(0o755)
+    assert interpret_freecad_path(bundle) == cmd.resolve()
+
+
+def test_interpret_freecad_path_falls_back_to_freecad_gui_binary(tmp_path):
+    bundle, gui = _fake_app_bundle(tmp_path, binary='FreeCAD')
+    assert interpret_freecad_path(bundle) == gui.resolve()
+
+
+def test_interpret_freecad_path_resolves_windows_install_dir(tmp_path):
+    install = tmp_path / 'FreeCAD 1.0'
+    exe = install / 'bin' / 'FreeCADCmd.exe'
+    exe.parent.mkdir(parents=True)
+    exe.write_text('#!/bin/sh\n')
+    exe.chmod(0o755)
+    assert interpret_freecad_path(install) == exe.resolve()
+    assert interpret_freecad_path(exe) == exe.resolve()
+
+
+def test_interpret_freecad_path_rejects_empty_bundle(tmp_path):
+    empty = tmp_path / 'FreeCAD.app'
+    empty.mkdir()
+    assert interpret_freecad_path(empty) is None
+    assert interpret_freecad_path(tmp_path / 'missing.app') is None
+    assert interpret_freecad_path('') is None
+    assert interpret_freecad_path(None) is None
+
+
+def test_find_freecad_accepts_app_bundle_as_preferred(monkeypatch, tmp_path):
+    monkeypatch.delenv('VOXELMILL_FREECAD', raising=False)
+    monkeypatch.delenv('FREECAD', raising=False)
+    monkeypatch.setattr(shutil, 'which', lambda _name: None)
+    monkeypatch.setattr('voxelmill.importers._repo_root', lambda: tmp_path / 'repo')
+    (tmp_path / 'repo').mkdir()
+    monkeypatch.chdir(tmp_path)
+    home = tmp_path / 'home'
+    home.mkdir()
+    monkeypatch.setattr(Path, 'home', classmethod(lambda cls: home))
+    bundle, cmd = _fake_app_bundle(tmp_path)
+    assert find_freecad(preferred=str(bundle)) == cmd.resolve()
+    assert resolve_freecad(preferred=str(bundle)) == cmd.resolve()
+    monkeypatch.setenv('VOXELMILL_FREECAD', str(bundle))
+    assert find_freecad() == cmd.resolve()
 
 
 def test_tessellate_box_step(tmp_path):

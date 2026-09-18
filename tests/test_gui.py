@@ -831,6 +831,49 @@ def test_added_object_pose_controls_are_undoable_and_quit_is_last(application, t
 
 
 @pytest.mark.gui
+def test_startup_prompts_are_deferred_until_complete_startup(application, tmp_path, monkeypatch):
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'config'))
+    monkeypatch.setenv('XDG_CACHE_HOME', str(tmp_path / 'cache'))
+    called = []
+    monkeypatch.setattr(MainWindow, '_maybe_run_wizard', lambda self, source: called.append('wizard'))
+    monkeypatch.setattr(MainWindow, '_maybe_prompt_freecad', lambda self: called.append('freecad'))
+    monkeypatch.setattr(MainWindow, '_maybe_offer_recovery', lambda self: called.append('recovery'))
+    window = MainWindow(small_settings(), None, headless=True)
+    assert called == []
+    window.complete_startup()
+    assert called == ['wizard', 'freecad', 'recovery']
+    window.complete_startup()
+    assert called == ['wizard', 'freecad', 'recovery']
+    window.close()
+
+
+@pytest.mark.gui
+def test_accept_freecad_path_resolves_macos_app_bundle(application, tmp_path, monkeypatch):
+    from voxelmill.gui import appprefs
+    monkeypatch.setattr(appprefs, 'preferences_path', lambda: tmp_path / 'editor.json')
+    bundle = tmp_path / 'FreeCAD.app'
+    cmd = bundle / 'Contents' / 'MacOS' / 'FreeCADCmd'
+    cmd.parent.mkdir(parents=True)
+    cmd.write_text('#!/bin/sh\n')
+    cmd.chmod(0o755)
+    window = MainWindow(small_settings(), None, headless=True)
+    resolved = window._accept_freecad_path(str(bundle))
+    assert resolved == str(cmd.resolve())
+    assert window.editor_preferences['freecad_path'] == str(bundle)
+    assert appprefs.load_preferences()['freecad_path'] == str(bundle)
+    window.close()
+
+
+@pytest.mark.gui
+def test_run_shows_the_window_before_vtk_start_and_startup_prompts():
+    import inspect
+    from voxelmill.gui.window import run
+    source = inspect.getsource(run)
+    assert source.index('window.show()') < source.index('viewport.start()')
+    assert source.index('window.show()') < source.index('complete_startup')
+
+
+@pytest.mark.gui
 def test_import_step_action_tracks_freecad(application, tmp_path, monkeypatch):
     from voxelmill.gui import appprefs
     monkeypatch.setattr(appprefs, 'preferences_path', lambda: tmp_path / 'editor.json')

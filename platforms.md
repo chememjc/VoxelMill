@@ -53,7 +53,7 @@ notarization remain follow-up work; until then macOS users need
 | **Wheels (numpy / scipy / manifold3d / PySide6 / VTK)** | Manylinux wheels; AppImage copies import trees | macOS x86_64 wheels generally available for pinned ranges | arm64 wheels required; manifold3d and VTK need confirmed arm64 artifacts for the pinned versions | Win_amd64 wheels; VTK and PySide6 pull large DLL trees that the packager must stage |
 | **GUI / OpenGL** | Host X11/Wayland + GL; AppImage does not bundle them. Tests use `xvfb-run` | Cocoa + Metal/OpenGL layer; Qt platform `cocoa`. VTK + QVTK must be validated on a real display; no Xvfb | Same; Apple Silicon GL/Metal quirks | ANGLE / desktop OpenGL / Qt `windows` plugin. VTK DLLs and Qt platform plugins must sit next to the exe or on PATH |
 | **Distributor format** | AppImage (`output/appimage/VoxelMill-x86_64.AppImage`) | Signed `.app` inside a notarized DMG (or zip). Hardened runtime, entitlements, staple | Same | Portable zip with embedded Python, or Inno/MSI. Code signing recommended for SmartScreen |
-| **STEP / FreeCAD** | Headless FreeCAD via PATH / AppImage discovery in `importers.resolve_freecad`; override `VOXELMILL_FREECAD` / `FREECAD` | Need a macOS FreeCAD app bundle or conda build; resolve by `.app/Contents/MacOS/FreeCAD` (or equivalent), not AppImage | Same; arm64 FreeCAD build | FreeCAD `.exe` / install dir; argv and `QT_QPA_PLATFORM=offscreen` still apply for the helper |
+| **STEP / FreeCAD** | Headless FreeCAD via PATH / AppImage discovery in `importers.resolve_freecad`; override `VOXELMILL_FREECAD` / `FREECAD` | `interpret_freecad_path` expands `FreeCAD.app` to `Contents/MacOS/FreeCADCmd` (else `FreeCAD`); also searches `/Applications` and `~/Applications` | Same; arm64 FreeCAD build | `FreeCAD*/bin/FreeCADCmd.exe` under Program Files, or an `.exe` path; argv and `QT_QPA_PLATFORM=offscreen` still apply for the helper |
 | **SDCP printer** | UDP discovery + WebSocket (`websocket-client`); LAN broadcast | Same sockets stack; local-network permission prompts on recent macOS may apply | Same | Same; Windows Firewall may prompt on first broadcast/listen |
 | **Tests** | Full suite on Linux; GUI real-render gated on `xvfb-run` | Affinity tests skip (`sched_setaffinity` absent). Need a Cocoa/offscreen strategy instead of Xvfb | Same | Affinity and `RLIMIT_AS` tests skip or need Windows doubles. No `xvfb-run`; use Qt offscreen / OSMesa / skipped real-render |
 
@@ -87,8 +87,9 @@ line so the image does not carry the CUDA Toolkit EULA.
 - **Codesign and notarization dominate calendar time.** A PySide6+VTK `.app`
   that loads unsigned native code will fail Gatekeeper; Apple's notarization
   pipeline (ticket staple, hardened runtime) is the long pole, not CMake.
-- **FreeCAD** is an external subprocess today. Point `VOXELMILL_FREECAD` at a
-  macOS build; do not assume the Linux AppImage candidates exist.
+- **FreeCAD** is an external subprocess today. `find_freecad` accepts a
+  `FreeCAD.app` bundle (resolved to `Contents/MacOS/FreeCADCmd`) as well as
+  `VOXELMILL_FREECAD`; do not assume the Linux AppImage candidates exist.
 - **Wheels.** Confirm `manifold3d==3.3.2` and `vtk>=9.3,<10` publish macOS
   arm64 wheels for the target CPython before promising an arm64 editor image.
 
@@ -149,8 +150,9 @@ bundle that merely invokes it.
 1. **`resources.py`** — `RLIMIT_AS` and `sched_setaffinity` / `/proc/self/task`
    are Linux-only. Import or first `execution_limits` use fails unless gated.
 2. **`importers.py` FreeCAD discovery** — Linux looks for PATH binaries and
-   `FreeCAD*.AppImage` under the repo/cwd/home; macOS/Windows need env
-   override or platform-specific layouts before STEP tests pass.
+   `FreeCAD*.AppImage` under the repo/cwd/home. macOS resolves `FreeCAD.app`
+   bundles (including `/Applications`); Windows looks under Program Files
+   `FreeCAD*/bin`. Env override still wins.
 3. **VTK / Qt display backend** — Linux tests assume X11 + `xvfb-run`. macOS
    needs Cocoa; Windows needs platform plugins and DLL placement. Offscreen CI
    is a separate problem on each OS.

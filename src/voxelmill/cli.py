@@ -1031,7 +1031,8 @@ def build_parser():
     common.add_argument('--timing', action='store_true',
                         help='print a per-stage wall-time table to stderr')
     common.add_argument('--freecad', metavar='PATH',
-                        help='FreeCAD binary or AppImage for STEP import; sets VOXELMILL_FREECAD')
+                        help='FreeCAD binary, AppImage, or macOS .app for STEP import; '
+                             'sets VOXELMILL_FREECAD')
     sub = parser.add_subparsers(dest='command', required=True)
 
     import_step = sub.add_parser('import-step', parents=[common],
@@ -1345,9 +1346,38 @@ def _version():
     return f'VoxelMill {__version__}'
 
 
+def _gui_is_importable() -> bool:
+    try:
+        import PySide6  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def _desktop_argv(argv):
+    """Match AppRun: no args, or a single existing file, opens the editor.
+
+    Finder / Explorer / a double-clicked ``.app`` otherwise hit argparse's
+    required subcommand and exit before any window appears. ``-psn_*`` is the
+    classic macOS Finder process-serial-number flag. Subcommands, ``--help``
+    and ``--version`` are left alone, and PySide6 is imported only when a
+    rewrite is actually being considered.
+    """
+    if argv is None:
+        argv = sys.argv[1:]
+    argv = [item for item in argv if not str(item).startswith('-psn_')]
+    rewrite = (not argv) or (
+        len(argv) == 1 and not str(argv[0]).startswith('-') and os.path.exists(argv[0]))
+    if not rewrite or not _gui_is_importable():
+        return argv
+    if not argv:
+        return ['gui']
+    return ['gui', argv[0]]
+
+
 def main(argv=None):
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(_desktop_argv(argv))
     freecad = getattr(args, 'freecad', None)
     if freecad:
         os.environ['VOXELMILL_FREECAD'] = freecad

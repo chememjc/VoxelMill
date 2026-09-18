@@ -47,7 +47,18 @@ def _ignore_python_stdlib(_directory, names):
     return [name for name in names if name in drop or name.endswith('.pyc')]
 
 
-def _ignore_site(_directory, names):
+def _keep_numpy_core_tests(directory) -> bool:
+    """NumPy 2.2 imports ``numpy._core.tests._natype`` from ``numpy.testing``.
+
+    scipy's array-api compat does ``from numpy import *``, which lazy-loads
+    that path. Stripping every ``tests`` directory made ``prepare`` fail inside
+    the AppImage while ``--version`` still looked fine.
+    """
+    parts = Path(directory).parts
+    return len(parts) >= 2 and parts[-2] == 'numpy' and parts[-1] == '_core'
+
+
+def _ignore_site(directory, names):
     drop = {
         'pip', 'pip-22.0.2.dist-info', '__pycache__', 'tests',
         '_distutils_hack', 'distutils-precedence.pth',
@@ -58,7 +69,16 @@ def _ignore_site(_directory, names):
         'Qt6WebEngine', 'Qt6WebEngineCore', 'Qt6WebEngineWidgets',
         'examples', 'qml', 'Designer', 'Linguist',
     }
-    return [name for name in names if name in drop or name.endswith('.pyc')]
+    keep_tests = _keep_numpy_core_tests(directory)
+    ignored = []
+    for name in names:
+        if name.endswith('.pyc'):
+            ignored.append(name)
+        elif name == 'tests' and keep_tests:
+            continue
+        elif name in drop:
+            ignored.append(name)
+    return ignored
 
 
 def _copy_imported(modname: str, site: Path):
@@ -240,6 +260,8 @@ def _verify_staged_python(appdir: Path):
     script = (
         'import math, os, pathlib, voxelmill\n'
         'from voxelmill import _native\n'
+        'from scipy import ndimage  # noqa: F401\n'
+        'import voxelmill.pipeline  # noqa: F401\n'
         'root = pathlib.Path(os.environ["PYTHONHOME"]).resolve()\n'
         'origin = pathlib.Path(voxelmill.__file__).resolve()\n'
         'if root not in origin.parents:\n'
