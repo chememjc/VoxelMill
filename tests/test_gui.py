@@ -831,6 +831,29 @@ def test_added_object_pose_controls_are_undoable_and_quit_is_last(application, t
 
 
 @pytest.mark.gui
+def test_import_step_action_tracks_freecad(application, tmp_path, monkeypatch):
+    from voxelmill.gui import appprefs
+    monkeypatch.setattr(appprefs, 'preferences_path', lambda: tmp_path / 'editor.json')
+    monkeypatch.setattr('voxelmill.importers.find_freecad', lambda preferred=None: None)
+    window = MainWindow(small_settings(), None, headless=True)
+    assert 'import_step' in window.actions_map
+    assert window.actions_map['import_step'].text() == 'Import STEP...'
+    assert not window.actions_map['import_step'].isEnabled()
+    window.close()
+
+    fake = tmp_path / 'fakefreecad'
+    fake.write_text('#!/bin/sh\n')
+    fake.chmod(0o755)
+    monkeypatch.setattr('voxelmill.importers.find_freecad', lambda preferred=None: fake)
+    window = MainWindow(small_settings(), None, headless=True)
+    assert window.actions_map['import_step'].isEnabled()
+    window.editor_preferences['freecad_path'] = str(fake)
+    window._editor_preferences_applied({'freecad_path': str(fake)})
+    assert window.actions_map['import_step'].isEnabled()
+    window.close()
+
+
+@pytest.mark.gui
 def test_open_stl_draws_the_primary_under_the_model_actor(application, source):
     """A single STL with no added parts used to crash in ``_finish_place``.
 

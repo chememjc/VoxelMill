@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 from copy import deepcopy
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -1029,6 +1030,8 @@ def build_parser():
     common.add_argument('--progress', action='store_true', help='print progress to stderr')
     common.add_argument('--timing', action='store_true',
                         help='print a per-stage wall-time table to stderr')
+    common.add_argument('--freecad', metavar='PATH',
+                        help='FreeCAD binary or AppImage for STEP import; sets VOXELMILL_FREECAD')
     sub = parser.add_subparsers(dest='command', required=True)
 
     import_step = sub.add_parser('import-step', parents=[common],
@@ -1345,6 +1348,9 @@ def _version():
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
+    freecad = getattr(args, 'freecad', None)
+    if freecad:
+        os.environ['VOXELMILL_FREECAD'] = freecad
     try:
         return args.func(args)
     except VoxelMillError as error:

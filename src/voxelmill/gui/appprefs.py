@@ -37,7 +37,9 @@ DEFAULT_TRANSLATE_STEP_MM = 1.0
 #: editor's own built-in sizing is the default, not an empty memory of one.
 DEFAULTS = {'snap_angle_deg': DEFAULT_SNAP_ANGLE_DEG, 'motion_mode': DEFAULT_MOTION_MODE,
            'translate_step_mm': DEFAULT_TRANSLATE_STEP_MM,
-           'window_geometry': None, 'window_state': None}
+           'window_geometry': None, 'window_state': None,
+           # Empty means unset; FreeCAD is only needed for STEP import.
+           'freecad_path': ''}
 
 
 def preferences_path():
@@ -96,6 +98,9 @@ def load_preferences() -> dict:
         stored = data.get(key)
         if _valid_base64_text(stored):
             values[key] = stored
+    freecad = data.get('freecad_path')
+    if isinstance(freecad, str) and freecad:
+        values['freecad_path'] = freecad
     return values
 
 

@@ -45,13 +45,53 @@ def _appimages_under(root: Path) -> Iterable[Path]:
         yield from sorted(root.glob(pattern))
 
 
-def resolve_freecad() -> Path:
+def find_freecad(preferred: str | Path | None = None) -> Path | None:
+    """Return an executable FreeCAD binary, or ``None`` if none is available.
+
+    Never raises. Search order matches :func:`resolve_freecad`, except a set but
+    invalid ``VOXELMILL_FREECAD`` / ``FREECAD`` yields ``None`` instead of an
+    error (callers that need the CI contract should use ``resolve_freecad``).
+    ``preferred`` is typically the editor ``freecad_path`` preference.
+    """
+    for key in ('VOXELMILL_FREECAD', 'FREECAD'):
+        raw = os.environ.get(key)
+        if raw:
+            path = Path(raw).expanduser()
+            if _is_executable(path):
+                return path.resolve()
+            return None
+
+    if preferred not in (None, ''):
+        path = Path(preferred).expanduser()
+        if _is_executable(path):
+            return path.resolve()
+
+    for name in _PATH_NAMES:
+        found = shutil.which(name)
+        if found:
+            path = Path(found)
+            if _is_executable(path):
+                return path.resolve()
+
+    for root in (_repo_root(), Path.cwd()):
+        for candidate in _appimages_under(root):
+            if _is_executable(candidate):
+                return candidate.resolve()
+
+    for candidate in sorted(Path.home().glob('FreeCAD*.AppImage')):
+        if _is_executable(candidate):
+            return candidate.resolve()
+    return None
+
+
+def resolve_freecad(preferred: str | Path | None = None) -> Path:
     """Return an executable FreeCAD binary, or raise ``VoxelMillError('step_import')``.
 
-    Search order: ``VOXELMILL_FREECAD`` / ``FREECAD``, then PATH
-    (``freecad`` / ``FreeCAD`` / ``freecadcmd``), then ``tools/FreeCAD*.AppImage``
-    and ``FreeCAD*.AppImage`` under the repo root and cwd, then
-    ``~/FreeCAD*.AppImage``.
+    Search order: ``VOXELMILL_FREECAD`` / ``FREECAD`` (if set, an invalid path
+    still errors — CI contract), then ``preferred`` (editor prefs path), then
+    PATH (``freecad`` / ``FreeCAD`` / ``freecadcmd``), then
+    ``tools/FreeCAD*.AppImage`` and ``FreeCAD*.AppImage`` under the repo root
+    and cwd, then ``~/FreeCAD*.AppImage``.
     """
     for key in ('VOXELMILL_FREECAD', 'FREECAD'):
         raw = os.environ.get(key)
@@ -64,25 +104,14 @@ def resolve_freecad() -> Path:
                 f'{key}={raw!r} is not an executable FreeCAD binary',
             )
 
-    for name in _PATH_NAMES:
-        found = shutil.which(name)
-        if found:
-            path = Path(found)
-            if _is_executable(path):
-                return path.resolve()
+    found = find_freecad(preferred=preferred)
+    if found is not None:
+        return found
 
     searched: list[str] = []
     for root in (_repo_root(), Path.cwd()):
-        for candidate in _appimages_under(root):
-            searched.append(str(candidate))
-            if _is_executable(candidate):
-                return candidate.resolve()
-
-    for candidate in sorted(Path.home().glob('FreeCAD*.AppImage')):
-        searched.append(str(candidate))
-        if _is_executable(candidate):
-            return candidate.resolve()
-
+        searched.extend(str(candidate) for candidate in _appimages_under(root))
+    searched.extend(str(candidate) for candidate in sorted(Path.home().glob('FreeCAD*.AppImage')))
     raise VoxelMillError(
         'step_import',
         'FreeCAD not found; set VOXELMILL_FREECAD to an executable or put '
@@ -111,9 +140,10 @@ def _parse_reports(stdout: str) -> list[dict[str, Any]]:
 
 
 def run_freecad_helper(argv: list[str], *, cancel: CancellationToken | None = None,
-                       timeout_s: float | None = 600.0) -> dict[str, Any]:
+                       timeout_s: float | None = 600.0,
+                       preferred: str | Path | None = None) -> dict[str, Any]:
     """Run ``step_tessellate.py`` under FreeCAD ``-c`` with stdin closed."""
-    freecad = resolve_freecad()
+    freecad = resolve_freecad(preferred=preferred)
     script = helper_script()
     if not script.is_file():
         raise VoxelMillError('step_import', f'FreeCAD helper script missing: {script}')
@@ -251,7 +281,8 @@ def apply_step_weld(stl_path: str | Path, weld_tolerance_mm: float,
 
 
 def tessellate_step(path: str | Path, settings: dict, output_stl: str | Path,
-                    cancel: CancellationToken | None = None) -> dict[str, Any]:
+                    cancel: CancellationToken | None = None,
+                    preferred: str | Path | None = None) -> dict[str, Any]:
     """Tessellate ``path`` (STEP) to ``output_stl`` using FreeCAD headlessly.
 
     Linear deflection comes from ``settings['repair']['step_linear_deflection_mm']``
@@ -259,7 +290,8 @@ def tessellate_step(path: str | Path, settings: dict, output_stl: str | Path,
     ``repair.weld_tolerance_mm`` is positive, near-duplicate vertices are welded
     before the STL is finalized. Returns a report with engine path, FreeCAD
     version when available, deflection, weld tolerance, triangle count and
-    axis-aligned bounds in millimeters.
+    axis-aligned bounds in millimeters. ``preferred`` is forwarded to
+    :func:`resolve_freecad` (editor ``freecad_path``).
     """
     source = Path(path)
     if not source.is_file():
@@ -288,6 +320,7 @@ def tessellate_step(path: str | Path, settings: dict, output_stl: str | Path,
     raw = run_freecad_helper(
         [str(source.resolve()), str(destination), str(linear), str(ANGULAR_DEFLECTION_DEG)],
         cancel=cancel,
+        preferred=preferred,
     )
     if raw.get('mode') != 'tessellate':
         raise VoxelMillError('step_import', 'FreeCAD helper returned an unexpected report',

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import shutil
 
 import numpy as np
 import pytest
@@ -10,7 +11,7 @@ import pytest
 from voxelmill.config import resolve_settings
 from voxelmill.contracts import VoxelMillError
 from voxelmill.importers import (
-    apply_step_weld, resolve_freecad, tessellate_step, write_box_step,
+    apply_step_weld, find_freecad, resolve_freecad, tessellate_step, write_box_step,
 )
 from voxelmill.mesh import open_stl, inspect_mesh, write_stl
 
@@ -32,6 +33,38 @@ def test_resolve_freecad_finds_engine():
     engine = _freecad_or_skip()
     assert engine.is_file()
     assert 'FreeCAD' in engine.name or 'freecad' in engine.name.lower()
+
+
+def test_find_freecad_returns_none_when_unavailable(monkeypatch, tmp_path):
+    monkeypatch.delenv('VOXELMILL_FREECAD', raising=False)
+    monkeypatch.delenv('FREECAD', raising=False)
+    monkeypatch.setattr(shutil, 'which', lambda _name: None)
+    monkeypatch.setattr('voxelmill.importers._repo_root', lambda: tmp_path / 'repo')
+    (tmp_path / 'repo').mkdir()
+    monkeypatch.chdir(tmp_path)
+    home = tmp_path / 'home'
+    home.mkdir()
+    monkeypatch.setattr(Path, 'home', classmethod(lambda cls: home))
+    assert find_freecad() is None
+    assert find_freecad(preferred='') is None
+    assert find_freecad(preferred=str(tmp_path / 'missing')) is None
+
+
+def test_find_freecad_uses_preferred(monkeypatch, tmp_path):
+    monkeypatch.delenv('VOXELMILL_FREECAD', raising=False)
+    monkeypatch.delenv('FREECAD', raising=False)
+    monkeypatch.setattr(shutil, 'which', lambda _name: None)
+    monkeypatch.setattr('voxelmill.importers._repo_root', lambda: tmp_path / 'repo')
+    (tmp_path / 'repo').mkdir()
+    monkeypatch.chdir(tmp_path)
+    home = tmp_path / 'home'
+    home.mkdir()
+    monkeypatch.setattr(Path, 'home', classmethod(lambda cls: home))
+    exe = tmp_path / 'FreeCAD.AppImage'
+    exe.write_text('#!/bin/sh\n')
+    exe.chmod(0o755)
+    assert find_freecad(preferred=str(exe)) == exe.resolve()
+    assert resolve_freecad(preferred=str(exe)) == exe.resolve()
 
 
 def test_tessellate_box_step(tmp_path):
@@ -131,7 +164,7 @@ def test_tessellate_applies_weld_tolerance_setting(tmp_path, monkeypatch):
     d = [1.0, 1.0, 0.0]
     tris = np.array([[a, b, c], [b2, d, c]], dtype=np.float64)
 
-    def fake_helper(argv, *, cancel=None, timeout_s=600.0):
+    def fake_helper(argv, *, cancel=None, timeout_s=600.0, preferred=None):
         write_stl(Path(argv[1]), tris.astype(np.float32))
         return {
             'mode': 'tessellate',

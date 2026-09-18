@@ -73,6 +73,20 @@ class PreferencesDialog(QtWidgets.QDialog):
             'Distance one arrow-key press or one +/- button moves the selected part. '
             'Shift moves ten times as far. Editor preference: not stored in a profile '
             'or a project.')
+        self.freecad_path = QtWidgets.QLineEdit()
+        self.freecad_path.setObjectName('freecad_path')
+        self.freecad_path.setText(self.editor_preferences.get('freecad_path') or '')
+        self.freecad_path.setPlaceholderText('optional — only for STEP import')
+        self.freecad_path.setToolTip(
+            'Path to a FreeCAD binary or AppImage. Only needed for STEP (.step/.stp) '
+            'import; STL, Prepare, and slice do not use it. Editor preference: not '
+            'stored in a profile or a project.')
+        browse = QtWidgets.QPushButton('Browse…')
+        browse.setObjectName('freecad_path_browse')
+        browse.clicked.connect(self._browse_freecad)
+        freecad_row = QtWidgets.QHBoxLayout()
+        freecad_row.addWidget(self.freecad_path, 1)
+        freecad_row.addWidget(browse)
         self.island_passes = QtWidgets.QSpinBox()
         self.island_passes.setObjectName('max_island_passes')
         self.island_passes.setRange(1, 10)
@@ -84,6 +98,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         form.addRow('Memory ceiling', self.memory)
         form.addRow('Rotation snap', self.snap_angle)
         form.addRow('Nudge step', self.translate_step)
+        form.addRow('FreeCAD (STEP import)', freecad_row)
         form.addRow('Island correction passes', self.island_passes)
         form.addRow('Detected', self.status)
         buttons = QtWidgets.QDialogButtonBox(
@@ -105,6 +120,13 @@ class PreferencesDialog(QtWidgets.QDialog):
         })
         settings['support']['max_island_passes'] = self.island_passes.value()
         return validate_settings(settings)
+
+    def _browse_freecad(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, 'Locate FreeCAD', self.freecad_path.text() or '',
+            'FreeCAD (FreeCAD* freecad* freecadcmd*);;All files (*)')
+        if path:
+            self.freecad_path.setText(path)
 
     def _refresh(self, *_):
         status = cuda_status()
@@ -132,12 +154,13 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.document.set_settings(settings)
         self.applied = deepcopy(settings)
         self.settings_applied.emit(self.applied)
-        # Merge rather than replace: the stored file also holds the motion mode
-        # and the window layout, and rebuilding it from these two fields alone
-        # would discard them every time someone touched Apply.
+        # Merge rather than replace: the stored file also holds the motion mode,
+        # FreeCAD path, and the window layout, and rebuilding it from the snap
+        # fields alone would discard them every time someone touched Apply.
         self.editor_preferences = {**load_preferences(),
                                    'snap_angle_deg': float(self.snap_angle.currentData()),
-                                   'translate_step_mm': float(self.translate_step.value())}
+                                   'translate_step_mm': float(self.translate_step.value()),
+                                   'freecad_path': self.freecad_path.text().strip()}
         save_preferences(self.editor_preferences)
         self.editor_preferences_applied.emit(dict(self.editor_preferences))
         self._refresh()

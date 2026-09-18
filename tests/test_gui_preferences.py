@@ -42,17 +42,19 @@ def test_worker_spin_box_admits_the_derive_sentinel(app):
 def test_applying_preferences_keeps_the_layout_and_motion_mode(app, tmp_path, monkeypatch):
     """Apply rebuilt the file from two fields, which erased everything else.
 
-    The same file holds the motion mode and the saved window layout. Writing
-    only the snap angle and the nudge step reverted both to their defaults
-    every time someone touched Apply.
+    The same file holds the motion mode, FreeCAD path, and the saved window
+    layout. Writing only the snap angle and the nudge step reverted the rest
+    to their defaults every time someone touched Apply.
     """
     from voxelmill.gui import appprefs
     monkeypatch.setattr(appprefs, 'preferences_path', lambda: tmp_path / 'editor.json')
     appprefs.save_preferences({'snap_angle_deg': 15.0, 'motion_mode': 'absolute',
                                'translate_step_mm': 2.5, 'window_geometry': 'AAAA',
-                               'window_state': 'BBBB'})
+                               'window_state': 'BBBB',
+                               'freecad_path': '/opt/FreeCAD.AppImage'})
     document = Document(resolve_settings())
     dialog = PreferencesDialog(document, headless=True)
+    assert dialog.freecad_path.text() == '/opt/FreeCAD.AppImage'
     assert dialog.apply() is not None
     stored = appprefs.load_preferences()
     assert stored['motion_mode'] == 'absolute'
@@ -60,6 +62,20 @@ def test_applying_preferences_keeps_the_layout_and_motion_mode(app, tmp_path, mo
     assert stored['window_state'] == 'BBBB'
     assert stored['translate_step_mm'] == 2.5
     assert stored['snap_angle_deg'] == 15.0
+    assert stored['freecad_path'] == '/opt/FreeCAD.AppImage'
+
+
+def test_freecad_path_save_and_load(tmp_path, monkeypatch):
+    from voxelmill.gui import appprefs
+    monkeypatch.setattr(appprefs, 'preferences_path', lambda: tmp_path / 'editor.json')
+    assert appprefs.load_preferences()['freecad_path'] == ''
+    appprefs.save_preferences({'freecad_path': '/usr/bin/freecad'})
+    assert appprefs.load_preferences()['freecad_path'] == '/usr/bin/freecad'
+    appprefs.save_preferences({'freecad_path': ''})
+    assert appprefs.load_preferences()['freecad_path'] == ''
+    path = appprefs.preferences_path()
+    path.write_text('{"freecad_path": 12}\n')
+    assert appprefs.load_preferences()['freecad_path'] == ''
 
 
 def test_the_island_pass_cap_reaches_the_settings_table(app):

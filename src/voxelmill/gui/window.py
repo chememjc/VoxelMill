@@ -13,6 +13,7 @@ from dataclasses import asdict
 import json
 import os
 from pathlib import Path
+import sys
 import tempfile
 
 import numpy as np
@@ -194,6 +195,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._build_ui()
         self.setAcceptDrops(True)
         self._maybe_run_wizard(source)
+        self._maybe_prompt_freecad()
         self._maybe_offer_recovery()
         if source:
             self.reload()
@@ -870,7 +872,9 @@ class MainWindow(QtWidgets.QMainWindow):
             return action
 
         add(file_menu, 'open', 'Open STL...', self.open_stl_dialog, QtGui.QKeySequence.Open)
+        add(file_menu, 'import_step', 'Import STEP...', self.import_step_dialog)
         add(file_menu, 'add_model', 'Add model...', self.add_extra_model_dialog)
+        self._refresh_step_import_enabled()
         add(file_menu, 'compute_attachments', 'Compute attachments', self.compute_attachments, 'Ctrl+R')
         add(file_menu, 'arrange_objects', 'Arrange on plate', self.arrange_objects, 'Ctrl+L')
         add(file_menu, 'open_project', 'Open project...', self.open_project_dialog)
@@ -997,6 +1001,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.editor_preferences.update(preferences)
         self.object_panel.set_snap_angle(self.editor_preferences['snap_angle_deg'])
         self.object_panel.set_translate_step(self.editor_preferences['translate_step_mm'])
+        self._refresh_step_import_enabled()
+
+    def _freecad_preferred(self):
+        path = self.editor_preferences.get('freecad_path') or ''
+        return path or None
+
+    def _refresh_step_import_enabled(self):
+        from ..importers import find_freecad
+        action = self.actions_map.get('import_step')
+        if action is None:
+            return
+        action.setEnabled(find_freecad(preferred=self._freecad_preferred()) is not None)
 
     # ---- motion mode -----------------------------------------------------
     #
@@ -2373,6 +2389,44 @@ class MainWindow(QtWidgets.QMainWindow):
             self._refresh_undo()
         return wizard
 
+    def _maybe_prompt_freecad(self):
+        """Offer to locate FreeCAD once when STEP import would otherwise stay off.
+
+        Same skip gates as the first-run wizard (headless / NO_WIZARD / no TTY)
+        so pytest and AppImage smoke never hang on a modal.
+        """
+        if self.headless or os.environ.get('VOXELMILL_NO_WIZARD') or not sys.stdin.isatty():
+            return None
+        from ..importers import find_freecad
+        if find_freecad(preferred=self._freecad_preferred()) is not None:
+            return None
+        box = QtWidgets.QMessageBox(self)
+        box.setWindowTitle('FreeCAD for STEP import')
+        box.setText('STEP import needs FreeCAD.')
+        box.setInformativeText(
+            'VoxelMill can tessellate .step/.stp files when FreeCAD is available. '
+            'STL, Prepare, and slice do not need it. Locate a FreeCAD binary now, '
+            'or set it later under Preferences.')
+        locate = box.addButton('Locate…', QtWidgets.QMessageBox.AcceptRole)
+        box.addButton('Not now', QtWidgets.QMessageBox.RejectRole)
+        box.exec()
+        if box.clickedButton() is not locate:
+            return None
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, 'Locate FreeCAD', '',
+            'FreeCAD (FreeCAD* freecad* freecadcmd*);;All files (*)')
+        if not path:
+            return None
+        candidate = Path(path).expanduser()
+        if not (candidate.is_file() and os.access(candidate, os.X_OK)):
+            self.statusBar().showMessage(f'not an executable FreeCAD binary: {path}', 8000)
+            return None
+        self.editor_preferences['freecad_path'] = str(candidate)
+        save_preferences(self.editor_preferences)
+        self._refresh_step_import_enabled()
+        self.statusBar().showMessage(f'FreeCAD path saved: {candidate}', 5000)
+        return str(candidate)
+
     def _maybe_offer_recovery(self):
         path = autosave_path()
         if self.headless or not path.exists() or path.stat().st_size <= 0:
@@ -3195,17 +3249,32 @@ class MainWindow(QtWidgets.QMainWindow):
         self.rebuild()
 
     def add_extra_model_dialog(self):
-        """Pick one or more STLs and let the packer place them.
+        """Pick one or more STLs (and STEP when FreeCAD is available).
 
         Asking for a center offset per file, before the part was even loaded,
         made adding a second part a guessing game about where it would land.
         The plate is arranged afterwards instead, and the part can then be
         moved with the same controls as everything else.
         """
-        paths, _ = QtWidgets.QFileDialog.getOpenFileNames(self, 'Add model', '', 'STL (*.stl)')
+        from ..importers import find_freecad
+        step_ok = find_freecad(preferred=self._freecad_preferred()) is not None
+        filters = 'STL (*.stl);;STEP (*.step *.stp)' if step_ok else 'STL (*.stl)'
+        paths, _ = QtWidgets.QFileDialog.getOpenFileNames(self, 'Add model', '', filters)
         if not paths:
             return None
-        return self.add_models(paths)
+        resolved = []
+        for path in paths:
+            suffix = Path(path).suffix.lower()
+            if suffix in ('.step', '.stp'):
+                stl = self._tessellate_step_to_temp(path)
+                if stl is None:
+                    continue
+                resolved.append(str(stl))
+            else:
+                resolved.append(path)
+        if not resolved:
+            return None
+        return self.add_models(resolved)
 
     def handle_pick(self, position, role, modifiers=QtCore.Qt.NoModifier):
         """Shift adds a contact, Ctrl deletes, Alt moves the pending contact."""
@@ -3301,6 +3370,38 @@ class MainWindow(QtWidgets.QMainWindow):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open STL', '', 'STL (*.stl)')
         if path:
             self.open_stl(path)
+
+    def import_step_dialog(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, 'Import STEP', '', 'STEP (*.step *.stp)')
+        if path:
+            return self.import_step(path)
+        return None
+
+    def _tessellate_step_to_temp(self, path):
+        """Tessellate STEP to a durable temp STL using document repair settings."""
+        from ..importers import tessellate_step
+        fd, stl = tempfile.mkstemp(suffix='.stl', prefix='voxelmill-step-')
+        os.close(fd)
+        stl_path = Path(stl)
+        try:
+            tessellate_step(path, self.document.settings, stl_path,
+                            preferred=self._freecad_preferred())
+        except VoxelMillError as error:
+            try:
+                stl_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+            self._report_error(error.to_dict(), 'import STEP')
+            return None
+        return stl_path
+
+    def import_step(self, path):
+        stl_path = self._tessellate_step_to_temp(path)
+        if stl_path is None:
+            return None
+        self.open_stl(stl_path)
+        return stl_path
 
     def open_project_dialog(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open project', '', 'VoxelMill (*.voxmil)')
