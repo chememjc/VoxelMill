@@ -13,7 +13,10 @@ mask across distinct physical cores, fastest class first, instead.
 from contextlib import contextmanager
 from pathlib import Path
 import os
-import resource
+try:
+    import resource
+except ImportError:
+    resource=None
 from .contracts import VoxelMillError
 from .topology import select_cpus
 
@@ -21,23 +24,27 @@ from .topology import select_cpus
 def execution_limits(budget, *, hard_memory=True):
     from threadpoolctl import threadpool_limits
     affinity={}
-    old_limit=resource.getrlimit(resource.RLIMIT_AS)
+    rlimit_as=getattr(resource,'RLIMIT_AS',None) if resource is not None else None
+    old_limit=None
     native_limit=None
     try:
         if hasattr(os,'sched_setaffinity'):
-            cpus=list(select_cpus(budget.workers,policy=budget.worker_policy))
-            for entry in Path('/proc/self/task').iterdir():
-                try:
-                    tid=int(entry.name)
-                    affinity[tid]=os.sched_getaffinity(tid)
-                    os.sched_setaffinity(tid,cpus)
-                except ProcessLookupError:
-                    continue
-        if hard_memory:
+            tasks=Path('/proc/self/task')
+            if tasks.is_dir():
+                cpus=list(select_cpus(budget.workers,policy=budget.worker_policy))
+                for entry in tasks.iterdir():
+                    try:
+                        tid=int(entry.name)
+                        affinity[tid]=os.sched_getaffinity(tid)
+                        os.sched_setaffinity(tid,cpus)
+                    except ProcessLookupError:
+                        continue
+        if hard_memory and rlimit_as is not None:
+            old_limit=resource.getrlimit(rlimit_as)
             limit=int(budget.memory_gib*1024**3)
             if old_limit[1]!=resource.RLIM_INFINITY:
                 limit=min(limit,old_limit[1])
-            resource.setrlimit(resource.RLIMIT_AS,(limit,old_limit[1]))
+            resource.setrlimit(rlimit_as,(limit,old_limit[1]))
         from . import _native
         if hasattr(_native,'WorkerLimit'):
             native_limit=_native.WorkerLimit(budget.workers)
@@ -47,7 +54,8 @@ def execution_limits(budget, *, hard_memory=True):
         raise VoxelMillError('memory_budget','Operation exhausted the configured address-space memory ceiling') from exc
     finally:
         native_limit=None
-        resource.setrlimit(resource.RLIMIT_AS,old_limit)
+        if old_limit is not None:
+            resource.setrlimit(rlimit_as,old_limit)
         for tid,cpus in affinity.items():
             try:os.sched_setaffinity(tid,cpus)
             except ProcessLookupError:pass

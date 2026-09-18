@@ -8,47 +8,10 @@ lessons go in `gotchas.md`.
 
 Headline after S2+S3 is **2.32 s / 350 MB** (was 73.7 s / 636 MB). Stop before tagging.
 
-- [x] T. `--timing` (`6c8079b`). Bracket 3.30 s: island_guard 37.5 %,
-      reslice 29.8 %, drainage 22.9 %, supports 8.2 %.
-- [-] S1. Persist Rasterizer Z-interval. **Skip:** ctor is 0.003 s; per-layer
-      scan conversion dominates. `reset()` already keeps the sorted index.
-- [x] S2. `slice_into` OR into one panel (`798f6c7`). island_guard 1.24 → 0.83 s.
-- [x] S3. Native 3D EDT (`e726252`). Drainage 0.75 → 0.24 s, bit-identical.
-- [-] S4. Reslice leftovers: extract_runs 0.28 s and growth 0.16 s on the
-      default-worker critical path. CCL/merge/peel under 0.15 s. Left as
-      optional; not required for the tag decision.
-- [-] S5. Hollow / KD-tree. Bracket never hollows or retries. hollow_cup
-      was already 1.7 s before S2/S3.
-- [x] Tests for untrapped fixtures (`f45827b`).
-- [x] Item 5 closed as will-not-do (different solids).
-- [x] P1. CLI-only AppImage staged and packed; `extract_runs` present;
-      `scripts/make_appimage.sh`.
-- [x] P2. `platforms.md`.
-- [x] MIT: source stays MIT; RLE/EDT are original; AppImage binary duties
-      unchanged (LGPL Qt GUI-only, CUDA EULA only if nvcc).
-- [x] Docs sweep (`4e5cdbc`). **Do not tag v0.2.0** — user decision.
-
-- [x] Rebuild `_native` with `native/runs.cpp` via `scripts/rebuild.sh -j2`.
-      DONE (`b43a452`).
-- [x] Kernel tests in `tests/test_runs.py`: every bind_runs symbol against
-      scipy/numpy on random fields and real-shaped panels. Load-bearing:
-      `run_ccl` numbering == `ndi.label`; `run_pairs` union-key sequence
-      including 64-row cross-chunk duplicates. DONE: 15 passed.
-- [x] Wire the kernels through `validation.py` internals as **one** coherent
-      change. Dense path is the fallback below `RUN_DENSITY_FLOOR` (6 px/run)
-      and when `VOXELMILL_NATIVE_RUNS=0`. `Layer.mask` and `analyze_layers`
-      signature unchanged. `VoidForest.add` stays dense for `supports.py`.
-- [x] `test_merge_union_sequence_matches_reference` stays green — union
-      call sequence including cross-chunk duplicates is the result.
-- [x] Equivalence vs `/home3/noisecancelingcodex`. Golden-only: all 13
-      recorded shapes match. Live old-vs-new: cube, pin_array,
-      overhang_bracket, torus, open_box match on inspect/prepare/prepared.stl
-      /slice (STL + GOO). Invalid fixtures have no goldens, so golden-only
-      reports them as missing rather than as content diffs.
-- [x] Re-measure `prepare fixtures/shapes/overhang_bracket.stl --max-passes 1
-      --allow-unresolved`: **3.45 s / 545 MB**, trapped volume still
-      `2.0886070650760757e-15`.
-- [x] Kernels+tests committed as `b43a452`. Integration follows.
+- [x] Sanitize public tree (no machine-absolute paths; vestigial C-CLI work cancelled).
+- [ ] Linux suite green.
+- [ ] AppImage 0.3.0.
+- [ ] Actions 0.4.0.
 
 ## Headline number
 
@@ -175,7 +138,7 @@ shape that actually retries or hollows before spending effort on them.
 
 ## Phase 0 — fork, baseline, ledgers
 
-- [x] Fork the committed v0.1.0 tree to `/home3/voxelmill`, `git init`.
+- [x] Fork the committed v0.1.0 tree to this repo root, `git init`.
 - [x] Link `inputstl/` to the immutable originals (gitignored).
 - [x] Build venv and native module for the new tree.
 - [x] Version 0.1.0 -> 0.2.0 in `pyproject.toml` and `src/voxelmill/__init__.py`.
@@ -417,47 +380,15 @@ Run `scripts/equivalence.py` after each item. Commit each item separately.
 
 ## Phase 3 — extract `libvoxelmill_core` (C++17 + C ABI)
 
-- [ ] CMake restructure: logic into `libvoxelmill_core`, `_native` becomes
-      bindings only, add a `voxelmill` executable target.
-- [ ] Vendor Manifold's C++ library via `FetchContent`, pinned to match the
-      `manifold3d==3.3.2` wheel. Highest-risk item: ~38 call sites depend on it
-      and only the Python wheel exists on this machine. Do not reimplement CSG.
-- [ ] Port stages behind `VOXELMILL_NATIVE_<STAGE>=0/1` env switches so both
-      paths can be A/B'd in one build. Replace in order: `ndimage.label` ->
-      native CCL; `distance_transform_edt` -> Felzenszwalb-Huttenlocher EDT;
-      `cKDTree` -> native KD-tree; `ConvexHull`/`Delaunay` -> Qhull;
-      `csgraph.connected_components` -> adjacency-list CCL.
-- [ ] Remove each switch once its native path has been green for a full run.
+- [-] Cancelled: `libvoxelmill_core` extraction not pursued for the packaging plan.
 
 ## Phase 4 — standalone native CLI
 
-- [ ] `vm_cli_main(argc, argv)` in the core; the binary is a one-line `main`,
-      and `voxelmill.cli:main` becomes a thin binding onto the same symbol so
-      the 29 in-process test files keep working unchanged.
-- [ ] Option table (~40 shared flags, 27 subcommands, ~150-180 flags total),
-      `--set section.key=value` merge, config/profile precedence and provenance,
-      TOML reader, JSON writer preserving `allow_nan=False` and key order,
-      `.voxmil` ZIP with `project.py`'s bomb/member-count preflight checks.
-- [ ] Completions and man pages from a static option table; output must stay
-      byte-identical (`tests/test_shellhelp.py` runs a real subprocess).
-- [ ] Point `gui/operations.py:210` at the binary instead of
-      `sys.executable -m voxelmill.cli`.
+- [-] Cancelled: `vm_cli_main` / standalone C CLI not pursued.
 
 ## Phase 5 — optional CUDA
 
-Re-profile first; phases 2-3 reshape the distribution. Every path opt-in via the
-existing `--acceleration auto|cpu|cuda` contract, identical results to CPU, and
-the build and tests must pass with no GPU and no CUDA compiler.
-
-- [ ] Per-layer connected-component labeling on GPU (best fit; batches across
-      layers).
-- [ ] Batched EDT (PBA+).
-- [ ] Make `native/cuda_morphology.cu` separable and shared-memory aware; it is
-      currently one thread per pixel with a brute-force footprint scan.
-- [ ] Share one device-resident batched-layer buffer between the CCL and EDT
-      kernels so PCIe transfer does not eat the win.
-- [ ] Probably skip: GPU rasterization (1.5 % of runtime), GPU orientation
-      search (not the bottleneck).
+- [-] Cancelled: CUDA kernels / GPU path not pursued for the packaging plan.
 
 ## Phase 6 — bracing flags, docs, release
 

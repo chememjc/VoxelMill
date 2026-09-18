@@ -16,6 +16,7 @@ from voxelmill.mesh import open_stl, inspect_mesh, write_stl
 
 
 def _freecad_or_skip():
+    """Skip when FreeCAD is not configured (CI without VOXELMILL_FREECAD/PATH)."""
     try:
         return resolve_freecad()
     except VoxelMillError as exc:
@@ -27,10 +28,10 @@ def _settings(**repair):
     return resolve_settings(None, None, overrides)
 
 
-def test_resolve_freecad_prefers_113():
+def test_resolve_freecad_finds_engine():
     engine = _freecad_or_skip()
     assert engine.is_file()
-    assert 'FreeCAD' in engine.name
+    assert 'FreeCAD' in engine.name or 'freecad' in engine.name.lower()
 
 
 def test_tessellate_box_step(tmp_path):

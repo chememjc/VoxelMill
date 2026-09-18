@@ -801,12 +801,11 @@ auto-calibration (22, needs measured prints).
 tessellate STEP into a mesh, behind an importer interface so a native reader
 (gmsh or OCP) can replace it without touching callers.
 
-**Use FreeCAD 1.1.3** — `/home3/freecad/FreeCAD_1.1.3-Linux-x86_64-py311.AppImage`
-— rather than 1.1.1, unless the tessellation API differs materially, in which
-case pin whichever works and record why in `gotchas.md`. Both are present on
-this machine (1.1.1, 1.1.3 and a `FreeCAD.AppImage` symlink), so a compatibility
-check is cheap: tessellate one STEP with each and compare triangle counts and
-bounds.
+**Use FreeCAD 1.1.3** — point `VOXELMILL_FREECAD` at a 1.1.3 AppImage, or put
+`freecad` / `FreeCAD` / `freecadcmd` on PATH — rather than 1.1.1, unless the
+tessellation API differs materially, in which case pin whichever works and
+record why in `gotchas.md`. A compatibility check is cheap: tessellate one
+STEP with each candidate and compare triangle counts and bounds.
 
 The `freecad-headless` skill on this machine documents the CLI's silent-failure
 traps and **must be read before writing that code**. Expose tessellation

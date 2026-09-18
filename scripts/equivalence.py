@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Behavioral-equivalence gate between VoxelMill v0.1.0 and v0.2.0.
 
-The rewrite at /home3/voxelmill (v0.2.0) is meant to behave identically to
-the tree it replaces, /home3/noisecancelingcodex (v0.1.0), for the pipeline
-commands that matter: inspect, prepare, and slice. This script drives both
-trees with the SAME arguments on the SAME fixture shapes and diffs what came
-out -- the JSON reports structurally (after stripping fields that are
-expected to vary run to run, like wall-clock seconds) and the binary
-`.goo`/`.stl` outputs by content.
+The rewrite in this repo (v0.2.0) is meant to behave identically to the
+v0.1.0 tree it replaces, for the pipeline commands that matter: inspect,
+prepare, and slice. This script drives both trees with the SAME arguments on
+the SAME fixture shapes and diffs what came out -- the JSON reports
+structurally (after stripping fields that are expected to vary run to run,
+like wall-clock seconds) and the binary `.goo`/`.stl` outputs by content.
 
     .venv/bin/python scripts/equivalence.py
+    .venv/bin/python scripts/equivalence.py --old-root /path/to/v0.1.0
     .venv/bin/python scripts/equivalence.py --scenario sphere --scenario torus -v
     .venv/bin/python scripts/equivalence.py --update-golden
 
@@ -17,7 +17,7 @@ Each shape in fixtures/shapes/*.stl is one scenario. A scenario runs
 inspect -> prepare -> slice as three subprocesses per side (old and new),
 each invoked as `<root>/.venv/bin/python -m voxelmill.cli ...` with the
 tree's own venv and cwd, so neither side can accidentally import the other's
-code. When old-root is unavailable (e.g. it has since been deleted) the
+code. When ``--old-root`` is omitted or the old tree is unavailable, the
 `--update-golden` / golden-comparison path lets the new tree keep guarding
 its own regressions: a golden set of normalized reports is checked in once
 under old-vs-new agreement, and every later run is compared against it.
@@ -38,8 +38,9 @@ import subprocess
 import sys
 import tempfile
 
-DEFAULT_OLD_ROOT = Path('/home3/noisecancelingcodex')
-DEFAULT_NEW_ROOT = Path('/home3/voxelmill')
+# Optional: pass --old-root to enable live old-vs-new. Default is golden-only.
+DEFAULT_OLD_ROOT = None
+DEFAULT_NEW_ROOT = Path(__file__).resolve().parents[1]
 
 #: Keys that are expected to differ between otherwise-identical runs because
 #: they measure the run itself (wall time, memory, worker count) rather than
@@ -630,9 +631,10 @@ def parse_args(argv):
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--old-root', type=Path, default=DEFAULT_OLD_ROOT,
-                        help='v0.1.0 tree (default: %(default)s)')
+                        help='v0.1.0 tree for live old-vs-new compare '
+                             '(optional; omit for golden-only)')
     parser.add_argument('--new-root', type=Path, default=DEFAULT_NEW_ROOT,
-                        help='v0.2.0 tree (default: %(default)s)')
+                        help='v0.2.0 tree (default: repository root)')
     parser.add_argument('--scenario', action='append', dest='scenarios',
                         help='shape name (no extension) to run; repeatable. Default: every '
                              'fixtures/shapes/*.stl under new-root')
@@ -656,7 +658,10 @@ def _run_scenario_worker(args):
 
 def main(argv=None):
     args = parse_args(argv)
-    old_root, new_root = args.old_root.resolve(), args.new_root.resolve()
+    new_root = args.new_root.resolve()
+    # Sentinel path that does not exist: evaluate_scenario falls back to golden-only.
+    old_root = (args.old_root.resolve() if args.old_root is not None
+                else new_root / '.voxelmill-no-old-root')
     golden_dir = (args.golden or (new_root / 'reports' / 'golden')).resolve()
 
     if not (new_root / 'fixtures' / 'shapes').is_dir():
@@ -664,7 +669,9 @@ def main(argv=None):
         return 2
     if not args.update_golden and not old_root.exists():
         if not golden_dir_has_content(golden_dir):
-            print(f'error: old root {old_root} does not exist and golden dir {golden_dir} is empty; '
+            where = (str(args.old_root) if args.old_root is not None
+                     else '(not set; pass --old-root for live compare)')
+            print(f'error: old root {where} does not exist and golden dir {golden_dir} is empty; '
                   'nothing to compare against', file=sys.stderr)
             return 2
 

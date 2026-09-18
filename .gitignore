@@ -36,6 +36,9 @@ output/
 *~
 .DS_Store
 
+# Local / machine-specific bench dumps (fixture paths are absolute)
+reports/bench/
+
 # Local scratch
 deleteme.*
 *.backup

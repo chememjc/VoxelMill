@@ -11,46 +11,83 @@ import json
 import math
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import threading
 import time
-from typing import Any
+from typing import Any, Iterable
 
 import numpy as np
 
 from .contracts import Canceled, CancellationToken, VoxelMillError
 
-# Prefer the pinned 1.1.3 AppImage; fall back to the machine symlink.
-FREECAD_CANDIDATES = (
-    Path('/home3/freecad/FreeCAD_1.1.3-Linux-x86_64-py311.AppImage'),
-    Path('/home3/freecad/FreeCAD.AppImage'),
-)
 ANGULAR_DEFLECTION_DEG = 15.0
 REPORT_PREFIX = 'VOXELMILL_STEP_REPORT '
+_PATH_NAMES = ('freecad', 'FreeCAD', 'freecadcmd')
+_APPIMAGE_GLOBS = ('tools/FreeCAD*.AppImage', 'FreeCAD*.AppImage')
 
 
 def helper_script() -> Path:
     return Path(__file__).resolve().parent / 'data' / 'step_tessellate.py'
 
 
+def _repo_root() -> Path:
+    # src/voxelmill/importers.py → parents[2] is the repository root.
+    return Path(__file__).resolve().parents[2]
+
+
+def _is_executable(path: Path) -> bool:
+    return path.is_file() and os.access(path, os.X_OK)
+
+
+def _appimages_under(root: Path) -> Iterable[Path]:
+    for pattern in _APPIMAGE_GLOBS:
+        yield from sorted(root.glob(pattern))
+
+
 def resolve_freecad() -> Path:
-    """Return an executable FreeCAD AppImage, or raise ``VoxelMillError('step_import')``."""
+    """Return an executable FreeCAD binary, or raise ``VoxelMillError('step_import')``.
+
+    Search order: ``VOXELMILL_FREECAD`` / ``FREECAD``, then PATH
+    (``freecad`` / ``FreeCAD`` / ``freecadcmd``), then ``tools/FreeCAD*.AppImage``
+    and ``FreeCAD*.AppImage`` under the repo root and cwd, then
+    ``~/FreeCAD*.AppImage``.
+    """
     for key in ('VOXELMILL_FREECAD', 'FREECAD'):
         raw = os.environ.get(key)
         if raw:
             path = Path(raw).expanduser()
-            if path.is_file() and os.access(path, os.X_OK):
+            if _is_executable(path):
                 return path.resolve()
-            raise VoxelMillError('step_import',
-                            f'{key}={raw!r} is not an executable FreeCAD AppImage')
-    for candidate in FREECAD_CANDIDATES:
-        if candidate.is_file() and os.access(candidate, os.X_OK):
+            raise VoxelMillError(
+                'step_import',
+                f'{key}={raw!r} is not an executable FreeCAD binary',
+            )
+
+    for name in _PATH_NAMES:
+        found = shutil.which(name)
+        if found:
+            path = Path(found)
+            if _is_executable(path):
+                return path.resolve()
+
+    searched: list[str] = []
+    for root in (_repo_root(), Path.cwd()):
+        for candidate in _appimages_under(root):
+            searched.append(str(candidate))
+            if _is_executable(candidate):
+                return candidate.resolve()
+
+    for candidate in sorted(Path.home().glob('FreeCAD*.AppImage')):
+        searched.append(str(candidate))
+        if _is_executable(candidate):
             return candidate.resolve()
+
     raise VoxelMillError(
         'step_import',
-        'FreeCAD AppImage not found; install 1.1.3 at '
-        f'{FREECAD_CANDIDATES[0]} or set VOXELMILL_FREECAD',
-        {'candidates': [str(p) for p in FREECAD_CANDIDATES]},
+        'FreeCAD not found; set VOXELMILL_FREECAD to an executable or put '
+        'freecad, FreeCAD, or freecadcmd on PATH',
+        {'searched': searched},
     )
 
 

@@ -848,17 +848,17 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   millimetre positions only when the caller supplies the assembly AABB; without
   it those examples cannot be placed in 2D or 3D.
 
-- **STEP import shells out to FreeCAD 1.1.3, not the system Python.** Prefer
-  `/home3/freecad/FreeCAD_1.1.3-Linux-x86_64-py311.AppImage` (resolved first by
-  `voxelmill.importers.resolve_freecad`); fall back to
-  `/home3/freecad/FreeCAD.AppImage` (symlink to 1.1.3 on this machine). Override
-  with `VOXELMILL_FREECAD` or `FREECAD`. Tessellation API matches 1.1.1 on a
-  10×20×30 mm box (12 triangles, identical bounds), so 1.1.3 is pinned for N5
-  as planned. Headless traps still apply: close stdin, pass args via
-  `FC_SCRIPT_ARGS` (0x1F-joined), no `if __name__ == "__main__"` in the `-c`
-  helper, `os._exit` instead of `sys.exit`, and log through both
-  `FreeCAD.Console` and `print`. The helper can run twice per launch — treat
-  writes as idempotent and take the last `VOXELMILL_STEP_REPORT` line.
+- **STEP import shells out to FreeCAD, not the system Python.** Resolve via
+  `VOXELMILL_FREECAD` / `FREECAD`, then PATH (`freecad`, `FreeCAD`,
+  `freecadcmd`), then `tools/FreeCAD*.AppImage` / `FreeCAD*.AppImage` under
+  the repo root or cwd, then `~/FreeCAD*.AppImage`. Prefer FreeCAD 1.1.3 when
+  choosing an AppImage. Tessellation API matches 1.1.1 on a 10×20×30 mm box
+  (12 triangles, identical bounds), so 1.1.3 is the N5 pin. Headless traps
+  still apply: close stdin, pass args via `FC_SCRIPT_ARGS` (0x1F-joined), no
+  `if __name__ == "__main__"` in the `-c` helper, `os._exit` instead of
+  `sys.exit`, and log through both `FreeCAD.Console` and `print`. The helper
+  can run twice per launch — treat writes as idempotent and take the last
+  `VOXELMILL_STEP_REPORT` line.
 
 - **A package rename is not done until the editable install is rebuilt.**
   Renaming `src/chopchop` to `src/voxelmill` leaves a stale

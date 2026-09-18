@@ -518,7 +518,7 @@ against the reference file, because the file does not exercise them:
 
 ## Verification against the reference file
 
-Decoder/verifier: `/home3/noisecancelingcodex/scripts/goo_probe.py` (no
+Decoder/verifier: `scripts/goo_probe.py` in the v0.1.0 tree (and this repo; no
 third-party dependencies; uses numpy only when present, for statistics). It
 parses every header field, walks the whole layer chain checking all 3664
 delimiters and the chain-to-footer arithmetic, and fully decodes the first three
