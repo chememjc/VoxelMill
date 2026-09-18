@@ -1383,6 +1383,13 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   help and exited. `_desktop_argv` in `cli.main` now matches AppRun when
   PySide6 is importable.
 
+- **A Mac `.app` with PyInstaller `console=True` is `LSBackgroundOnly`.**
+  Finder `open` then starts a process (`ApplicationType=BackgroundOnly`) and
+  never shows a window, even after argv is rewritten to `gui`. Terminal
+  `Contents/MacOS/VoxelMill gui` can still pop Qt dialogs. Build the Mac EXE
+  with `console=False` and set `LSBackgroundOnly=False` in the bundle plist.
+  Windows stays `console=True` so the zip CLI prints.
+
 - **Do not strip `numpy/_core/tests` out of the AppImage.** A blanket
   `tests` ignore on `copytree` dropped `numpy._core.tests`. NumPy 2.2's
   `numpy.testing` imports `numpy._core.tests._natype`, and scipy's

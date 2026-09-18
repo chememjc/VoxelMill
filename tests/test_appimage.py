@@ -89,6 +89,15 @@ def test_apprun_opens_gui_only_when_pyside_is_bundled():
     assert 'Terminal=false' in desktop
 
 
+def test_pyinstaller_mac_bundle_is_not_background_only():
+    text = (ROOT / 'packaging' / 'pyinstaller.spec').read_text()
+    # console=True makes PyInstaller set LSBackgroundOnly; Finder then starts
+    # a process and never shows a window.
+    assert "console=sys.platform != 'darwin'" in text
+    assert "'LSBackgroundOnly': False" in text
+    assert 'NSPrincipalClass' in text
+
+
 def test_site_copy_keeps_numpy_core_tests():
     import importlib.util
     spec = importlib.util.spec_from_file_location('build_appimage', BUILDER)

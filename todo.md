@@ -12,8 +12,8 @@ Headline **2.32 s / 350 MB**. Stay on `master`; no release branch until a later 
 - [x] Linux suite: 744+326 passed; golden 13/13.
 - [x] FreeCAD path in editor.json; Import STEP disabled until found.
 - [x] AppImage 0.3.0 (`output/appimage/VoxelMill-x86_64.AppImage`, 406 MiB, CUDA off).
-- [ ] GitHub Actions green for Linux AppImage + Mac DMGs + Windows zip (`workflow_dispatch`, then tag `v5.0.0`).
-- [ ] Smoke the Intel DMG on `imac` (download artifact; do not compile there).
+- [~] GitHub Actions: 687b32a run 35346577026 green; Linux AppImage + Intel CLI/empty-argv smoked. Mac Finder still needs a non-background bundle (`console=False`). Rebuild after that spec fix.
+- [~] Smoke Intel DMG on iMac: 687b32a `--version`/`prepare`/empty-argv process OK; Info.plist was `LSBackgroundOnly=true` so Finder has no window. Retest after the console=False rebuild.
 - [x] macOS GUI: resolve `FreeCAD.app` to `Contents/MacOS/FreeCADCmd`; show the window before VTK start / Locate prompt (otherwise the prompt is the last thing that appears).
 - [x] Double-click / empty argv on PyInstaller Mac+Windows rewrites to `gui` (AppRun already did this on Linux).
 - [ ] Alpha GitHub Release `v5.0.0` with binaries and install notes. **Do not tag until the post-FreeCAD-bundle artifacts are smoke-tested.** Confirm tag name (`v5.0.0` vs `v0.5.0`) with the user.

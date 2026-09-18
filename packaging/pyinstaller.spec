@@ -148,6 +148,10 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
+# Windows needs a console so `VoxelMill.exe prepare` prints. macOS .app with
+# console=True sets LSBackgroundOnly, so Finder launch never shows a window.
+# CLI from Terminal still writes stdout with console=False. argv_emulation
+# turns a dropped file into sys.argv so `_desktop_argv` can open the editor.
 exe = EXE(
     pyz,
     a.scripts,
@@ -158,9 +162,9 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=True,
+    console=sys.platform != 'darwin',
     disable_windowed_traceback=False,
-    argv_emulation=False,
+    argv_emulation=sys.platform == 'darwin',
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
@@ -186,5 +190,7 @@ if sys.platform == 'darwin':
             'CFBundleDisplayName': 'VoxelMill',
             'CFBundleShortVersionString': _VERSION,
             'NSHighResolutionCapable': True,
+            'LSBackgroundOnly': False,
+            'NSPrincipalClass': 'NSApplication',
         },
     )
