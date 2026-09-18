@@ -1356,3 +1356,13 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   label array. Leaving `add` on dense components while `analyze_layers`
   stays in run space is deliberate. Scattering at `add`'s return would also
   work, but changing the return shape would not.
+
+- **STEP is the only FreeCAD consumer.** Missing FreeCAD must not block STL,
+  Prepare, or slice. The path lives in editor.json (`freecad_path`), with
+  `VOXELMILL_FREECAD` winning for CI. The first-run Locate prompt is skipped
+  when headless, `VOXELMILL_NO_WIZARD`, or stdin is not a TTY.
+
+- **Mac packages from Actions are thin, not universal2.** VTK and PySide6
+  wheels are one arch each. Unsigned `.app` will Gatekeeper-warn; users run
+  `xattr -dr com.apple.quarantine` on the app. Do not compile on the iMac;
+  download the Intel DMG artifact if you want to smoke-test.
