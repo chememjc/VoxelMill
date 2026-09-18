@@ -12,9 +12,9 @@ to `/usr/bin/python3`. The stager therefore copies CPython, the stdlib,
 VoxelMill, and the runtime site-packages into `AppDir/usr`. `AppRun` sets
 `PYTHONHOME` and `PYTHONNOUSERSITE` so a host venv cannot leak in.
 
-Linux x86_64 AppImage is the only ship vehicle for v0.2.0. macOS (x86_64 and
-arm64) and Windows requirements are analysis-only in
-[`../platforms.md`](../platforms.md); this page does not add other packagers.
+Linux x86_64 AppImage is the v0.3.0 ship vehicle. macOS and Windows
+drag-and-drop packages are built on GitHub Actions (see
+[`../platforms.md`](../platforms.md)).
 
 ### Icons
 
