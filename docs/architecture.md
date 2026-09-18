@@ -2,7 +2,7 @@
 
 ## Overview
 
-VoxelMill is a Linux single-part resin 3D-print preparation tool that transforms STL meshes into evidence-driven sliced output. Python orchestrates the pipeline, calling pybind11-bound C++ for expensive geometry and raster operations, optional PySide6+VTK GUI renders a viewport and layer view, and the primary product is a JSON-structured validation report documenting placement, support routing, and resliced closure. Every exported file is independently re-opened and validated at printer pitch to prove the written geometry rather than the in-memory solid.
+VoxelMill is a Linux single-part resin 3D-print preparation tool that transforms STL meshes into evidence-driven sliced output. Python orchestrates the pipeline (CLI and optional PySide6+VTK GUI), calling pybind11-bound C++ in `voxelmill._native` for expensive geometry and raster operations. A standalone C CLI was measured and cancelled: it would duplicate argument parsing, settings resolution and report contracts without shrinking the remaining Python surface. The primary product is a JSON-structured validation report documenting placement, support routing, and resliced closure. Every exported file is independently re-opened and validated at printer pitch to prove the written geometry rather than the in-memory solid.
 
 ## File Layout
 
@@ -39,6 +39,7 @@ VoxelMill is a Linux single-part resin 3D-print preparation tool that transforms
 | `src/voxelmill/gui/appprefs.py` | Editor-only preferences that change nothing about the output — the rotation snap increment, the arrow-key translate step, motion mode (relative/absolute), and the remembered window geometry/dock layout — persisted to `~/.config/voxelmill/editor.json`, never to a printer profile or a `.voxmil` project |
 | `native/mesh.cpp` | Exact-coordinate topology: triangle welding, edge manifold inspection |
 | `native/raster.cpp` | Pixel-center even/odd and nonzero scan conversion with winding-rule tolerance |
+| `native/runs.cpp` | Row-RLE occupancy kernels (`extract_runs`, CCL, overlap, border) used inside validation |
 | `native/intersections.cpp` | Exact-predicate self-intersection detection over a BVH broad phase |
 | `native/voxel.cpp` | Occupancy grid, well-composedness repair, surface extraction |
 | `native/distance.cpp` | Adaptive triangle covering and nearest-surface distance verification |
@@ -58,7 +59,7 @@ The `voxelmill prepare` command follows this sequence:
 7. **Reslice**: On the raster path, `RasterParity` compares fresh grouped occupancy with the reopened carrier on its exact grid. `pipeline._reslice()` reopens that staged STL and validates it independently — `validation.analyze_layers()` for layer connectivity and island births, `validation.analyze_drainage()` for void escape — so the checks run against the written bytes rather than the in-memory solid.
 8. **Correction**: When automatic contacts are enabled, `island_guard.route_without_islands` (shared with the editor's Compute attachments) repeats steps 4 to 7: route, assemble, scan for islands, and if any are found, add contacts under them and route again — up to `max_passes` (`support.max_island_passes`, default 5) and stopping early on success or on no progress. See [algorithms.md](algorithms.md#island-correction-passes).
 9. **Publish**: Only a passing validation, or an explicit `--allow-unresolved`, copies the staged file to the destination with `atomic_copy`. Otherwise the geometry is withheld and `export.written` is `false` with the failed check names. **A failing run never overwrites or deletes an existing output file.**
-10. **Report**: The evidence JSON is written either way. The report is the product; the STL is the by-product.
+10. **Report**: The evidence JSON is written either way. The report is the product; the STL is the by-product. `prepare` always records a per-stage wall-time map in `report['timing']`; CLI `--timing` prints that table to stderr. Equivalence treats `timing` as volatile (alongside `seconds` and similar run-cost fields), so golden diffs stay geometry-focused.
 
 ## Python Modules
 
@@ -183,6 +184,12 @@ carries almost all the work and runs concurrently across layers; only the
 accumulators, the bounded diagnostics and the `VoidForest` union-find stay in
 order. Worker count comes from `resources.workers` (0 derives it) and is capped
 by `_layer_worker_cap` so the in-flight full-panel buffers fit the memory budget.
+
+Per-layer analysis may take a row-RLE path through `_native.extract_runs` and
+the other `runs.cpp` kernels when density clears `RUN_DENSITY_FLOOR` and
+`VOXELMILL_NATIVE_RUNS` is not off. That path is internal: `Layer.mask` stays a
+dense occupancy panel, and `VoidForest.add` still consumes dense empty-space
+labels for callers such as support routing.
 
 | Name | Parameters | Returns | Purpose |
 |------|-----------|---------|---------|
@@ -310,6 +317,7 @@ All functions are bound via pybind11 in `native/module.cpp` and called from Pyth
 | `verify_surface_deviation(original, repaired, tolerance_mm, callback=None)` | Original triangles (n,3,3), repaired triangles (m,3,3), tolerance float, optional callback | `dict` with `passed`, `status`, `certified_upper_bound_mm`, `sampled_lower_bound_mm`, `distance_queries`, `target_degenerate_triangles_skipped`, `method` | Bidirectional surface-distance check. A triangle's center distance plus its covering radius bounds every point on it, so `certified_upper_bound_mm` is a proof, not a sample. Failing to certify counts as failing. |
 | `goo_encode_layer(image)` | uint8 (height,width) image | `bytes` | GOO v3 layer blob with magic and checksum |
 | `goo_decode_layer(blob, width, height)` | GOO v3 blob bytes, width, height integers | uint8 (height,width) image | Decode layer; raises on checksum or framing error |
+| `extract_runs(mask, want=1, cap=RUN_TABLE_CAP)` | uint8 occupancy panel, want 0/1, optional cap | `(starts, ends, row_offsets)` | Row-RLE of a binary panel; raises when the run table would exceed the cap. Dense fallback is the caller's decision |
 | `WorkerLimit(n)` | Worker count (1–32) | Instance | TBB global parallelism limit (if compiled with VOXELMILL_TBB) |
 
 ## Where to Change What

@@ -2,6 +2,10 @@
 
 A staged Linux application for single-part resin-print preparation. Implementation status, evidence and remaining stage gates are tracked in [plan.md](plan.md).
 
+v0.2.0 keeps a Python CLI and optional GUI, with hot geometry and raster work in
+the C++ `_native` kernels. The Linux AppImage is the ship vehicle; macOS and
+Windows port analysis lives in [platforms.md](platforms.md).
+
 The editor's File menu includes dedicated **Printer**, **Resin**, and **Support**
 editors with portable configuration saves. The support editor renders an example
 attachment array as dimensions change. Part-to-part supports can be forbidden or
@@ -90,7 +94,8 @@ benchmark gate together:
 ```
 
 A relocatable AppImage (CLI or editor) is built by
-`scripts/build_appimage.py`; see [packaging.md](docs/packaging.md).
+`scripts/build_appimage.py` (or the thin wrapper `scripts/make_appimage.sh`);
+see [packaging.md](docs/packaging.md).
 
 This compares against `reports/bench/baseline.json` and writes the measurement to
 `output/benchmark-check.json`. `--samples` opts into full original fixtures and

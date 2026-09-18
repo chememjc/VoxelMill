@@ -4,11 +4,17 @@
 
 `scripts/build_appimage.py` stages a relocatable AppDir and, with
 `appimagetool`, packs `output/appimage/VoxelMill-x86_64.AppImage`.
+`scripts/make_appimage.sh` is a thin wrapper that picks the project venv
+Python when present and forwards every argument to `build_appimage.py`.
 
 The project virtualenv is not relocatable: `/.venv/bin/python3` is a symlink
 to `/usr/bin/python3`. The stager therefore copies CPython, the stdlib,
 VoxelMill, and the runtime site-packages into `AppDir/usr`. `AppRun` sets
 `PYTHONHOME` and `PYTHONNOUSERSITE` so a host venv cannot leak in.
+
+Linux x86_64 AppImage is the only ship vehicle for v0.2.0. macOS (x86_64 and
+arm64) and Windows requirements are analysis-only in
+[`../platforms.md`](../platforms.md); this page does not add other packagers.
 
 ### Icons
 
@@ -30,6 +36,8 @@ resolution while retaining the 256 px fallback.
 # Fast CLI-only image for tests and headless machines
 .venv/bin/python scripts/build_appimage.py --cli-only --stage-only \
   --appdir output/appimage/VoxelMill.AppDir
+# Same via the wrapper:
+# scripts/make_appimage.sh --cli-only --stage-only --appdir output/appimage/VoxelMill.AppDir
 
 # Full editor (includes PySide6 and VTK; ~406 MiB packed)
 curl -L -o packaging/appimage/appimagetool \
@@ -41,7 +49,9 @@ chmod +x packaging/appimage/appimagetool
 ```
 
 `--cli-only` omits VTK and PySide6. The editor then fails at import with a
-missing-module error rather than a missing system package.
+missing-module error rather than a missing system package. A CLI-only image
+was smoke-tested at v0.2.0 (`--version` reports `0.2.0`; the staged
+`voxelmill._native` exposes `extract_runs`).
 
 A full editor image (the default, without `--cli-only`) opens the GUI when
 double-clicked or when given a single existing file. `--help`, `prepare`,
@@ -54,6 +64,8 @@ bundled. Qt WebEngine and QML are omitted from the image.
 
 CUDA is not bundled. The image uses the CPU morphology fallback unless the
 host has a compatible driver and the native extension was built with CUDA.
+Release configures should leave `nvcc` out of the link line so the artifact
+does not carry the CUDA Toolkit EULA.
 
 A clean CMake reconfigure needs the venv pybind11:
 
