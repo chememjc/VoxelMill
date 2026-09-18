@@ -96,6 +96,32 @@ def _native_runs():
     return _native
 
 
+def _native_edt():
+    """3D Euclidean distance transform; None forces scipy.
+
+    `VOXELMILL_NATIVE_EDT=0` (also `false`/`off`) is the A/B kill-switch.
+    Distances match `ndi.distance_transform_edt` bit for bit when native is on.
+    """
+    flag = os.environ.get('VOXELMILL_NATIVE_EDT', '1').strip().lower()
+    if flag in _NATIVE_RUNS_OFF:
+        return None
+    try:
+        from . import _native
+    except ImportError:
+        return None
+    if not hasattr(_native, 'distance_transform_edt'):
+        return None
+    return _native
+
+
+def _distance_transform_edt(empty, sampling):
+    """Foreground-to-background Euclidean distance on a 3-D occupancy volume."""
+    native = _native_edt()
+    if native is not None:
+        return native.distance_transform_edt(np.ascontiguousarray(empty), sampling)
+    return ndi.distance_transform_edt(empty, sampling=sampling)
+
+
 def _extract_occupancy_runs(native, mask, *, require_density=True):
     """Row-RLE of a binary occupancy panel, or None to take the dense path.
 
@@ -863,10 +889,13 @@ def analyze_drainage(triangles, bounds, settings, *, budget=None, cancel=None, p
     budget.require(needed, 'drainage analysis volume')
     nx, ny, nz = (int(v) for v in dims)
     x0, y0, z0 = bounds[0] - 2 * pitch
+    mark = time.monotonic()
     raster = _native.Rasterizer(np.asarray(triangles), cancel.check)
+    t_rasterizer = time.monotonic() - mark
     occupancy = np.zeros((nz, ny, nx), dtype=bool)
     subsamples = max(1, int(round(pitch / min(settings['printer']['pixel_pitch_mm']) / 8)))
     unclosed_rows = unclosed_slices = 0
+    mark = time.monotonic()
     for k in range(nz):
         cancel.check()
         # Conservative decimation: any material in the cell marks the cell solid.
@@ -888,20 +917,27 @@ def analyze_drainage(triangles, bounds, settings, *, budget=None, cancel=None, p
             unclosed_slices += 1
         occupancy[k] = cell
         progress('drainage', k + 1, nz)
+    t_slice = time.monotonic() - mark
+    mark = time.monotonic()
     empty = ~occupancy
     empty[0] = empty[-1] = True
     empty[:, 0] = empty[:, -1] = True
     empty[:, :, 0] = empty[:, :, -1] = True
-    clearance = ndi.distance_transform_edt(empty, sampling=(pitch, pitch, pitch))
+    clearance = _distance_transform_edt(empty, (pitch, pitch, pitch))
+    t_edt = time.monotonic() - mark
+    mark = time.monotonic()
     result = drainage_clearance(empty, clearance, pitch, radius, cancel,
                                 float(settings['repair']['min_void_volume_mm3']))
+    t_clearance = time.monotonic() - mark
     result.update(status='complete', analysis_pitch_mm=pitch, analysis_grid=[nx, ny, nz],
                   min_orifice_area_mm2=area, clearance_radius_mm=radius,
                   z_subsamples_per_cell=subsamples,
                   unclosed_rows=unclosed_rows, unclosed_slices=unclosed_slices,
                   occupancy_closed=not unclosed_rows,
                   sampling='XY cell centers and Z subsamples; sub-grid walls may be missed',
-                  seconds=time.monotonic() - started)
+                  seconds=time.monotonic() - started,
+                  timing={'rasterizer': t_rasterizer, 'slice_loop': t_slice,
+                          'edt': t_edt, 'drainage_clearance': t_clearance})
     return result
 
 

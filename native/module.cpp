@@ -10,6 +10,7 @@ void bind_intersections(py::module_&);
 void bind_voxel(py::module_&);
 void bind_distance(py::module_&);
 void bind_runs(py::module_&);
+void bind_edt(py::module_&);
 void bind_goo(py::module_&);
 void bind_ctb(py::module_&);
 #ifdef VOXELMILL_CUDA
@@ -25,6 +26,7 @@ PYBIND11_MODULE(_native, m) {
  bind_ctb(m);
  bind_distance(m);
  bind_runs(m);
+ bind_edt(m);
 #ifdef VOXELMILL_CUDA
  bind_cuda(m);
 #endif

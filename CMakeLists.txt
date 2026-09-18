@@ -3,7 +3,7 @@ project(voxelmill LANGUAGES CXX)
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 # 3.0.1 caches a dangling Python thread state when first imported by Qt workers.
 find_package(pybind11 3.0.4 CONFIG REQUIRED)
-set(NATIVE_SOURCES native/module.cpp native/mesh.cpp native/raster.cpp native/voxel.cpp native/goo.cpp native/ctb.cpp native/distance.cpp native/runs.cpp)
+set(NATIVE_SOURCES native/module.cpp native/mesh.cpp native/raster.cpp native/voxel.cpp native/goo.cpp native/ctb.cpp native/distance.cpp native/runs.cpp native/edt.cpp)
 include(CheckLanguage)
 check_language(CUDA)
 if(CMAKE_CUDA_COMPILER)

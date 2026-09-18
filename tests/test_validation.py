@@ -593,6 +593,95 @@ def test_fixture_hollow_cup_fails_drainage_and_drained_cup_passes():
     assert drainage_check(open_) == 'pass'
 
 
+def _assert_edt_matches_scipy(mask, sampling):
+    from voxelmill import _native
+    mask = np.ascontiguousarray(mask)
+    got = _native.distance_transform_edt(mask, sampling)
+    ref = ndi.distance_transform_edt(mask, sampling=sampling)
+    np.testing.assert_array_equal(got, ref)
+
+
+def test_native_edt_matches_scipy_on_random_3d_fields():
+    """Felzenszwalb–Huttenlocher distances must equal scipy bit for bit."""
+    rng = np.random.default_rng(20260917)
+    pitch = 0.18806319451591877
+    for _ in range(24):
+        shape = tuple(int(rng.integers(1, 12)) for _ in range(3))
+        p = float(rng.choice([0.0, 0.1, 0.35, 0.7, 0.95, 1.0]))
+        mask = rng.random(shape) < p
+        _assert_edt_matches_scipy(mask, (1.0, 1.0, 1.0))
+        _assert_edt_matches_scipy(mask, (pitch, pitch, pitch))
+        _assert_edt_matches_scipy(mask, (0.1, 0.2, 0.3))
+    _assert_edt_matches_scipy(np.ones((4, 5, 6), bool), (1.0, 1.0, 1.0))
+    _assert_edt_matches_scipy(np.zeros((4, 5, 6), bool), (pitch, pitch, pitch))
+    single = np.ones((6, 7, 8), bool)
+    single[2, 3, 4] = False
+    _assert_edt_matches_scipy(single, (pitch, pitch, pitch))
+
+
+def _drainage_empty(triangles, bounds, settings, voxels_per_radius=3.0):
+    """The occupancy volume `analyze_drainage` feeds to the 3-D EDT."""
+    from voxelmill import _native
+    from voxelmill.contracts import CancellationToken
+    cancel = CancellationToken()
+    area = float(settings['repair']['min_orifice_area_mm2'])
+    radius = math.sqrt(area / math.pi)
+    pitch = radius / float(voxels_per_radius)
+    bounds = np.asarray(bounds, dtype=float)
+    dims = np.maximum(1, np.ceil((bounds[1] - bounds[0]) / pitch)).astype(int) + 4
+    nx, ny, nz = (int(v) for v in dims)
+    x0, y0, z0 = bounds[0] - 2 * pitch
+    raster = _native.Rasterizer(np.asarray(triangles), cancel.check)
+    occupancy = np.zeros((nz, ny, nx), dtype=bool)
+    subsamples = max(1, int(round(pitch / min(settings['printer']['pixel_pitch_mm']) / 8)))
+    for k in range(nz):
+        cell = np.zeros((ny, nx), dtype=bool)
+        for sub in range(subsamples):
+            z = z0 + (k + (sub + 0.5) / subsamples) * pitch
+            if z < bounds[0][2] or z > bounds[1][2]:
+                continue
+            sliced = raster.slice(float(z), nx, ny, float(x0), float(y0), pitch, pitch,
+                                  cancel.check, 'nonzero')
+            cell |= sliced['mask'] != 0
+        occupancy[k] = cell
+    empty = ~occupancy
+    empty[0] = empty[-1] = True
+    empty[:, 0] = empty[:, -1] = True
+    empty[:, :, 0] = empty[:, :, -1] = True
+    return empty, (pitch, pitch, pitch)
+
+
+def test_native_edt_matches_scipy_on_real_drainage_grids():
+    from pathlib import Path
+    from voxelmill.geometry import triangle_bounds
+    from voxelmill.mesh import open_stl
+    from voxelmill.validation import _native_edt
+    assert _native_edt() is not None
+    settings = resolve_settings()
+    triangles = hollow_box()
+    empty, sampling = _drainage_empty(triangles, triangle_bounds(triangles), settings)
+    _assert_edt_matches_scipy(empty, sampling)
+    root = Path(__file__).resolve().parents[1] / 'fixtures/shapes'
+    with open_stl(root / 'overhang_bracket.stl') as mesh:
+        triangles = np.asarray(mesh.triangles, dtype=np.float32).copy()
+        bounds = np.asarray(mesh.asset.bounds, dtype=float)
+    empty, sampling = _drainage_empty(triangles, bounds, settings)
+    _assert_edt_matches_scipy(empty, sampling)
+
+
+def test_native_edt_off_falls_back_to_scipy(monkeypatch):
+    from voxelmill.validation import _distance_transform_edt, _native_edt
+    rng = np.random.default_rng(7)
+    mask = rng.random((9, 8, 11)) < 0.4
+    mask[0] = False
+    sampling = (0.2, 0.2, 0.2)
+    monkeypatch.setenv('VOXELMILL_NATIVE_EDT', '0')
+    assert _native_edt() is None
+    got = _distance_transform_edt(mask, sampling)
+    ref = ndi.distance_transform_edt(mask, sampling=sampling)
+    np.testing.assert_array_equal(got, ref)
+
+
 def test_island_extent_matches_argwhere_and_bincount_on_a_random_label_field():
     """The two expressions `_island_extent` replaced, checked component by component."""
     from voxelmill.validation import CROSS, _island_extent
