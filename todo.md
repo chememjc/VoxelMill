@@ -6,21 +6,27 @@ lessons go in `gotchas.md`.
 
 ## Now
 
-Phase 2 item 2 (RLE internals) is done. Remaining, re-profile before picking:
+Headline after S2+S3 is **2.32 s / 350 MB** (was 73.7 s / 636 MB). Stop before tagging.
 
-- [ ] Re-profile `prepare overhang_bracket` now that validation is 0.93 s of
-      a 3.45 s run. The ~10 s floor argument is stale.
-- [ ] Phase 1 `--timing` flag (unrelated to `timing.py` print-time estimates).
-- [ ] Phase 2 items 6–9 only if the new profile says they matter:
-      Rasterizer Z-interval persistence, UnionLayerStream fold, hollow voxel
-      loops, support KD-tree cache. This fixture never hollows or retries.
-- [ ] Close or independently verify item 5 (do not share `_reslice` and
-      island-guard analyses). 5b is the third `analyze_layers` behind a
-      non-default policy.
-- [ ] Phase 3+ (`libvoxelmill_core`, standalone CLI, CUDA) need a rescope:
-      a standalone binary saves ~0.3 s against a 3.45 s run.
-- [ ] Phase 6: README / architecture / packaging for the core split; tag
-      v0.2.0. Bracing CLI flags already shipped.
+- [x] T. `--timing` (`6c8079b`). Bracket 3.30 s: island_guard 37.5 %,
+      reslice 29.8 %, drainage 22.9 %, supports 8.2 %.
+- [-] S1. Persist Rasterizer Z-interval. **Skip:** ctor is 0.003 s; per-layer
+      scan conversion dominates. `reset()` already keeps the sorted index.
+- [x] S2. `slice_into` OR into one panel (`798f6c7`). island_guard 1.24 → 0.83 s.
+- [x] S3. Native 3D EDT (`e726252`). Drainage 0.75 → 0.24 s, bit-identical.
+- [-] S4. Reslice leftovers: extract_runs 0.28 s and growth 0.16 s on the
+      default-worker critical path. CCL/merge/peel under 0.15 s. Left as
+      optional; not required for the tag decision.
+- [-] S5. Hollow / KD-tree. Bracket never hollows or retries. hollow_cup
+      was already 1.7 s before S2/S3.
+- [x] Tests for untrapped fixtures (`f45827b`).
+- [x] Item 5 closed as will-not-do (different solids).
+- [x] P1. CLI-only AppImage staged and packed; `extract_runs` present;
+      `scripts/make_appimage.sh`.
+- [x] P2. `platforms.md`.
+- [x] MIT: source stays MIT; RLE/EDT are original; AppImage binary duties
+      unchanged (LGPL Qt GUI-only, CUDA EULA only if nvcc).
+- [x] Docs sweep (`4e5cdbc`). **Do not tag v0.2.0** — user decision.
 
 - [x] Rebuild `_native` with `native/runs.cpp` via `scripts/rebuild.sh -j2`.
       DONE (`b43a452`).
@@ -61,6 +67,8 @@ Phase 2 item 2 (RLE internals) is done. Remaining, re-profile before picking:
 | + scatter dedup in `VoidForest.merge` | **18.3 s** | 780 MB | **4.02x vs v0.1.0**, 1.38x on top of the above
 | + island counts computed per diagnostic | **12.9 s** | 824 MB | **5.71x vs v0.1.0**, 1.43x on top of the above
 | + RLE per-layer analysis in `validation.py` | **3.45 s** | 545 MB | **21.4x vs v0.1.0**, 3.7x on top of 12.9 s; validation 0.93 s |
+| + UnionLayerStream `slice_into` OR | **2.84 s** | — | island_guard 1.24 → 0.83 s |
+| + native 3D EDT | **2.32 s** | 350 MB | **31.8x vs v0.1.0**; drainage 0.75 → 0.23 s |
 
 Record a new row after every Phase 2 item so the curve is visible.
 
