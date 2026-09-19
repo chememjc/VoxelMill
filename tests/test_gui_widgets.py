@@ -16,6 +16,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 from PySide6 import QtCore, QtGui, QtWidgets  # noqa: E402
 
 from voxelmill.contracts import Diagnostic  # noqa: E402
+from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor  # noqa: E402
+
 from voxelmill.gui.viewport import vtk_render_backend  # noqa: E402
 from voxelmill.gui.widgets import (  # noqa: E402
     ZClipSlider, install_focused_wheel_filter,
@@ -77,6 +79,15 @@ def test_z_clip_slider_emits_none_when_showing_all(application):
 
 def test_vtk_render_backend_is_native():
     assert vtk_render_backend() == 'native'
+
+
+def test_vtk_interactor_defers_cocoa_paint_event():
+    from voxelmill.gui.viewport import _VTKInteractor
+    assert _VTKInteractor.paintEvent is not QVTKRenderWindowInteractor.paintEvent
+    import inspect
+    source = inspect.getsource(_VTKInteractor.paintEvent)
+    assert "sys.platform != 'darwin'" in source
+    assert 'singleShot' in source
 
 
 def test_auto_island_scan_does_not_raise_the_report_tab(application):

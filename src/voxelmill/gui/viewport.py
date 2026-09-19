@@ -6,6 +6,8 @@ render interactively the viewport shows a strided preview and says so through
 """
 from __future__ import annotations
 
+import sys
+
 import numpy as np
 from PySide6 import QtCore, QtWidgets
 import vtkmodules.all as vtk
@@ -18,15 +20,40 @@ def vtk_render_backend():
     return 'native'
 
 
-def make_vtk_interactor(parent=None):
-    """Native QVTK widget. Do not switch Darwin to vtkGenericOpenGLRenderWindow:
+class _VTKInteractor(QVTKRenderWindowInteractor):
+    """QVTK widget that must not Render inside a Cocoa CATransaction.
 
-    5.0.1 Intel Finder-open crashed in ``vtkOpenGLState::Pop`` during
-    ``Initialize`` (OpenGL 3.2 reported as 0.0). The 5.0.0 hang was
-    ``vtkAnnotatedCubeActor`` FeatureEdges inside a Cocoa expose; that cube
-    is replaced below rather than changing the render window.
+    On Intel macOS 26, ``QVTKRenderWindowInteractor.paintEvent`` calls
+    ``Render()`` from ``-[_NSOpenGLViewBackingLayer display]`` during
+    ``CATransaction::commit``. That is a synchronous expose: 5.0.0 hung in
+    FeatureEdges there, and 5.0.1 still hung in ``vtkCocoaRenderWindow::Start``
+    after the annotated cube was removed. ``vtkGenericOpenGLRenderWindow``
+    crashed on the same machine. Deferring the VTK render until the event
+    loop is idle lets the transaction finish.
     """
-    return QVTKRenderWindowInteractor(parent)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._paint_queued = False
+
+    def paintEvent(self, ev):
+        if sys.platform != 'darwin':
+            return QVTKRenderWindowInteractor.paintEvent(self, ev)
+        if self._paint_queued:
+            return
+        self._paint_queued = True
+        QtCore.QTimer.singleShot(0, self._flush_deferred_paint)
+
+    def _flush_deferred_paint(self):
+        self._paint_queued = False
+        try:
+            self.Render()
+        except Exception:
+            pass
+
+
+def make_vtk_interactor(parent=None):
+    return _VTKInteractor(parent)
 
 from .camera import CameraController, FACE_VIEWS, HOME_VIEW as CAMERA_HOME
 from .gizmo import TransformGizmo

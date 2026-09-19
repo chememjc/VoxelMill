@@ -1403,16 +1403,17 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   `xattr -dr com.apple.quarantine` on the app. Do not compile on the iMac;
   download the Intel DMG artifact if you want to smoke-test.
 
-- **QVTK as a QWidget on macOS hangs the editor on first paint.** 5.0.0 Intel
-  on macOS 26 hung in `vtkCocoaRenderWindow::Render` → `vtkFeatureEdges`
-  (vtkAnnotatedCubeActor) during a synchronous Cocoa expose inside a
-  `CATransaction`. The window looked frozen with a ghosted Setup panel over
-  the 3D view and needed a force-quit. Switching Darwin to
-  `vtkGenericOpenGLRenderWindow` + `QOpenGLWidget` then *crashed* on the
-  same iMac (`vtkOpenGLState::Pop` null, OpenGL 3.2 reported as 0.0) both
-  from SSH and from Finder `open`. Keep the native Cocoa render window;
-  replace the annotated cube with `vtkCubeSource` (no FeatureEdges) and
-  install the marker after the first paint.
+- **QVTK paintEvent must not Render inside a Cocoa CATransaction.** 5.0.0
+  Intel hung in `vtkCocoaRenderWindow::Render` → `vtkFeatureEdges` during
+  `-[_NSOpenGLViewBackingLayer display]` / `handleExposeEvent
+  SynchronousDelivery`. Replacing the annotated cube was not enough: 5.0.1
+  still hung in `vtkCocoaRenderWindow::Start` on the same expose path
+  (sampled 100% of main thread for minutes; Apple Events never ran).
+  `vtkGenericOpenGLRenderWindow` crashed on that iMac (`vtkOpenGLState::Pop`
+  null, OpenGL 3.2 reported as 0.0) from Finder `open`. Keep the native
+  render window, skip FeatureEdges on the nav cube, and on Darwin defer
+  `paintEvent` → `Render()` with `QTimer.singleShot(0)` so the transaction
+  can finish.
 
 - **A hover-wheel over a spin box is an accidental edit.** Qt's default
   `WheelFocus` changes `QDoubleSpinBox`/`QComboBox` values while the user is
