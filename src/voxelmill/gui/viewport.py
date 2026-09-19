@@ -6,18 +6,8 @@ render interactively the viewport shows a strided preview and says so through
 """
 from __future__ import annotations
 
-import sys
-
 import numpy as np
 from PySide6 import QtCore, QtWidgets
-# QWidget + vtkCocoaRenderWindow paints from NSOpenGLView during a
-# CATransaction on macOS. vtkAnnotatedCubeActor's FeatureEdges then runs
-# inside that paint and the UI hangs (VoxelMill 5.0.0 Intel hang, force-quit).
-# Qt's OpenGL widget plus vtkGenericOpenGLRenderWindow renders through Qt
-# instead. Must be set before QVTKRenderWindowInteractor is imported.
-import vtkmodules.qt as _vtk_qt
-if sys.platform == 'darwin':
-    _vtk_qt.QVTKRWIBase = 'QOpenGLWidget'
 import vtkmodules.all as vtk
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtkmodules.util import numpy_support
@@ -25,26 +15,17 @@ from vtkmodules.util import numpy_support
 
 def vtk_render_backend():
     """Which VTK/Qt pairing this platform uses for the 3D view."""
-    return 'generic_opengl' if sys.platform == 'darwin' else 'native'
+    return 'native'
 
 
 def make_vtk_interactor(parent=None):
-    """Build the VTK interactor widget for this platform.
+    """Native QVTK widget. Do not switch Darwin to vtkGenericOpenGLRenderWindow:
 
-    macOS uses ``QOpenGLWidget`` + ``vtkGenericOpenGLRenderWindow`` so a
-    Cocoa expose cannot recurse into ``vtkCocoaRenderWindow::Render``. Other
-    platforms keep the native render window, which is the well-tested path
-    on Linux.
+    5.0.1 Intel Finder-open crashed in ``vtkOpenGLState::Pop`` during
+    ``Initialize`` (OpenGL 3.2 reported as 0.0). The 5.0.0 hang was
+    ``vtkAnnotatedCubeActor`` FeatureEdges inside a Cocoa expose; that cube
+    is replaced below rather than changing the render window.
     """
-    if sys.platform == 'darwin':
-        render_window = vtk.vtkGenericOpenGLRenderWindow()
-        if hasattr(render_window, 'SetFrameBlitModeToBlitToCurrent'):
-            render_window.SetFrameBlitModeToBlitToCurrent()
-        widget = QVTKRenderWindowInteractor(parent, rw=render_window)
-        # QVTK always sets WA_PaintOnScreen; that is for the native-window
-        # path and fights QOpenGLWidget's own buffer.
-        widget.setAttribute(QtCore.Qt.WA_PaintOnScreen, False)
-        return widget
     return QVTKRenderWindowInteractor(parent)
 
 from .camera import CameraController, FACE_VIEWS, HOME_VIEW as CAMERA_HOME
@@ -166,6 +147,51 @@ def cube_face_at(position, tolerance=0.15):
     if abs(position[axis]) < tolerance:
         return None
     return _CUBE_FACES[(axis, 1 if position[axis] > 0 else -1)]
+
+
+def navigation_cube_prop():
+    """Unit cube with face captions, no ``vtkFeatureEdges``.
+
+    ``vtkAnnotatedCubeActor`` extracts edges on first render; on Cocoa that
+    ran inside a synchronous expose and hung the 5.0.0 Intel editor. A
+    ``vtkCubeSource`` plus ``vtkVectorText`` is the same pickable 1×1×1 body
+    ``cube_face_at`` already understands.
+    """
+    assembly = vtk.vtkAssembly()
+    source = vtk.vtkCubeSource()
+    source.SetXLength(1.0)
+    source.SetYLength(1.0)
+    source.SetZLength(1.0)
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputConnection(source.GetOutputPort())
+    body = vtk.vtkActor()
+    body.SetMapper(mapper)
+    body.GetProperty().SetColor(0.62, 0.66, 0.72)
+    assembly.AddPart(body)
+    # (text, position, orientation). VectorText sits on the face; origin is
+    # the lower-left of the string so the offsets are a bit left/down of
+    # centre. Close enough to read; picking uses the cube, not the glyphs.
+    captions = (
+        ('Right',  (0.51, -0.18, -0.08), (90, 90, 0)),
+        ('Left',   (-0.51, -0.18, 0.08), (90, -90, 0)),
+        ('Back',   (-0.22, 0.51, -0.08), (90, 0, 180)),
+        ('Front',  (-0.22, -0.51, -0.08), (90, 0, 0)),
+        ('Top',    (-0.18, -0.08, 0.51), (0, 0, 0)),
+        ('Bottom', (-0.28, 0.08, -0.51), (180, 0, 0)),
+    )
+    for text, position, orientation in captions:
+        vec = vtk.vtkVectorText()
+        vec.SetText(text)
+        tmapper = vtk.vtkPolyDataMapper()
+        tmapper.SetInputConnection(vec.GetOutputPort())
+        actor = vtk.vtkActor()
+        actor.SetMapper(tmapper)
+        actor.SetScale(0.16, 0.16, 0.16)
+        actor.GetProperty().SetColor(0.1, 0.1, 0.1)
+        actor.SetPosition(*position)
+        actor.SetOrientation(*orientation)
+        assembly.AddPart(actor)
+    return assembly
 
 
 class Scene:
@@ -518,9 +544,12 @@ class Viewport(QtWidgets.QWidget):
             'RightButtonPressEvent', self._on_right_press, 1.0)
         self._key_press_observer_id = self.interactor.AddObserver(
             'KeyPressEvent', self._on_key_press, 1.0)
-        self.add_navigation_cube()
         self.camera.home()
         self.render()
+        # Add the orientation marker after the first paint. vtkAnnotatedCubeActor
+        # ran FeatureEdges inside a Cocoa expose and hung 5.0.0; even the cheap
+        # cube is installed from a timer so it cannot nest in CATransaction.
+        QtCore.QTimer.singleShot(0, self.add_navigation_cube)
 
     def _abort_event(self, observer_id):
         """Stop VTK from also dispatching this event to lower-priority
@@ -569,18 +598,14 @@ class Viewport(QtWidgets.QWidget):
 
         Faces read Front / Back / Left / Right / Top / Bottom rather than axis
         letters, with Front on -Y so it agrees with the green build-volume
-        edge. The widget itself is display-only, so clicks are picked here and
-        turned into camera moves.
+        edge. Built from ``vtkCubeSource`` rather than ``vtkAnnotatedCubeActor``:
+        the latter runs ``vtkFeatureEdges`` on every first paint and hung the
+        Intel 5.0.0 editor inside a Cocoa expose. The widget is display-only,
+        so clicks are picked here and turned into camera moves.
         """
-        cube = vtk.vtkAnnotatedCubeActor()
-        cube.SetXPlusFaceText('Right')
-        cube.SetXMinusFaceText('Left')
-        cube.SetYPlusFaceText('Back')
-        cube.SetYMinusFaceText('Front')
-        cube.SetZPlusFaceText('Top')
-        cube.SetZMinusFaceText('Bottom')
-        cube.GetTextEdgesProperty().SetColor(0.1, 0.1, 0.1)
-        cube.GetCubeProperty().SetColor(0.62, 0.66, 0.72)
+        if self.cube_widget is not None:
+            return self.cube_widget
+        cube = navigation_cube_prop()
         widget = vtk.vtkOrientationMarkerWidget()
         widget.SetOrientationMarker(cube)
         widget.SetInteractor(self.interactor)
@@ -590,6 +615,7 @@ class Viewport(QtWidgets.QWidget):
         # which is not what a click on it should mean here.
         widget.InteractiveOff()
         self.cube, self.cube_widget = cube, widget
+        self.render()
         return widget
 
     def cube_face_under(self, x, y):

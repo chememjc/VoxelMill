@@ -75,12 +75,8 @@ def test_z_clip_slider_emits_none_when_showing_all(application):
     assert slider.clip_limits() == (None, None)
 
 
-def test_vtk_render_backend_is_native_off_darwin():
-    import sys
-    if sys.platform == 'darwin':
-        assert vtk_render_backend() == 'generic_opengl'
-    else:
-        assert vtk_render_backend() == 'native'
+def test_vtk_render_backend_is_native():
+    assert vtk_render_backend() == 'native'
 
 
 def test_auto_island_scan_does_not_raise_the_report_tab(application):

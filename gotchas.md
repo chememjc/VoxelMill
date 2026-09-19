@@ -1405,12 +1405,14 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
 
 - **QVTK as a QWidget on macOS hangs the editor on first paint.** 5.0.0 Intel
   on macOS 26 hung in `vtkCocoaRenderWindow::Render` → `vtkFeatureEdges`
-  (the navigation cube) during a synchronous Cocoa expose inside a
+  (vtkAnnotatedCubeActor) during a synchronous Cocoa expose inside a
   `CATransaction`. The window looked frozen with a ghosted Setup panel over
-  the 3D view and needed a force-quit. On Darwin, set
-  `vtkmodules.qt.QVTKRWIBase = "QOpenGLWidget"` *before* importing
-  `QVTKRenderWindowInteractor` and pass a `vtkGenericOpenGLRenderWindow`.
-  Linux keeps the native render window.
+  the 3D view and needed a force-quit. Switching Darwin to
+  `vtkGenericOpenGLRenderWindow` + `QOpenGLWidget` then *crashed* on the
+  same iMac (`vtkOpenGLState::Pop` null, OpenGL 3.2 reported as 0.0) both
+  from SSH and from Finder `open`. Keep the native Cocoa render window;
+  replace the annotated cube with `vtkCubeSource` (no FeatureEdges) and
+  install the marker after the first paint.
 
 - **A hover-wheel over a spin box is an accidental edit.** Qt's default
   `WheelFocus` changes `QDoubleSpinBox`/`QComboBox` values while the user is
