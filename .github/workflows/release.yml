@@ -134,8 +134,26 @@ jobs:
           APP=output/portable/VoxelMill.app
           test -d "$APP"
           "$APP/Contents/MacOS/VoxelMill" --version
-          hdiutil create -volname VoxelMill -srcfolder "$APP" -ov -format UDZO \
-            "output/portable/${{ matrix.dmg }}"
+          # hdiutil UDZO occasionally fails with "Resource busy" on the Intel
+          # runner while a previous image is still detaching. Retry a few times
+          # in a scratch dir rather than failing the whole portable job.
+          dmg="output/portable/${{ matrix.dmg }}"
+          tmpdir=$(mktemp -d)
+          trap 'rm -rf "$tmpdir"' EXIT
+          ok=0
+          for attempt in 1 2 3 4 5; do
+            if hdiutil create -volname VoxelMill -srcfolder "$APP" -ov -format UDZO \
+                 "$tmpdir/VoxelMill.dmg"; then
+              mv -f "$tmpdir/VoxelMill.dmg" "$dmg"
+              ok=1
+              break
+            fi
+            echo "hdiutil failed (attempt $attempt); retrying..."
+            sleep $((attempt * 3))
+            hdiutil detach -force /Volumes/VoxelMill 2>/dev/null || true
+          done
+          test "$ok" -eq 1
+          test -f "$dmg"
 
       - name: Zip onedir
         if: matrix.kind == 'windows'
