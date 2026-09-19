@@ -1,4 +1,4 @@
-# Portable release artifacts for v5.x tags (and manual dispatch).
+# Portable release artifacts for v0.x tags (and manual dispatch).
 # Linux: AppImage. macOS/Windows: PyInstaller onedir (.app + DMG / zip).
 # No Homebrew. Version in the tree stays whatever is committed (do not bump here).
 # Tag a release only after a workflow_dispatch run is green.
@@ -9,8 +9,7 @@ name: release
   workflow_dispatch:
   push:
     tags:
-      - 'v5*'
-      - 'v0.4*'
+      - 'v0.*'
 
 permissions:
   contents: read

@@ -1403,10 +1403,10 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   `xattr -dr com.apple.quarantine` on the app. Do not compile on the iMac;
   download the Intel DMG artifact if you want to smoke-test.
 
-- **QVTK paintEvent must not Render inside a Cocoa CATransaction.** 5.0.0
+- **QVTK paintEvent must not Render inside a Cocoa CATransaction.** 0.5.0
   Intel hung in `vtkCocoaRenderWindow::Render` → `vtkFeatureEdges` during
   `-[_NSOpenGLViewBackingLayer display]` / `handleExposeEvent
-  SynchronousDelivery`. Replacing the annotated cube was not enough: 5.0.1
+  SynchronousDelivery`. Replacing the annotated cube was not enough: 0.5.1
   still hung in `vtkCocoaRenderWindow::Start` on the same expose path
   (sampled 100% of main thread for minutes; Apple Events never ran).
   `vtkGenericOpenGLRenderWindow` crashed on that iMac (`vtkOpenGLState::Pop`

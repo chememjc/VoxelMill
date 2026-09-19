@@ -13,10 +13,10 @@ Headline **2.32 s / 350 MB**. Stay on `master`; no release branch until a later 
 - [x] FreeCAD path in editor.json; Import STEP disabled until found.
 - [x] AppImage 0.3.0 (`output/appimage/VoxelMill-x86_64.AppImage`, 406 MiB, CUDA off).
 - [x] GitHub Actions green for Linux AppImage + Mac DMGs + Windows zip (`11ae424` run 35348077136).
-- [x] Smoke Intel DMG on iMac: `--version` 5.0.0, `prepare` cube, empty argv opens GUI, Finder `open` is LaunchServices Foreground (`LSBackgroundOnly=false`).
+- [x] Smoke Intel DMG on iMac: `--version` 0.5.0, `prepare` cube, empty argv opens GUI, Finder `open` is LaunchServices Foreground (`LSBackgroundOnly=false`).
 - [x] macOS GUI: resolve `FreeCAD.app` to `Contents/MacOS/FreeCADCmd`; show the window before VTK start / Locate prompt (otherwise the prompt is the last thing that appears).
 - [x] Double-click / empty argv on PyInstaller Mac+Windows rewrites to `gui` (AppRun already did this on Linux).
-- [x] Alpha GitHub Release `v5.0.1` (prerelease). Artifacts from run 35419079931 (`c89c403`), smoked on Linux and Intel iMac. Tag-triggered rebuild cancelled so the published bits stay the ones that were tested.
+- [x] Alpha GitHub Release was tagged `v5.0.1` by a version typo (meant `v0.5.1`). Source is 0.5.1; replace the GitHub tag/release after a green rebuild and Intel smoke. Artifacts from run 35419079931 (`c89c403`) were smoked on Linux and Intel iMac.
 
 ## Headline number
 

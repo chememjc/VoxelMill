@@ -1,7 +1,7 @@
 # Platforms
 
 VoxelMill ships as a Linux AppImage plus GitHub Actions portables for macOS
-and Windows on `v5*` tags (see
+and Windows on `v0.*` tags (see
 [`.github/workflows/release.yml`](.github/workflows/release.yml) and
 [docs/packaging.md](docs/packaging.md)). This page records OS differences and
 what must stay as it is.

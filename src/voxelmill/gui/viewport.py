@@ -25,8 +25,8 @@ class _VTKInteractor(QVTKRenderWindowInteractor):
 
     On Intel macOS 26, ``QVTKRenderWindowInteractor.paintEvent`` calls
     ``Render()`` from ``-[_NSOpenGLViewBackingLayer display]`` during
-    ``CATransaction::commit``. That is a synchronous expose: 5.0.0 hung in
-    FeatureEdges there, and 5.0.1 still hung in ``vtkCocoaRenderWindow::Start``
+    ``CATransaction::commit``. That is a synchronous expose: 0.5.0 hung in
+    FeatureEdges there, and 0.5.1 still hung in ``vtkCocoaRenderWindow::Start``
     after the annotated cube was removed. ``vtkGenericOpenGLRenderWindow``
     crashed on the same machine. Deferring the VTK render until the event
     loop is idle lets the transaction finish.
@@ -180,7 +180,7 @@ def navigation_cube_prop():
     """Unit cube with face captions, no ``vtkFeatureEdges``.
 
     ``vtkAnnotatedCubeActor`` extracts edges on first render; on Cocoa that
-    ran inside a synchronous expose and hung the 5.0.0 Intel editor. A
+    ran inside a synchronous expose and hung the 0.5.0 Intel editor. A
     ``vtkCubeSource`` plus ``vtkVectorText`` is the same pickable 1×1×1 body
     ``cube_face_at`` already understands.
     """
@@ -574,7 +574,7 @@ class Viewport(QtWidgets.QWidget):
         self.camera.home()
         self.render()
         # Add the orientation marker after the first paint. vtkAnnotatedCubeActor
-        # ran FeatureEdges inside a Cocoa expose and hung 5.0.0; even the cheap
+        # ran FeatureEdges inside a Cocoa expose and hung 0.5.0; even the cheap
         # cube is installed from a timer so it cannot nest in CATransaction.
         QtCore.QTimer.singleShot(0, self.add_navigation_cube)
 
@@ -627,7 +627,7 @@ class Viewport(QtWidgets.QWidget):
         letters, with Front on -Y so it agrees with the green build-volume
         edge. Built from ``vtkCubeSource`` rather than ``vtkAnnotatedCubeActor``:
         the latter runs ``vtkFeatureEdges`` on every first paint and hung the
-        Intel 5.0.0 editor inside a Cocoa expose. The widget is display-only,
+        Intel 0.5.0 editor inside a Cocoa expose. The widget is display-only,
         so clicks are picked here and turned into camera moves.
         """
         if self.cube_widget is not None:
