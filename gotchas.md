@@ -1,6 +1,6 @@
 # Engineering gotchas
 
-This is a verified lessons log, not a list of hypothetical hazards. Updated 2026-09-09.
+This is a verified lessons log, not a list of hypothetical hazards. Updated 2026-09-18.
 
 - **`extra_models=None` is not an empty dict.** `load_and_place` used `None`
   to mean "no added parts". `_finish_place` then called `.get` on that value,
@@ -1402,3 +1402,18 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   wheels are one arch each. Unsigned `.app` will Gatekeeper-warn; users run
   `xattr -dr com.apple.quarantine` on the app. Do not compile on the iMac;
   download the Intel DMG artifact if you want to smoke-test.
+
+- **QVTK as a QWidget on macOS hangs the editor on first paint.** 5.0.0 Intel
+  on macOS 26 hung in `vtkCocoaRenderWindow::Render` → `vtkFeatureEdges`
+  (the navigation cube) during a synchronous Cocoa expose inside a
+  `CATransaction`. The window looked frozen with a ghosted Setup panel over
+  the 3D view and needed a force-quit. On Darwin, set
+  `vtkmodules.qt.QVTKRWIBase = "QOpenGLWidget"` *before* importing
+  `QVTKRenderWindowInteractor` and pass a `vtkGenericOpenGLRenderWindow`.
+  Linux keeps the native render window.
+
+- **A hover-wheel over a spin box is an accidental edit.** Qt's default
+  `WheelFocus` changes `QDoubleSpinBox`/`QComboBox` values while the user is
+  scrolling the Setup page. Install `FocusedWheelFilter` on the
+  `QApplication` so a wheel is ignored until the field has been clicked, and
+  forward it to the enclosing scroll area so the page still moves.

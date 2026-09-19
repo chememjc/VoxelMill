@@ -28,7 +28,10 @@ the project manifest; only the file on disk is hash-named, because the
 archive keeps working after the original path disappears.
 
 The editor prepares one part at a time. Its left side is a VTK view of the
-model, routed supports, raft, contacts, and build volume. The front bottom
+model, routed supports, raft, contacts, and build volume. A vertical two-handle
+Z-clip slider sits on the right of that view (bottom handle is Zmin, top handle
+is Zmax, **All** or a double-click shows everything), the same idea as Chitubox
+and PrusaSlicer. The front bottom
 edge of the build volume (−Y, Z=0) is green; the other eleven edges are red. Its Setup tab holds
 the commonly tuned orientation, process, support, and repair values. The **All
 resolved settings (JSON)** box exposes every value resolved from the printer
@@ -436,16 +439,25 @@ not touch the open document. The result goes to the Report tab as JSON, and
 the status bar shows the placed size, whether it fits, and the transform
 note when there is one.
 
-The Layers tab renders one printer-pitch layer at a time. Its diagnostic filter
-selects marker categories. The Faults tab reuses the same left-hand scene (no
-second VTK window) and the same layer job pipeline: it shows a 2D layer image
-with per-class colored markers, a visible color key with class toggles, and
-independent bottom-up / top-down Z clipping of the model, supports, and raft.
+The Layers tab renders one printer-pitch layer at a time. Its layer slider is
+vertical (layer 0 at the plate) and the zoom slider is horizontal; Ctrl+wheel
+zooms, a plain wheel steps one layer. Its diagnostic filter selects marker
+categories. The Faults tab reuses the same left-hand scene (no second VTK
+window) and the same layer job pipeline: it shows a 2D layer image with
+per-class colored markers, the same vertical layer slider and zoom slider as
+Layers, a visible color key with class toggles, and Z clipping that is shared
+with the 3D view. **Show all** next to the Z clipping header clears the clip.
 Fault glyphs in the 3D view use the same colors and are non-pickable so they
-cannot steal support placement. Leaving the tab clears the clip planes and
-fault actor; the Layers tab keeps its existing markers. The Report tab has
-the full JSON report and a selectable diagnostics list; activating a diagnostic
-with a layer number jumps the layer viewer to it.
+cannot steal support placement. Leaving the tab clears the fault actor but
+keeps the Z clip the 3D slider already had. The Report tab has the full JSON
+report and a selectable diagnostics list; double-clicking a diagnostic opens
+the Layers tab at that layer. An automatic island scan after a move or rotate
+fills the report without switching to that tab; **Check islands now** still
+does.
+
+Spin boxes and combo boxes ignore the mouse wheel until they have been clicked
+(they have keyboard focus). Hover-scrolling a tall Setup page must not change
+values.
 
 Every expensive stage runs in a background job. A changed document cancels the
 obsolete generation and discards results that raced with the new decision. Esc

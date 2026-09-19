@@ -32,6 +32,7 @@ from .objects import TOOLS, AttachmentSettings, ObjectPanel, ToolSelector
 from .appprefs import DEFAULT_MOTION_MODE, load_preferences, save_preferences
 from .notifications import NotificationBanner, NotificationCenter
 from .viewport import Viewport
+from .widgets import ZClipSlider, install_focused_wheel_filter
 
 STAGES = ('place', 'model', 'supports', 'union', 'validate')
 THEMES = ('system', 'light', 'dark')
@@ -194,7 +195,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self._autosave_timer.start()
         self._startup_source = source
         self._startup_completed = False
+        self._island_check_show_report = True
         self._build_ui()
+        install_focused_wheel_filter(QtWidgets.QApplication.instance())
         self.setAcceptDrops(True)
         # Modal dialogs and VTK Initialize() must wait until the window is
         # shown. On macOS a FreeCAD/wizard QMessageBox during construction,
@@ -348,12 +351,22 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tools = ToolSelector(radius_mm=self.document.settings['support']['spacing_mm'])
         self.tools.tool_changed.connect(self._on_tool_changed)
         self.tools.radius_changed.connect(self._on_brush_radius_changed)
+        self.z_clip_slider = ZClipSlider()
+        build_z = float(self.document.settings['printer']['build_mm'][2])
+        self.z_clip_slider.set_extent(0.0, build_z)
+        self.z_clip_slider.clip_changed.connect(self._on_view_z_clip)
+        self.z_clip_slider.show_all_requested.connect(self._on_show_all_clip)
         center = QtWidgets.QWidget()
         center_layout = QtWidgets.QVBoxLayout(center)
         center_layout.setContentsMargins(0, 0, 0, 0)
         center_layout.setSpacing(0)
         center_layout.addWidget(self.tools)
-        center_layout.addWidget(left, 1)
+        view_row = QtWidgets.QHBoxLayout()
+        view_row.setContentsMargins(0, 0, 0, 0)
+        view_row.setSpacing(0)
+        view_row.addWidget(left, 1)
+        view_row.addWidget(self.z_clip_slider)
+        center_layout.addLayout(view_row, 1)
         left = center
         self.scene.show_build_volume(self.document.settings)
         # Both modes get a controller. Headless has no widget to animate, so it
@@ -369,14 +382,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.faults.layer_requested.connect(self.request_layer)
         self.faults.clip_changed.connect(self._on_fault_clip)
         self.faults.filter_changed.connect(self._refresh_fault_glyphs)
+        self.faults.show_all_requested.connect(self._on_show_all_clip)
         report_page = QtWidgets.QWidget()
         report_layout = QtWidgets.QVBoxLayout(report_page)
         self.diagnostic_list = QtWidgets.QTreeWidget()
         self.diagnostic_list.setObjectName('diagnostic_list')
         self.diagnostic_list.setHeaderLabels(['Check / diagnostic', 'Layer', 'Severity'])
         self.diagnostic_list.setRootIsDecorated(False)
-        self.diagnostic_list.setToolTip('Select a layer diagnostic to jump the layer preview to it.')
+        self.diagnostic_list.setToolTip(
+            'Double-click a diagnostic to open the Layers tab at that layer.')
         self.diagnostic_list.itemActivated.connect(self._select_diagnostic)
+        self.diagnostic_list.itemDoubleClicked.connect(self._select_diagnostic)
         self.diagnostics = QtWidgets.QPlainTextEdit()
         self.diagnostics.setReadOnly(True)
         report_layout.addWidget(self.diagnostic_list, 1)
@@ -1083,8 +1099,15 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.island_summary is not None and not self.island_stale:
             self._set_island_badge(self.island_summary, stale=True)
 
-    def check_islands(self):
-        """Re-scan the current assembly for islands, in the background."""
+    def check_islands(self, checked=False, *, show_report=True):
+        """Re-scan the current assembly for islands, in the background.
+
+        ``show_report`` is True for the menu action and False for the
+        automatic scan after a rebuild, so a move/rotate does not yank the
+        editor over to the Report tab. ``checked`` is the unused ``triggered``
+        payload from the menu action.
+        """
+        self._island_check_show_report = bool(show_report)
         self._clear_preview_transforms()
         union = self.document.derived.union
         if union is None:
@@ -1113,7 +1136,10 @@ class MainWindow(QtWidgets.QMainWindow):
             'diagnostics': value['diagnostics'],
             'metrics': metrics,
         }, note='island scan only; this is not a full validation')
-        self.report_dock.raise_()
+        # An automatic re-scan after move/rotate must not steal the tab the
+        # user is working in; Check islands now still jumps to Report.
+        if getattr(self, '_island_check_show_report', True):
+            self.tabs.setCurrentIndex(self.report_tab_index)
         self.layers.set_diagnostic_codes({d['code'] for d in value['diagnostics']})
 
     # ---- Check print menu -------------------------------------------------
@@ -2769,32 +2795,58 @@ class MainWindow(QtWidgets.QMainWindow):
         plan = self.document.derived.plan
         return fault_overlay(report, plan, bounds=self._fault_bounds())
 
-    def _enter_faults_tab(self):
+    def _sync_z_extent(self):
+        """Keep both Z-clip controls on the same world-Z range as the scene."""
         bounds = self._fault_bounds()
-        self.faults.set_z_extent(float(bounds[0, 2]), float(bounds[1, 2]))
+        # Keep the plate at the bottom of the slider so a clip-from-below
+        # of 0 mm is the bed, not the model's current lowest point.
+        zmin = min(0.0, float(bounds[0, 2]))
+        zmax = max(float(bounds[1, 2]), zmin + 1.0)
+        if hasattr(self, 'z_clip_slider'):
+            self.z_clip_slider.set_extent(zmin, zmax)
+        self.faults.set_z_extent(zmin, zmax, reset=False)
+        lo, hi = self.z_clip_slider.clip_limits()
+        self.faults.set_clip(lo, hi)
+        self._apply_z_clip(lo, hi)
+
+    def _apply_z_clip(self, zmin, zmax):
+        self.scene.set_z_clip(zmin, zmax)
+        if self.viewport:
+            self.viewport.render()
+
+    def _on_view_z_clip(self, zmin, zmax):
+        self.faults.set_clip(zmin, zmax)
+        self._apply_z_clip(zmin, zmax)
+
+    def _on_show_all_clip(self):
+        if hasattr(self, 'z_clip_slider'):
+            self.z_clip_slider.set_clip(None, None)
+        self.faults.set_clip(None, None)
+        self._apply_z_clip(None, None)
+
+    def _enter_faults_tab(self):
+        self._sync_z_extent()
         self.faults.set_markers(self._fault_markers())
         if self.layers.slider.isEnabled():
             self.faults.set_range(self.layers.slider.maximum() + 1)
             self.faults.slider.setValue(self.layers.slider.value())
-        zmin, zmax = self.faults.clip_limits()
-        self.scene.set_z_clip(zmin, zmax)
+        lo, hi = self.z_clip_slider.clip_limits()
+        self.faults.set_clip(lo, hi)
+        self._apply_z_clip(lo, hi)
         self._refresh_fault_glyphs()
         self.request_layer(self.faults.slider.value())
-        if self.viewport:
-            self.viewport.render()
 
     def _leave_faults_tab(self):
-        self.scene.set_z_clip(None, None)
+        # Z clipping belongs to the 3D view, so leaving Faults must not clear
+        # it. Only the fault glyphs are Faults-tab state.
         self.scene.clear('faults')
         if self.viewport:
             self.viewport.render()
 
     def _on_fault_clip(self, zmin, zmax):
-        if self.tabs.currentIndex() != self.faults_tab_index:
-            return
-        self.scene.set_z_clip(zmin, zmax)
-        if self.viewport:
-            self.viewport.render()
+        if hasattr(self, 'z_clip_slider'):
+            self.z_clip_slider.set_clip(zmin, zmax)
+        self._apply_z_clip(zmin, zmax)
 
     def _refresh_fault_glyphs(self):
         if getattr(self, 'tabs', None) is None or not hasattr(self, 'faults_tab_index'):
@@ -2911,6 +2963,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _select_diagnostic(self, item, _column):
         diagnostic = item.data(0, QtCore.Qt.UserRole) or {}
+        self.tabs.setCurrentIndex(self.layers_tab_index)
         layer = diagnostic.get('layer')
         if layer is not None:
             self.layers.slider.setValue(int(layer))
@@ -2993,6 +3046,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.viewport.reset_camera()
             if self.viewport.transform_index is not None:
                 self.viewport.select_transform_object(self.viewport.transform_index)
+        self._sync_z_extent()
         document = self.document
         triangles, bounds = value['triangles'], value['bounds']
         self.jobs.submit('supports', lambda token, progress: services.build_supports(
@@ -3031,11 +3085,12 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.layers.selected_source == 'union':
             self.layers.set_range(layer_count)
             self.faults.set_range(layer_count)
+        self._sync_z_extent()
         self.statusBar().showMessage(f'assembled {value.num_tri()} triangles', 6000)
         # D5: the badge is re-earned after every edit rather than left showing
         # a result that describes geometry the user has since changed.
         if self.auto_island_check and self._pending_export is None:
-            self.check_islands()
+            self.check_islands(show_report=False)
         if self._pending_export is not None:
             self.validate()
         elif self.tabs.currentIndex() == self.layers_tab_index and self.layers.selected_source == 'union':

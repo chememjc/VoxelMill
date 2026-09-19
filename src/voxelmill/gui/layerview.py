@@ -144,16 +144,21 @@ def _crop_occupancy(occupied, col0, row0, cols, rows):
 
 
 def render_layer_image(mask, *, zoom=1.0, center=None, size=(640, 640), diagnostics=(),
-                       grid=None, marker=6, grid_min_scale=PIXEL_GRID_MIN_SCALE):
+                       grid=None, marker=6, grid_min_scale=PIXEL_GRID_MIN_SCALE,
+                       color_for=None):
     """Render one viewport of a layer at ``zoom`` screen pixels per printer pixel.
 
     Only the visible crop is materialised.  At or above ``grid_min_scale`` the
     gutter between printer pixels is drawn black, so a solid region reads as a
     grid of separate exposed pixels rather than one white field.
+    ``color_for`` maps a diagnostic code to an RGB triple; the default is
+    :func:`issue_color`.  The Faults tab passes its own palette so the 2D
+    preview matches the 3D glyphs.
     """
     mask = np.asarray(mask)
     if mask.ndim != 2:
         raise ValueError('a layer mask must be two dimensional')
+    color_fn = color_for or issue_color
     occupied = mask != 0
     height, width = occupied.shape
     view_width, view_height = max(1, int(size[0])), max(1, int(size[1]))
@@ -196,7 +201,7 @@ def render_layer_image(mask, *, zoom=1.0, center=None, size=(640, 640), diagnost
             lo_y, hi_y = max(0, y - marker), min(view_height, y + marker + 1)
             lo_x, hi_x = max(0, x - marker), min(view_width, x + marker + 1)
             if hi_y > lo_y and hi_x > lo_x:
-                view[lo_y:hi_y, lo_x:hi_x] = issue_color(diagnostic_code(diagnostic))
+                view[lo_y:hi_y, lo_x:hi_x] = color_fn(diagnostic_code(diagnostic))
 
     view = np.ascontiguousarray(view)
     return QtGui.QImage(view.data, view_width, view_height,
@@ -266,6 +271,7 @@ class LayerCanvas(QtWidgets.QWidget):
         self._mask = None
         self._grid = None
         self._diagnostics = ()
+        self._color_for = None
         self._zoom = 1.0
         self._fit = True
         self._center = None
@@ -284,6 +290,11 @@ class LayerCanvas(QtWidgets.QWidget):
     @property
     def fitted(self):
         return self._fit
+
+    def set_color_for(self, color_for):
+        """Override the diagnostic-code → RGB mapping used when painting markers."""
+        self._color_for = color_for
+        self.update()
 
     def set_layer(self, mask, grid=None, diagnostics=()):
         mask = np.asarray(mask) if mask is not None else None
@@ -382,7 +393,8 @@ class LayerCanvas(QtWidgets.QWidget):
         return render_layer_image(
             self._mask, zoom=self._effective_zoom(), center=self._effective_center(),
             size=(max(1, self.width()), max(1, self.height())),
-            diagnostics=self._diagnostics, grid=self._grid)
+            diagnostics=self._diagnostics, grid=self._grid,
+            color_for=self._color_for)
 
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)

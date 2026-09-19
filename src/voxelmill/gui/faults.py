@@ -11,7 +11,8 @@ import math
 import numpy as np
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from .layerview import MAX_PREVIEW_PIXELS, preview_decimation
+from .layerview import (MAX_PREVIEW_PIXELS, PIXEL_GRID_MIN_SCALE, ZOOM_STEPS,
+                        LayerCanvas, preview_decimation)
 from ..validation import block_any
 
 #: Distinct, reasonably colorblind-friendly RGB triples for known codes.
@@ -197,11 +198,13 @@ class FaultView(QtWidgets.QWidget):
 
     The shared VTK scene stays on the left of the main window; this tab only
     drives its clip planes and fault glyphs plus a layer image colored to
-    match.
+    match. The layer slider is vertical (layer 0 at the plate) and the
+    zoom slider is horizontal, the same layout the Layers tab uses.
     """
     layer_requested = QtCore.Signal(int)
     clip_changed = QtCore.Signal(object, object)
     filter_changed = QtCore.Signal()
+    show_all_requested = QtCore.Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -211,11 +214,34 @@ class FaultView(QtWidgets.QWidget):
         self.label.setAlignment(QtCore.Qt.AlignCenter)
         self.label.setMinimumSize(240, 240)
         self.label.setStyleSheet('background:#111;color:#bbb;')
-        self.slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.canvas = LayerCanvas()
+        self.canvas.setObjectName('fault_canvas')
+        self.canvas.set_color_for(lambda code: fault_color(code))
+        self.stack = QtWidgets.QStackedLayout()
+        self.stack.addWidget(self.label)
+        self.stack.addWidget(self.canvas)
+
+        self.slider = QtWidgets.QSlider(QtCore.Qt.Vertical)
         self.slider.setObjectName('fault_layer_slider')
         self.slider.setEnabled(False)
+        self.slider.setToolTip('Layer. The wheel over the view moves one layer; '
+                               'Ctrl+wheel zooms.')
         self.info = QtWidgets.QLabel('')
         self.info.setWordWrap(True)
+
+        self.zoom_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.zoom_slider.setObjectName('fault_zoom')
+        self.zoom_slider.setRange(0, len(ZOOM_STEPS) - 1)
+        self.zoom_slider.setValue(ZOOM_STEPS.index(1))
+        self.zoom_slider.setToolTip(
+            'Screen pixels per printer pixel. At 5x and above each printer pixel is '
+            'drawn as its own square with a black gutter.')
+        self.zoom_label = QtWidgets.QLabel('')
+        self.zoom_label.setObjectName('fault_zoom_label')
+        self.zoom_label.setMinimumWidth(64)
+        self.fit_button = QtWidgets.QPushButton('Fit')
+        self.fit_button.setObjectName('fault_fit')
+        self.fit_button.setToolTip('Show the whole frame and resume fitting on resize.')
 
         self.key = QtWidgets.QWidget()
         self.key.setObjectName('fault_key')
@@ -230,8 +256,20 @@ class FaultView(QtWidgets.QWidget):
         key_scroll.setMaximumHeight(180)
         key_box_layout.addWidget(key_scroll)
 
-        clip_box = QtWidgets.QGroupBox('Z clipping')
+        clip_header = QtWidgets.QHBoxLayout()
+        clip_title = QtWidgets.QLabel('Z clipping')
+        clip_title.setObjectName('fault_clip_title')
+        self.show_all = QtWidgets.QPushButton('Show all')
+        self.show_all.setObjectName('fault_clip_show_all')
+        self.show_all.setToolTip('Clear Z clipping and show the whole model.')
+        clip_header.addWidget(clip_title)
+        clip_header.addStretch(1)
+        clip_header.addWidget(self.show_all)
+        clip_box = QtWidgets.QGroupBox()
+        clip_box.setObjectName('fault_clip_box')
+        clip_box.setFlat(True)
         clip_form = QtWidgets.QFormLayout(clip_box)
+        clip_form.setContentsMargins(0, 0, 0, 0)
         self.clip_below = QtWidgets.QDoubleSpinBox()
         self.clip_below.setObjectName('fault_clip_below')
         self.clip_below.setDecimals(2)
@@ -245,36 +283,101 @@ class FaultView(QtWidgets.QWidget):
         clip_form.addRow('From below (Zmin)', self.clip_below)
         clip_form.addRow('From above (Zmax)', self.clip_above)
 
-        layout.addWidget(self.label, 1)
-        layout.addWidget(self.slider)
+        body = QtWidgets.QHBoxLayout()
+        body.addLayout(self.stack, 1)
+        body.addWidget(self.slider)
+        zoom_row = QtWidgets.QHBoxLayout()
+        zoom_row.addWidget(QtWidgets.QLabel('Zoom:'))
+        zoom_row.addWidget(self.zoom_slider, 1)
+        zoom_row.addWidget(self.zoom_label)
+        zoom_row.addWidget(self.fit_button)
+
+        layout.addLayout(body, 1)
+        layout.addLayout(zoom_row)
         layout.addWidget(self.info)
         layout.addWidget(key_box)
+        layout.addLayout(clip_header)
         layout.addWidget(clip_box)
 
         self._markers = []
         self._checks = {}
         self._image = None
         self._clip_silent = False
+        self._syncing_zoom = False
 
         self.slider.valueChanged.connect(self.layer_requested)
         self.clip_below.valueChanged.connect(self._emit_clip)
         self.clip_above.valueChanged.connect(self._emit_clip)
+        self.show_all.clicked.connect(self._on_show_all)
+        self.canvas.layer_delta.connect(self.step_layer)
+        self.canvas.zoom_changed.connect(self._on_canvas_zoom)
+        self.zoom_slider.valueChanged.connect(self._on_zoom_slider)
+        self.fit_button.clicked.connect(self.canvas.fit)
+        self._update_zoom_label(self.canvas.zoom)
         self.set_markers([])
 
     def set_range(self, layers):
         self.slider.setEnabled(layers > 0)
         self.slider.setRange(0, max(0, layers - 1))
 
-    def set_z_extent(self, zmin, zmax):
-        """Configure absolute clip limits; defaults to the full interval."""
+    def step_layer(self, delta):
+        """Move the layer slider, clamped, without wrapping at either end."""
+        if not self.slider.isEnabled():
+            return
+        self.slider.setValue(max(self.slider.minimum(),
+                                 min(self.slider.maximum(), self.slider.value() + int(delta))))
+
+    def _on_zoom_slider(self, index):
+        if self._syncing_zoom:
+            return
+        self.canvas.set_zoom(ZOOM_STEPS[int(index)])
+
+    def _on_canvas_zoom(self, zoom):
+        self._syncing_zoom = True
+        nearest = min(range(len(ZOOM_STEPS)), key=lambda i: abs(ZOOM_STEPS[i] - zoom))
+        self.zoom_slider.setValue(nearest)
+        self._syncing_zoom = False
+        self._update_zoom_label(zoom)
+
+    def _update_zoom_label(self, zoom):
+        text = f'{zoom:g}x' if zoom >= 1 else f'1:{int(round(1 / zoom))}'
+        grid = '  grid' if zoom >= PIXEL_GRID_MIN_SCALE else ''
+        self.zoom_label.setText(f'{text}{grid}')
+
+    def set_z_extent(self, zmin, zmax, *, reset=False):
+        """Configure absolute clip limits.
+
+        ``reset=True`` moves the spin boxes to the full interval (Show all).
+        Otherwise the current clip is kept and only clamped into the new range,
+        so entering this tab does not wipe a clip the 3D view already has.
+        """
         zmin, zmax = float(zmin), float(zmax)
         if zmax < zmin:
             zmin, zmax = zmax, zmin
+        current = (float(self.clip_below.value()), float(self.clip_above.value()))
         self._clip_silent = True
         for box in (self.clip_below, self.clip_above):
             box.setRange(zmin, zmax)
-        self.clip_below.setValue(zmin)
-        self.clip_above.setValue(zmax)
+        if reset:
+            self.clip_below.setValue(zmin)
+            self.clip_above.setValue(zmax)
+        else:
+            self.clip_below.setValue(max(zmin, min(zmax, current[0])))
+            self.clip_above.setValue(max(zmin, min(zmax, current[1])))
+        self._clip_silent = False
+
+    def set_clip(self, zmin, zmax):
+        """Move the spin boxes without emitting ``clip_changed``."""
+        self._clip_silent = True
+        if zmin is None or zmax is None:
+            self.clip_below.setValue(self.clip_below.minimum())
+            self.clip_above.setValue(self.clip_above.maximum())
+        else:
+            lo, hi = float(zmin), float(zmax)
+            if lo > hi:
+                lo, hi = hi, lo
+            self.clip_below.setValue(lo)
+            self.clip_above.setValue(hi)
         self._clip_silent = False
 
     def clip_limits(self):
@@ -282,7 +385,19 @@ class FaultView(QtWidgets.QWidget):
         zmax = float(self.clip_above.value())
         if zmin > zmax:
             zmin, zmax = zmax, zmin
+        lo_bound, hi_bound = self.clip_below.minimum(), self.clip_above.maximum()
+        eps = max(1e-6, (hi_bound - lo_bound) * 1e-4)
+        if zmin <= lo_bound + eps and zmax >= hi_bound - eps:
+            return None, None
         return zmin, zmax
+
+    def _on_show_all(self):
+        self._clip_silent = True
+        self.clip_below.setValue(self.clip_below.minimum())
+        self.clip_above.setValue(self.clip_above.maximum())
+        self._clip_silent = False
+        self.show_all_requested.emit()
+        self.clip_changed.emit(None, None)
 
     def _emit_clip(self, *_args):
         if self._clip_silent:
@@ -346,9 +461,10 @@ class FaultView(QtWidgets.QWidget):
 
     def show_layer(self, payload, markers=None):
         markers = self.filtered_markers(payload['index']) if markers is None else markers
-        self._image = fault_mask_to_image(payload['mask'], markers, payload['grid'])
-        self.label.setPixmap(QtGui.QPixmap.fromImage(self._image).scaled(
-            self.label.size(), QtCore.Qt.KeepAspectRatio, QtCore.Qt.FastTransformation))
+        self.canvas.set_layer(payload['mask'], payload['grid'], markers)
+        self.stack.setCurrentWidget(self.canvas)
+        self._image = self.canvas.rendered_image()
+        self._on_canvas_zoom(self.canvas.zoom)
         origin = payload.get('source', 'union')
         note = ('decoded GOO pixels' if origin == 'goo'
                 else 'assembly sliced at the configured layer height')

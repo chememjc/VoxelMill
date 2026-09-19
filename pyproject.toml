@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "voxelmill"
-version = "5.0.0"
+version = "5.0.1"
 description = "Single-part Linux resin preparation with explicit validation evidence"
 readme = "README.md"
 requires-python = ">=3.10"

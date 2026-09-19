@@ -6,11 +6,46 @@ render interactively the viewport shows a strided preview and says so through
 """
 from __future__ import annotations
 
+import sys
+
 import numpy as np
 from PySide6 import QtCore, QtWidgets
+# QWidget + vtkCocoaRenderWindow paints from NSOpenGLView during a
+# CATransaction on macOS. vtkAnnotatedCubeActor's FeatureEdges then runs
+# inside that paint and the UI hangs (VoxelMill 5.0.0 Intel hang, force-quit).
+# Qt's OpenGL widget plus vtkGenericOpenGLRenderWindow renders through Qt
+# instead. Must be set before QVTKRenderWindowInteractor is imported.
+import vtkmodules.qt as _vtk_qt
+if sys.platform == 'darwin':
+    _vtk_qt.QVTKRWIBase = 'QOpenGLWidget'
 import vtkmodules.all as vtk
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtkmodules.util import numpy_support
+
+
+def vtk_render_backend():
+    """Which VTK/Qt pairing this platform uses for the 3D view."""
+    return 'generic_opengl' if sys.platform == 'darwin' else 'native'
+
+
+def make_vtk_interactor(parent=None):
+    """Build the VTK interactor widget for this platform.
+
+    macOS uses ``QOpenGLWidget`` + ``vtkGenericOpenGLRenderWindow`` so a
+    Cocoa expose cannot recurse into ``vtkCocoaRenderWindow::Render``. Other
+    platforms keep the native render window, which is the well-tested path
+    on Linux.
+    """
+    if sys.platform == 'darwin':
+        render_window = vtk.vtkGenericOpenGLRenderWindow()
+        if hasattr(render_window, 'SetFrameBlitModeToBlitToCurrent'):
+            render_window.SetFrameBlitModeToBlitToCurrent()
+        widget = QVTKRenderWindowInteractor(parent, rw=render_window)
+        # QVTK always sets WA_PaintOnScreen; that is for the native-window
+        # path and fights QOpenGLWidget's own buffer.
+        widget.setAttribute(QtCore.Qt.WA_PaintOnScreen, False)
+        return widget
+    return QVTKRenderWindowInteractor(parent)
 
 from .camera import CameraController, FACE_VIEWS, HOME_VIEW as CAMERA_HOME
 from .gizmo import TransformGizmo
@@ -430,7 +465,7 @@ class Viewport(QtWidgets.QWidget):
         super().__init__(parent)
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        self.interactor = QVTKRenderWindowInteractor(self)
+        self.interactor = make_vtk_interactor(self)
         layout.addWidget(self.interactor)
         self.scene = Scene()
         self.interactor.GetRenderWindow().AddRenderer(self.scene.renderer)

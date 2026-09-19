@@ -9,7 +9,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 pytest.importorskip('PySide6')
 pytest.importorskip('vtkmodules')
 
-from PySide6 import QtWidgets  # noqa: E402
+from PySide6 import QtCore, QtWidgets  # noqa: E402
 
 from voxelmill.config import resolve_settings  # noqa: E402
 from voxelmill.contracts import Diagnostic, ValidationReport  # noqa: E402
@@ -108,9 +108,34 @@ def test_mainwindow_has_faults_tab_and_key(application):
     assert window.faults.key.objectName() == 'fault_key'
     assert isinstance(window.faults, FaultView)
     assert window.faults_tab_index == window.layers_tab_index + 1
-    # Entering and leaving must not require a display.
+    # Entering and leaving must not require a display. Z clip is shared with
+    # the 3D view, so leaving Faults keeps it; only the glyphs go away.
     window.tabs.setCurrentIndex(window.faults_tab_index)
+    assert window.scene._z_clip is None
+    window.faults.clip_below.setValue(window.faults.clip_below.minimum() + 1.0)
     assert window.scene._z_clip is not None
     window.tabs.setCurrentIndex(window.layers_tab_index)
-    assert window.scene._z_clip is None
+    assert window.scene._z_clip is not None
     assert 'faults' not in window.scene.actors
+    window.z_clip_slider.show_all.click()
+    assert window.scene._z_clip is None
+    window.close()
+
+
+def test_faults_layer_slider_is_vertical_and_has_a_zoom_slider(application):
+    view = FaultView()
+    assert view.slider.orientation() == QtCore.Qt.Vertical
+    assert view.zoom_slider.orientation() == QtCore.Qt.Horizontal
+    assert view.show_all.objectName() == 'fault_clip_show_all'
+
+
+def test_faults_show_all_emits_cleared_clip(application):
+    view = FaultView()
+    view.set_z_extent(0.0, 50.0, reset=True)
+    view.clip_below.setValue(5.0)
+    view.clip_above.setValue(20.0)
+    seen = []
+    view.clip_changed.connect(lambda a, b: seen.append((a, b)))
+    view.show_all.click()
+    assert seen[-1] == (None, None)
+    assert view.clip_limits() == (None, None)
