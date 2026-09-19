@@ -16,7 +16,7 @@ Headline **2.32 s / 350 MB**. Stay on `master`; no release branch until a later 
 - [x] Smoke Intel DMG on iMac: `--version` 5.0.0, `prepare` cube, empty argv opens GUI, Finder `open` is LaunchServices Foreground (`LSBackgroundOnly=false`).
 - [x] macOS GUI: resolve `FreeCAD.app` to `Contents/MacOS/FreeCADCmd`; show the window before VTK start / Locate prompt (otherwise the prompt is the last thing that appears).
 - [x] Double-click / empty argv on PyInstaller Mac+Windows rewrites to `gui` (AppRun already did this on Linux).
-- [ ] Alpha GitHub Release `v5.0.0` with binaries and install notes. Confirm tag name (`v5.0.0` vs `v0.5.0`) with the user. Ship artifacts from run 35348077136, not earlier greens.
+- [x] Alpha GitHub Release `v5.0.1` (prerelease). Artifacts from run 35419079931 (`c89c403`), smoked on Linux and Intel iMac. Tag-triggered rebuild cancelled so the published bits stay the ones that were tested.
 
 ## Headline number
 
