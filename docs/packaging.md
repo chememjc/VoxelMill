@@ -71,6 +71,92 @@ chmod +x packaging/appimage/appimagetool
 ./output/appimage/VoxelMill-x86_64.AppImage gui part.stl
 ```
 
+All path arguments are resolved before the stager runs its verification child
+from `/tmp`. Relative `--appdir`, `--output`, `--tool`, and
+`--native-extension` paths are interpreted relative to the directory where
+`build_appimage.py` was invoked, rather than a later subprocess directory.
+
+### CPU-only release build
+
+The active development extension may have CUDA enabled. Do not replace it just
+to build a portable release: a running Python process can still have that file
+mapped. Build a separate CPU extension and select it explicitly when staging:
+
+```sh
+cmake -S . -B build/appimage-cpu -G Ninja \
+  -Dpybind11_DIR="$(.venv/bin/python -c 'import pybind11; print(pybind11.get_cmake_dir())')" \
+  -DCMAKE_CUDA_COMPILER=
+cmake --build build/appimage-cpu -j2
+
+APPIMAGE_EXTRACT_AND_RUN=1 .venv/bin/python scripts/build_appimage.py \
+  --appdir output/appimage-053/VoxelMill.AppDir \
+  --output output/appimage-053/VoxelMill-0.5.3-linux-x86_64.AppImage \
+  --tool packaging/appimage/appimagetool \
+  --native-extension build/appimage-cpu/_native.cpython-310-x86_64-linux-gnu.so
+```
+
+`--native-extension` validates the extension filename, removes any native
+module copied from the active environment, and stages the named file before
+the isolated import check. Use the extension suffix produced by the build's
+Python when it differs from the example. Acceptance also requires the bundled
+runtime to report `CUDA compiled=false`.
+
+### Linux artifact acceptance
+
+Run the reusable acceptance test against the packed artifact, outside a
+development environment. Actual rendering uses Xvfb and may need to run
+outside a restricted execution sandbox:
+
+```sh
+.venv/bin/python scripts/appimage_acceptance.py \
+  output/appimage-053/VoxelMill-0.5.3-linux-x86_64.AppImage \
+  --output-dir output/appimage-053/acceptance-final \
+  --expected-version 0.5.3
+```
+
+For an artifact downloaded from the tagged release, use a new evidence
+directory and record the workflow run that produced it:
+
+```sh
+mkdir -p /tmp/voxelmill-v0.5.3
+gh release download v0.5.3 \
+  --pattern 'VoxelMill-0.5.3-linux-x86_64.AppImage' \
+  --dir /tmp/voxelmill-v0.5.3
+.venv/bin/python scripts/appimage_acceptance.py \
+  /tmp/voxelmill-v0.5.3/VoxelMill-0.5.3-linux-x86_64.AppImage \
+  --output-dir output/appimage-053/published-acceptance \
+  --expected-version 0.5.3 \
+  --workflow-url https://github.com/OWNER/REPOSITORY/actions/runs/RUN_ID
+```
+
+The runner clears only files it owns in the selected output directory, so
+stale outputs cannot satisfy a rerun. It records the artifact SHA-256 and
+verifies:
+
+- version, startup, model inspection, configuration defaults, preparation,
+  support regeneration, project save/reopen, slicing, and standalone decoded
+  validation;
+- that imports and the CPU native extension come from the extracted AppImage,
+  never the checkout or active virtualenv;
+- downward braces and grounded support routes, zero raster islands, layer
+  connectivity and overlap, and decoded-pixel parity;
+- exact reopening of the prepared STL as one manifold component wholly at or
+  above the plate; and
+- a real Qt/VTK framebuffer, a nonempty layer preview, and settings preserved
+  after the GUI project is reopened.
+
+Preparation deliberately skips its expensive drainage and void analyses and
+uses an explicitly warned export so the harness can inspect the resulting
+artifact. That warning is retained in `prepare.json`; it does not relax the
+route, island, exact-mesh, render, or pixel checks. Slicing and standalone
+verification run their own checks, and warning diagnostics remain in their
+reports. `--skip-gui` exists only to record unavailable render coverage; it is
+not sufficient for release acceptance.
+
+The concrete v0.5.3 commands, checksum, results, warnings, and unavailable
+platform or physical-print coverage are recorded in
+[`reports/releases/v0.5.3.md`](../reports/releases/v0.5.3.md).
+
 `--cli-only` omits VTK and PySide6. The editor then fails at import with a
 missing-module error rather than a missing system package. A CLI-only image
 was smoke-tested at v0.3.0 (`--version` reports the package version; the staged

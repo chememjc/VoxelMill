@@ -398,16 +398,22 @@ usable set. Which pillar radius (`run_r`) a routed run actually gets —
 decided once, from that run's total length (elbow included), before any
 of its cylinders or graph edges are built, so a small-pillar run is thin
 along its whole length rather than only near the tip. Elbows get a union
-sphere. `brace_geometry` computes `brace_spacing_mm`/`brace_start_height_mm`,
-using the built-in 30 mm / 3 mm when either is left at `0`; `_brace` then
-ties each tall pillar (taller than `max(start, 15 mm)`) to its nearest two
-neighbours at that spacing starting at that height, with each strut's
-radius scaled to the thinner of the two pillars it connects, so a
-small-pillar run is braced with a strut sized to itself rather than to
-the nominal diameter.
+sphere. Downward brace origins start at the full-width shoulder below each
+tip taper and are processed from highest to lowest at `brace_spacing_mm`
+(default 15 mm). Each branch stays at 45° and is limited by its complete
+diagonal `brace_max_length_mm` (default 30 mm); the independent
+`brace_max_distance_mm` controls which neighbors are considered. The router
+chooses the shortest valid existing grounded support or a valid plate landing,
+merges at the first support intersection, and suppresses duplicate connections
+inside the spacing interval. Model parts can never be brace destinations,
+even when primary part-to-part supports are enabled. Branches that collide
+with model material, leave the build volume, or cannot reach a valid landing
+are rejected and reported. Each strut's radius is scaled to the thinner of
+the two pillars it connects, so a small-pillar run is braced with a strut
+sized to itself rather than to the nominal diameter.
 
 `route_contacts`'s `metrics` records the resolved values actually used —
-`brace_spacing_mm`, `brace_start_height_mm`, `tip_base_diameter_mm`,
+`brace_spacing_mm`, `brace_max_length_mm`, `tip_base_diameter_mm`,
 `pillar_angle_deg`, `small_pillars` (how many routed runs used the thin
 class) — alongside `base`, `build_base`'s own record (see below).
 

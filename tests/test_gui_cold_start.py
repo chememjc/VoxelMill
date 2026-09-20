@@ -73,6 +73,9 @@ if window.viewport:
     assert np.count_nonzero(np.abs(pixels[:, :3].astype(int) - [31, 33, 38]).sum(axis=1) > 30) > 1000
 print(json.dumps({'layer': window.layers.info.text(), 'triangles': window.document.derived.union.num_tri()}))
 window.jobs.wait(5000)
+if window.document.dirty:
+    from pathlib import Path
+    window.document.save(Path(__file__).with_suffix('.voxmil'))
 window.close()
 '''
 

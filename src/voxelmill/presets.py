@@ -67,8 +67,8 @@ _BUILTIN_SUPPORT = {
         'small_pillar_lower_depth_mm': 0.25,
         'small_pillar_max_length_mm': 0.0,  # missing reference threshold: disabled
         'model_anchor_penetration_mm': 0.20,  # Bottom / Contact Depth
-        'brace_spacing_mm': 30.0,        # Middle / Max Cross Structure Spacing
-        'brace_start_height_mm': 3.00,   # Middle / Cross Start Height
+        'brace_spacing_mm': 15.0,        # vertical spacing from each support shoulder
+        'brace_max_length_mm': 30.0,     # complete downward diagonal length
         'base_type': 'skate',            # Bottom / Platform Touch Shape = Skate
         'base_touch_diameter_mm': 10.0,  # Bottom / Touch Diameter
         'base_thickness_mm': 0.80,       # Bottom / Thickness

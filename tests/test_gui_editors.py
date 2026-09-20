@@ -71,7 +71,8 @@ def test_invalid_edits_cannot_apply_or_replace_saved_files(app, tmp_path):
 def test_editor_files_reload_in_cli_and_other_projects(kind, suffix, app, tmp_path, capsys):
     settings = resolve_settings(overrides={'resin': {'density_g_cm3': 1.15},
         'process': {'normal_exposure_s': 4.2},
-        'support': {'allow_part_to_part': False, 'brace_diameter_mm': .8}})
+        'support': {'allow_part_to_part': False, 'brace_diameter_mm': .8,
+                    'brace_spacing_mm': 17.0, 'brace_max_length_mm': 28.0}})
     dialog = ConfigurationEditor(Document(settings), kind, headless=True)
     output = tmp_path / ('saved' + suffix)
     assert dialog.save_file(str(output)) is not None, dialog.status.text()

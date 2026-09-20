@@ -82,6 +82,7 @@ def test_anchor_fields_round_trip_through_portable_support_save(app, tmp_path):
 def test_anchor_settings_change_the_headless_example_geometry(app):
     settings = resolve_settings(overrides={'support': {
         'part_to_part_avoidance': 0.0,
+        'allow_part_to_part': True,
         'model_anchor_length_mm': 1.0,
         'model_anchor_diameter_mm': .55,
         'model_anchor_penetration_mm': .2,
@@ -102,6 +103,7 @@ def test_anchor_settings_change_the_headless_example_geometry(app):
 def test_small_model_pillar_settings_reach_the_preview(app):
     settings = resolve_settings(overrides={'support': {
         'part_to_part_avoidance': 0.0,
+        'allow_part_to_part': True,
         'small_pillar_mode': 'model',
         'small_pillar_shape': 'cone',
         'small_pillar_diameter_mm': .4,

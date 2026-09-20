@@ -424,6 +424,8 @@ def test_project_round_trip_keeps_edits_and_saved_validation(application, source
     window.document.add_contact([0.0, 0.0, 5.0])
     window.export(tmp_path / 'out.stl')
     drain(window, application, stages=('validate',))
+    saved_validation = window.document.saved_validation
+    assert saved_validation is not None
     project = tmp_path / 'part.voxmil'
     window.document.save(project)
     assert not window.document.dirty
@@ -431,7 +433,7 @@ def test_project_round_trip_keeps_edits_and_saved_validation(application, source
     reopened = MainWindow(small_settings(), None, headless=True)
     reopened.open_project(project, extract_dir=tmp_path / 'extracted')
     assert reopened.document.manual_contacts == [[0.0, 0.0, 5.0]]
-    assert reopened.document.saved_validation['passed'] is True
+    assert reopened.document.saved_validation == saved_validation
     # A reopened project reports history, never a fresh guarantee.
     assert 'revalidate before exporting' in reopened.diagnostics.toPlainText()
     assert reopened.document.derived.validation is None
@@ -1326,7 +1328,7 @@ def test_apply_settings_does_not_flatten_extra_part_lifts(application, tmp_path)
 
 def test_allow_part_to_part_checkbox_toggles_the_setting(application):
     window = MainWindow(small_settings(), None, headless=True)
-    assert window.document.settings['support']['allow_part_to_part'] is True
+    assert window.document.settings['support']['allow_part_to_part'] is False
     window.actions_map['allow_part_to_part'].setChecked(False)
     assert window.document.settings['support']['allow_part_to_part'] is False
     window.actions_map['allow_part_to_part'].setChecked(True)

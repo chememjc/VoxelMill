@@ -100,9 +100,9 @@ def _overrides(args):
     put('support', 'automatic', args.auto_supports)
     put('support', 'auto_bracing', args.auto_bracing)
     put('support', 'brace_spacing_mm', args.brace_spacing_mm)
-    put('support', 'brace_start_height_mm', args.brace_start_height_mm)
     put('support', 'brace_diameter_mm', args.brace_diameter_mm)
     put('support', 'brace_max_distance_mm', args.brace_max_distance_mm)
+    put('support', 'brace_max_length_mm', args.brace_max_length_mm)
     put('support', 'allow_part_to_part', args.part_to_part_supports)
     put('support', 'part_to_part_avoidance', args.part_to_part_avoidance)
     put('support', 'overhang_angle_deg', args.overhang_angle_deg)
@@ -946,21 +946,23 @@ def build_parser():
     common.add_argument('--auto-supports', action=argparse.BooleanOptionalAction, default=None,
                         help='automatic contacts; disable for manual contacts only')
     common.add_argument('--auto-bracing', action=argparse.BooleanOptionalAction, default=None,
-                        help='cross-braces between slender pillars; independent of --auto-supports')
+                        help='downward 45-degree branches between grounded supports; independent '
+                             'of --auto-supports')
     common.add_argument('--brace-spacing-mm', type=float,
-                        help='vertical gap between cross-braces; 0 derives '
-                             'max_slenderness * 2 * pillar_radius')
-    common.add_argument('--brace-start-height-mm', type=float,
-                        help='height of the lowest cross-brace above the plate; 0 derives '
-                             'max_slenderness * 2 * pillar_radius')
+                        help='vertical spacing between downward brace origins, measured from '
+                             'each support shoulder; default 15 mm')
     common.add_argument('--brace-diameter-mm', type=float,
                         help='cross-brace diameter; 0 derives it from the thinner of the '
                              'two connected pillars')
     common.add_argument('--brace-max-distance-mm', type=float,
                         help='farthest a pillar neighbour may be and still be braced; '
                              '0 derives 1.5 * spacing_mm')
+    common.add_argument('--brace-max-length-mm', type=float,
+                        help='maximum complete downward brace length, including its diagonal '
+                             'connection; default 30 mm')
     common.add_argument('--part-to-part-supports', action=argparse.BooleanOptionalAction, default=None,
-                        help='allow supports to anchor on the model; disable to require plate routes')
+                        help='allow primary supports to anchor on model material; braces always '
+                             'use grounded support-network destinations')
     common.add_argument('--part-to-part-avoidance', type=float,
                         help='0 scores routes equally by length; 1 always prefers an available plate '
                              'route; intermediate values require proportionally shorter model routes')

@@ -37,11 +37,11 @@ These are accepted by every command except `goo-info`.
 | `--contour-supports` / `--no-contour-supports` | Also sample the outer perimeter of downward-face clusters. Off by default. |
 | `--boundary-supports` / `--no-boundary-supports` | Also sample open mesh boundary edges (crop cuts). Closed solids add none. Off by default. |
 | `--auto-bracing` / `--no-auto-bracing` | Automatic bracing, switched independently of contacts. |
-| `--brace-spacing-mm` | Vertical gap between cross-braces, `support.brace_spacing_mm`. `0` (default) uses the built-in 30 mm; a mixed pair with `--brace-start-height-mm` still fills the zero side with 30 or 3. |
-| `--brace-start-height-mm` | Height of the lowest cross-brace above the plate, `support.brace_start_height_mm`. `0` (default) uses the built-in 3 mm. Pillars shorter than `max(start, 15 mm)` are not braced. |
+| `--brace-spacing-mm` | Vertical spacing between downward 45° brace origins, measured from each support shoulder, `support.brace_spacing_mm` (default 15 mm). |
 | `--brace-diameter-mm` | Cross-brace diameter, `support.brace_diameter_mm`. `0` (default) derives it from the thinner of the two connected pillars. |
 | `--brace-max-distance-mm` | Farthest a pillar neighbour may be and still be braced, `support.brace_max_distance_mm`. `0` (default) derives `1.5 * spacing_mm`. |
-| `--part-to-part-supports` / `--no-part-to-part-supports` | Allow or forbid support anchors on model material. |
+| `--brace-max-length-mm` | Maximum complete downward diagonal brace length, `support.brace_max_length_mm` (default 30 mm). Candidates that cannot reach a valid grounded destination are omitted. |
+| `--part-to-part-supports` / `--no-part-to-part-supports` | Allow or forbid primary support anchors on model material. Braces always require a support-only path to the plate or generated base. |
 | `--part-to-part-avoidance VALUE` | Route preference from `0` (equal length competition) to `1` (historical plate preference); intermediate values require a proportionally shorter model route. |
 | `--peel-analysis` / `--no-peel-analysis` | Enable or skip the uncalibrated downward-surface peel advisory. Skipping reports `not_run`. Thresholds use `--set peel.KEY=VALUE`. |
 | `--seal-voids` / `--no-seal-voids` | Fill enclosed cavities. On by default. |
@@ -711,8 +711,10 @@ values are preserved in portable support presets.
 Defaults are `model_anchor_length_mm=2`, `model_anchor_diameter_mm=0.4`, and
 `model_anchor_penetration_mm=0.15`. Override with `--set` as needed. Zero length
 keeps the direct bottom; zero diameter derives the selected middle diameter.
-Top-tip settings stay independent. Use `--set support.part_to_part_avoidance=0`
-in the example to make its available model anchor compete with the plate route.
+Top-tip settings stay independent. Enable `--part-to-part-supports` explicitly,
+then use `--set support.part_to_part_avoidance=0` in the example to make its
+available model anchor compete with the plate route. Braces remain support-only
+even when this primary-routing option is enabled.
 
 `--small-pillar-mode middle|model` chooses a thin middle segment or an entire
 short model-to-model connector. Both use `support.small_pillar_diameter_mm`

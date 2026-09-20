@@ -24,6 +24,7 @@ def pedestal_scene():
 def routed(**support):
     triangles, bounds = pedestal_scene()
     settings = resolve_settings(overrides={'support': {
+        'allow_part_to_part': True,
         'part_to_part_avoidance': 0.0,
         **support,
     }})
@@ -91,7 +92,7 @@ def test_anchor_clearance_rejects_a_sideways_obstacle():
                                   obstacle], m.OpType.Add)).astype(np.float32)
     bounds = np.stack((triangles.reshape(-1, 3).min(axis=0), triangles.reshape(-1, 3).max(axis=0)))
     settings = resolve_settings(overrides={'support': {
-        'part_to_part_avoidance': 0.0, 'model_anchor_length_mm': 1.0,
+        'allow_part_to_part': True, 'part_to_part_avoidance': 0.0, 'model_anchor_length_mm': 1.0,
         'model_anchor_diameter_mm': .55, 'model_anchor_penetration_mm': .2,
     }})
     field = build_column_field(triangles, bounds, settings, pitch_mm=.5)
@@ -137,7 +138,8 @@ def test_short_gap_stays_thin_point_to_point():
              + m.Manifold.cube((20, 20, 2), True).translate((0, 0, 12)))
     triangles = manifold_triangles(solid).astype(np.float32)
     bounds = np.asarray(solid.bounding_box()).reshape(2, 3)
-    settings = resolve_settings(overrides={'support': {'part_to_part_avoidance': 0.0}})
+    settings = resolve_settings(overrides={'support': {
+        'allow_part_to_part': True, 'part_to_part_avoidance': 0.0}})
     from voxelmill.supports import build_column_field, route_contacts
     field = build_column_field(triangles, bounds, settings, pitch_mm=.5)
     plan, _ = route_contacts([[0., 0., 11.]], field, settings)

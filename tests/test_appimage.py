@@ -1,13 +1,22 @@
 """AppDir staging is relocatable and does not consult the host virtualenv."""
 import os
 from pathlib import Path
+import importlib.util
 import subprocess
 import sys
+import sysconfig
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILDER = ROOT / 'scripts' / 'build_appimage.py'
+
+
+def load_builder():
+    spec = importlib.util.spec_from_file_location('build_appimage', BUILDER)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 @pytest.fixture
@@ -106,14 +115,53 @@ def test_pyinstaller_mac_bundle_is_not_background_only():
 
 
 def test_site_copy_keeps_numpy_core_tests():
-    import importlib.util
-    spec = importlib.util.spec_from_file_location('build_appimage', BUILDER)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    mod = load_builder()
     assert 'tests' not in mod._ignore_site('/opt/numpy/_core', ['tests', '__init__.py', '__pycache__'])
     assert '__pycache__' in mod._ignore_site('/opt/numpy/_core', ['tests', '__pycache__'])
     assert 'tests' in mod._ignore_site('/opt/numpy', ['tests', 'linalg'])
     assert 'tests' in mod._ignore_site('/opt/scipy/ndimage', ['tests', '__init__.py'])
+
+
+def test_explicit_native_extension_replaces_staged_environment_copy(tmp_path):
+    mod = load_builder()
+    package = tmp_path / 'site-packages' / 'voxelmill'
+    package.mkdir(parents=True)
+    (package / '_native.old.so').write_bytes(b'cuda environment build')
+    suffix = sysconfig.get_config_var('EXT_SUFFIX') or '.so'
+    cpu = tmp_path / f'_native{suffix}'
+    cpu.write_bytes(b'cpu release build')
+
+    staged = mod._stage_native_override(cpu, package)
+
+    assert staged.read_bytes() == b'cpu release build'
+    assert list(package.glob('_native*.so')) == [staged]
+    with pytest.raises(SystemExit, match='native extension not found'):
+        mod._stage_native_override(tmp_path / f'missing{suffix}', package)
+    wrong = tmp_path / f'other{suffix}'
+    wrong.write_bytes(b'wrong module')
+    with pytest.raises(SystemExit, match='must be named _native'):
+        mod._stage_native_override(wrong, package)
+
+
+def test_relative_appdir_and_native_override_are_resolved_before_staging(tmp_path, monkeypatch):
+    mod = load_builder()
+    captured = {}
+    native = tmp_path / '_native.so'
+    native.write_bytes(b'cpu')
+
+    def stage(appdir, *, gui, native_extension):
+        captured.update(appdir=appdir, gui=gui, native=native_extension)
+        return appdir
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(mod, 'stage_appdir', stage)
+    assert mod.main(['--appdir', 'relative/AppDir', '--native-extension', '_native.so',
+                     '--cli-only', '--stage-only']) == 0
+    assert captured == {
+        'appdir': (tmp_path / 'relative/AppDir').resolve(),
+        'gui': False,
+        'native': native.resolve(),
+    }
 
 
 def test_cli_rewrites_empty_argv_to_gui_when_pyside_is_present(tmp_path, monkeypatch):

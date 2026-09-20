@@ -1,5 +1,13 @@
 Alpha {version}: portable Linux / macOS / Windows builds. Unsigned.
 
+Bracing now grows downward at 45° from the full-width shoulder below each support tip, while retaining the main pillars. Vertical branch spacing defaults to 15 mm and maximum actual branch length to 30 mm; both are editable independently of support spacing and neighbour distance. The obsolete bottom-up brace-start setting has been removed.
+
+Branches connect to grounded supports or existing branches, or form a new plate landing using the configured base style. Model parts never anchor braces. Full branch thickness, model clearance, build boundaries and complete new feet are checked before a branch is accepted. Support graphs and reports include branch connections and rejection evidence.
+
+Primary part-to-part supports now require explicit enabling. That setting does not relax brace grounding or model clearance.
+
+Generated grid bases are simplified within STL coordinate precision to prevent collapsed triangles on reopening. Connected braces can still narrow drainage channels; existing drainage failures continue to block ordinary export.
+
 This is an alpha. The GUI editor, CLI (`prepare`, `slice`, …), and CPU-only native kernels are bundled. CUDA is not. Qt is used via PySide6 under LGPL v3; see `licenses/THIRD-PARTY.md`.
 
 ## Install

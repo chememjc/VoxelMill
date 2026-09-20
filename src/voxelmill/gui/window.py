@@ -950,7 +950,7 @@ class MainWindow(QtWidgets.QMainWindow):
         add(parts_menu, 'arrange_objects', 'Arrange on plate', self.arrange_objects, 'Ctrl+L')
         add(parts_menu, 'measure_stl', 'Measure STL (sizes and fit)...', self.measure_stl_dialog)
         part_to_part = QtGui.QAction('Allow part-to-part supports', self, checkable=True)
-        part_to_part.setChecked(bool(self.document.settings['support'].get('allow_part_to_part', True)))
+        part_to_part.setChecked(bool(self.document.settings['support'].get('allow_part_to_part', False)))
         part_to_part.toggled.connect(self._set_allow_part_to_part)
         parts_menu.addAction(part_to_part)
         self.actions_map['allow_part_to_part'] = part_to_part
@@ -1588,7 +1588,7 @@ class MainWindow(QtWidgets.QMainWindow):
         action = getattr(self, 'actions_map', {}).get('allow_part_to_part')
         if action is not None:
             action.blockSignals(True)
-            action.setChecked(bool(self.document.settings['support'].get('allow_part_to_part', True)))
+            action.setChecked(bool(self.document.settings['support'].get('allow_part_to_part', False)))
             action.blockSignals(False)
         for box, value in zip(self.scale, self.document.scale_factors):
             box.setValue(value)

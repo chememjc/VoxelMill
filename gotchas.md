@@ -1,6 +1,48 @@
 # Engineering gotchas
 
-This is a verified lessons log, not a list of hypothetical hazards. Updated 2026-09-18.
+This is a verified lessons log, not a list of hypothetical hazards. Updated 2026-09-20.
+
+- **Bracing must trace support-only grounding.** In 0.5.3, downward branches
+  admit only shaft edges reachable from a plate foot without traversing a tip,
+  model anchor or bottom connector. A primary part-to-part connection does not
+  establish brace grounding. New graph junctions split their destination edges;
+  primary elbow edges share one shoulder-based vertical spacing schedule.
+
+- **A candidate cap alone does not bound descending branch origins.** A tiny
+  representable spacing on a lone tall support can produce many origins with
+  no reachable destination, consuming no candidate attempts. The origin count
+  and attempted destinations now each obey the work limit, with cancellation
+  checks and separate reported counts.
+
+- **A tilted cylinder ending at Z=0 extends below the build plate.** A new
+  brace's diagonal ends above the plate on a short vertical foot stem. Check
+  the complete branch envelope and configured foot before accepting it; do not
+  clip a bad landing. The length setting measures the diagonal branch axis.
+
+- **Actual-render tests must resolve the unsaved-changes prompt.** The cold
+  editor's model, attachment and layer checks completed, but `window.close()`
+  blocked in `_confirm_discard_or_save` after routing marked the document dirty.
+  Saving before closing removes that test hang without bypassing rendering.
+
+- **Local release builds need an explicit CPU extension.** The development
+  environment can contain CUDA native code while releases are CPU-only.
+  `build_appimage.py --native-extension` selects a separate CPU build for the
+  staged package without replacing the live development extension.
+
+- **Connected downward braces can still create drainage bottlenecks.** On the
+  lifted sphere with a 0.8 mm skate base, bracing adds five diagonals and two
+  feet. The reopened solid remains one component, its feet stay inside the
+  base, and no enclosed cavity appears; sampled drainage still finds a narrow
+  channel below the configured 1 mm² threshold. Preserve that failed check and
+  withhold ordinary export. Base-only dimensional tests disable bracing
+  explicitly; the braced case separately verifies the drainage rejection.
+
+- **Grid-base triangles can collapse only when serialized to float32.** A
+  generated grid had four nonzero float64 faces become zero-area STL faces,
+  with or without bracing. Simplifying the generated grid within one float32
+  coordinate step removes redundant edges while keeping its topology closed.
+  Deleting degenerate output faces alone would not establish that. The strict
+  reopened-mesh and drainage regressions cover both braced and unbraced grids.
 
 - **`extra_models=None` is not an empty dict.** `load_and_place` used `None`
   to mean "no added parts". `_finish_place` then called `.get` on that value,
@@ -1133,8 +1175,9 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
 
 - **Support "bridging" is called bracing in this codebase.** The feature is
   `supports._brace`, gated by `support.auto_bracing` and sized by
-  `brace_spacing_mm`, `brace_start_height_mm`, `brace_diameter_mm` and
-  `brace_max_distance_mm`. Grep for `bridge` and you will find only a GUI/CLI
+  `brace_spacing_mm`, `brace_max_length_mm`, `brace_diameter_mm` and
+  `brace_max_distance_mm`. Version 0.5.3 removes the old bottom-up
+  `brace_start_height_mm`. Grep for `bridge` and you will find only a GUI/CLI
   docstring. Both GUI surfaces expose all five by construction — they are
   generated from `config.DEFAULTS` — so a missing bracing control can only ever
   be a CLI gap.

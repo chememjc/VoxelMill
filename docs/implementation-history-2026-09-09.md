@@ -369,15 +369,20 @@ stability remain uncalibrated.
 ## Completed — Tier 2.1 and configuration editors (2026-09-08)
 
 - [x] Recovered interrupted work: independent tip diameter, branch angle,
-      short-pillar class, brace spacing/start height, plate/none/circular-pad
-      bases, CHITUBOX partial preset and dimensional tests exist in source.
+      short-pillar class, the original brace spacing/start-height experiment,
+      plate/none/circular-pad bases. The brace start-height design was later
+      superseded by downward shoulder-origin branches; current settings are
+      documented in `docs/configuration.md` and `docs/algorithms.md`.
+      The CHITUBOX partial preset and dimensional tests exist in source.
       The drainage attribution correction is already in gotchas.md.
 - [x] Verified recovered support/preset block: **32 passed**. Broader support,
       configuration, and batch regression: **68 passed** before new editor tests.
 - [x] Add part-to-part policy: forbid model anchors, prefer plate routes with
       adjustable avoidance, or score both kinds equally; preserve route failures.
 - [x] Expose brace diameter and neighbour reach as adjustable settings alongside
-      existing enable, spacing, and start controls; check brace/model collisions.
+      the historical enable, spacing, and start controls; check brace/model
+      collisions. This historical start-height control was superseded by the
+      0.5.3 downward shoulder-origin branch design.
 - [x] Dedicated printer, resin, and support editor windows, portable saves/loads,
       shared validation and undoable application; live rendered support example.
 - [x] CLI parity for editor saves and the support example; resin save delegated

@@ -148,40 +148,25 @@ def test_the_thin_pillar_class_needs_both_halves_or_neither():
 
 # ---- bracing: two numbers, not one -----------------------------------------
 
-def test_brace_spacing_and_start_height_are_independent():
+def test_brace_spacing_and_length_are_independent():
     settings = resolve_settings()
     pillar_r = settings['support']['pillar_diameter_mm'] / 2
-    assert brace_geometry(settings, pillar_r) == (30.0, 3.0)
-
-    apart = settings_with(brace_spacing_mm=30.0, brace_start_height_mm=3.0)
-    assert brace_geometry(apart, pillar_r) == (30.0, 3.0)
-    # A zero on either side uses the built-in 30 / 3, not slenderness.
-    assert brace_geometry(settings_with(brace_spacing_mm=30.0), pillar_r) == (30.0, 3.0)
-    assert brace_geometry(settings_with(brace_start_height_mm=3.0), pillar_r) == (30.0, 3.0)
-    assert brace_geometry(settings_with(brace_spacing_mm=12.0), pillar_r) == (12.0, 3.0)
-    assert brace_geometry(settings_with(brace_start_height_mm=8.0), pillar_r) == (30.0, 8.0)
+    assert brace_geometry(settings, pillar_r) == (15.0, 30.0)
+    assert brace_geometry(settings_with(brace_spacing_mm=12.0), pillar_r) == (12.0, 30.0)
+    assert brace_geometry(settings_with(brace_max_length_mm=8.0), pillar_r) == (15.0, 8.0)
+    with pytest.raises(VoxelMillError):
+        settings_with(brace_spacing_mm=0)
 
 
-def test_a_lower_start_height_produces_more_braces_at_the_stated_levels():
+def test_smaller_vertical_spacing_produces_more_downward_braces():
     solid = m.Manifold.sphere(4, 48).translate((0, 0, 64))
     triangles, bounds = placed(solid)
     default, _raft = plan_supports(triangles, bounds, resolve_settings())
-    close = settings_with(brace_spacing_mm=8.0, brace_start_height_mm=4.0)
+    close = settings_with(brace_spacing_mm=8.0, brace_max_length_mm=30.0)
     plan, raft = plan_supports(triangles, bounds, close)
     assert plan.metrics['brace_spacing_mm'] == 8.0
-    assert plan.metrics['brace_start_height_mm'] == 4.0
+    assert plan.metrics['brace_max_length_mm'] == 30.0
     assert plan.metrics['braces'] > default.metrics['braces']
-
-    strut_r = close['support']['pillar_diameter_mm'] / 4
-    levels = []
-    for part in plan.solids:
-        x0, y0, z0, x1, y1, z1 = part.bounding_box()
-        if z1 - z0 < 2 * strut_r * 1.01 and max(x1 - x0, y1 - y0) > 4 * strut_r:
-            levels.append((z0 + z1) / 2)
-    assert levels
-    assert min(levels) == pytest.approx(4.0, abs=1e-6)
-    for level in levels:
-        assert (level - 4.0) % 8.0 == pytest.approx(0.0, abs=1e-6)
     assert assemble(solid, plan, raft).status() == m.Error.NoError
 
 
@@ -192,7 +177,7 @@ def test_every_base_strategy_builds_what_it_says_and_measures_itself():
     results = {}
     for kind, extra in (('plate', {}), ('none', {}),
                         ('pad', {'base_touch_diameter_mm': 3.0, 'base_thickness_mm': 0.8})):
-        plan, raft = plan_for(solid, settings_with(base_type=kind, **extra))
+        plan, raft = plan_for(solid, settings_with(base_type=kind, auto_bracing=False, **extra))
         results[kind] = (plan.metrics['base'], raft)
 
     plate, plate_raft = results['plate']
@@ -261,8 +246,8 @@ def test_the_chitubox_preset_resolves_to_the_recorded_table():
     assert resolved['tip_length_mm'] == 2.00           # Top / Connection Length
     assert resolved['pillar_diameter_mm'] == 0.80      # Middle / Diameter
     assert resolved['pillar_angle_deg'] == 20.0        # 70 from vertical = 20 from horizontal
-    assert resolved['brace_spacing_mm'] == 30.0        # Middle / Max Cross Spacing
-    assert resolved['brace_start_height_mm'] == 3.00   # Middle / Cross Start Height
+    assert resolved['brace_spacing_mm'] == 15.0        # Downward branch vertical interval
+    assert resolved['brace_max_length_mm'] == 30.0     # Actual diagonal branch length
     assert resolved['base_touch_diameter_mm'] == 10.0  # Bottom / Touch Diameter
     assert resolved['base_thickness_mm'] == 0.80       # Bottom / Thickness
     assert resolved['base_skate_length_mm'] == 0.0     # elongation still unknown
@@ -374,16 +359,16 @@ def test_the_brace_sizing_flags_reach_the_settings_from_the_command_line():
     from voxelmill.cli import _settings, build_parser
     args = build_parser().parse_args(['prepare', 'in.stl',
                                       '--brace-spacing-mm', '30',
-                                      '--brace-start-height-mm', '3',
+                                      '--brace-max-length-mm', '3',
                                       '--brace-diameter-mm', '0.8',
                                       '--brace-max-distance-mm', '12'])
     resolved = _settings(args)['support']
     assert resolved['brace_spacing_mm'] == 30.0
-    assert resolved['brace_start_height_mm'] == 3.0
+    assert resolved['brace_max_length_mm'] == 3.0
     assert resolved['brace_diameter_mm'] == 0.8
     assert resolved['brace_max_distance_mm'] == 12.0
     assert all(isinstance(resolved[key], float) for key in (
-        'brace_spacing_mm', 'brace_start_height_mm',
+        'brace_spacing_mm', 'brace_max_length_mm',
         'brace_diameter_mm', 'brace_max_distance_mm'))
 
 

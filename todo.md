@@ -6,6 +6,11 @@ lessons go in `gotchas.md`.
 
 ## Now
 
+### 0.5.3 downward bracing alpha
+
+- [ ] Commit and push tested changes; manually verify all four release builds before tagging.
+- [ ] Publish v0.5.3 alpha through the tag workflow and accept the downloaded AppImage; record checksum and provenance.
+
 Headline **2.32 s / 350 MB**. Stay on `master`; no release branch until a later stable.
 
 - [x] Sanitize public tree (no machine-absolute paths; vestigial C-CLI cancelled).
@@ -397,7 +402,7 @@ Run `scripts/equivalence.py` after each item. Commit each item separately.
 
 ## Phase 6 — bracing flags, docs, release
 
-- [x] Add `--brace-spacing-mm`, `--brace-start-height-mm`,
+- [x] Add `--brace-spacing-mm`, `--brace-max-length-mm`,
       `--brace-diameter-mm`, `--brace-max-distance-mm` alongside
       `--auto-bracing`, wired through `_overrides`, with CLI tests and
       docs/cli.md + docs/configuration.md updates. DONE. Completions and the
@@ -410,13 +415,13 @@ Run `scripts/equivalence.py` after each item. Commit each item separately.
 ## Verified findings (do not re-derive)
 
 - Support "bridging" is called **bracing** here: `support.auto_bracing` plus
-  `brace_spacing_mm`, `brace_start_height_mm`, `brace_diameter_mm`,
-  `brace_max_distance_mm` (config.py:71,118,119; `supports._brace`
-  supports.py:1258). The GUI exposes all five by construction — both
+  `brace_spacing_mm`, `brace_max_length_mm`, `brace_diameter_mm`,
+  `brace_max_distance_mm` (`config.DEFAULTS` and `supports._brace`).
+  Version 0.5.3 removes the former bottom-up start-height setting.
+  The GUI exposes all five by construction — both
   `settings_table.build_descriptors()` and `ConfigurationEditor` are generated
-  from `config.DEFAULTS`, and tests assert 1:1 coverage. The CLI has a named
-  flag only for `auto_bracing`; the four sizing parameters are reachable only
-  through the generic `--set`. That asymmetry is the one real gap. -> Phase 6.
+  from `config.DEFAULTS`, and tests assert 1:1 coverage. The CLI has dedicated
+  flags for the toggle and all four dimensions, as well as generic `--set`.
 - Python startup is not a bottleneck: `import voxelmill.cli` is 0.10 s,
   `numpy+scipy+manifold3d` 0.20 s. A standalone binary saves ~0.3 s per run.
 - The hot kernels are already C++ (native/raster.cpp, mesh.cpp, voxel.cpp,

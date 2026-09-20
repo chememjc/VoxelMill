@@ -36,6 +36,7 @@ def test_normalization_is_deep_and_exact_coordinate_lookup():
 
 def test_two_contacts_can_have_independent_radius_and_tip_geometry():
     settings, field = scene()
+    settings['support']['auto_bracing'] = False
     points = [[-10, 0, 8.0], [-5, 0, 8.0]]
     overrides = [
         {'position_mm': points[0], 'parameters': {'pillar_diameter_mm': .6}},

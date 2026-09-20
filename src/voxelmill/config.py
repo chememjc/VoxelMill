@@ -69,7 +69,10 @@ DEFAULTS = {
     },
     'support': {
         'automatic': True, 'auto_bracing': True,
-        'allow_part_to_part': True,
+        # Primary supports may anchor on another model only when explicitly
+        # enabled.  Brace destinations are always support-network nodes and
+        # never inherit this policy.
+        'allow_part_to_part': False,
         # After routing, drop unroutable contacts that already have material in
         # a 3x3 printer-pitch neighbourhood one layer below. Near-vertical walls
         # sampled on both sides of the surface do not need a pillar. Island and
@@ -117,11 +120,13 @@ DEFAULTS = {
         # model-to-model connector, whose two ends penetrate independently.
         'small_pillar_mode': 'middle', 'small_pillar_shape': 'cone',
         'small_pillar_upper_depth_mm': 0.0, 'small_pillar_lower_depth_mm': 0.0,
-        # Cross-brace geometry. Zero means the built-in start 3 mm and
-        # spacing 30 mm (the CHITUBOX transcription). Explicit nonzero values
-        # still win; a mixed pair uses 30 or 3 for the zero side.
-        'brace_spacing_mm': 0.0, 'brace_start_height_mm': 0.0,
-        'brace_diameter_mm': 0.0, 'brace_max_distance_mm': 0.0,
+        # Downward 45-degree brace geometry.  Origins are sampled from the
+        # shoulder below each tip taper; brace_spacing_mm is vertical spacing
+        # between those origins.  brace_max_length_mm is the complete diagonal
+        # length limit, while brace_max_distance_mm independently limits the
+        # neighboring support search.
+        'brace_spacing_mm': 15.0, 'brace_diameter_mm': 0.0,
+        'brace_max_distance_mm': 0.0, 'brace_max_length_mm': 30.0,
         # What the supports land on. 'grid' is the default: less resin and
         # less suction than a solid slab, still one connected base. 'plate' is
         # the convex hull raft, with a 30 degree outer putty-knife bevel.
@@ -401,7 +406,6 @@ def validate_settings(settings):
             'tip_base_diameter_mm', 'small_pillar_diameter_mm', 'small_pillar_max_length_mm',
             'model_anchor_length_mm', 'model_anchor_diameter_mm', 'model_anchor_penetration_mm',
             'small_pillar_upper_depth_mm', 'small_pillar_lower_depth_mm',
-            'brace_spacing_mm', 'brace_start_height_mm',
             'brace_diameter_mm', 'brace_max_distance_mm', 'part_to_part_avoidance',
             'base_touch_diameter_mm', 'base_thickness_mm', 'break_point_diameter_mm',
             'base_skate_length_mm', 'base_strut_width_mm', 'base_edge_slope_deg',

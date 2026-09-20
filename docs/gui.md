@@ -38,6 +38,10 @@ not always `.stl`.
 | **Tasks** | Printer monitor; Cancel running job; Run operation |
 | **View** | Named camera views, Fit to scene, issue navigation, layout reset (unchanged) |
 
+Primary part-to-part supports are disabled by default. The Parts checkbox
+enables model anchors for primary routing only; brace networks always require
+a continuous support-only path to the plate or generated base.
+
 Reopening a `.voxmil` project shows each part's original file name in the
 object list, not the SHA-256 stem of its extracted mesh. The name travels in
 the project manifest; only the file on disk is hash-named, because the
@@ -302,7 +306,9 @@ The Support editor shows a four-contact floating-beam illustration from the
 production router. Its height control is 3–160 mm, and changing a setting
 invalidates the previous preview before an asynchronous replacement job is
 submitted. The status reports routed contacts, model anchors, generated
-braces, and braces rejected by model collision checks. Export example STL
+downward braces, and braces rejected by model collision checks. Braces begin
+at the full-width shoulder below each tip taper, travel at 45°, and never
+anchor on model parts. Export example STL
 writes this illustrative geometry only; it has no print validation or strength
 claim. Cancellation and stale-job results are discarded.
 The shared **base type** choices are `plate`, `none`, `pad`, `skate`,

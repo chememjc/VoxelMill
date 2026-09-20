@@ -26,7 +26,7 @@ ENUMS = {('support', 'base_type'): BASE_TYPES,
          ('support', 'small_pillar_shape'): SMALL_PILLAR_SHAPES,
          ('support', 'tip_shape'): TIP_SHAPES}
 HELP = {
-    'allow_part_to_part': 'Allow supports to start on model material. Disable to require a route to the plate.',
+    'allow_part_to_part': 'Allow primary supports to anchor on model material. Brace networks always require a continuous support-only path to the plate or generated base.',
     'drop_attached_unroutable': 'After routing, drop contacts that will not fit if they already have material one printer layer below. Island and manual contacts are never dropped.',
     'tree_supports': 'Cluster nearby vertical plate supports onto one trunk with branches. Off keeps independent pillars.',
     'contour_supports': 'Also sample the outer perimeter of downward-face clusters, not just face centroids and interior lattices.',
@@ -35,9 +35,9 @@ HELP = {
     'part_to_part_avoidance': '0: compare routes equally by length. 1: prefer any available plate route. '
                               'At 0.5 a model route must be less than half the plate route length.',
     'brace_diameter_mm': 'Brace diameter. 0 derives half the thinner adjoining pillar diameter.',
-    'brace_max_distance_mm': 'Maximum neighbour distance. 0 derives 1.5 times support spacing.',
-    'brace_spacing_mm': 'Vertical interval between braces. 0 uses the built-in 30 mm.',
-    'brace_start_height_mm': 'First brace height above plate. 0 uses the built-in 3 mm.',
+    'brace_max_distance_mm': 'Maximum neighbor distance for finding an existing support destination. 0 derives 1.5 times primary support spacing.',
+    'brace_spacing_mm': 'Vertical spacing between downward brace origins, measured from each support shoulder. Default 15 mm.',
+    'brace_max_length_mm': 'Maximum complete 45-degree downward brace length, including the diagonal connection. Default 30 mm; unreachable candidates are omitted.',
     'tip_base_diameter_mm': 'Tip cone lower diameter. 0 uses the nominal pillar diameter.',
     'tip_shape': 'Top contact shape. Cone tapers from the tip-base diameter to the contact diameter; cylinder keeps the contact diameter.',
     'break_point_diameter_mm': 'Optional ball at the top contact for a controlled snap-off. 0 disables it. When set it must be at least the contact diameter and must fit in the tip length plus penetration.',

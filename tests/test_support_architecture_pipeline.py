@@ -36,7 +36,7 @@ def test_model_anchor_shape_survives_full_prepare_export_and_reopen(
         tmp_path, pedestal_source, shape):
     output = tmp_path / f'prepared-{shape}.stl'
     settings = small_settings(
-        automatic=False, base_type='none', part_to_part_avoidance=0.0,
+        automatic=False, base_type='none', allow_part_to_part=True, part_to_part_avoidance=0.0,
         model_anchor_shape=shape, model_anchor_length_mm=1.0,
         model_anchor_diameter_mm=.55, model_anchor_penetration_mm=.2,
         penetration_mm=.15)
@@ -69,7 +69,7 @@ def test_whole_small_model_pillar_survives_full_prepare_export_and_reopen(
         tmp_path, pedestal_source, shape):
     output = tmp_path / f'prepared-small-{shape}.stl'
     settings = small_settings(
-        automatic=False, base_type='none', part_to_part_avoidance=0.0,
+        automatic=False, base_type='none', allow_part_to_part=True, part_to_part_avoidance=0.0,
         small_pillar_mode='model', small_pillar_shape=shape,
         small_pillar_diameter_mm=.4, small_pillar_max_length_mm=30.0,
         small_pillar_upper_depth_mm=.25, small_pillar_lower_depth_mm=.25)

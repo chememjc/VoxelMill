@@ -148,7 +148,21 @@ def stage_licenses(appdir: Path):
     _copy_tree(source, doc / 'licenses')
 
 
-def stage_appdir(appdir: Path, *, gui: bool):
+def _stage_native_override(source: Path, package: Path):
+    """Replace staged native code explicitly, without touching the live venv."""
+    source = Path(source)
+    expected = sysconfig.get_config_var('EXT_SUFFIX') or '.so'
+    if not source.is_file():
+        raise SystemExit(f'native extension not found: {source}')
+    if not source.name.startswith('_native') or not source.name.endswith(expected):
+        raise SystemExit(f'native extension must be named _native*{expected}: {source}')
+    for old in package.glob('_native*.so'):
+        old.unlink()
+    _copy_file(source, package / source.name)
+    return package / source.name
+
+
+def stage_appdir(appdir: Path, *, gui: bool, native_extension: Path | None = None):
     if appdir.exists():
         shutil.rmtree(appdir)
     usr = appdir / 'usr'
@@ -215,6 +229,8 @@ def stage_appdir(appdir: Path, *, gui: bool):
         if folder.is_dir():
             for so in folder.glob('_native*.so'):
                 _copy_file(so, site / 'voxelmill' / so.name)
+    if native_extension is not None:
+        _stage_native_override(native_extension, site / 'voxelmill')
 
     stage_licenses(appdir)
 
@@ -288,17 +304,22 @@ def main(argv=None):
                         help='omit PySide6 and VTK (smaller, no editor)')
     parser.add_argument('--stage-only', action='store_true',
                         help='write the AppDir and stop')
+    parser.add_argument('--native-extension',
+                        help='stage this prebuilt _native extension instead of the active environment copy')
     args = parser.parse_args(argv)
     gui = not args.cli_only
-    appdir = stage_appdir(Path(args.appdir), gui=gui)
+    appdir_path = Path(args.appdir).resolve()
+    native_extension = Path(args.native_extension).resolve() if args.native_extension else None
+    appdir = stage_appdir(appdir_path, gui=gui, native_extension=native_extension)
     print(f'staged {appdir}')
     if args.stage_only:
         return 0
-    tool = Path(args.tool)
+    tool = Path(args.tool).resolve()
     if not tool.is_file():
         raise SystemExit(f'appimagetool not found at {tool}; download it or pass --tool')
-    pack_appdir(appdir, Path(args.output), tool)
-    print(f'wrote {args.output}')
+    output = Path(args.output).resolve()
+    pack_appdir(appdir, output, tool)
+    print(f'wrote {output}')
     return 0
 
 

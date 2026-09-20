@@ -311,6 +311,7 @@ Inspect a bottom connector with dimensions independent of the top tip:
 
 ```sh
 .venv/bin/voxelmill support-example --model-anchor-shape cone \
+  --part-to-part-supports \
   --part-to-part-avoidance 0 --set support.model_anchor_length_mm=1 \
   --set support.model_anchor_diameter_mm=0.4 \
   --set support.model_anchor_penetration_mm=0.2 \

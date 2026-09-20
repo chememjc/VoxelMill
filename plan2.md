@@ -601,8 +601,11 @@ The stated priority. This is where the program gets better at *printing*.
 ## 2.1 Support and base architecture — fully parametric
 
 Implementation checkpoint (2026-09-08): independent tip-base diameter, branch
-angle, short-pillar class, brace spacing/start/diameter/reach, plate/none/pad
-strategies, and the partial `chitubox-mars5` preset are implemented and tested.
+angle, short-pillar class, the original brace spacing/start/diameter/reach
+experiment, plate/none/pad strategies, and the partial `chitubox-mars5` preset
+were implemented and tested. The start-height experiment is historical;
+0.5.3 replaces it with downward shoulder-origin branches and a complete
+diagonal length limit.
 `allow_part_to_part` can forbid model anchors; `part_to_part_avoidance` spans
 equal length comparison (0) through mandatory preference for available plate
 routes (1). Brace/model clearance is checked on the existing analysis grid.
@@ -711,6 +714,13 @@ and estimated removal difficulty so the trade-off is quantified rather than felt
 
 ### Structural work in the support model
 
+Historical note (2026-09-20): the early design below describes the former
+bottom-up cross-brace implementation. The shipped contract now uses downward
+45° branches from the shoulder below each tip taper. `brace_spacing_mm` is
+vertical shoulder spacing (15 mm default), `brace_max_length_mm` is the
+complete diagonal limit (30 mm default), and `brace_max_distance_mm` remains
+the separate neighbor reach. `brace_start_height_mm` no longer exists.
+
 At the start of this plan, `route_contacts` built exactly two segments — one
 uniform cylinder and one cone whose taper length *is* `tip_length_mm` — with one
 global `pillar_diameter_mm`, a hard-coded 45° branch limit (`supports.py:458`),
@@ -727,7 +737,9 @@ In order:
    20° from horizontal here), replacing the hard-coded 45°.
 4. **Small-pillar class** — a second, thinner pillar for short or light contacts.
 5. **Independent cross-brace spacing and start height** (30 mm / 3 mm) instead
-   of one derived number serving both.
+   of one derived number serving both. **Superseded:** this historical design
+   was replaced by downward shoulder-origin branches in the 0.5.3 alpha; see
+   the note above and `docs/algorithms.md`.
 6. **Plate touch shapes with their own diameter and thickness**, including the
    feet-only mode above.
 

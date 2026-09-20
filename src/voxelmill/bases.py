@@ -348,6 +348,17 @@ def build_base(feet, settings, pillar_radius, *, foot_radii=None, cancel=None):
         solid = _extrude(footprint, thickness, float(support['base_edge_slope_deg']),
                          float(settings['process']['layer_height_mm']), record, cancel)
     cancel.check()
+    if kind == 'grid':
+        # Intersecting grid strips can leave near-coincident vertices along a
+        # pad boundary. Their double-precision triangles have positive area,
+        # but collapse when STL stores float32 coordinates. Simplify the solid
+        # topology before export, within one float32 coordinate step; dropping
+        # faces from the serialized soup could instead leave an open boundary.
+        scale = max(abs(value) for value in solid.bounding_box())
+        tolerance = max(1e-8, float(np.spacing(np.float32(scale))))
+        solid = solid.simplify(tolerance)
+        record.update(export_simplification_mm=tolerance,
+                      export_simplification_basis='one float32 coordinate step; redundant grid edges')
     if solid.status() != m.Error.NoError or solid.is_empty():
         raise VoxelMillError('invalid_support', 'Base construction did not produce valid geometry')
     _record_footprint(record, footprint, solid)

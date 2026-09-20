@@ -26,7 +26,7 @@ Resolved settings contain `schema_version`, `printer`, `resin`, `process`, `supp
 | `process` elephant foot | `elephant_foot_compensation_mm=0.0` (disabled), `elephant_foot_layers=0` (derives the ramp length from `bottom_layers`) |
 | `process` dimensional | `shrink_percent_xy=0.0`, `shrink_percent_z=0.0`, `tolerance_offset_mm=0.0`, `bottom_tolerance_offset_mm=0.0` (all disabled and uncalibrated) |
 | `process` antialiasing | `antialias_levels=1` (`1`, `2`, or `4`; 1 is binary occupancy, 2 or 4 supersample to coverage grayscale), `antialias_supports=false` (support tips stay binary unless this is set) |
-| `support` | `automatic=true`, `auto_bracing=true`, `allow_part_to_part=true`, `drop_attached_unroutable=true`, `tree_supports=false`, `tree_cluster_mm=0` (derives `2 * spacing_mm`), `contour_supports=false`, `boundary_supports=false`, `part_to_part_avoidance=1`, `spacing_mm=3`, `contact_diameter_mm=0.4`, `penetration_mm=0.15`, `tip_shape="cone"`, `break_point_diameter_mm=0.8`, `pillar_diameter_mm=1.2`, `tip_length_mm=2`, `tip_base_diameter_mm=0` (derives `pillar_diameter_mm`), `model_anchor_shape="cone"`, `model_anchor_length_mm=2`, `model_anchor_diameter_mm=0.4`, `model_anchor_penetration_mm=0.15`, `pillar_angle_deg=45`, `small_pillar_diameter_mm=0`, `small_pillar_max_length_mm=0` (both zero disables the thin-pillar class), `brace_spacing_mm=0`, `brace_start_height_mm=0` (zeros use built-in 30 mm / 3 mm), `brace_diameter_mm=0` (derives from the thinner connected pillar), `brace_max_distance_mm=0` (derives `1.5 * spacing_mm`), `base_type="grid"`, `raft_slope_deg=30` (plate outer putty-knife bevel; 0 is a near-vertical rim), `base_touch_diameter_mm=0`, `base_thickness_mm=0`, `base_skate_length_mm=0`, `base_rotation_deg=0`, `base_strut_width_mm=0`, `base_cell_size_mm=6`, `min_tip_length_mm=0.3`, `raft_thickness_mm=1`, `raft_expansion_mm=2`, `max_slenderness=40`, `max_span_mm=3`, `min_overlap_pixels=1`, `overhang_angle_deg=45`, `support_clearance_mm=0.3`, `max_island_passes=5` (integer 1–10; caps `prepare`'s and the editor's island-correction loop, see [algorithms.md](algorithms.md#island-correction-passes)), `max_contact_gap_mm=0` (derives `spacing_mm`), `max_contact_load_mm2=0` (derives `4 * spacing_mm^2`) |
+| `support` | `automatic=true`, `auto_bracing=true`, `allow_part_to_part=false`, `drop_attached_unroutable=true`, `tree_supports=false`, `tree_cluster_mm=0` (derives `2 * spacing_mm`), `contour_supports=false`, `boundary_supports=false`, `part_to_part_avoidance=1`, `spacing_mm=3`, `contact_diameter_mm=0.4`, `penetration_mm=0.15`, `tip_shape="cone"`, `break_point_diameter_mm=0.8`, `pillar_diameter_mm=1.2`, `tip_length_mm=2`, `tip_base_diameter_mm=0` (derives `pillar_diameter_mm`), `model_anchor_shape="cone"`, `model_anchor_length_mm=2`, `model_anchor_diameter_mm=0.4`, `model_anchor_penetration_mm=0.15`, `pillar_angle_deg=45`, `small_pillar_diameter_mm=0`, `small_pillar_max_length_mm=0` (both zero disables the thin-pillar class), `brace_spacing_mm=15`, `brace_diameter_mm=0` (derives from the thinner connected pillar), `brace_max_distance_mm=0` (derives `1.5 * spacing_mm`), `brace_max_length_mm=30` (maximum complete diagonal length), `base_type="grid"`, `raft_slope_deg=30` (plate outer putty-knife bevel; 0 is a near-vertical rim), `base_touch_diameter_mm=0`, `base_thickness_mm=0`, `base_skate_length_mm=0`, `base_rotation_deg=0`, `base_strut_width_mm=0`, `base_cell_size_mm=6`, `min_tip_length_mm=0.3`, `raft_thickness_mm=1`, `raft_expansion_mm=2`, `max_slenderness=40`, `max_span_mm=3`, `min_overlap_pixels=1`, `overhang_angle_deg=45`, `support_clearance_mm=0.3`, `max_island_passes=5` (integer 1–10; caps `prepare`'s and the editor's island-correction loop, see [algorithms.md](algorithms.md#island-correction-passes)), `max_contact_gap_mm=0` (derives `spacing_mm`), `max_contact_load_mm2=0` (derives `4 * spacing_mm^2`) |
 | `repair` | `seal_voids=true`, `min_orifice_area_mm2=1`, `aggressiveness="conservative"`, `max_deviation_mm=0.05`, `remove_tiny_features=false`, `auto_drain_holes=false`, `voxel_size_mm=0` (derived), `smooth_iterations=0`, `min_void_volume_mm3=0`, `support_void_policy="fail"` (`fail` / `ignore` / `fill`) |
 | `assembly` | `union="auto"` (`auto` or `exact`), `require_raster_parity=true`, `max_parity_examples=16` (integer 0–256), `clip_to_build_volume=false` |
 | `resources` | `memory_gib=32`, `workers=0` (0 derives one per physical core, capped at 8 where the measured speedup plateaus), `worker_policy="performance"` (`performance` / `efficiency` / `all`), `scratch_dir=null` (omit the key in TOML to use its default); `acceleration="auto"` (`auto` / `cpu` / `cuda`), `cuda_device=0`, `post_slice_hook=null`; layer analysis caps worker concurrency against full-panel mask/label/EDT scratch estimates |
@@ -167,23 +167,27 @@ fill historical zeros through `fill_legacy_settings` / `_LEGACY_SUPPORT_OFF`
 rather than sprouting the new nonzero defaults. Explicit zeros already stored
 in a project are kept as zeros.
 
-`brace_spacing_mm`/`brace_start_height_mm` used to be one derived number,
-`max_slenderness * 2 * pillar_radius`, serving as both the vertical gap
-between cross-braces and the height of the lowest one. Zero (the default) now
-uses the built-in 30 mm spacing and 3 mm start (the CHITUBOX transcription);
-an explicit nonzero still wins, and a mixed pair uses 30 or 3 for the zero
-side. Both are ordinary `support` keys, reachable through
-`--set section.key=value` or the dedicated `--brace-spacing-mm`/
-`--brace-start-height-mm` CLI shortcuts (see [cli.md](cli.md)), or the GUI's
-resolved-settings JSON. Pillars shorter than `max(start, 15 mm)` are not
-braced, so a dense low part does not grow a drainage net under itself.
+Downward braces begin at the full-width shoulder below each tip taper and
+proceed at 45° toward a grounded support network or a valid plate landing.
+`brace_spacing_mm` is their vertical origin spacing and defaults to 15 mm;
+it is independent of primary `spacing_mm`. `brace_max_length_mm` limits the
+complete diagonal branch to 30 mm by default. `brace_max_distance_mm` remains
+the separate neighbor search limit and `0` derives `1.5 * spacing_mm`.
+Candidates are processed from highest to lowest, use the shortest valid
+support-only connection, and are omitted when no destination fits the length,
+clearance, or build-volume rules. A model part is never a brace anchor, even
+when `allow_part_to_part=true`; that flag applies only to primary support
+routing. All four values are ordinary `support` keys, reachable through
+`--set section.key=value`, the dedicated brace CLI shortcuts, or the GUI's
+resolved-settings JSON.
 
 `support.tree_cluster_mm` (default `0`, which derives `2 * spacing_mm`) is the
 radius `tree_supports` clusters nearby vertical plate supports within before
 building a shared trunk; see [algorithms.md](algorithms.md#tree-supports).
 
-`allow_part_to_part` controls whether a contact may anchor on already printed
-model material. When enabled, `part_to_part_avoidance` compares the model route
+`allow_part_to_part` controls whether a primary contact may anchor on already
+printed model material and defaults to `false`. When enabled,
+`part_to_part_avoidance` compares the model route
 with the available plate route by centerline length: `0` lets both compete
 equally, `1` preserves the historical preference for the plate route, and an
 intermediate value accepts the model only when it is proportionally shorter
@@ -195,10 +199,11 @@ reach the existing failure gates.
 
 `brace_diameter_mm` sets the cross-brace diameter when nonzero; `0` derives it
 from the thinner of the two connected pillars. `brace_max_distance_mm` limits
-which pillar neighbours can be connected and defaults to `1.5 * spacing_mm`.
-Both are ordinary `support` keys, reachable through `--set section.key=value`
-or the dedicated `--brace-diameter-mm`/`--brace-max-distance-mm` CLI shortcuts
-(see [cli.md](cli.md)), or the GUI's resolved-settings JSON. Before a brace is
+which pillar neighbors can be connected and defaults to `1.5 * spacing_mm`.
+`brace_spacing_mm` and `brace_max_length_mm` are strictly positive; their
+defaults are 15 mm and 30 mm. All four are ordinary `support` keys, reachable
+through `--set section.key=value` or the dedicated brace CLI shortcuts (see
+[cli.md](cli.md)), or the GUI's resolved-settings JSON. Before a brace is
 emitted, its capsule is checked against occupied model columns on the support
 analysis grid. A collision rejects that candidate and increments
 `braces_collision_rejected`; the grid test is a clearance heuristic, not a

@@ -52,14 +52,18 @@ starting point. The independent anchor and whole small-pillar geometry can be
 configured completely without claiming to reconstruct those missing values.
 
 The support section also includes `allow_part_to_part` and
-`part_to_part_avoidance`. The boolean permits model anchors; avoidance `0`
+`part_to_part_avoidance`. The boolean defaults to false and permits model
+anchors for primary supports when enabled; avoidance `0`
 lets model and plate routes compete by length, while `1` keeps the historical
 plate preference and intermediate values require a proportionally shorter
-model route. `brace_diameter_mm` and `brace_max_distance_mm` independently
-control brace thickness and neighbour reach; zero retains their derived
-defaults. Brace candidates that intersect occupied model columns on the
-analysis grid are rejected and counted. These additions leave the legacy
-defaults unchanged.
+model route. `brace_spacing_mm` (15 mm by default) sets vertical origin
+spacing below each shoulder, `brace_max_length_mm` (30 mm by default) limits
+the complete 45° branch, and `brace_diameter_mm` and `brace_max_distance_mm`
+independently control brace thickness and neighbor reach. Brace candidates
+always require a support-only grounded path; model parts are never brace
+anchors, even when primary part-to-part supports are enabled. Candidates that
+intersect occupied model columns on the analysis grid are rejected and
+counted.
 
 `base_type` accepts `plate`, `none`, `pad`, `skate`, `skeleton`, `grid`, and
 `hex`, plus `triangle` for triangulated foot connections.

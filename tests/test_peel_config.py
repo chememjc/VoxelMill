@@ -7,13 +7,16 @@ from voxelmill.config import DEFAULTS, resolve_settings, validate_settings
 from voxelmill.contracts import VoxelMillError
 
 
-def test_support_defaults_are_point_to_point_with_early_braces():
+def test_support_defaults_require_opt_in_model_anchors_and_use_downward_braces():
     support = resolve_settings()['support']
     assert support['model_anchor_length_mm'] == 2.0
     assert support['model_anchor_diameter_mm'] == 0.4
     assert support['model_anchor_penetration_mm'] == 0.15
     assert support['break_point_diameter_mm'] == 0.8
-    assert support['allow_part_to_part'] is True
+    assert support['allow_part_to_part'] is False
+    assert support['brace_spacing_mm'] == 15.0
+    assert support['brace_max_length_mm'] == 30.0
+    assert 'brace_start_height_mm' not in support
 
 
 def test_peel_defaults_and_cli_toggle():
@@ -25,6 +28,26 @@ def test_peel_defaults_and_cli_toggle():
     assert _overrides(args)['peel']['enabled'] is False
     args = build_parser().parse_args(['profile', '--peel-analysis'])
     assert _overrides(args)['peel']['enabled'] is True
+
+
+def test_downward_brace_cli_settings_round_trip_and_reject_zero_limits():
+    args = build_parser().parse_args([
+        'profile', '--brace-spacing-mm', '18', '--brace-max-distance-mm', '11',
+        '--brace-max-length-mm', '27', '--no-part-to-part-supports'])
+    changes = _overrides(args)['support']
+    assert changes == {
+        'brace_spacing_mm': 18.0,
+        'brace_max_distance_mm': 11.0,
+        'brace_max_length_mm': 27.0,
+        'allow_part_to_part': False,
+    }
+    settings = resolve_settings(overrides=_overrides(args))
+    assert settings['support']['brace_spacing_mm'] == 18.0
+    assert settings['support']['brace_max_length_mm'] == 27.0
+    with pytest.raises(VoxelMillError, match='brace_spacing_mm'):
+        resolve_settings(overrides={'support': {'brace_spacing_mm': 0}})
+    with pytest.raises(VoxelMillError, match='brace_max_length_mm'):
+        resolve_settings(overrides={'support': {'brace_max_length_mm': 0}})
 
 
 @pytest.mark.parametrize(('key', 'value'), [

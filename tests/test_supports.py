@@ -67,7 +67,7 @@ def test_blocked_column_routes_around_or_anchors_on_the_model():
     blocked = (m.Manifold.cube((10, 10, 20), True).translate((0, 0, 10))
                + m.Manifold.cube((30, 10, 4), True).translate((0, 0, 27)))
     triangles, bounds = placed(blocked)
-    plan, raft = plan_supports(triangles, bounds, resolve_settings())
+    plan, raft = plan_supports(triangles, bounds, resolve_settings(overrides={'support': {'allow_part_to_part': True}}))
     routing = plan.metrics['routing']
     assert routing['branched'] + routing['model_anchor'] > 0
     assert plan.metrics['contacts_failed'] == 0
@@ -79,7 +79,7 @@ def test_blocked_column_routes_around_or_anchors_on_the_model():
     wide = (m.Manifold.cube((40, 40, 20), True).translate((0, 0, 10))
             + m.Manifold.cube((20, 20, 4), True).translate((0, 0, 27)))
     triangles, bounds = placed(wide)
-    plan, _ = plan_supports(triangles, bounds, resolve_settings())
+    plan, _ = plan_supports(triangles, bounds, resolve_settings(overrides={'support': {'allow_part_to_part': True}}))
     assert plan.metrics['routing']['model_anchor'] > 0
 
 
@@ -153,7 +153,7 @@ def test_a_contact_closer_than_one_tip_anchors_on_a_shortened_tip():
     routed, cover 389 of 773, body 516 of 1,085. After it: 195, 722 and 994,
     with the remainder a different failure class entirely.
     """
-    settings = resolve_settings()
+    settings = resolve_settings(overrides={'support': {'allow_part_to_part': True}})
     tip = settings['support']['tip_length_mm']
     gap = 1.0
     assert settings['support']['min_tip_length_mm'] <= gap < tip
@@ -178,7 +178,7 @@ def test_a_contact_closer_than_one_tip_anchors_on_a_shortened_tip():
 
 def test_routed_support_dimensions_match_the_configured_segments():
     """Dimensional regression: nothing else pins the tip geometry numerically."""
-    settings = resolve_settings()
+    settings = resolve_settings(overrides={'support': {'auto_bracing': False}})
     support = settings['support']
     tip, penetration = support['tip_length_mm'], support['penetration_mm']
     solid = m.Manifold.sphere(6, 64).translate((0, 0, 11))
@@ -210,38 +210,28 @@ def test_routed_support_dimensions_match_the_configured_segments():
 
 
 def test_brace_interval_and_radius_match_the_derived_spacing():
-    """Dimensional regression: zero brace settings mean start 3 mm, spacing 30 mm."""
     settings = resolve_settings()
-    support = settings['support']
-    pillar_r = support['pillar_diameter_mm'] / 2
     solid = m.Manifold.sphere(4, 48).translate((0, 0, 64))
     triangles, bounds = placed(solid)
     plan, _raft = plan_supports(triangles, bounds, settings)
-    assert plan.metrics['brace_spacing_mm'] == pytest.approx(30.0)
-    assert plan.metrics['brace_start_height_mm'] == pytest.approx(3.0)
-
-    # A brace is the only horizontal solid: its Z extent is one strut diameter.
-    strut_r = pillar_r * 0.5
-    levels = []
-    for solid_part in plan.solids:
-        x0, y0, z0, x1, y1, z1 = solid_part.bounding_box()
-        if z1 - z0 < 2 * strut_r * 1.01 and max(x1 - x0, y1 - y0) > 4 * strut_r:
-            levels.append((z0 + z1) / 2)
-    assert levels, 'no horizontal brace found'
-    assert min(levels) == pytest.approx(3.0, abs=1e-6)
-    for level in levels:
-        assert (level - 3.0) % 30.0 == pytest.approx(0.0, abs=1e-6)
-    for solid_part in plan.solids:
-        x0, y0, z0, x1, y1, z1 = solid_part.bounding_box()
-        if (z1 - z0) < 2 * strut_r * 1.01:
-            assert (z1 - z0) == pytest.approx(2 * strut_r, rel=0.02)
+    assert plan.metrics['brace_spacing_mm'] == pytest.approx(15.0)
+    assert plan.metrics['brace_max_length_mm'] == pytest.approx(30.0)
+    nodes = {node.id: np.asarray(node.position_mm) for node in plan.graph.nodes}
+    braces = [edge for edge in plan.graph.edges if edge.kind == 'brace']
+    assert braces
+    for edge in braces:
+        start, end = nodes[edge.start], nodes[edge.end]
+        assert start[2] - end[2] == pytest.approx(np.linalg.norm(start[:2] - end[:2]))
+        assert np.linalg.norm(start - end) <= 30.0 + 1e-8
+        # A later branch can split an earlier one; all retain derived thickness.
+        assert edge.radius_mm <= settings['support']['pillar_diameter_mm'] / 4
 
 
-def test_twenty_millimetre_lift_gets_a_brace_at_the_default_start():
+def test_twenty_millimetre_lift_gets_downward_braces():
     solid = m.Manifold.sphere(6, 48).translate((0, 0, 26))
     triangles, bounds = placed(solid)
     plan, _raft = plan_supports(triangles, bounds, resolve_settings())
-    assert plan.metrics['brace_start_height_mm'] == pytest.approx(3.0)
+    assert plan.metrics['brace_spacing_mm'] == pytest.approx(15.0)
     assert plan.metrics['braces'] >= 1
 
 

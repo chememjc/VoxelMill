@@ -126,7 +126,8 @@ def test_bare_feet_count_overlap_once_and_use_the_actual_short_pillar_radius():
     assert result['record']['connected_components'] == 1
     solid = m.Manifold.sphere(4, 32).translate((0, 0, 10))
     triangles, bounds = placed(solid)
-    settings = settings_for('none', small_pillar_diameter_mm=.4, small_pillar_max_length_mm=50)
+    settings = settings_for('none', auto_bracing=False,
+                            small_pillar_diameter_mm=.4, small_pillar_max_length_mm=50)
     plan, _ = plan_supports(triangles, bounds, settings)
     assert plan.metrics['small_pillars'] == plan.metrics['contacts_routed']
     assert plan.metrics['base']['contact_area_mm2'] == pytest.approx(
@@ -202,7 +203,7 @@ def test_new_base_survives_preparation_reopen_and_raster_validation(kind, tmp_pa
     from test_pipeline import small
     source, output = tmp_path / 'sphere.stl', tmp_path / 'supported.stl'
     write_stl(source, manifold_triangles(m.Manifold.sphere(6, 48)))
-    settings = small(support={'base_type': kind, 'base_touch_diameter_mm': 2.4,
+    settings = small(support={'auto_bracing': False, 'base_type': kind, 'base_touch_diameter_mm': 2.4,
                              'base_thickness_mm': .8, 'base_skate_length_mm': 5})
     report = prepare(source, settings, output=output, components=True, drainage=True)
     assert report['validation']['passed'], report['validation']['checks']

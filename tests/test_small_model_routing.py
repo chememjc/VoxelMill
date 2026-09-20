@@ -15,6 +15,7 @@ from voxelmill.supports import build_column_field, route_contacts, apply_support
 
 def scene(**changes):
     settings = resolve_settings(overrides={'support': {
+        'allow_part_to_part': True,
         'small_pillar_mode': 'model', 'small_pillar_diameter_mm': .4,
         'small_pillar_max_length_mm': 5, 'small_pillar_upper_depth_mm': .25,
         'small_pillar_lower_depth_mm': .25, 'part_to_part_avoidance': 0,
