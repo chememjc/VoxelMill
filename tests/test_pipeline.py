@@ -289,3 +289,13 @@ def test_correction_is_skipped_entirely_when_automatic_support_is_off(tmp_path, 
     assert calls == [[]]
     assert len(report['passes']) == 1 and report['passes'][0]['kind'] == 'full_reslice'
     assert not report['validation']['passed']
+
+
+def test_cleanup_scratch_ignores_windows_sharing_violations():
+    from voxelmill.pipeline import _cleanup_scratch
+
+    class Scratch:
+        def cleanup(self):
+            raise PermissionError('WinError 32')
+
+    _cleanup_scratch(Scratch())

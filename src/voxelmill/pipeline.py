@@ -691,7 +691,19 @@ def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=
         report['scratch_bytes'] = sum(p.stat().st_size for p in Path(scratch.name).rglob('*') if p.is_file())
         return report
     finally:
+        _cleanup_scratch(scratch)
+
+
+def _cleanup_scratch(scratch):
+    """Remove the prepare scratch dir; ignore Windows sharing violations.
+
+    ``placed.f32`` can still be mapped when TemporaryDirectory.cleanup runs
+    on Windows, which used to turn a successful ``prepare`` into exit 1.
+    """
+    try:
         scratch.cleanup()
+    except OSError:
+        pass
 
 
 def _write_components(output, model, plan, raft, cancel, progress):
