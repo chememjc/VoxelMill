@@ -412,10 +412,20 @@ are rejected and reported. Each strut's radius is scaled to the thinner of
 the two pillars it connects, so a small-pillar run is braced with a strut
 sized to itself rather than to the nominal diameter.
 
+A new plate landing uses a short vertical foot stem below the diagonal so the
+tilted end cap stays above Z=0. The length limit applies to the diagonal axis;
+the foot uses the selected base style. Full foot envelopes are checked before
+acceptance. Both attempted destinations and descending origins obey the work
+limit, including origins with no reachable candidate.
+
 `route_contacts`'s `metrics` records the resolved values actually used —
 `brace_spacing_mm`, `brace_max_length_mm`, `tip_base_diameter_mm`,
 `pillar_angle_deg`, `small_pillars` (how many routed runs used the thin
 class) — alongside `base`, `build_base`'s own record (see below).
+Branch evidence includes `braces`, `brace_new_feet`,
+`brace_candidates_examined`, `brace_origins_examined`, `braces_capped`, and
+`brace_rejections` by collision, bounds, foot, length, spacing, grounding and
+missing destination. Accepted junctions split the support graph's edges.
 
 Unroutable contacts are collected even when diagnostics are capped. If
 `support.drop_attached_unroutable` is on (the default),

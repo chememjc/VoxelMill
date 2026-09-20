@@ -6,11 +6,6 @@ lessons go in `gotchas.md`.
 
 ## Now
 
-### 0.5.3 downward bracing alpha
-
-- [ ] Commit and push tested changes; manually verify all four release builds before tagging.
-- [ ] Publish v0.5.3 alpha through the tag workflow and accept the downloaded AppImage; record checksum and provenance.
-
 Headline **2.32 s / 350 MB**. Stay on `master`; no release branch until a later stable.
 
 - [x] Sanitize public tree (no machine-absolute paths; vestigial C-CLI cancelled).
