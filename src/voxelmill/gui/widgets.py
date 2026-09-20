@@ -20,26 +20,53 @@ class FocusedWheelFilter(QtCore.QObject):
 
     _TYPES = (QtWidgets.QAbstractSpinBox, QtWidgets.QComboBox)
 
+    @classmethod
+    def _target(cls, obj):
+        """Nearest spin/combo ancestor, including ``obj`` itself.
+
+        On Cocoa the wheel often lands on the inner ``QLineEdit``, so matching
+        only ``isinstance(obj, _TYPES)`` lets hover-wheels change values.
+        """
+        widget = obj if isinstance(obj, QtWidgets.QWidget) else None
+        while widget is not None:
+            if isinstance(widget, cls._TYPES):
+                return widget
+            widget = widget.parentWidget()
+        return None
+
     def eventFilter(self, obj, event):
-        etype = event.type()
-        if etype == QtCore.QEvent.Type.Show and isinstance(obj, self._TYPES):
-            # WheelFocus is Qt's default and is exactly the hover-changes-value
-            # behaviour this filter exists to stop.
-            if obj.focusPolicy() == QtCore.Qt.WheelFocus:
-                obj.setFocusPolicy(QtCore.Qt.StrongFocus)
+        # Compare as ints: PySide6 EnumMeta can raise from a VTK/xvfb child
+        # when QEvent.Type is touched after the event is already dispatched.
+        try:
+            etype = int(event.type())
+            if etype == int(QtCore.QEvent.Type.Show) and isinstance(obj, self._TYPES):
+                # WheelFocus is Qt's default and is exactly the hover-changes-value
+                # behaviour this filter exists to stop.
+                if obj.focusPolicy() == QtCore.Qt.WheelFocus:
+                    obj.setFocusPolicy(QtCore.Qt.StrongFocus)
+                line_edit = getattr(obj, 'lineEdit', None)
+                if callable(line_edit):
+                    edit = line_edit()
+                    if edit is not None:
+                        edit.setFocusPolicy(QtCore.Qt.StrongFocus)
+                return False
+            if etype != int(QtCore.QEvent.Type.Wheel):
+                return False
+            target = self._target(obj)
+            if target is None or target.hasFocus():
+                return False
+            parent = target.parentWidget()
+            while parent is not None:
+                if isinstance(parent, QtWidgets.QAbstractScrollArea):
+                    viewport = parent.viewport()
+                    if viewport is not None and viewport is not obj:
+                        QtWidgets.QApplication.sendEvent(viewport, event)
+                    return True
+                parent = parent.parentWidget()
+            event.ignore()
+            return True
+        except Exception:
             return False
-        if etype != QtCore.QEvent.Type.Wheel or not isinstance(obj, self._TYPES):
-            return False
-        if obj.hasFocus():
-            return False
-        parent = obj.parentWidget()
-        while parent is not None:
-            if isinstance(parent, QtWidgets.QAbstractScrollArea):
-                QtWidgets.QApplication.sendEvent(parent.viewport(), event)
-                return True
-            parent = parent.parentWidget()
-        event.ignore()
-        return True
 
 
 _WHEEL_FILTER = None

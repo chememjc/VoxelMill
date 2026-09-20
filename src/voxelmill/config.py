@@ -89,32 +89,37 @@ DEFAULTS = {
         # to be proportionally shorter: model <= plate * (1 - avoidance).
         'part_to_part_avoidance': 1.0,
         'spacing_mm': 3.0, 'contact_diameter_mm': 0.4, 'penetration_mm': 0.15,
-        'tip_shape': 'cone', 'break_point_diameter_mm': 0.0,
+        'tip_shape': 'cone', 'break_point_diameter_mm': 0.8,
         'pillar_diameter_mm': 1.2, 'tip_length_mm': 2.0,
         # Diameter where the tip cone meets the pillar. CHITUBOX calls this
         # "Tip Down Diameter" and keeps it independent of the middle segment's
         # diameter; they merely happen to be equal in the known-good profile.
         # 0 derives it from pillar_diameter_mm, which is the old behavior.
         'tip_base_diameter_mm': 0.0,
-        # Independent bottom connector for part-to-part supports. Zero length
-        # keeps the direct middle/tip attachment. Zero diameter derives the
-        # chosen middle diameter. Penetration is independent of the top tip.
-        'model_anchor_shape': 'cone', 'model_anchor_length_mm': 0.0,
-        'model_anchor_diameter_mm': 0.0, 'model_anchor_penetration_mm': 0.0,
+        # Independent bottom connector for part-to-part supports. Both ends
+        # are a ball plus a short cone; zero length keeps the historical
+        # direct middle/tip attachment with no bottom ball. Zero diameter
+        # derives the chosen middle diameter. Penetration is independent of
+        # the top tip. The 0.8 mm break-point ball must fit in the 2 mm tip.
+        'model_anchor_shape': 'cone', 'model_anchor_length_mm': 2.0,
+        'model_anchor_diameter_mm': 0.4, 'model_anchor_penetration_mm': 0.15,
         # Steepest-to-shallowest limit for an angled branch, measured from
         # horizontal. 45 is what the router hard-coded before this existed.
         'pillar_angle_deg': 45.0,
-        # A second, thinner pillar class for short runs. Both 0 disables it;
-        # a pillar no longer than small_pillar_max_length_mm uses the thin
-        # diameter instead.
+        # A second, thinner pillar class for short runs. Both 0 disables it
+        # as a length-gated class; a pillar no longer than
+        # small_pillar_max_length_mm uses the thin diameter instead.
+        # Short model-anchor gaps have a separate VoxelMill rule in
+        # route_contacts: they stay point-to-point at this diameter if set,
+        # else at the contact diameter, and do not swell to pillar_diameter_mm.
         'small_pillar_diameter_mm': 0.0, 'small_pillar_max_length_mm': 0.0,
         # The original thin-middle class is separate from an entire short
         # model-to-model connector, whose two ends penetrate independently.
         'small_pillar_mode': 'middle', 'small_pillar_shape': 'cone',
         'small_pillar_upper_depth_mm': 0.0, 'small_pillar_lower_depth_mm': 0.0,
-        # Cross-brace geometry. Both 0 derive the old single number,
-        # max_slenderness * pillar_diameter_mm, for spacing and start height
-        # alike; setting either separates them.
+        # Cross-brace geometry. Zero means the built-in start 3 mm and
+        # spacing 30 mm (the CHITUBOX transcription). Explicit nonzero values
+        # still win; a mixed pair uses 30 or 3 for the zero side.
         'brace_spacing_mm': 0.0, 'brace_start_height_mm': 0.0,
         'brace_diameter_mm': 0.0, 'brace_max_distance_mm': 0.0,
         # What the supports land on. 'grid' is the default: less resin and
@@ -186,6 +191,18 @@ DEFAULTS = {
 }
 
 
+# Omitted from older archives, these used to mean "off". Filling the current
+# nonzero DEFAULTS would sprout break-point balls and bottom connectors on
+# projects that never stored those keys. Explicit zeros in a saved table are
+# kept as zeros; only an absent key takes the historical off values.
+_LEGACY_SUPPORT_OFF = {
+    'break_point_diameter_mm': 0.0,
+    'model_anchor_length_mm': 0.0,
+    'model_anchor_diameter_mm': 0.0,
+    'model_anchor_penetration_mm': 0.0,
+}
+
+
 def fill_legacy_settings(settings):
     """Fill sections and support keys that older schema-1 archives omit.
 
@@ -193,7 +210,8 @@ def fill_legacy_settings(settings):
     but incomplete table of either is left untouched so ``validate_settings``
     still rejects it. Keys added later to the already-universal ``support``
     table cannot be distinguished from omissions, so missing support keys take
-    their current defaults. Unknown keys are not invented and still fail.
+    their current defaults — except the point-to-point ball/anchor keys, which
+    fill historical zeros. Unknown keys are not invented and still fail.
     """
     if not isinstance(settings, dict):
         return settings
@@ -202,7 +220,9 @@ def fill_legacy_settings(settings):
     support = settings.get('support')
     if isinstance(support, dict):
         for key, value in DEFAULTS['support'].items():
-            support.setdefault(key, deepcopy(value))
+            if key in support:
+                continue
+            support[key] = deepcopy(_LEGACY_SUPPORT_OFF.get(key, value))
     resources = settings.get('resources')
     if isinstance(resources, dict):
         for key in ('acceleration', 'cuda_device'):
@@ -391,6 +411,9 @@ def validate_settings(settings):
         _error('support.break_point_diameter_mm must be at least contact_diameter_mm when enabled')
     if s['break_point_diameter_mm'] > s['tip_length_mm'] + s['penetration_mm']:
         _error('support.break_point_diameter_mm must fit within the tip length and penetration')
+    if (s['break_point_diameter_mm'] and s['model_anchor_length_mm']
+            and s['break_point_diameter_mm'] > s['model_anchor_length_mm'] + s['model_anchor_penetration_mm']):
+        _error('support.break_point_diameter_mm must fit within the model-anchor length and penetration')
     if s['model_anchor_diameter_mm'] and not s['model_anchor_length_mm']:
         _error('support.model_anchor_diameter_mm requires a positive model_anchor_length_mm')
     if s['part_to_part_avoidance'] > 1:

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Generate the distributed PNG icon sizes from the canonical SVG artwork.
+"""Generate the distributed PNG, ICNS, and ICO icons from the canonical SVG.
 
 The SVG files in ``icons/`` are the design source of truth.  QtSvg is used
 instead of ImageMagick so rasterization matches the Qt runtime that displays
-the application icon.
+the application icon.  ``packaging/voxelmill.icns`` is what Finder and Dock
+read for the macOS ``.app``; ``packaging/voxelmill.ico`` is the Windows exe.
 """
 from __future__ import annotations
 
@@ -11,12 +12,15 @@ import argparse
 import os
 from pathlib import Path
 import shutil
+import struct
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "icons"
 APPIMAGE = ROOT / "packaging" / "appimage" / "hicolor"
 PACKAGE = ROOT / "src" / "voxelmill" / "data" / "icons"
+ICNS = ROOT / "packaging" / "voxelmill.icns"
+ICO = ROOT / "packaging" / "voxelmill.ico"
 SIZES = (16, 22, 24, 32, 48, 64, 128, 256, 512, 1024)
 VARIANTS = {
     "voxelmill": "voxelmill.svg",
@@ -88,6 +92,64 @@ def generate() -> None:
         shutil.copyfile(APPIMAGE / "256x256" / "apps" / f"{name}.png",
                         PACKAGE / f"{name}.png")
 
+    _write_icns(ICNS)
+    _write_ico(ICO)
+
+
+def _png(size: int) -> Path:
+    return APPIMAGE / f"{size}x{size}" / "apps" / "voxelmill.png"
+
+
+def _write_icns(destination: Path) -> None:
+    """PNG-in-ICNS so Finder/Dock get the artwork without ``iconutil``.
+
+    PyInstaller's macOS BUNDLE copies this into ``Contents/Resources`` and
+    stamps ``CFBundleIconFile``. ``icon=None`` left the bootloader's Python
+    rocket on the .app.
+    """
+    # type -> pixel size of the PNG to embed (includes @2x slots).
+    slots = (
+        ("icp4", 16), ("icp5", 32), ("icp6", 64), ("ic07", 128),
+        ("ic08", 256), ("ic09", 512), ("ic10", 1024),
+        ("ic11", 32), ("ic12", 64), ("ic13", 256), ("ic14", 512),
+    )
+    entries = []
+    for ostype, size in slots:
+        path = _png(size)
+        data = path.read_bytes()
+        if not data.startswith(b"\x89PNG"):
+            raise SystemExit(f"not a PNG: {path}")
+        entries.append((ostype.encode("ascii"), data))
+    toc_payload = b"".join(kind + struct.pack(">I", 8 + len(data)) for kind, data in entries)
+    chunks = [b"TOC " + struct.pack(">I", 8 + len(toc_payload)) + toc_payload]
+    chunks.extend(kind + struct.pack(">I", 8 + len(data)) + data for kind, data in entries)
+    body = b"".join(chunks)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(b"icns" + struct.pack(">I", 8 + len(body)) + body)
+
+
+def _write_ico(destination: Path) -> None:
+    """PNG-in-ICO so the Windows onedir exe is not the PyInstaller default."""
+    sizes = (16, 32, 48, 256)
+    images = []
+    for size in sizes:
+        path = _png(size)
+        data = path.read_bytes()
+        if not data.startswith(b"\x89PNG"):
+            raise SystemExit(f"not a PNG: {path}")
+        images.append((size, data))
+    count = len(images)
+    offset = 6 + 16 * count
+    entries = bytearray(struct.pack("<HHH", 0, 1, count))
+    blobs = bytearray()
+    for size, data in images:
+        width = 0 if size >= 256 else size
+        entries.extend(struct.pack("<BBBBHHII", width, width, 0, 0, 1, 32, len(data), offset))
+        blobs.extend(data)
+        offset += len(data)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(bytes(entries) + bytes(blobs))
+
 
 def check() -> int:
     failures = []
@@ -109,6 +171,10 @@ def check() -> int:
     for present in sorted(PACKAGE.iterdir()):
         if present.is_file() and present.name not in allowed:
             failures.append(f"unexpected package asset: {present}")
+    if not ICNS.is_file() or ICNS.read_bytes()[:4] != b"icns" or ICNS.stat().st_size < 1000:
+        failures.append(f"missing ICNS: {ICNS}")
+    if not ICO.is_file() or ICO.read_bytes()[:4] != b"\x00\x00\x01\x00" or ICO.stat().st_size < 100:
+        failures.append(f"missing ICO: {ICO}")
     if failures:
         print("\n".join(failures), file=sys.stderr)
         return 1

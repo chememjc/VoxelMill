@@ -163,6 +163,25 @@ jobs:
           & "$dir\VoxelMill.exe" --version
           Compress-Archive -Path $dir -DestinationPath "output/portable/VoxelMill-windows-x64.zip" -Force
 
+      - name: CLI smoke
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: |
+          set -euo pipefail
+          CUBE=fixtures/shapes/cube.stl
+          case "${{ matrix.kind }}" in
+            appimage) BIN=output/appimage/VoxelMill-x86_64.AppImage; chmod +x "$BIN" ;;
+            mac) BIN=output/portable/VoxelMill.app/Contents/MacOS/VoxelMill ;;
+            windows) BIN=output/portable/VoxelMill/VoxelMill.exe ;;
+          esac
+          test -e "$BIN"
+          "$BIN" --version
+          "$BIN" inspect "$CUBE" | tee inspect.json
+          grep -q signed_volume inspect.json
+          mkdir -p smoke-out
+          "$BIN" prepare "$CUBE" --max-passes 1 --allow-unresolved --output smoke-out/cube.stl | tee prepare.json
+          test -f smoke-out/cube.stl
+
       - name: Upload Linux AppImage
         if: matrix.kind == 'appimage'
         uses: actions/upload-artifact@v6

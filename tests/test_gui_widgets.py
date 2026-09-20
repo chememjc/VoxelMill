@@ -54,6 +54,13 @@ def test_spinbox_wheel_is_ignored_until_the_field_is_focused(application):
     QtWidgets.QApplication.sendEvent(box, _wheel(box))
     application.processEvents()
     assert box.value() == start
+    # Cocoa delivers the wheel to the inner QLineEdit; that path must also
+    # be ignored until the spin box itself is focused.
+    edit = box.lineEdit()
+    assert edit is not None
+    QtWidgets.QApplication.sendEvent(edit, _wheel(edit))
+    application.processEvents()
+    assert box.value() == start
     box.setFocus(QtCore.Qt.MouseFocusReason)
     application.processEvents()
     if not box.hasFocus():
@@ -61,6 +68,10 @@ def test_spinbox_wheel_is_ignored_until_the_field_is_focused(application):
     QtWidgets.QApplication.sendEvent(box, _wheel(box))
     application.processEvents()
     assert box.value() != start
+    # Once focused, a wheel on the inner line edit may also change the value
+    # (Cocoa's real delivery path); do not require it under sendEvent.
+    QtWidgets.QApplication.sendEvent(edit, _wheel(edit))
+    application.processEvents()
     box.close()
 
 

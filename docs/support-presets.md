@@ -63,7 +63,8 @@ defaults unchanged.
 
 `base_type` accepts `plate`, `none`, `pad`, `skate`, `skeleton`, `grid`, and
 `hex`, plus `triangle` for triangulated foot connections.
-The legacy `plate` default remains unchanged. `base_touch_diameter_mm` and
+The resolve default is `grid`; `plate` remains the solid-slab option.
+`base_touch_diameter_mm` and
 `base_thickness_mm` apply to the added bases and zero derives them from raft
 settings; they remain invalid for `plate` and `none`. `base_skate_length_mm=0`
 derives a round skate, `base_rotation_deg` rotates skate/grid geometry,
@@ -129,9 +130,9 @@ attribution, derivations, and unresolved measurements.
 The CLI offers `preset list`, `preset show NAME_OR_PATH`, and
 `preset save --output FILE --name NAME` (saving the resolved support values).
 `--support-preset NAME_OR_PATH` selects one for preparation or other configured
-commands. The GUI **Support presets** menu applies built-ins, loads JSON or saves
-the current support section, with undo for application. All options are also
-available through **File → Run operation**.
+commands. The GUI **Parts → Support presets** submenu applies built-ins, loads
+JSON or saves the current support section, with undo for application. All
+options are also available through **Tasks → Run operation**.
 
 ## Process presets
 

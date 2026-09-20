@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import pytest
 import manifold3d as m
@@ -161,11 +163,13 @@ def test_a_contact_closer_than_one_tip_anchors_on_a_shortened_tip():
     assert plan.metrics['contacts_failed'] == 0
     assert plan.metrics['routing']['model_anchor'] > 0
     assert plan.metrics['contacts_with_shortened_tip'] > 0
-    assert plan.metrics['min_tip_used_mm'] == pytest.approx(gap, abs=0.05)
+    assert plan.metrics['min_tip_used_mm'] < tip
+    middles = [e for e in plan.graph.edges if e.kind == 'model_anchor']
+    assert middles
+    assert max(e.radius_mm for e in middles) < settings['support']['pillar_diameter_mm'] / 2 - 1e-9
     assert assemble(solid, plan, raft).status() == m.Error.NoError
 
-    # The shortest permitted tip is what decides it, not the geometry: raise it
-    # above the gap and the same contacts become unroutable again.
+    # Two min-length ends no longer fit: the same contacts become unroutable.
     strict = resolve_settings(overrides={'support': {'min_tip_length_mm': 1.5}})
     plan, _ = plan_supports(triangles, bounds, strict)
     assert plan.metrics['contacts_failed'] > 0
@@ -206,19 +210,15 @@ def test_routed_support_dimensions_match_the_configured_segments():
 
 
 def test_brace_interval_and_radius_match_the_derived_spacing():
-    """Dimensional regression: spacing and start height are one derived number.
-
-    ``_brace`` uses ``max_slenderness * 2 * pillar_r`` as both the height of
-    the first brace and the gap between braces, so the two cannot be set
-    apart. Pinning that here is what makes separating them a visible change.
-    """
+    """Dimensional regression: zero brace settings mean start 3 mm, spacing 30 mm."""
     settings = resolve_settings()
     support = settings['support']
     pillar_r = support['pillar_diameter_mm'] / 2
-    interval = support['max_slenderness'] * 2 * pillar_r
     solid = m.Manifold.sphere(4, 48).translate((0, 0, 64))
     triangles, bounds = placed(solid)
     plan, _raft = plan_supports(triangles, bounds, settings)
+    assert plan.metrics['brace_spacing_mm'] == pytest.approx(30.0)
+    assert plan.metrics['brace_start_height_mm'] == pytest.approx(3.0)
 
     # A brace is the only horizontal solid: its Z extent is one strut diameter.
     strut_r = pillar_r * 0.5
@@ -228,15 +228,21 @@ def test_brace_interval_and_radius_match_the_derived_spacing():
         if z1 - z0 < 2 * strut_r * 1.01 and max(x1 - x0, y1 - y0) > 4 * strut_r:
             levels.append((z0 + z1) / 2)
     assert levels, 'no horizontal brace found'
-    distinct = sorted({round(level / interval) for level in levels})
-    # Braces sit at whole multiples of the interval, the lowest at the first.
-    assert min(distinct) == 1
+    assert min(levels) == pytest.approx(3.0, abs=1e-6)
     for level in levels:
-        assert level == pytest.approx(round(level / interval) * interval, abs=1e-6)
+        assert (level - 3.0) % 30.0 == pytest.approx(0.0, abs=1e-6)
     for solid_part in plan.solids:
         x0, y0, z0, x1, y1, z1 = solid_part.bounding_box()
         if (z1 - z0) < 2 * strut_r * 1.01:
             assert (z1 - z0) == pytest.approx(2 * strut_r, rel=0.02)
+
+
+def test_twenty_millimetre_lift_gets_a_brace_at_the_default_start():
+    solid = m.Manifold.sphere(6, 48).translate((0, 0, 26))
+    triangles, bounds = placed(solid)
+    plan, _raft = plan_supports(triangles, bounds, resolve_settings())
+    assert plan.metrics['brace_start_height_mm'] == pytest.approx(3.0)
+    assert plan.metrics['braces'] >= 1
 
 
 def test_plate_touch_footprint_matches_the_configured_raft():
@@ -268,3 +274,77 @@ def test_plate_touch_footprint_matches_the_configured_raft():
     # It is one connected convex body, not a pad per foot.
     assert len(raft.decompose()) == 1
     assert raft.volume() > 0
+
+
+def holed_shelf():
+    """Lifted block with a vertical hole; a shaft through the bore clips the wall."""
+    body = m.Manifold.cube((20, 20, 8), True).translate((0, 0, 24))
+    hole = m.Manifold.cylinder(12, 2.0, 2.0, 48).translate((0, 0, 18))
+    return body - hole
+
+
+def test_shaft_through_a_hole_is_rejected_or_rerouted():
+    solid = holed_shelf()
+    triangles, bounds = placed(solid)
+    settings = resolve_settings(overrides={'support': {
+        'automatic': False, 'auto_bracing': False, 'base_type': 'none',
+        'drop_attached_unroutable': False}})
+    # On the solid ring next to the bore. A 45° branch into the empty hole
+    # column would run a shaft through the wall.
+    contact = [4.0, 0.0, 20.0]
+    plan, _ = plan_supports(triangles, bounds, settings, extra_contacts=[contact])
+    hole = m.Manifold.cylinder(12, 2.0, 2.0, 48).translate((0, 0, 18))
+    for part in plan.solids:
+        overlap = part ^ hole
+        if overlap.is_empty() or overlap.volume() <= 1e-6:
+            continue
+        raise AssertionError('support solid occupies the mounting hole')
+    feet = [n.position_mm for n in plan.graph.nodes if n.kind == 'foot']
+    for foot in feet:
+        assert math.hypot(foot[0], foot[1]) >= 2.0 - 1e-3
+
+
+def test_overlapping_branch_candidates_emit_only_one_shaft():
+    solid = m.Manifold.cube((12, 12, 4), True).translate((0, 0, 20))
+    triangles, bounds = placed(solid)
+    settings = resolve_settings(overrides={'support': {
+        'automatic': False, 'auto_bracing': False, 'base_type': 'none',
+        'drop_attached_unroutable': False}})
+    contacts = [[0.0, 0.0, 18.0], [0.35, 0.0, 18.0]]
+    plan, _ = plan_supports(triangles, bounds, settings, extra_contacts=contacts)
+    shafts = [e for e in plan.graph.edges if e.kind in ('vertical', 'branched')]
+    # Extra/island contacts are density-exempt, so both may plant. They must
+    # not weave a 45° branch to dodge each other; that is what failed drainage.
+    assert plan.metrics['routing'].get('branched', 0) == 0
+    assert len(shafts) >= 1
+    assert plan.metrics['contacts_routed'] >= 1
+
+
+def test_dense_tilted_overhang_keeps_spacing_but_an_island_still_lands():
+    solid = m.Manifold.cube((24, 24, 2), True).rotate((0, 25, 0)).translate((0, 0, 16))
+    triangles, bounds = placed(solid)
+    settings = resolve_settings(overrides={'support': {
+        'auto_bracing': False, 'base_type': 'none', 'spacing_mm': 4.0}})
+    plan, _ = plan_supports(triangles, bounds, settings)
+    contacts = np.array([n.position_mm for n in plan.graph.nodes if n.kind == 'contact'])
+    assert len(contacts) > 1
+    from scipy.spatial import cKDTree
+    tree = cKDTree(contacts)
+    # Automatic contacts are not a forest inside one spacing cell.
+    counts = tree.query_ball_point(contacts, r=0.5)
+    assert max(len(n) for n in counts) == 1
+
+    plate = m.Manifold.cube((20, 8, 2), True).translate((0, 0, 12))
+    triangles, bounds = placed(plate)
+    settings = resolve_settings(overrides={'support': {
+        'automatic': False, 'auto_bracing': False, 'base_type': 'none',
+        'drop_attached_unroutable': False, 'spacing_mm': 4.0}})
+    spaced = [[-4.0, 0.0, 11.0], [4.0, 0.0, 11.0]]
+    island = [1.6, 0.0, 11.0]
+    denser, _ = plan_supports(triangles, bounds, settings, extra_contacts=spaced + [island])
+    heads = np.array([n.position_mm for n in denser.graph.nodes if n.kind == 'contact'])
+    assert np.min(np.linalg.norm(heads - island, axis=1)) < 0.2
+    auto = heads[np.linalg.norm(heads - island, axis=1) > 0.2]
+    if len(auto) > 1:
+        from scipy.spatial.distance import pdist
+        assert pdist(auto).min() > 3.0

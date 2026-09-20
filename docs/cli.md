@@ -37,8 +37,8 @@ These are accepted by every command except `goo-info`.
 | `--contour-supports` / `--no-contour-supports` | Also sample the outer perimeter of downward-face clusters. Off by default. |
 | `--boundary-supports` / `--no-boundary-supports` | Also sample open mesh boundary edges (crop cuts). Closed solids add none. Off by default. |
 | `--auto-bracing` / `--no-auto-bracing` | Automatic bracing, switched independently of contacts. |
-| `--brace-spacing-mm` | Vertical gap between cross-braces, `support.brace_spacing_mm`. `0` (default) derives `max_slenderness * 2 * pillar_radius`, same as `--brace-start-height-mm`; setting either separates them. |
-| `--brace-start-height-mm` | Height of the lowest cross-brace above the plate, `support.brace_start_height_mm`. `0` (default) derives `max_slenderness * 2 * pillar_radius`. |
+| `--brace-spacing-mm` | Vertical gap between cross-braces, `support.brace_spacing_mm`. `0` (default) uses the built-in 30 mm; a mixed pair with `--brace-start-height-mm` still fills the zero side with 30 or 3. |
+| `--brace-start-height-mm` | Height of the lowest cross-brace above the plate, `support.brace_start_height_mm`. `0` (default) uses the built-in 3 mm. Pillars shorter than `max(start, 15 mm)` are not braced. |
 | `--brace-diameter-mm` | Cross-brace diameter, `support.brace_diameter_mm`. `0` (default) derives it from the thinner of the two connected pillars. |
 | `--brace-max-distance-mm` | Farthest a pillar neighbour may be and still be braced, `support.brace_max_distance_mm`. `0` (default) derives `1.5 * spacing_mm`. |
 | `--part-to-part-supports` / `--no-part-to-part-supports` | Allow or forbid support anchors on model material. |
@@ -708,12 +708,11 @@ honor their `base_*` settings through `--set`, including
 values are preserved in portable support presets.
 
 `--model-anchor-shape cone|cylinder` selects the independent bottom connector.
-Set its dimensions through `--set support.model_anchor_length_mm=1`,
-`support.model_anchor_diameter_mm=0.4`, and
-`support.model_anchor_penetration_mm=0.2`. Zero length keeps the direct bottom;
-zero diameter derives the selected middle diameter. Top-tip settings stay
-independent. Use `--set support.part_to_part_avoidance=0` in the example to
-make its available model anchor compete with the plate route.
+Defaults are `model_anchor_length_mm=2`, `model_anchor_diameter_mm=0.4`, and
+`model_anchor_penetration_mm=0.15`. Override with `--set` as needed. Zero length
+keeps the direct bottom; zero diameter derives the selected middle diameter.
+Top-tip settings stay independent. Use `--set support.part_to_part_avoidance=0`
+in the example to make its available model anchor compete with the plate route.
 
 `--small-pillar-mode middle|model` chooses a thin middle segment or an entire
 short model-to-model connector. Both use `support.small_pillar_diameter_mm`
@@ -735,7 +734,12 @@ CLI. Needs the `gui` extra. See [gui.md](gui.md).
 | Option | Effect |
 | --- | --- |
 | `--view {front,back,left,right,top,bottom,iso}` | Sets the initial camera view on startup, same views as the `View` menu. Front is the −Y face the green plate edge marks. |
-| `--goo PATH` | Opens this GOO file for layer inspection on startup, as if **Open GOO for inspection…** were used immediately after launch. |
+| `--goo PATH` | Opens this GOO file for layer inspection on startup, as if **File → Open GOO or CTB for inspection…** were used immediately after launch. |
+
+Empty argv (and a single existing file path) rewrites to `gui` when the binary
+is frozen or PySide6 imports. On Windows VirtualBox guests, `cmd_gui` sets
+`QT_OPENGL=software` before `QApplication` when the `VBoxGuest` service is
+present; a real GPU and an already-set `QT_OPENGL` are left alone.
 
 ## `monitor`
 
@@ -798,7 +802,7 @@ and do not silently attach to a neighbour. Projects written with
 `prepare --project` preserve rotation, centering, lift (including zero), both
 contact lists, and the per-contact parameter records for GUI reopening.
 
-The editor's **File → Run operation (all options)…** exposes all noninteractive
+The editor's **Tasks → Run operation (all options)…** exposes all noninteractive
 commands and switches, including full correction passes and component exports.
 It executes this same CLI in a separate process; see [gui.md](gui.md).
 

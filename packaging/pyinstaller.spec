@@ -150,6 +150,21 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
+# Finder/Dock (macOS) and Explorer (Windows) read the executable/bundle icon,
+# not Qt's window icon. Linux AppImage uses the hicolor PNG tree instead.
+_ICNS = ROOT / 'packaging' / 'voxelmill.icns'
+_ICO = ROOT / 'packaging' / 'voxelmill.ico'
+if sys.platform == 'darwin':
+    if not _ICNS.is_file():
+        raise SystemExit(f'missing {_ICNS}; run scripts/generate_icons.py')
+    _BUNDLE_ICON = str(_ICNS)
+elif sys.platform == 'win32':
+    if not _ICO.is_file():
+        raise SystemExit(f'missing {_ICO}; run scripts/generate_icons.py')
+    _BUNDLE_ICON = str(_ICO)
+else:
+    _BUNDLE_ICON = None
+
 # Windows needs a console so `VoxelMill.exe prepare` prints. macOS .app with
 # console=True sets LSBackgroundOnly, so Finder launch never shows a window.
 # CLI from Terminal still writes stdout with console=False. argv_emulation
@@ -170,6 +185,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=_BUNDLE_ICON,
 )
 coll = COLLECT(
     exe,
@@ -186,10 +202,11 @@ if sys.platform == 'darwin':
     app = BUNDLE(
         coll,
         name='VoxelMill.app',
-        icon=None,
+        icon=_BUNDLE_ICON,
         bundle_identifier='com.voxelmill.VoxelMill',
         info_plist={
             'CFBundleDisplayName': 'VoxelMill',
+            'CFBundleIconFile': 'voxelmill.icns',
             'CFBundleShortVersionString': _VERSION,
             'NSHighResolutionCapable': True,
             'LSBackgroundOnly': False,

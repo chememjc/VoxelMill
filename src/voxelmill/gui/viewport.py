@@ -55,7 +55,10 @@ class _VTKInteractor(QVTKRenderWindowInteractor):
 def make_vtk_interactor(parent=None):
     return _VTKInteractor(parent)
 
-from .camera import CameraController, FACE_VIEWS, HOME_VIEW as CAMERA_HOME
+from .camera import (
+    CameraController, FACE_VIEWS, HOME_VIEW as CAMERA_HOME,
+    named_view_near, rotate_view_90,
+)
 from .gizmo import TransformGizmo
 
 LAYER_COLORS = {
@@ -158,66 +161,311 @@ def polydata_from_triangles(triangles, settings=None, base_color=None, face_colo
 _CUBE_FACES = {(0, 1): 'Right', (0, -1): 'Left', (1, 1): 'Back',
                (1, -1): 'Front', (2, 1): 'Top', (2, -1): 'Bottom'}
 
+#: Half-extent of the pickable body. Faces sit on this cube; corners are cut
+#: back so a click there is an isometric rather than a coin-flip between faces.
+CUBE_HALF = 0.5
+#: In-plane half-width of each square face. Larger than the corner triangles
+#: so "Bottom" still has room, small enough that a corner is a real target.
+CUBE_FACE_HALF = 0.28
+#: Invisible bounds pad so the orientation marker frames a margin around the
+#: cube for the four orbit arrows.
+CUBE_PAD_HALF = 0.75
+#: Longest face label ("Bottom") fills this fraction of the face square.
+CUBE_LABEL_FILL = 0.70
+CUBE_LABEL_LIFT = 0.01
+
+_FACE_RGB = (184, 190, 198)
+_EDGE_RGB = (138, 146, 156)
+_CORNER_RGB = (158, 166, 176)
+_ARROW_RGB = (0.18, 0.42, 0.78)
+
+#: Face captions: (label, outward normal, vtk orientation in degrees).
+_FACE_CAPTIONS = (
+    ('Right',  (1.0, 0.0, 0.0), (90, 90, 0)),
+    ('Left',   (-1.0, 0.0, 0.0), (90, -90, 0)),
+    ('Back',   (0.0, 1.0, 0.0), (90, 0, 180)),
+    ('Front',  (0.0, -1.0, 0.0), (90, 0, 0)),
+    ('Top',    (0.0, 0.0, 1.0), (0, 0, 0)),
+    ('Bottom', (0.0, 0.0, -1.0), (180, 0, 0)),
+)
+
+
+def _iso_name(position):
+    return 'iso_' + ''.join('+' if float(c) > 0 else '-' for c in position)
+
+
+def cube_arrow_at(u, v, inner=0.16, corner=0.22):
+    """Orbit arrow under a normalized marker-viewport point, or None.
+
+    The chamfered cube is framed with padding, so the outer band around the
+    widget is the four FreeCAD-style arrows. Viewport corners are ignored: a
+    diagonal click is not an arrow.
+    """
+    try:
+        u, v = float(u), float(v)
+    except (TypeError, ValueError):
+        return None
+    if not (0.0 <= u <= 1.0 and 0.0 <= v <= 1.0):
+        return None
+    if not (np.isfinite(u) and np.isfinite(v)):
+        return None
+    du, dv = u - 0.5, v - 0.5
+    au, av = abs(du), abs(dv)
+    if au < 0.5 - inner and av < 0.5 - inner:
+        return None
+    if au > 0.5 - corner and av > 0.5 - corner:
+        return None
+    if au > av:
+        return 'right' if du > 0 else 'left'
+    return 'up' if dv > 0 else 'down'
+
+
+def _arrow_from_cube_point(position):
+    """3D counterpart of :func:`cube_arrow_at` for a point outside the body."""
+    x, y, z = (float(c) for c in position)
+    name, value = max(
+        (('right', x), ('left', -x), ('up', z), ('down', -z)),
+        key=lambda item: item[1])
+    second = sorted((abs(x), abs(y), abs(z)))[1]
+    if value < CUBE_HALF + 0.08 or second > 0.25:
+        return None
+    return name
+
+
+def cube_hit_at(position, tolerance=0.15):
+    """Classify a navigation-cube pick.
+
+    A 3-vector is cube-local: ``('face', 'Front')``, ``('corner', 'iso_+-+')``,
+    ``('arrow', 'right')`` for a point clearly outside the body, or ``None``
+    when the hit is too close to the centre or sits on an ambiguous edge.
+    A 2-vector is a normalized marker-viewport coordinate and only names an
+    orbit arrow.
+    """
+    position = np.asarray(position, dtype=float).reshape(-1)
+    if position.shape == (2,):
+        arrow = cube_arrow_at(position[0], position[1])
+        return ('arrow', arrow) if arrow is not None else None
+    if position.shape != (3,) or not np.isfinite(position).all():
+        return None
+    abspos = np.abs(position)
+    peak = float(abspos.max())
+    if peak < tolerance:
+        return None
+    if peak >= CUBE_HALF + 0.08:
+        arrow = _arrow_from_cube_point(position)
+        return ('arrow', arrow) if arrow is not None else None
+    ordered = np.sort(abspos)
+    # Corner triangle: all three axes are out near the chamfer.
+    if ordered[0] >= CUBE_FACE_HALF - 0.02:
+        return ('corner', _iso_name(position))
+    axis = int(np.argmax(abspos))
+    others = [abspos[i] for i in range(3) if i != axis]
+    if max(others) <= CUBE_FACE_HALF + 0.02:
+        sign = 1 if position[axis] > 0 else -1
+        return ('face', _CUBE_FACES[(axis, sign)])
+    return None
+
 
 def cube_face_at(position, tolerance=0.15):
     """Face label for a pick on the navigation cube, or None near its center.
 
-    The cube is axis aligned and centered on its own origin, so the dominant
-    component of the pick position names the face. A pick too close to the
-    center to be attributed is refused rather than guessed: snapping the camera
-    somewhere the user did not click is worse than doing nothing.
+    Kept as the face-only helper so existing tests and the xvfb Front pick
+    stay on the six printer faces. Corners, edges and arrows are :func:`cube_hit_at`.
     """
-    position = np.asarray(position, dtype=float)
-    if position.shape != (3,) or not np.isfinite(position).all():
-        return None
-    axis = int(np.argmax(np.abs(position)))
-    if abs(position[axis]) < tolerance:
-        return None
-    return _CUBE_FACES[(axis, 1 if position[axis] > 0 else -1)]
+    hit = cube_hit_at(position, tolerance)
+    if hit is not None and hit[0] == 'face':
+        return hit[1]
+    return None
+
+
+def _emit_triangle(triangles, colors, points, rgb):
+    tri = [np.asarray(p, dtype=float) for p in points]
+    normal = np.cross(tri[1] - tri[0], tri[2] - tri[0])
+    if float(np.dot(normal, np.mean(tri, axis=0))) < 0:
+        tri = [tri[0], tri[2], tri[1]]
+    triangles.append(tri)
+    colors.append(rgb)
+
+
+def _emit_quad(triangles, colors, p0, p1, p2, p3, rgb):
+    _emit_triangle(triangles, colors, (p0, p1, p2), rgb)
+    _emit_triangle(triangles, colors, (p0, p2, p3), rgb)
+
+
+def chamfered_cube_triangles(half=CUBE_HALF, face=CUBE_FACE_HALF):
+    """Unit-sized cube with truncated corners and edges.
+
+    Six squares, twelve rectangles, eight triangles -- FreeCAD's 26-pick
+    NavCube layout -- still bounded by ``[-half, half]`` so picking math stays
+    in cube space.
+    """
+    half, face = float(half), float(face)
+    triangles, colors = [], []
+    for axis in range(3):
+        for sign in (-1.0, 1.0):
+            u_axis, v_axis = (axis + 1) % 3, (axis + 2) % 3
+
+            def pt(su, sv, axis=axis, sign=sign, u_axis=u_axis, v_axis=v_axis):
+                point = np.zeros(3)
+                point[axis] = sign * half
+                point[u_axis] = su * face
+                point[v_axis] = sv * face
+                return point
+
+            _emit_quad(triangles, colors, pt(-1, -1), pt(1, -1), pt(1, 1), pt(-1, 1),
+                       _FACE_RGB)
+    for a in range(3):
+        for b in range(a + 1, 3):
+            e = 3 - a - b
+            for sa in (-1.0, 1.0):
+                for sb in (-1.0, 1.0):
+
+                    def pt_a(se, a=a, b=b, e=e, sa=sa, sb=sb):
+                        point = np.zeros(3)
+                        point[a] = sa * half
+                        point[b] = sb * face
+                        point[e] = se * face
+                        return point
+
+                    def pt_b(se, a=a, b=b, e=e, sa=sa, sb=sb):
+                        point = np.zeros(3)
+                        point[a] = sa * face
+                        point[b] = sb * half
+                        point[e] = se * face
+                        return point
+
+                    _emit_quad(triangles, colors, pt_a(-1), pt_a(1), pt_b(1), pt_b(-1),
+                               _EDGE_RGB)
+    for sx in (-1.0, 1.0):
+        for sy in (-1.0, 1.0):
+            for sz in (-1.0, 1.0):
+                _emit_triangle(triangles, colors, (
+                    np.array([sx * half, sy * face, sz * face]),
+                    np.array([sx * face, sy * half, sz * face]),
+                    np.array([sx * face, sy * face, sz * half]),
+                ), _CORNER_RGB)
+    return np.asarray(triangles, dtype=np.float32), np.asarray(colors, dtype=np.uint8)
+
+
+def _vector_text_scale(text, face_size, fill=CUBE_LABEL_FILL):
+    vec = vtk.vtkVectorText()
+    vec.SetText(text)
+    vec.Update()
+    bounds = vec.GetOutput().GetBounds()
+    longest = max(bounds[1] - bounds[0], bounds[3] - bounds[2], 1e-9)
+    return fill * float(face_size) / longest
+
+
+def _centered_label_actor(text, face_center, orientation, scale):
+    """``vtkVectorText`` origin is lower-left; place the glyph's AABB centre."""
+    vec = vtk.vtkVectorText()
+    vec.SetText(text)
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputConnection(vec.GetOutputPort())
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+    actor.SetScale(scale, scale, scale)
+    actor.SetOrientation(*orientation)
+    actor.GetProperty().SetColor(0.1, 0.1, 0.1)
+    actor.SetPosition(0.0, 0.0, 0.0)
+    mapper.Update()
+    bounds = actor.GetBounds()
+    center = np.array((0.5 * (bounds[0] + bounds[1]),
+                       0.5 * (bounds[2] + bounds[3]),
+                       0.5 * (bounds[4] + bounds[5])))
+    actor.SetPosition(*(np.asarray(face_center, dtype=float) - center))
+    actor.nav_label = text
+    return actor
+
+
+def _pad_actor():
+    """Transparent cube that inflates the marker bounds; never pickable."""
+    source = vtk.vtkCubeSource()
+    source.SetXLength(2.0 * CUBE_PAD_HALF)
+    source.SetYLength(2.0 * CUBE_PAD_HALF)
+    source.SetZLength(2.0 * CUBE_PAD_HALF)
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputConnection(source.GetOutputPort())
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+    actor.GetProperty().SetOpacity(0.0)
+    actor.PickableOff()
+    actor.nav_role = 'pad'
+    return actor
+
+
+def _arrow_triangle_uv(direction):
+    centres = {'right': (0.93, 0.50), 'left': (0.07, 0.50),
+               'up': (0.50, 0.93), 'down': (0.50, 0.07)}
+    cx, cy = centres[direction]
+    if direction == 'right':
+        return ((cx + 0.035, cy), (cx - 0.028, cy + 0.04), (cx - 0.028, cy - 0.04))
+    if direction == 'left':
+        return ((cx - 0.035, cy), (cx + 0.028, cy + 0.04), (cx + 0.028, cy - 0.04))
+    if direction == 'up':
+        return ((cx, cy + 0.035), (cx - 0.04, cy - 0.028), (cx + 0.04, cy - 0.028))
+    return ((cx, cy - 0.035), (cx - 0.04, cy + 0.028), (cx + 0.04, cy + 0.028))
+
+
+def navigation_arrow_actors():
+    """Screen-space orbit arrows in normalized marker-viewport coordinates."""
+    actors = []
+    for direction in ('left', 'right', 'up', 'down'):
+        points = vtk.vtkPoints()
+        for u, v in _arrow_triangle_uv(direction):
+            points.InsertNextPoint(u, v, 0.0)
+        cells = vtk.vtkCellArray()
+        cells.InsertNextCell(3)
+        cells.InsertCellPoint(0)
+        cells.InsertCellPoint(1)
+        cells.InsertCellPoint(2)
+        data = vtk.vtkPolyData()
+        data.SetPoints(points)
+        data.SetPolys(cells)
+        mapper = vtk.vtkPolyDataMapper2D()
+        coord = vtk.vtkCoordinate()
+        coord.SetCoordinateSystemToNormalizedViewport()
+        mapper.SetTransformCoordinate(coord)
+        mapper.SetInputData(data)
+        actor = vtk.vtkActor2D()
+        actor.SetMapper(mapper)
+        actor.GetProperty().SetColor(*_ARROW_RGB)
+        actor.PickableOff()
+        actor.nav_arrow = direction
+        actors.append(actor)
+    return actors
 
 
 def navigation_cube_prop():
-    """Unit cube with face captions, no ``vtkFeatureEdges``.
+    """Chamfered unit cube with face captions, no ``vtkFeatureEdges``.
 
     ``vtkAnnotatedCubeActor`` extracts edges on first render; on Cocoa that
-    ran inside a synchronous expose and hung the 0.5.0 Intel editor. A
-    ``vtkCubeSource`` plus ``vtkVectorText`` is the same pickable 1×1×1 body
-    ``cube_face_at`` already understands.
+    ran inside a synchronous expose and hung the 0.5.0 Intel editor. Static
+    polydata plus ``vtkVectorText`` is the same pickable 1×1×1 body
+    ``cube_hit_at`` already understands.
     """
     assembly = vtk.vtkAssembly()
-    source = vtk.vtkCubeSource()
-    source.SetXLength(1.0)
-    source.SetYLength(1.0)
-    source.SetZLength(1.0)
+    triangles, colors = chamfered_cube_triangles()
     mapper = vtk.vtkPolyDataMapper()
-    mapper.SetInputConnection(source.GetOutputPort())
+    mapper.SetInputData(polydata_from_triangles(triangles, face_colors=colors))
+    mapper.SetScalarModeToUseCellData()
+    mapper.SetColorModeToDirectScalars()
     body = vtk.vtkActor()
     body.SetMapper(mapper)
     body.GetProperty().SetColor(0.62, 0.66, 0.72)
+    # Mesh edges, not vtkFeatureEdges: a render flag, not a filter that ran
+    # inside a Cocoa expose and hung the Intel 0.5.0 editor.
+    body.GetProperty().SetEdgeVisibility(True)
+    body.GetProperty().SetEdgeColor(0.16, 0.17, 0.20)
+    body.GetProperty().SetLineWidth(1.2)
+    body.nav_role = 'body'
     assembly.AddPart(body)
-    # (text, position, orientation). VectorText sits on the face; origin is
-    # the lower-left of the string so the offsets are a bit left/down of
-    # centre. Close enough to read; picking uses the cube, not the glyphs.
-    captions = (
-        ('Right',  (0.51, -0.18, -0.08), (90, 90, 0)),
-        ('Left',   (-0.51, -0.18, 0.08), (90, -90, 0)),
-        ('Back',   (-0.22, 0.51, -0.08), (90, 0, 180)),
-        ('Front',  (-0.22, -0.51, -0.08), (90, 0, 0)),
-        ('Top',    (-0.18, -0.08, 0.51), (0, 0, 0)),
-        ('Bottom', (-0.28, 0.08, -0.51), (180, 0, 0)),
-    )
-    for text, position, orientation in captions:
-        vec = vtk.vtkVectorText()
-        vec.SetText(text)
-        tmapper = vtk.vtkPolyDataMapper()
-        tmapper.SetInputConnection(vec.GetOutputPort())
-        actor = vtk.vtkActor()
-        actor.SetMapper(tmapper)
-        actor.SetScale(0.16, 0.16, 0.16)
-        actor.GetProperty().SetColor(0.1, 0.1, 0.1)
-        actor.SetPosition(*position)
-        actor.SetOrientation(*orientation)
-        assembly.AddPart(actor)
+    assembly.AddPart(_pad_actor())
+    scale = _vector_text_scale('Bottom', 2.0 * CUBE_FACE_HALF)
+    lift = CUBE_HALF + CUBE_LABEL_LIFT
+    for text, normal, orientation in _FACE_CAPTIONS:
+        center = np.asarray(normal, dtype=float) * lift
+        assembly.AddPart(_centered_label_actor(text, center, orientation, scale))
     return assembly
 
 
@@ -533,6 +781,7 @@ class Viewport(QtWidgets.QWidget):
         self._transition.timeout.connect(self._advance_transition)
         self._pending_poses = []
         self._pending_name = None
+        self._pending_final = None
         self.paint_enabled = False
         self._paint_active = False
         self.gizmo = TransformGizmo(self.interactor, self.scene.renderer)
@@ -625,7 +874,7 @@ class Viewport(QtWidgets.QWidget):
 
         Faces read Front / Back / Left / Right / Top / Bottom rather than axis
         letters, with Front on -Y so it agrees with the green build-volume
-        edge. Built from ``vtkCubeSource`` rather than ``vtkAnnotatedCubeActor``:
+        edge. Built from static polydata rather than ``vtkAnnotatedCubeActor``:
         the latter runs ``vtkFeatureEdges`` on every first paint and hung the
         Intel 0.5.0 editor inside a Cocoa expose. The widget is display-only,
         so clicks are picked here and turned into camera moves.
@@ -641,17 +890,24 @@ class Viewport(QtWidgets.QWidget):
         # Interactive mode lets the user drag the marker around the corner,
         # which is not what a click on it should mean here.
         widget.InteractiveOff()
+        renderer = widget.GetRenderer()
+        if renderer is not None:
+            for actor in navigation_arrow_actors():
+                # vtkOpenGLRenderer on this VTK build does not wrap AddActor2D.
+                renderer.AddViewProp(actor)
         self.cube, self.cube_widget = cube, widget
         self.render()
         return widget
 
-    def cube_face_under(self, x, y):
-        """Face label under a display position, or None when the cube is missed.
+    def cube_hit_under(self, x, y):
+        """``cube_hit_at`` result under a display position, or None on a miss.
 
         The display point is rejected against the marker's own viewport
         rectangle first: a prop pick is asked to search one renderer and will
         happily answer for a point that renderer does not own, which would turn
-        every click in the main view into a camera snap.
+        every click in the main view into a camera snap. Orbit arrows are
+        classified in the marker's normalized viewport so they stay in screen
+        space the way FreeCAD's NavCube arrows do.
         """
         if self.cube_widget is None:
             return None
@@ -662,14 +918,30 @@ class Viewport(QtWidgets.QWidget):
         left, bottom, right, top = renderer.GetViewport()
         if not (left * width <= x <= right * width and bottom * height <= y <= top * height):
             return None
+        span_x = (right - left) * width
+        span_y = (top - bottom) * height
+        if span_x > 0 and span_y > 0:
+            u = (x - left * width) / span_x
+            v = (y - bottom * height) / span_y
+            arrow = cube_arrow_at(u, v)
+            if arrow is not None:
+                return ('arrow', arrow)
         if not self._cube_picker.Pick(x, y, 0, renderer):
             return None
-        return cube_face_at(self._cube_picker.GetPickPosition())
+        return cube_hit_at(self._cube_picker.GetPickPosition())
+
+    def cube_face_under(self, x, y):
+        """Face label under a display position, or None when the cube is missed."""
+        hit = self.cube_hit_under(x, y)
+        if hit is not None and hit[0] == 'face':
+            return hit[1]
+        return None
 
     # ---- camera ---------------------------------------------------------
     def set_view(self, name, animate=True):
         """Snap to a named view, interpolating unless asked not to."""
         self._transition.stop()
+        self._pending_final = None
         if not animate:
             self.camera.set_view(name)
             self.render()
@@ -680,16 +952,49 @@ class Viewport(QtWidgets.QWidget):
         self._transition.start()
         return name
 
+    def rotate_view(self, turn, animate=True):
+        """Orbit 90° in view space, matching a named view when the roll agrees."""
+        camera = self.camera.camera
+        focal = np.asarray(camera.GetFocalPoint(), dtype=float)
+        direction = np.asarray(camera.GetPosition(), dtype=float) - focal
+        up = np.asarray(camera.GetViewUp(), dtype=float)
+        new_direction, new_up = rotate_view_90(direction, up, turn)
+        name = named_view_near(new_direction, new_up)
+        if name is not None:
+            return self.set_view(name, animate=animate)
+        distance = float(np.linalg.norm(direction)) or 1.0
+        target = (focal + new_direction * distance, focal, new_up)
+        self._transition.stop()
+        self._pending_name = None
+        if not animate:
+            self.camera.apply(target)
+            self.camera.current = None
+            self._pending_final = None
+            self.render()
+            self.view_changed.emit(turn)
+            return turn
+        self._pending_poses = list(self.camera.steps_toward(
+            new_direction, new_up, self.transition_steps))
+        self._pending_final = target
+        self._transition.start()
+        return turn
+
     def _advance_transition(self):
         if not self._pending_poses:
             self._transition.stop()
             name, self._pending_name = self._pending_name, None
+            final, self._pending_final = self._pending_final, None
             if name is not None:
                 # Land exactly on the named pose and reframe, so a transition
                 # can never leave the camera almost-but-not-quite square on.
                 self.camera.set_view(name)
                 self.render()
                 self.view_changed.emit(name)
+            elif final is not None:
+                self.camera.apply(final)
+                self.camera.current = None
+                self.render()
+                self.view_changed.emit('')
             return
         self.camera.apply(self._pending_poses.pop(0))
         self.render()
@@ -707,10 +1012,22 @@ class Viewport(QtWidgets.QWidget):
 
     def _on_click(self, interactor, event):
         x, y = interactor.GetEventPosition()
-        face = self.cube_face_under(x, y)
-        if face is not None:
+        # FakeViewport in the gizmo smoke tests stubs cube_face_under only.
+        hit_under = getattr(self, 'cube_hit_under', None)
+        if hit_under is not None:
+            hit = hit_under(x, y)
+        else:
+            face = self.cube_face_under(x, y)
+            hit = ('face', face) if face is not None else None
+        if hit is not None:
             # A click on the cube is a camera command, never a support edit.
-            self.set_view(FACE_VIEWS[face])
+            kind, payload = hit
+            if kind == 'face':
+                self.set_view(FACE_VIEWS[payload])
+            elif kind == 'corner':
+                self.set_view(payload)
+            elif kind == 'arrow':
+                self.rotate_view(payload)
             return
         if self.gizmo.attached_index is not None and self.gizmo.begin_drag(x, y):
             # Grabbed a handle: this click drives the gizmo, not a pick/paint,

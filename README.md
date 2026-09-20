@@ -2,7 +2,7 @@
 
 A staged Linux application for single-part resin-print preparation. Implementation status, evidence and remaining stage gates are tracked in [plan.md](plan.md).
 
-v0.5.1 (alpha) keeps a Python CLI and optional GUI, with hot geometry and raster
+v0.5.2 (alpha) keeps a Python CLI and optional GUI, with hot geometry and raster
 work in the C++ `_native` kernels. Portable builds: Linux x86_64 AppImage, two
 thin macOS DMGs (Intel and Apple Silicon), and a Windows x64 zip. See
 [docs/packaging.md](docs/packaging.md) and [platforms.md](platforms.md).
@@ -14,9 +14,9 @@ Download the matching asset from the [GitHub Releases](https://github.com/chemem
 **Linux x86_64**
 
 ```sh
-chmod +x VoxelMill-0.5.1-linux-x86_64.AppImage
-./VoxelMill-0.5.1-linux-x86_64.AppImage --help
-./VoxelMill-0.5.1-linux-x86_64.AppImage gui
+chmod +x VoxelMill-0.5.2-linux-x86_64.AppImage
+./VoxelMill-0.5.2-linux-x86_64.AppImage --help
+./VoxelMill-0.5.2-linux-x86_64.AppImage gui
 ```
 
 The editor needs host OpenGL and X11 or Wayland.
@@ -30,19 +30,20 @@ open /Applications/VoxelMill.app
 
 If macOS still blocks it: System Settings → Privacy & Security → Open Anyway.
 
-**Windows x64** — unzip `VoxelMill-0.5.1-windows-x64.zip` and run `VoxelMill\VoxelMill.exe` (CLI subcommands work from that same exe). SmartScreen may warn; Open anyway.
+**Windows x64** — unzip `VoxelMill-0.5.2-windows-x64.zip` and run `VoxelMill\VoxelMill.exe` (CLI subcommands work from that same exe). SmartScreen may warn; Open anyway.
 
-The editor's File menu includes dedicated **Printer**, **Resin**, and **Support**
-editors with portable configuration saves. The support editor renders an example
-attachment array as dimensions change. Part-to-part supports can be forbidden or
-given an adjustable preference; bracing has independent size, spacing, start,
-and reach controls. Supports land on a selectable base — the original convex
-`plate`, bare `none` feet, per-foot `pad` or `skate` shapes, a spanning-tree
-`skeleton`, or a porous `grid` or `hex` lattice, optionally tapered inward from
-the plate — and each reports its own measured contact area, open area and
-resin volume. All settings and file operations are also
-available from the CLI; `voxelmill support-example --output example.stl` exports
-the same illustrative array. See [GUI workflows](docs/gui.md) and [CLI options](docs/cli.md).
+The editor's **Configuration** menu includes dedicated **Printer**, **Resin**,
+and **Support** editors with portable configuration saves. The support editor
+renders an example attachment array as dimensions change. Part-to-part supports
+can be forbidden or given an adjustable preference; bracing has independent
+size, spacing, start, and reach controls. Supports land on a selectable base —
+default porous `grid`, the original convex `plate`, bare `none` feet, per-foot
+`pad` or `skate` shapes, a spanning-tree `skeleton`, or a `hex` lattice,
+optionally tapered inward from the plate — and each reports its own measured
+contact area, open area and resin volume. All settings and file operations are
+also available from the CLI; `voxelmill support-example --output example.stl`
+exports the same illustrative array. See [GUI workflows](docs/gui.md) and
+[CLI options](docs/cli.md).
 
 Development setup (Python 3.10+, CMake, C++17 compiler):
 

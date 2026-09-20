@@ -43,7 +43,9 @@ The SVG artwork in `icons/` is canonical. Run
 `.venv/bin/python scripts/generate_icons.py` after changing it; the script uses
 QtSvg to render dark full-color, light, and symbolic variants at the distributed
 hicolor sizes (16 through 512 px plus 1024 px) and copies the dark 256 px image
-to the AppImage desktop fallback and package data. The dark full-color variant
+to the AppImage desktop fallback and package data, and writes
+`packaging/voxelmill.icns` (macOS `.app` / Finder / Dock) plus
+`packaging/voxelmill.ico` (Windows exe). The dark full-color variant
 is the application default; symbolic artwork is intended for small or visually
 busy contexts. `scripts/generate_icons.py --check` verifies that generated files
 match the canonical SVGs without rewriting them.
@@ -75,9 +77,15 @@ was smoke-tested at v0.3.0 (`--version` reports the package version; the staged
 `voxelmill._native` exposes `extract_runs` and `distance_transform_edt`).
 
 A full editor image (the default, without `--cli-only`) opens the GUI when
-double-clicked or when given a single existing file. `--help`, `prepare`,
-`slice` and the other subcommands stay CLI. A CLI-only image has no PySide6
-tree, so AppRun does not rewrite the argument list.
+double-clicked or when given a single existing file: empty argv (and a single
+existing file path) rewrites to `gui` when the binary is frozen or PySide6
+imports. `--help`, `prepare`, `slice` and the other subcommands stay CLI. A
+CLI-only image has no PySide6 tree, so AppRun does not rewrite the argument
+list.
+
+On Windows VirtualBox guests, launching the editor sets `QT_OPENGL=software`
+(and `LIBGL_ALWAYS_SOFTWARE`) before `QApplication` when the `VBoxGuest`
+service is present. Real GPUs and an already-set `QT_OPENGL` are unchanged.
 
 The desktop file uses `Exec=voxelmill %F` and `Terminal=false`. Host OpenGL /
 X11 or Wayland libraries are still required for the editor; they are not

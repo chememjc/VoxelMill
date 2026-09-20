@@ -365,13 +365,16 @@ level-wise step changes no height. What remains is what the part keeps.
 ## Supports
 
 Contacts come from downward faces and from raster island births, thinned to
-`spacing_mm` with island contacts mandatory. `route_contacts` tries three
-strategies in order: a vertical pillar to the plate, then an angled or branched
-route to a free column within `2 * spacing_mm`, then a contact onto
-already-printed model material below it. Every failed route is reported with a
-capped diagnostic count and reaches the export decision: exact raster
-connectivity alone does not prove the planned contacts were placed or are
-removable.
+one automatic contact per XY `spacing_mm` cell (lowest Z wins); islands,
+manual/paint enforcers, and correction extras bypass the density cap.
+`route_contacts` tries three strategies in order: a vertical pillar to the
+plate, then an angled or branched route to a free column within
+`2 * spacing_mm`, then a contact onto already-printed model material below it.
+Shaft clearance is a capsule of radius plus `support_clearance_mm`, not
+centerline samples; the occupancy overlay skips overlapping shafts. Every
+failed route is reported with a capped diagnostic count and reaches the export
+decision: exact raster connectivity alone does not prove the planned contacts
+were placed or are removable.
 
 Each routed contact is three segments — tip, pillar, and whatever it
 lands on — and `route_contacts` computes each one's geometry from
@@ -380,10 +383,10 @@ lands on — and `route_contacts` computes each one's geometry from
 Per-contact records (`contact_parameters.py`) overlay a subset of those
 keys onto one contact by rounded plate coordinates; unmatched records are
 reported and never merged onto a neighbour. `tip_shape` is `cone` or
-`cylinder`; `break_point_diameter_mm` of `0` emits no ball, and a positive
-value unions a sphere onto the top contact so the snap-off is one closed
-solid. A ball that no longer fits a shortened tip fails that contact
-rather than clipping the sphere.
+`cylinder`; `break_point_diameter_mm` defaults to `0.8` and unions a sphere
+onto the top contact so the snap-off is one closed solid; `0` emits no ball.
+A ball that no longer fits a shortened tip fails that contact rather than
+clipping the sphere.
 `tip_base_r` falls back to the pillar radius only when
 `tip_base_diameter_mm` is `0`; `branch_tangent` is
 `tan(radians(pillar_angle_deg))`, and a candidate branch column at lateral
@@ -394,10 +397,10 @@ usable set. Which pillar radius (`run_r`) a routed run actually gets —
 `pillar_diameter_mm` or the thinner `small_pillar_diameter_mm` — is
 decided once, from that run's total length (elbow included), before any
 of its cylinders or graph edges are built, so a small-pillar run is thin
-along its whole length rather than only near the tip. `brace_geometry`
-computes `brace_spacing_mm`/`brace_start_height_mm`, falling back to the
-historical `max_slenderness * 2 * pillar_radius` on either when it is
-left at `0`; `_brace` then ties each tall pillar to its nearest two
+along its whole length rather than only near the tip. Elbows get a union
+sphere. `brace_geometry` computes `brace_spacing_mm`/`brace_start_height_mm`,
+using the built-in 30 mm / 3 mm when either is left at `0`; `_brace` then
+ties each tall pillar (taller than `max(start, 15 mm)`) to its nearest two
 neighbours at that spacing starting at that height, with each strut's
 radius scaled to the thinner of the two pillars it connects, so a
 small-pillar run is braced with a strut sized to itself rather than to
@@ -426,14 +429,15 @@ between them require the model route to be shorter by the configured ratio.
 Contacts blocked by this policy are counted separately, while contacts with no
 permitted route remain failures and retain their export gate.
 
-Ordinary model routes can reserve a separate bottom cone or cylinder using
-`model_anchor_length_mm`. That length and `min_tip_length_mm` must both fit;
-only the top tip shortens. The bottom diameter and downward penetration are
-independent of the top. A small collar buried inside both adjoining solids
-joins the new bottom in volume without changing its outer dimensions.
-Zero bottom length and depth retain the original geometry. New bottom
-footprints are checked conservatively on the existing columns, and central
-column depth checks prevent extending through the lower material run.
+Ordinary model routes reserve a separate bottom cone or cylinder using
+`model_anchor_length_mm` (default 2 mm) with matching diameter and penetration
+defaults. That length and `min_tip_length_mm` must both fit; only the top tip
+shortens. Part-to-part is point-to-point (balls both ends); `_fit_anchor_tips`
+keeps short gaps from swelling to `pillar_diameter_mm`. A small collar buried
+inside both adjoining solids joins the new bottom in volume without changing
+its outer dimensions. Zero bottom length retains the direct attachment. New
+bottom footprints are checked conservatively on the existing columns, and
+central column depth checks prevent extending through the lower material run.
 
 `small_pillar_mode="middle"` keeps the thin-middle rule above. In `"model"`
 mode, an eligible short gap instead gets one complete connector between model
@@ -456,8 +460,9 @@ a proof of mechanical strength. The 20,000-candidate cap counts rejected as
 well as emitted braces (`brace_candidates_examined`, `braces_capped`), and an
 interval too small to advance the floating-point height fails explicitly.
 
-`build_base` decides what every routed foot lands on. `plate` (default)
-retains the legacy `raft_from_feet` geometry bit-for-bit. `none` unions
+`build_base` decides what every routed foot lands on. `grid` (default) is the
+porous lattice. `plate` retains the legacy `raft_from_feet` geometry
+bit-for-bit. `none` unions
 actual 24-sided bare-foot sections and removes overlap from its measured
 area; `nominal_disc_area_mm2` preserves the ideal pi-sum for comparison.
 `pad` emits circular per-foot pads. `skate` emits a capsule whose total
@@ -701,7 +706,7 @@ overrides it for that run.
 ## Unsupported overhangs
 
 `overhangs.analyze_overhangs` (the `unsupported_overhangs` check,
-`--no-overhang-check` on `prepare`, and **Check print → Overhangs** in the
+`--no-overhang-check` on `prepare`, and **Verification → Overhangs** in the
 editor) compares two things the pipeline already computes separately: the
 downward-face samples `supports.downward_contacts` says need support, and
 the contacts routing actually placed. A sample counts as reached when a

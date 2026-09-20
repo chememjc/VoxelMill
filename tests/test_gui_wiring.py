@@ -113,6 +113,7 @@ def test_drop_to_plate_zeroes_the_lift(window):
     assert window.document.model_lift_mm == pytest.approx(37.0)
     window.object_panel.drop_to_plate.click()
     assert window.document.model_lift_mm == 0.0
+    assert window.lift.value() == pytest.approx(0.0)
 
 
 def test_drop_to_plate_zeroes_every_selected_part(window):
@@ -124,6 +125,7 @@ def test_drop_to_plate_zeroes_every_selected_part(window):
     window.object_panel.drop_to_plate.click()
     assert window.document.model_lift_mm == 0.0
     assert window.document.extra_models[0]['lift_mm'] == 0.0
+    assert window.lift.value() == pytest.approx(0.0)
 
 
 # ---- multi-select pose commits move every selected part -------------------

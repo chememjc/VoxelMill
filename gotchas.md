@@ -52,8 +52,8 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
 
 - **A GUI AppImage with no args must launch the editor.** Argparse requires a
   subcommand, so a double-click of a CLI-wired AppRun printed help and quit.
-  AppRun now rewrites empty argv (and a single existing file) to `gui` only
-  when PySide6 is in the image.
+  Empty argv (and a single existing file) rewrites to `gui` when the binary is
+  frozen or PySide6 imports; CLI-only images do not rewrite.
 
 - **TSMC retract travel must sum to lift travel.** CHITUBOX enforces that the
   two retract substages cover the same distance as the two lift substages.
@@ -1390,6 +1390,11 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   with `console=False` and set `LSBackgroundOnly=False` in the bundle plist.
   Windows stays `console=True` so the zip CLI prints.
 
+- **Finder and Dock ignore Qt's window icon.** PyInstaller `BUNDLE(icon=None)`
+  left the bootloader's Python rocket on `VoxelMill.app`. The spec now points
+  at `packaging/voxelmill.icns` (`CFBundleIconFile`) and the Windows EXE at
+  `packaging/voxelmill.ico`, both written by `scripts/generate_icons.py`.
+
 - **Do not strip `numpy/_core/tests` out of the AppImage.** A blanket
   `tests` ignore on `copytree` dropped `numpy._core.tests`. NumPy 2.2's
   `numpy.testing` imports `numpy._core.tests._natype`, and scipy's
@@ -1411,12 +1416,18 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   (sampled 100% of main thread for minutes; Apple Events never ran).
   `vtkGenericOpenGLRenderWindow` crashed on that iMac (`vtkOpenGLState::Pop`
   null, OpenGL 3.2 reported as 0.0) from Finder `open`. Keep the native
-  render window, skip FeatureEdges on the nav cube, and on Darwin defer
+  render window, build the nav cube from chamfered polydata + `vtkVectorText`
+  (no `vtkAnnotatedCubeActor` / `vtkFeatureEdges`), and on Darwin defer
   `paintEvent` → `Render()` with `QTimer.singleShot(0)` so the transaction
   can finish.
 
 - **A hover-wheel over a spin box is an accidental edit.** Qt's default
   `WheelFocus` changes `QDoubleSpinBox`/`QComboBox` values while the user is
   scrolling the Setup page. Install `FocusedWheelFilter` on the
-  `QApplication` so a wheel is ignored until the field has been clicked, and
-  forward it to the enclosing scroll area so the page still moves.
+  `QApplication` so a wheel is ignored until the field has been clicked, walk
+  parents so a Cocoa wheel that lands on the inner `QLineEdit` is still
+  ignored, and forward it to the enclosing scroll area so the page still moves.
+
+- **Windows VirtualBox guests hang QVTK before `window.show()`.** Detect the
+  `VBoxGuest` service and set `QT_OPENGL=software` before `QApplication`; leave
+  a real GPU and an already-set `QT_OPENGL` alone.

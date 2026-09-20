@@ -26,7 +26,7 @@ Resolved settings contain `schema_version`, `printer`, `resin`, `process`, `supp
 | `process` elephant foot | `elephant_foot_compensation_mm=0.0` (disabled), `elephant_foot_layers=0` (derives the ramp length from `bottom_layers`) |
 | `process` dimensional | `shrink_percent_xy=0.0`, `shrink_percent_z=0.0`, `tolerance_offset_mm=0.0`, `bottom_tolerance_offset_mm=0.0` (all disabled and uncalibrated) |
 | `process` antialiasing | `antialias_levels=1` (`1`, `2`, or `4`; 1 is binary occupancy, 2 or 4 supersample to coverage grayscale), `antialias_supports=false` (support tips stay binary unless this is set) |
-| `support` | `automatic=true`, `auto_bracing=true`, `allow_part_to_part=true`, `drop_attached_unroutable=true`, `tree_supports=false`, `tree_cluster_mm=0` (derives `2 * spacing_mm`), `contour_supports=false`, `boundary_supports=false`, `part_to_part_avoidance=1`, `spacing_mm=3`, `contact_diameter_mm=0.4`, `penetration_mm=0.15`, `tip_shape="cone"`, `break_point_diameter_mm=0` (disabled), `pillar_diameter_mm=1.2`, `tip_length_mm=2`, `tip_base_diameter_mm=0` (derives `pillar_diameter_mm`), `pillar_angle_deg=45`, `small_pillar_diameter_mm=0`, `small_pillar_max_length_mm=0` (both zero disables the thin-pillar class), `brace_spacing_mm=0`, `brace_start_height_mm=0` (both derive `max_slenderness * 2 * pillar_radius`), `brace_diameter_mm=0` (derives from the thinner connected pillar), `brace_max_distance_mm=0` (derives `1.5 * spacing_mm`), `base_type="grid"`, `raft_slope_deg=30` (plate outer putty-knife bevel; 0 is a near-vertical rim), `base_touch_diameter_mm=0`, `base_thickness_mm=0`, `base_skate_length_mm=0`, `base_rotation_deg=0`, `base_strut_width_mm=0`, `base_cell_size_mm=6`, `min_tip_length_mm=0.3`, `raft_thickness_mm=1`, `raft_expansion_mm=2`, `max_slenderness=40`, `max_span_mm=3`, `min_overlap_pixels=1`, `overhang_angle_deg=45`, `support_clearance_mm=0.3`, `max_island_passes=5` (integer 1–10; caps `prepare`'s and the editor's island-correction loop, see [algorithms.md](algorithms.md#island-correction-passes)), `max_contact_gap_mm=0` (derives `spacing_mm`), `max_contact_load_mm2=0` (derives `4 * spacing_mm^2`) |
+| `support` | `automatic=true`, `auto_bracing=true`, `allow_part_to_part=true`, `drop_attached_unroutable=true`, `tree_supports=false`, `tree_cluster_mm=0` (derives `2 * spacing_mm`), `contour_supports=false`, `boundary_supports=false`, `part_to_part_avoidance=1`, `spacing_mm=3`, `contact_diameter_mm=0.4`, `penetration_mm=0.15`, `tip_shape="cone"`, `break_point_diameter_mm=0.8`, `pillar_diameter_mm=1.2`, `tip_length_mm=2`, `tip_base_diameter_mm=0` (derives `pillar_diameter_mm`), `model_anchor_shape="cone"`, `model_anchor_length_mm=2`, `model_anchor_diameter_mm=0.4`, `model_anchor_penetration_mm=0.15`, `pillar_angle_deg=45`, `small_pillar_diameter_mm=0`, `small_pillar_max_length_mm=0` (both zero disables the thin-pillar class), `brace_spacing_mm=0`, `brace_start_height_mm=0` (zeros use built-in 30 mm / 3 mm), `brace_diameter_mm=0` (derives from the thinner connected pillar), `brace_max_distance_mm=0` (derives `1.5 * spacing_mm`), `base_type="grid"`, `raft_slope_deg=30` (plate outer putty-knife bevel; 0 is a near-vertical rim), `base_touch_diameter_mm=0`, `base_thickness_mm=0`, `base_skate_length_mm=0`, `base_rotation_deg=0`, `base_strut_width_mm=0`, `base_cell_size_mm=6`, `min_tip_length_mm=0.3`, `raft_thickness_mm=1`, `raft_expansion_mm=2`, `max_slenderness=40`, `max_span_mm=3`, `min_overlap_pixels=1`, `overhang_angle_deg=45`, `support_clearance_mm=0.3`, `max_island_passes=5` (integer 1–10; caps `prepare`'s and the editor's island-correction loop, see [algorithms.md](algorithms.md#island-correction-passes)), `max_contact_gap_mm=0` (derives `spacing_mm`), `max_contact_load_mm2=0` (derives `4 * spacing_mm^2`) |
 | `repair` | `seal_voids=true`, `min_orifice_area_mm2=1`, `aggressiveness="conservative"`, `max_deviation_mm=0.05`, `remove_tiny_features=false`, `auto_drain_holes=false`, `voxel_size_mm=0` (derived), `smooth_iterations=0`, `min_void_volume_mm3=0`, `support_void_policy="fail"` (`fail` / `ignore` / `fill`) |
 | `assembly` | `union="auto"` (`auto` or `exact`), `require_raster_parity=true`, `max_parity_examples=16` (integer 0–256), `clip_to_build_volume=false` |
 | `resources` | `memory_gib=32`, `workers=0` (0 derives one per physical core, capped at 8 where the measured speedup plateaus), `worker_policy="performance"` (`performance` / `efficiency` / `all`), `scratch_dir=null` (omit the key in TOML to use its default); `acceleration="auto"` (`auto` / `cpu` / `cuda`), `cuda_device=0`, `post_slice_hook=null`; layer analysis caps worker concurrency against full-panel mask/label/EDT scratch estimates |
@@ -88,11 +88,11 @@ and, for `pad`, `base_touch_diameter_mm`/`base_thickness_mm`.
 `tip_shape` (`cone` default, or `cylinder`) is the top contact. A cone
 tapers from `tip_base_diameter_mm` to `contact_diameter_mm`; a cylinder
 keeps the contact diameter and ignores the tip-base diameter as a cone-only
-control. `break_point_diameter_mm` of `0` (the default) emits no ball. A
-positive value unions a sphere onto the top contact for a controlled
-snap-off; validation requires it to be at least `contact_diameter_mm` and
-to fit inside `tip_length_mm + penetration_mm`. These two keys, and the
-other individual geometry keys, can also be set per contact through
+control. `break_point_diameter_mm` defaults to `0.8` and unions a sphere onto
+the top contact for a controlled snap-off; `0` emits no ball. Validation
+requires a nonzero value to be at least `contact_diameter_mm` and to fit
+inside `tip_length_mm + penetration_mm`. These two keys, and the other
+individual geometry keys, can also be set per contact through
 `--contact-parameters` / the Setup tab: global defaults stay unchanged,
 lookup is exact at 1 µm rounding, and an unmatched position is a warning
 rather than a silent neighbour merge.
@@ -146,12 +146,14 @@ The ordinary model-anchor bottom is independent of the top tip:
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `model_anchor_shape` | `"cone"` | Cone to the middle radius, or `"cylinder"` at the bottom diameter. |
-| `model_anchor_length_mm` | `0` | Height above the lower model surface; zero keeps the direct attachment. |
-| `model_anchor_diameter_mm` | `0` | Lower endpoint diameter; zero derives the selected middle diameter. A nonzero diameter requires positive length. |
-| `model_anchor_penetration_mm` | `0` | Depth below the lower model surface; works with a direct attachment too. |
+| `model_anchor_length_mm` | `2` | Height above the lower model surface; zero keeps the direct attachment. |
+| `model_anchor_diameter_mm` | `0.4` | Lower endpoint diameter; zero derives the selected middle diameter. A nonzero diameter requires positive length. |
+| `model_anchor_penetration_mm` | `0.15` | Depth below the lower model surface; works with a direct attachment too. |
 
-A positive bottom length must fit in full along with `min_tip_length_mm`;
-only the top tip can shorten. A failed bottom candidate may still use a plate
+Part-to-part routes are point-to-point (balls at both ends). Short gaps stay
+thin via `_fit_anchor_tips` and do not swell to `pillar_diameter_mm`. A
+positive bottom length must fit in full along with `min_tip_length_mm`; only
+the top tip can shorten. A failed bottom candidate may still use a plate
 route; when no permitted route remains it fails `support_routes`. The new
 bottom envelope is checked against model columns with XY clearance, and depth
 must fit inside the central column's lower material run. This is sampled
@@ -160,15 +162,21 @@ endpoint and junction coordinates. On a cone the configured diameter is at
 the buried endpoint, not at the model's surface plane. Whole small model
 pillars use their own depth/shape settings instead of these bottom settings.
 
+Older schema-1 archives that omit the break-point / model-anchor keys still
+fill historical zeros through `fill_legacy_settings` / `_LEGACY_SUPPORT_OFF`
+rather than sprouting the new nonzero defaults. Explicit zeros already stored
+in a project are kept as zeros.
+
 `brace_spacing_mm`/`brace_start_height_mm` used to be one derived number,
 `max_slenderness * 2 * pillar_radius`, serving as both the vertical gap
-between cross-braces and the height of the lowest one. The reference
-configuration sets them 30 mm and 3 mm apart, which one number cannot
-express. Either left at `0` (the default) still derives that same value,
-so an untouched profile braces exactly as before. Both are ordinary
-`support` keys, reachable through `--set section.key=value` or the dedicated
-`--brace-spacing-mm`/`--brace-start-height-mm` CLI shortcuts (see
-[cli.md](cli.md)), or the GUI's resolved-settings JSON.
+between cross-braces and the height of the lowest one. Zero (the default) now
+uses the built-in 30 mm spacing and 3 mm start (the CHITUBOX transcription);
+an explicit nonzero still wins, and a mixed pair uses 30 or 3 for the zero
+side. Both are ordinary `support` keys, reachable through
+`--set section.key=value` or the dedicated `--brace-spacing-mm`/
+`--brace-start-height-mm` CLI shortcuts (see [cli.md](cli.md)), or the GUI's
+resolved-settings JSON. Pillars shorter than `max(start, 15 mm)` are not
+braced, so a dense low part does not grow a drainage net under itself.
 
 `support.tree_cluster_mm` (default `0`, which derives `2 * spacing_mm`) is the
 radius `tree_supports` clusters nearby vertical plate supports within before
@@ -196,8 +204,9 @@ analysis grid. A collision rejects that candidate and increments
 `braces_collision_rejected`; the grid test is a clearance heuristic, not a
 mechanical strength proof.
 
-`base_type` chooses what routed supports land on: `plate` (default) is the
-legacy convex hull raft, `none` emits actual 24-sided bare-foot sections,
+`base_type` chooses what routed supports land on: `grid` (default) is the
+porous lattice; `plate` is the legacy convex hull raft, `none` emits actual
+24-sided bare-foot sections,
 and `pad` gives each unique foot a circular disc. `skate` gives each foot a
 capsule; its total length includes the rounded ends, and zero derives the
 touch diameter, so no elongation is inferred. With `base_edge_slope_deg` the
@@ -314,10 +323,11 @@ import tessellation and near-duplicate vertex welding respectively; see
 
 Portable support-only presets apply after printer/resin profiles and before
 explicit CLI flags and `--set`. They preserve every unrelated settings section.
-Use `--support-preset light|medium|heavy|PATH` or the GUI **Support presets** menu.
-`preset save` captures the complete current support section. Named process
-presets and embedding presets inside printer/resin profiles remain future work.
-See [support-presets.md](support-presets.md) for the versioned JSON format.
+Use `--support-preset light|medium|heavy|PATH` or the GUI **Parts → Support
+presets** submenu. `preset save` captures the complete current support section.
+Named process presets and embedding presets inside printer/resin profiles remain
+future work. See [support-presets.md](support-presets.md) for the versioned JSON
+format.
 
 
 ## Peel screening

@@ -236,9 +236,9 @@ The written file is reloaded and re-validated through the same reader before
 `bind` returns, so a copy that cannot actually be parsed back fails at bind
 time rather than at the next slice.
 
-## The editor: File > Profile library...
+## The editor: Configuration > Profile library...
 
-**File → Profile library...** opens `ProfileLibraryDialog`
+**Configuration → Profile library...** opens `ProfileLibraryDialog`
 (`src/voxelmill/gui/profiles.py`), which calls the same `voxelmill.profiles`
 functions the CLI does — a printer or resin chosen in the editor and one
 chosen with `--printer`/`--resin` cannot resolve to different settings. The

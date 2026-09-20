@@ -303,7 +303,7 @@ analysis explicitly; the pitch is never coarsened automatically to fit.
 
 ## `goo_settings_differ`
 
-`voxelmill verify` (and the GUI's **Verify GOO** menu item) read panel
+`voxelmill verify` (and the GUI's **Verification → Verify GOO or CTB**) read panel
 resolution, physical build size, pixel pitch, mirroring, layer height,
 bottom/transition layer counts and bottom/normal exposure from the file
 itself, not from the `--printer`/`--resin` profile supplied on the command

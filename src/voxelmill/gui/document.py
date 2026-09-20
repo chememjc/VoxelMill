@@ -563,6 +563,82 @@ class Document:
             return apply
         return self.run(Command('clear extra models', assign([]), assign(before)))
 
+    def plate_floor(self):
+        """Height of the currently lowest part's bottom, in millimeters."""
+        lifts = [float(self.model_lift_mm)]
+        lifts.extend(float(spec['lift_mm']) for spec in self.extra_models)
+        return min(lifts)
+
+    def set_plate_floor(self, new_mm):
+        """Raise or lower every part by the same delta so the lowest sits at ``new_mm``."""
+        new_mm = float(new_mm)
+        if not np.isfinite(new_mm) or new_mm < 0:
+            raise VoxelMillError('invalid_orientation',
+                                'Model lift must be a finite non-negative millimeter value')
+        min_lift = self.plate_floor()
+        delta = new_mm - min_lift
+        if abs(delta) < 1e-12:
+            return None
+        before_primary = float(self.model_lift_mm)
+        before_extras = deepcopy(self.extra_models)
+        after_primary = max(0.0, before_primary + delta)
+        after_extras = []
+        for spec in before_extras:
+            changed = dict(spec)
+            changed['lift_mm'] = max(0.0, float(spec['lift_mm']) + delta)
+            after_extras.append(self._normalize_extra_model(changed))
+
+        def assign(primary, extras):
+            def apply(document):
+                document.model_lift_mm = float(primary)
+                document.placement = None
+                document.extra_models = deepcopy(extras)
+                document.derived.invalidate_from('solid')
+            return apply
+        return self.run(Command('set plate floor',
+                                assign(after_primary, after_extras),
+                                assign(before_primary, before_extras)))
+
+    def reset_all_lifts(self, mm):
+        """Write the same lift onto every part, collapsing relative gaps."""
+        mm = float(mm)
+        if not np.isfinite(mm) or mm < 0:
+            raise VoxelMillError('invalid_orientation',
+                                'Model lift must be a finite non-negative millimeter value')
+        before_primary = float(self.model_lift_mm)
+        before_extras = deepcopy(self.extra_models)
+        if abs(before_primary - mm) < 1e-12 and all(
+                abs(float(spec['lift_mm']) - mm) < 1e-12 for spec in before_extras):
+            return None
+        after_extras = []
+        for spec in before_extras:
+            changed = dict(spec)
+            changed['lift_mm'] = mm
+            after_extras.append(self._normalize_extra_model(changed))
+
+        def assign(primary, extras):
+            def apply(document):
+                document.model_lift_mm = float(primary)
+                document.placement = None
+                document.extra_models = deepcopy(extras)
+                document.derived.invalidate_from('solid')
+            return apply
+        return self.run(Command('reset all lifts', assign(mm, after_extras),
+                                assign(before_primary, before_extras)))
+
+    def reset_for_new_project(self):
+        """Keep resolved settings; drop source, extras, edits, undo and derived state."""
+        settings = deepcopy(self.settings)
+        extract = getattr(self, 'project_extract_dir', None)
+        self.__init__(settings)
+        self.project_extract_dir = None
+        if extract is not None and hasattr(extract, 'cleanup'):
+            try:
+                extract.cleanup()
+            except Exception:
+                pass
+        return self
+
     # ---- persistence ---------------------------------------------------
     def manifest(self):
         return {

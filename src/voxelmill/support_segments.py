@@ -39,6 +39,16 @@ def tip_segment(start, end, base_radius, contact_radius, shape='cone',
     return solid
 
 
+def elbow_sphere(center, radius, *, segments=24):
+    """Sphere that unions two cylinders meeting at an angle into one solid."""
+    center = np.asarray(center, dtype=float)
+    if center.shape != (3,) or not np.isfinite(center).all() or not np.isfinite(radius) or radius <= 0:
+        raise VoxelMillError('invalid_support', 'Invalid elbow sphere parameters')
+    if not isinstance(segments, (int, np.integer)) or segments < 8:
+        raise VoxelMillError('invalid_support', 'Elbow sphere needs at least eight segments')
+    return __import__('manifold3d').Manifold.sphere(float(radius), int(segments)).translate(center)
+
+
 def small_model_pillar(start, end, radius, shape='cone', upper_depth=0.0,
                        lower_depth=0.0, *, segments=32):
     """Build one watertight model-to-model connector around a surface segment.

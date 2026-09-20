@@ -266,10 +266,34 @@ class MainWindow(QtWidgets.QMainWindow):
         return restored
 
     def closeEvent(self, event):
-        """Remember the geometry and dock layout for next time -- never headless."""
+        """Prompt on dirty documents, then remember geometry -- never headless."""
+        if not self._confirm_discard_or_save():
+            event.ignore()
+            return
         if not self.headless:
             self._save_window_layout()
         super().closeEvent(event)
+
+    def _confirm_discard_or_save(self):
+        """Ask Save / Discard / Cancel when the document is dirty.
+
+        Headless tests construct ``MainWindow(..., headless=True)`` and must
+        not block on a modal, so headless is treated as Discard.
+        """
+        if not self.document.dirty:
+            return True
+        if self.headless:
+            return True
+        result = QtWidgets.QMessageBox.question(
+            self, 'Unsaved changes',
+            'The project has unsaved changes.',
+            QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.Discard | QtWidgets.QMessageBox.Cancel,
+            QtWidgets.QMessageBox.Save)
+        if result == QtWidgets.QMessageBox.Cancel:
+            return False
+        if result == QtWidgets.QMessageBox.Save:
+            return bool(self.save_project())
+        return True
 
     def _save_window_layout(self):
         self.editor_preferences['window_geometry'] = bytes(self.saveGeometry().toBase64()).decode('ascii')
@@ -492,6 +516,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.lift = QtWidgets.QDoubleSpinBox()
         self.lift.setRange(0, 200)
         self.lift.setValue(5.0)
+        self.lift.setKeyboardTracking(False)
+        self.lift.setToolTip(
+            'Height of the lowest part bottom. Changing this lifts every part by the same amount.')
         self.contact_list = QtWidgets.QListWidget()
         self.contact_list.setObjectName('contact_list')
         self.contact_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
@@ -793,6 +820,8 @@ class MainWindow(QtWidgets.QMainWindow):
         form.addRow(self.apply_json_button)
         self.rotate_auto.toggled.connect(self._sync_orientation_controls)
         self._sync_widgets_from_document()
+        # After the initial sync so construction does not emit an edit.
+        self.lift.valueChanged.connect(self._on_plate_floor_changed)
         self._apply_visibility_tier('simple')
         scroll = QtWidgets.QScrollArea()
         scroll.setWidgetResizable(True)
@@ -878,7 +907,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def _build_actions(self):
         bar = self.menuBar()
         file_menu = bar.addMenu('&File')
+        self.file_menu = file_menu
         edit_menu = bar.addMenu('&Edit')
+        parts_menu = bar.addMenu('&Parts')
+        verification_menu = bar.addMenu('&Verification')
+        configuration_menu = bar.addMenu('&Configuration')
+        tasks_menu = bar.addMenu('&Tasks')
         self.actions_map = {}
 
         def add(menu, name, label, slot, shortcut=None):
@@ -890,61 +924,69 @@ class MainWindow(QtWidgets.QMainWindow):
             self.actions_map[name] = action
             return action
 
+        add(file_menu, 'new_project', 'New project...', self.new_project, QtGui.QKeySequence.New)
         add(file_menu, 'open', 'Open STL...', self.open_stl_dialog, QtGui.QKeySequence.Open)
         add(file_menu, 'import_step', 'Import STEP...', self.import_step_dialog)
-        add(file_menu, 'add_model', 'Add model...', self.add_extra_model_dialog)
-        self._refresh_step_import_enabled()
-        add(file_menu, 'compute_attachments', 'Compute attachments', self.compute_attachments, 'Ctrl+R')
-        add(file_menu, 'arrange_objects', 'Arrange on plate', self.arrange_objects, 'Ctrl+L')
         add(file_menu, 'open_project', 'Open project...', self.open_project_dialog)
-        add(file_menu, 'save_project', 'Save project...', self.save_project_dialog, QtGui.QKeySequence.Save)
+        add(file_menu, 'save_project', 'Save project...', self.save_project, QtGui.QKeySequence.Save)
+        add(file_menu, 'save_project_as', 'Save project as...', self.save_project_as, 'Ctrl+Shift+S')
+        add(file_menu, 'open_goo', 'Open GOO or CTB for inspection...', self.open_goo_dialog)
+        add(file_menu, 'close_goo', 'Close opened slice file', self.close_goo)
         add(file_menu, 'export', 'Export supported STL...', self.export_dialog)
         add(file_menu, 'export_goo', 'Export Elegoo GOO...', self.export_goo_dialog)
         add(file_menu, 'export_ctb', 'Export CTB v3...', self.export_ctb_dialog)
-        add(file_menu, 'open_goo', 'Open GOO or CTB for inspection...', self.open_goo_dialog)
-        add(file_menu, 'close_goo', 'Close opened slice file', self.close_goo)
-        add(file_menu, 'verify_goo', 'Verify GOO or CTB (deep check)...', self.verify_goo_dialog)
-        add(file_menu, 'inspect_stl', 'Inspect STL (mesh inventory)...', self.inspect_stl_dialog)
-        add(file_menu, 'validate_stl', 'Validate STL (reslice and check)...', self.validate_stl_dialog)
-        add(file_menu, 'run_operation', 'Run operation (all options)...', self.operation_dialog)
-        add(file_menu, 'profile_library', 'Profile library...', self.profile_library_dialog)
-        add(file_menu, 'printer_editor', 'Printer editor...', self.printer_editor_dialog)
-        add(file_menu, 'printer_monitor', 'Printer monitor...', self.printer_monitor_dialog)
-        add(file_menu, 'resin_editor', 'Resin editor...', self.resin_editor_dialog)
-        add(file_menu, 'support_editor', 'Support editor...', self.support_editor_dialog)
-        add(file_menu, 'measure_stl', 'Measure STL (sizes and fit)...', self.measure_stl_dialog)
-        add(edit_menu, 'check_islands', 'Check islands now', self.check_islands, 'Ctrl+I')
-        auto_islands = QtGui.QAction('Re-check islands after every edit', self, checkable=True)
-        auto_islands.setChecked(self.auto_island_check)
-        auto_islands.toggled.connect(self._set_auto_island_check)
-        edit_menu.addAction(auto_islands)
-        self.actions_map['auto_island_check'] = auto_islands
-        presets_menu = bar.addMenu('&Support presets')
+        file_menu.addSeparator()
+        add(file_menu, 'quit', 'Quit', self.close, QtGui.QKeySequence.Quit)
+        self._refresh_step_import_enabled()
+
+        self.undo_action = add(edit_menu, 'undo', 'Undo', self.undo, QtGui.QKeySequence.Undo)
+        self.redo_action = add(edit_menu, 'redo', 'Redo', self.redo, QtGui.QKeySequence.Redo)
+        self.history_menu = edit_menu.addMenu('History')
+        self.history_menu.setObjectName('history_menu')
+        self.history_menu.aboutToShow.connect(self._rebuild_history_menu)
+
+        add(parts_menu, 'add_model', 'Add model...', self.add_extra_model_dialog)
+        add(parts_menu, 'compute_attachments', 'Compute attachments', self.compute_attachments, 'Ctrl+R')
+        add(parts_menu, 'arrange_objects', 'Arrange on plate', self.arrange_objects, 'Ctrl+L')
+        add(parts_menu, 'measure_stl', 'Measure STL (sizes and fit)...', self.measure_stl_dialog)
+        part_to_part = QtGui.QAction('Allow part-to-part supports', self, checkable=True)
+        part_to_part.setChecked(bool(self.document.settings['support'].get('allow_part_to_part', True)))
+        part_to_part.toggled.connect(self._set_allow_part_to_part)
+        parts_menu.addAction(part_to_part)
+        self.actions_map['allow_part_to_part'] = part_to_part
+        add(parts_menu, 'reset_all_lifts', 'Reset all parts to this lift', self.reset_all_lifts)
+        presets_menu = parts_menu.addMenu('Support presets')
         from ..presets import list_presets
         for name in list_presets():
             add(presets_menu, f'preset_{name}', f'Apply {name}',
                 lambda _checked=False, preset=name: self.apply_support_preset(preset))
         add(presets_menu, 'load_preset', 'Load preset JSON...', self.load_support_preset_dialog)
         add(presets_menu, 'save_preset', 'Save current support settings...', self.save_support_preset_dialog)
-        checks_menu = bar.addMenu('&Check print')
+
+        add(verification_menu, 'check_islands', 'Check islands now', self.check_islands, 'Ctrl+I')
+        auto_islands = QtGui.QAction('Re-check islands after every edit', self, checkable=True)
+        auto_islands.setChecked(self.auto_island_check)
+        auto_islands.toggled.connect(self._set_auto_island_check)
+        verification_menu.addAction(auto_islands)
+        self.actions_map['auto_island_check'] = auto_islands
         for key, label in PRINT_CHECK_LABELS:
-            add(checks_menu, f'check_print_{key}', label,
+            add(verification_menu, f'check_print_{key}', label,
                 lambda _checked=False, k=key, l=label: self.run_print_checks_now({k}, l))
-        checks_menu.addSeparator()
-        add(checks_menu, 'check_print_all', 'Check all',
+        verification_menu.addSeparator()
+        add(verification_menu, 'check_print_all', 'Check all',
             lambda _checked=False: self.run_print_checks_now(
                 set(services.PRINT_CHECK_NAMES), 'all checks'))
-        add(checks_menu, 'check_print_some', 'Check some...', self.check_print_some_dialog)
-        add(file_menu, 'cancel', 'Cancel running job', self.jobs.cancel_all, 'Esc')
-        file_menu.addSeparator()
-        add(file_menu, 'quit', 'Quit', self.close, QtGui.QKeySequence.Quit)
-        add(edit_menu, 'preferences', 'Preferences...', self.preferences_dialog)
-        self.undo_action = add(edit_menu, 'undo', 'Undo', self.undo, QtGui.QKeySequence.Undo)
-        self.redo_action = add(edit_menu, 'redo', 'Redo', self.redo, QtGui.QKeySequence.Redo)
-        self.history_menu = edit_menu.addMenu('History')
-        self.history_menu.setObjectName('history_menu')
-        self.history_menu.aboutToShow.connect(self._rebuild_history_menu)
-        theme_menu = edit_menu.addMenu('Theme')
+        add(verification_menu, 'check_print_some', 'Check some...', self.check_print_some_dialog)
+        add(verification_menu, 'verify_goo', 'Verify GOO or CTB (deep check)...', self.verify_goo_dialog)
+        add(verification_menu, 'inspect_stl', 'Inspect STL (mesh inventory)...', self.inspect_stl_dialog)
+        add(verification_menu, 'validate_stl', 'Validate STL (reslice and check)...', self.validate_stl_dialog)
+
+        add(configuration_menu, 'profile_library', 'Profile library...', self.profile_library_dialog)
+        add(configuration_menu, 'printer_editor', 'Printer editor...', self.printer_editor_dialog)
+        add(configuration_menu, 'resin_editor', 'Resin editor...', self.resin_editor_dialog)
+        add(configuration_menu, 'support_editor', 'Support editor...', self.support_editor_dialog)
+        add(configuration_menu, 'preferences', 'Preferences...', self.preferences_dialog)
+        theme_menu = configuration_menu.addMenu('Theme')
         theme_menu.setObjectName('theme_menu')
         self._theme_actions = {}
         for name in THEMES:
@@ -954,7 +996,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self._theme_actions[name] = action
             self.actions_map[f'theme_{name}'] = action
         self._theme_actions['system'].setChecked(True)
-        motion_menu = edit_menu.addMenu('Motion')
+        motion_menu = configuration_menu.addMenu('Motion')
         motion_menu.setObjectName('motion_menu')
         motion_group = QtGui.QActionGroup(self)
         motion_group.setExclusive(True)
@@ -966,7 +1008,16 @@ class MainWindow(QtWidgets.QMainWindow):
             motion_group.addAction(action)
             motion_menu.addAction(action)
             self.actions_map[f'motion_{mode}'] = action
-        add(edit_menu, 'shortcuts', 'Shortcuts...', self.shortcuts_dialog)
+        add(configuration_menu, 'shortcuts', 'Shortcuts...', self.shortcuts_dialog)
+        warned = QtGui.QAction('Allow warned export', self, checkable=True)
+        warned.toggled.connect(self._set_allow_unresolved)
+        configuration_menu.addAction(warned)
+        self.actions_map['warned'] = warned
+
+        add(tasks_menu, 'printer_monitor', 'Printer monitor...', self.printer_monitor_dialog)
+        add(tasks_menu, 'cancel', 'Cancel running job', self.jobs.cancel_all, 'Esc')
+        add(tasks_menu, 'run_operation', 'Run operation (all options)...', self.operation_dialog)
+
         view_menu = bar.addMenu('&View')
         for name in ('front', 'back', 'left', 'right', 'top', 'bottom', 'iso'):
             label = 'Home (isometric)' if name == 'iso' else name.capitalize()
@@ -996,10 +1047,6 @@ class MainWindow(QtWidgets.QMainWindow):
             lambda _checked=False: self._jump_issue_layer(1), 'Ctrl+Shift+]')
         add(view_menu, 'previous_issue_layer', 'Previous issue layer',
             lambda _checked=False: self._jump_issue_layer(-1), 'Ctrl+Shift+[')
-        warned = QtGui.QAction('Allow warned export', self, checkable=True)
-        warned.toggled.connect(self._set_allow_unresolved)
-        edit_menu.addAction(warned)
-        self.actions_map['warned'] = warned
         self._refresh_undo()
 
     # ---- camera --------------------------------------------------------
@@ -1297,6 +1344,23 @@ class MainWindow(QtWidgets.QMainWindow):
     def _set_allow_unresolved(self, state):
         self.allow_unresolved = bool(state)
 
+    def _set_allow_part_to_part(self, state):
+        settings = deepcopy(self.document.settings)
+        wanted = bool(state)
+        if bool(settings['support'].get('allow_part_to_part')) == wanted:
+            return
+        settings['support']['allow_part_to_part'] = wanted
+        try:
+            self.document.set_settings(settings, stage='supports')
+        except VoxelMillError as error:
+            self._report_error(error.to_dict(), 'part-to-part supports')
+            self._sync_widgets_from_document()
+            return
+        self._sync_widgets_from_document()
+        self._refresh_undo()
+        if self.document.source:
+            self.rebuild()
+
     def _set_visible(self, role, state):
         self.scene.set_visible(role, state)
         if self.viewport:
@@ -1518,7 +1582,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 box.setValue(value)
         for box, value in zip(self.offset, self.document.center_offset_mm):
             box.setValue(value)
-        self.lift.setValue(self.document.model_lift_mm)
+        self.lift.blockSignals(True)
+        self.lift.setValue(self.document.plate_floor())
+        self.lift.blockSignals(False)
+        action = getattr(self, 'actions_map', {}).get('allow_part_to_part')
+        if action is not None:
+            action.blockSignals(True)
+            action.setChecked(bool(self.document.settings['support'].get('allow_part_to_part', True)))
+            action.blockSignals(False)
         for box, value in zip(self.scale, self.document.scale_factors):
             box.setValue(value)
         for box, value in zip(self.mirror, self.document.mirror_axes):
@@ -2264,6 +2335,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self.redo_action.setEnabled(self.document.redo_label is not None)
         self.undo_action.setText(f'Undo {self.document.undo_label or ""}'.strip())
         self.redo_action.setText(f'Redo {self.document.redo_label or ""}'.strip())
+        self._refresh_window_title()
+
+    def _refresh_window_title(self):
+        if self.project_path:
+            self.setWindowTitle(f'{Path(self.project_path).name} — VoxelMill[*]')
+        else:
+            self.setWindowTitle('VoxelMill[*]')
+        self.setWindowModified(bool(self.document.dirty))
+        self._refresh_save_action()
+
+    def _refresh_save_action(self):
+        action = getattr(self, 'actions_map', {}).get('save_project')
+        if action is None:
+            return
+        action.setText('Save project' if self.project_path else 'Save project...')
 
     def _rebuild_history_menu(self):
         self.history_menu.clear()
@@ -2555,11 +2641,61 @@ class MainWindow(QtWidgets.QMainWindow):
                                         [box.isChecked() for box in self.mirror])
         except VoxelMillError as error:
             return self._report_error(error.to_dict())
-        self.document.set_orientation(rotation, [box.value() for box in self.offset], self.lift.value())
+        # Lift is the plate floor, already committed on the spinbox. Keep the
+        # primary's own lift here so Apply does not flatten extra-part gaps.
+        self.document.set_orientation(rotation, [box.value() for box in self.offset],
+                                      self.document.model_lift_mm)
+        if abs(self.lift.value() - self.document.plate_floor()) > 1e-9:
+            try:
+                self.document.set_plate_floor(self.lift.value())
+            except VoxelMillError as error:
+                return self._report_error(error.to_dict())
         self.scene.show_build_volume(self.document.settings)
         self._sync_widgets_from_document()
         self._refresh_undo()
         self.reload()
+
+    def _on_plate_floor_changed(self, value):
+        """Commit Setup lift immediately so Apply does not have to re-apply it."""
+        new_mm = float(value)
+        if abs(new_mm - self.document.plate_floor()) < 1e-9:
+            return
+        self._clear_preview_transforms()
+        try:
+            command = self.document.set_plate_floor(new_mm)
+        except VoxelMillError as error:
+            self._report_error(error.to_dict(), 'lift')
+            self._sync_widgets_from_document()
+            return
+        if command is None:
+            return
+        if self.attachment_state != 'none':
+            self.set_attachment_state('none')
+            self.notify('Attachments were dropped: changing height changes which faces '
+                        'need supporting. Compute attachments again.',
+                        category='attachments', level='warning')
+        self._sync_widgets_from_document()
+        self._refresh_undo()
+        self.reload()
+
+    def reset_all_lifts(self, _checked=False):
+        """Write the Setup lift onto every part, collapsing relative gaps."""
+        self._clear_preview_transforms()
+        try:
+            command = self.document.reset_all_lifts(self.lift.value())
+        except VoxelMillError as error:
+            return self._report_error(error.to_dict(), 'reset lifts')
+        if command is None:
+            return True
+        if self.attachment_state != 'none':
+            self.set_attachment_state('none')
+            self.notify('Attachments were dropped: changing height changes which faces '
+                        'need supporting. Compute attachments again.',
+                        category='attachments', level='warning')
+        self._sync_widgets_from_document()
+        self._refresh_undo()
+        self.reload()
+        return True
 
     # ---- pipeline ------------------------------------------------------
     def reload(self):
@@ -3437,6 +3573,8 @@ class MainWindow(QtWidgets.QMainWindow):
         return to_plate([record], [matrices[index]])
 
     def open_stl(self, path):
+        if not self._confirm_discard_or_save():
+            return
         self.jobs.invalidate()
         self._clear_orientation_candidates()
         if self.scene is not None:
@@ -3444,6 +3582,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.placed = None
         self._display_part_counts = []
         self.document = Document(self.document.settings, path)
+        self.project_path = None
         self._sync_widgets_from_document()
         self._refresh_undo()
         self.reload()
@@ -3491,6 +3630,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.open_project(path)
 
     def open_project(self, path, extract_dir=None):
+        if not self._confirm_discard_or_save():
+            return
         self._clear_orientation_candidates()
         self.document = Document.load(path, extract_dir or self.scratch)
         self.project_path = str(Path(path).resolve())
@@ -3504,13 +3645,52 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.document.source:
             self.reload()
 
-    def save_project_dialog(self):
-        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save project', '', 'VoxelMill (*.voxmil)')
-        if path:
+    def save_project(self, _checked=False):
+        """Overwrite the known project path, or fall through to Save As."""
+        if self.project_path:
             self._clear_preview_transforms()
-            path = with_suffix_if_missing(path, '.voxmil')
-            self.document.save(path)
-            self.project_path = str(Path(path).resolve())
+            self.document.save(self.project_path)
+            self._refresh_window_title()
+            return True
+        return bool(self.save_project_as())
+
+    def save_project_as(self, _checked=False):
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save project', '', 'VoxelMill (*.voxmil)')
+        if not path:
+            return False
+        self._clear_preview_transforms()
+        path = with_suffix_if_missing(path, '.voxmil')
+        self.document.save(path)
+        self.project_path = str(Path(path).resolve())
+        self._refresh_window_title()
+        return True
+
+    def save_project_dialog(self):
+        return self.save_project_as()
+
+    def new_project(self, _checked=False):
+        if not self._confirm_discard_or_save():
+            return False
+        self.jobs.invalidate()
+        self._clear_orientation_candidates()
+        if self.scene is not None:
+            self.scene.clear()
+        self.placed = None
+        self._display_part_counts = []
+        self.last_error = None
+        self._discard_validation_path()
+        self._pending_export = None
+        self.document.reset_for_new_project()
+        self.project_path = None
+        self.set_attachment_state('none')
+        self._set_island_badge(None)
+        self.diagnostics.clear()
+        self.diagnostic_list.clear()
+        self.layers.set_issue_layers({})
+        self.scene.show_build_volume(self.document.settings)
+        self._sync_widgets_from_document()
+        self._refresh_undo()
+        return True
 
     def export_dialog(self):
         path, selected_filter = QtWidgets.QFileDialog.getSaveFileName(

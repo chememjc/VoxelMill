@@ -13,14 +13,30 @@ unencrypted CTB v3 into the Layers tab so the decoded pixels can be scrubbed
 without a source mesh. **File → Export CTB v3...** slices through the same
 verified GOO path and converts. Encrypted CTB and v4/v5 are refused.
 
-**File → Open project...** and **Save project...** read and write `.voxmil`
-archives; no other project file extension is recognized. Both save dialogs,
-and **Export supported STL...** / **Export Elegoo GOO...** / **Export CTB
-v3...**, append the right extension whenever
-the typed filename has none of its own — a name already ending in an
-extension, even a different one chosen on purpose, is left exactly as typed.
-For the plain **Export supported STL...** dialog, the extension added is
-whichever format filter was selected (STL, GOO or CTB), not always `.stl`.
+**File → Open project...**, **Save project** / **Save project...**, and
+**Save project as...** read and write `.voxmil` archives; no other project
+file extension is recognized. **Save project** overwrites the known path
+when one exists (label without ellipsis); without a path it falls through to
+**Save project as...**. Dirty **New project**, **Open**, or **Quit** asks
+Save / Discard / Cancel; headless discards. The window title shows the
+project file name and a modified flag. Save/export dialogs append the right
+extension whenever the typed filename has none of its own — a name already
+ending in an extension, even a different one chosen on purpose, is left
+exactly as typed. For the plain **Export supported STL...** dialog, the
+extension added is whichever format filter was selected (STL, GOO or CTB),
+not always `.stl`.
+
+## Menus
+
+| Menu | Items |
+| --- | --- |
+| **File** | New project; Open STL; Import STEP; Open project; Save project (or Save project... with no path); Save project as; Open GOO/CTB inspect; Close slice file; Export supported STL / Elegoo GOO / CTB v3; Quit |
+| **Edit** | Undo; Redo; History |
+| **Parts** | Add model; Compute attachments; Arrange on plate; Measure STL; Allow part-to-part supports (checkable); Reset all parts to this lift; Support presets submenu |
+| **Verification** | Island checks; print checks (islands, enclosed voids, overhangs, suction cups, drainage, Check all, Check some...); Verify GOO/CTB; Inspect STL; Validate STL |
+| **Configuration** | Profile library; Printer / Resin / Support editors; Preferences; Theme; Motion; Shortcuts; Allow warned export |
+| **Tasks** | Printer monitor; Cancel running job; Run operation |
+| **View** | Named camera views, Fit to scene, issue navigation, layout reset (unchanged) |
 
 Reopening a `.voxmil` project shows each part's original file name in the
 object list, not the SHA-256 stem of its extracted mesh. The name travels in
@@ -77,7 +93,7 @@ paint with it instead of leaving it behind on the faces it no longer covers.
 **Clear blocked on this part** and **Clear enforced on this part** do exactly
 that: the selected part only. This is what the `.voxmil` schema-2 bump records;
 a schema-1 project is refused rather than converted, because its
-plate-coordinate marks cannot be attributed to a part after the fact. **File → Add model...** (also the object panel's
+plate-coordinate marks cannot be attributed to a part after the fact. **Parts → Add model...** (also the object panel's
 **Add...** button) places one or more further STLs on the plate; overlapping
 support envelopes are allowed, intersecting model solids are not, and
 supports are planned on the combined field so they can anchor between parts.
@@ -92,7 +108,7 @@ the box clears the overlay rather than copying the plate into it. The
 key, which is the same split the Setup tab makes between compact controls and
 the complete resolved-settings box; the collision field stays shared.
 Clicking a part in the 3D view selects it, the same selection the object
-panel's list shows. **File → Quit** closes the editor. **Edit → Preferences...**
+panel's list shows. **File → Quit** closes the editor. **Configuration → Preferences...**
 chooses `resources.acceleration` (`auto`/`cpu`/`cuda`), the CUDA device,
 workers, the memory ceiling, and the rotation snap increment described under
 [The object panel](#the-object-panel-move-rotate-scale-and-mirror) below. Auto
@@ -155,7 +171,7 @@ the drag ends — there is no debounce delay between letting go and the commit
 landing. Every dragged rotation is rounded to the nearest multiple of the
 rotation snap increment, whether it was dragged on the axis slider or on the
 object itself; a typed angle is taken exactly, because someone who types 37.5
-means 37.5. The rotation snap increment is set in Edit → Preferences (default
+means 37.5. The rotation snap increment is set in Configuration → Preferences (default
 5 degrees, "off" disables it) and lives in `~/.config/voxelmill/editor.json`,
 not in the settings table: it changes nothing about the output, so it must
 not travel inside a printer profile or a `.voxmil` project.
@@ -163,11 +179,11 @@ not travel inside a printer profile or a `.voxmil` project.
 Arrow keys nudge the selected part(s) in the plate's XY: Left/Right move X,
 Up/Down move Y, PageUp/PageDown move Z, by the object panel's translate step
 (1 mm; Shift nudges by ten times that). Unlike the rotation snap increment,
-this step is not currently exposed in Edit → Preferences. The nudge is
+this step is not currently exposed in Configuration → Preferences. The nudge is
 ignored while a spin box has focus, so typing a number is never interrupted
 by that number's own arrow keys.
 
-`Edit → Motion` chooses how a gizmo drag or an arrow-key nudge is interpreted:
+`Configuration → Motion` chooses how a gizmo drag or an arrow-key nudge is interpreted:
 **Relative to current pose** (the default) lands the edit on top of wherever
 the part already is, and **Absolute from import pose** measures it from the
 part's pose at import instead (no rotation, centered, 5 mm lift) — so the
@@ -193,7 +209,11 @@ result.
 **Drop to plate** zeros the selected part's lift, resting it on the bed. The
 lift is already defined as the height of the part's lowest point in its
 current rotation, so dropping to plate is exactly setting that number to
-zero — there is no separate geometry computation. **Zoom to selected** frames
+zero — there is no separate geometry computation. The Setup tab's **model
+lift** is the plate floor: the minimum of every part's `lift_mm`. Changing
+it shifts every part by the same delta and commits immediately on the
+spinbox. **Parts → Reset all parts to this lift** writes that value onto
+every part, collapsing relative gaps. **Zoom to selected** frames
 the selected part(s) in the 3D view, the same way `Fit to scene` frames
 everything. **Auto-orient** runs the orientation search on the current part
 alone, searching on top of its *placed* geometry (current rotation, scale,
@@ -206,7 +226,7 @@ part that is not alone on the plate.
 **Duplicate** copies the selected part, reusing the mesh already loaded, N
 copies at a time; because copies land exactly on their original, duplicating
 always arranges the plate afterwards. **Remove** drops an added part; the
-primary cannot be removed this way. **Arrange** (also File → Arrange on
+primary cannot be removed this way. **Arrange** (also Parts → Arrange on
 plate, Ctrl+L) is a deterministic bottom-left packer that lays every part out
 without overlap inside the build envelope less the edge clearance, using the
 support spacing as the gap between parts; it refuses with `arrange_no_fit`
@@ -225,7 +245,7 @@ its own document at construction, regardless of the profile's resolved
 value, so a part can be positioned before anything is routed to it. This is
 an editor-only default — the command line is unchanged, `voxelmill prepare`
 still routes supports automatically, and `support.automatic` still defaults
-to true in resolved settings. **File → Compute attachments** (Ctrl+R), or the
+to true in resolved settings. **Parts → Compute attachments** (Ctrl+R), or the
 **Compute attachments** button in the object panel, routes supports for the
 plate as it stands. It runs the same island-correction loop `voxelmill
 prepare` runs (see
@@ -264,12 +284,12 @@ and historical validation can be stored in a `.voxmil` project. A loaded
 historical validation is shown as history; the editor always rebuilds and
 revalidates before it exports.
 
-File → Printer editor..., Resin editor..., and Support editor... open dedicated
-validated editors for those sections. Printer saves are hardware-only `.ptr`
-profiles; resin saves include the current printer's process and support blocks;
-support saves are portable JSON presets. Load restores a draft, Save as writes
-the corresponding file, and Apply to project changes the document through its
-undo stack. Closing an editor discards unapplied edits. The resin loader
+Configuration → Printer editor..., Resin editor..., and Support editor... open
+dedicated validated editors for those sections. Printer saves are hardware-only
+`.ptr` profiles; resin saves include the current printer's process and support
+blocks; support saves are portable JSON presets. Load restores a draft, Save as
+writes the corresponding file, and Apply to project changes the document through
+its undo stack. Closing an editor discards unapplied edits. The resin loader
 resolves its process against the actual current printer, including its id and
 layer-height limits, so a resin bound to a custom printer is checked in the
 right context.
@@ -304,12 +324,15 @@ so automatic contact selection and coverage parameters are exercised on the
 project rather than by this fixture.
 
 Model-anchor controls are independent from the top contact: `model_anchor_shape`
-selects a cone or cylinder for an optional segment above the lower model
-surface, `model_anchor_length_mm` sets its length (zero preserves the direct
-anchor route), `model_anchor_diameter_mm` sets its diameter (zero derives the
-middle pillar diameter), and `model_anchor_penetration_mm` sets its penetration
-below the sampled surface. Each field is available in the support editor with
-the same `support.*` key and derivation rule shown in its tooltip.
+selects a cone or cylinder for the bottom connector,
+`model_anchor_length_mm` sets its length (default 2 mm; zero preserves the
+direct anchor route), `model_anchor_diameter_mm` sets its diameter (default
+0.4 mm; zero derives the middle pillar diameter), and
+`model_anchor_penetration_mm` sets its penetration below the sampled surface
+(default 0.15 mm). Part-to-part routes are point-to-point (balls at both ends);
+short gaps do not swell to `pillar_diameter_mm`. Each field is available in the
+support editor with the same `support.*` key and derivation rule shown in its
+tooltip.
 
 The small-pillar controls similarly expose the CHITUBOX-style model connector
 choice: `small_pillar_mode` selects middle or model segments, `small_pillar_shape`
@@ -343,16 +366,18 @@ presented as a routing that worked. `support.max_island_passes` (default 5,
 range 1-10) caps how many passes may run; each pass is a full route plus an
 assembly, so the cap is also a time limit.
 
-## Check print
+## Verification
 
-The **Check print** menu runs one or more print checks over the current
-in-memory assembly, without writing anything: **Islands**, **Enclosed
-voids**, **Overhangs**, **Suction cups**, **Drainage**, **Check all**, and
-**Check some...** (a checkbox dialog listing the first five, all checked by
-default). Results replace the Report dock's diagnostics and jump the layer
-view's diagnostic filter to the codes just found. None of these is an export
-decision — **Export supported STL** and **Export Elegoo GOO** always run the
-full validation regardless of what Check print last found, the same way a
+The **Verification** menu runs island and print checks over the current
+in-memory assembly, without writing anything: **Check islands now**,
+**Re-check islands after every edit**, **Islands**, **Enclosed voids**,
+**Overhangs**, **Suction cups**, **Drainage**, **Check all**, and
+**Check some...** (a checkbox dialog listing the print checks, all checked by
+default), then **Verify GOO or CTB (deep check)...**, **Inspect STL...**, and
+**Validate STL...**. Results replace the Report dock's diagnostics and jump the
+layer view's diagnostic filter to the codes just found. None of these is an
+export decision — **Export supported STL** and **Export Elegoo GOO** always run
+the full validation regardless of what Verification last found, the same way a
 green island badge is never an export gate.
 
 Each check reuses the exact analysis its dedicated path already runs, so a
@@ -430,7 +455,7 @@ reverting only a scale or mirror change made through the Setup tab takes
 **two** undos, not one, because the orientation command pushed after it
 sits on top of the stack.
 
-**File → Measure STL...** runs `pipeline.measure_stl`, the same function
+**Parts → Measure STL...** runs `pipeline.measure_stl`, the same function
 `voxelmill measure` calls, on a chosen file (or the currently open model),
 using the document's own rotation (substituting an unrotated pose when the
 document's orientation is set to automatic, since `measure` refuses
@@ -456,8 +481,9 @@ fills the report without switching to that tab; **Check islands now** still
 does.
 
 Spin boxes and combo boxes ignore the mouse wheel until they have been clicked
-(they have keyboard focus). Hover-scrolling a tall Setup page must not change
-values.
+(they have keyboard focus). The filter walks parents so a wheel that lands on
+the inner `QLineEdit` (Cocoa) is still ignored. Hover-scrolling a tall Setup
+page must not change values.
 
 Every expensive stage runs in a background job. A changed document cancels the
 obsolete generation and discards results that raced with the new decision. Esc
@@ -508,7 +534,7 @@ the new value, e.g. `support.spacing_mm was changed from the profile value
 button is disabled.
 
 The baseline is not the same as "whatever the editor opened with" once a
-profile has been applied: **File → Profile library… → Apply to editor**
+profile has been applied: **Configuration → Profile library… → Apply to editor**
 calls `Document.adopt_baseline`, so after that a dot means changed from the
 profile just chosen, not from the settings the editor started with.
 Applying the Setup tab itself (`apply_settings`) never moves the baseline,
@@ -537,8 +563,8 @@ baseline and currently equal to it.
 same independent raster, drainage, fit, and support checks as the command-line
 preparation path. The requested destination is replaced only after a passing
 report. A pre-existing destination is preserved if validation fails or a job
-is canceled. **Allow warned export** is an explicit per-window override for a
-failed report and is labeled as such in the status bar and report.
+is canceled. **Allow warned export** (Configuration menu) is an explicit per-window override
+for a failed report and is labeled as such in the status bar and report.
 
 **Export Elegoo GOO** follows that STL validation, then slices the staged
 prepared union and independently checks the decoded GOO pixels and settings
@@ -553,7 +579,7 @@ missing any of them raises `goo_motion` and the GUI shows that error rather than
 inventing a value. `PrintTime` stays zero unless a caller supplies a measured
 estimate.
 
-The File menu's **Printer monitor…** opens independently of the current model
+**Tasks → Printer monitor…** opens independently of the current model
 and does not require a print task. It can discover or connect to a known SDCP
 printer, refresh status and attributes, show release-film/device telemetry,
 open the printer-supplied RTSP camera URL (embedded playback or an explicit
@@ -592,21 +618,25 @@ printer cannot reach and records exactly how much; nothing is ever scaled.
 
 ## Navigation cube and camera views
 
-A labeled cube sits in the top-right corner of the 3D view (viewport 0.80,
-0.76 to 1.0, 1.0), inside a `vtkOrientationMarkerWidget`. Faces read **Front,
-Back, Left, Right, Top, Bottom** rather than axis letters, and **Front is
-−Y**, the same face the green build-volume edge marks — the two cues agree on
-purpose. The widget itself is display-only (`InteractiveOff`); a click on a
-face is picked separately with its own `vtkCellPicker` and turned into a
-camera move. `_on_click` checks the cube first, then the gizmo, so a click on
-the cube is always a camera command and never a support edit or a gizmo drag,
-no matter where on the model it would otherwise land.
+A chamfered orientation cube sits in the top-right corner of the 3D view
+(viewport 0.80, 0.76 to 1.0, 1.0), inside a `vtkOrientationMarkerWidget`. It is
+built from static polydata — faces, truncated corners, and edges — with
+face-centered `vtkVectorText` captions (**Front, Back, Left, Right, Top,
+Bottom**). It does not use `vtkAnnotatedCubeActor` or `vtkFeatureEdges`.
+**Front is −Y**, the same face the green build-volume edge marks. The widget
+itself is display-only (`InteractiveOff`); a click is picked separately and
+turned into a camera move. `_on_click` checks the cube first, then the gizmo,
+so a click on the cube is always a camera command and never a support edit or
+a gizmo drag.
 
 Picking a face means "show me that side": picking the +X face moves the
-camera to +X, it does not look toward +X. A pick within 0.15 of the cube's
+camera to +X, it does not look toward +X. A corner click selects one of the
+eight `iso_*` views. Four FreeCAD-style orbit arrows sit in the marker
+viewport (screen space) around the cube. A pick within 0.15 of the cube's
 center (by dominant axis component) is refused rather than guessed, since
 snapping the camera somewhere the user did not click is worse than doing
-nothing.
+nothing. Home iso remains a shallower front-right-top than a true cube-corner
+isometric.
 
 The `View` menu and matching shortcuts:
 
@@ -618,7 +648,7 @@ The `View` menu and matching shortcuts:
 | Right | Ctrl+4 | +X |
 | Top | Ctrl+5 | +Z |
 | Bottom | Ctrl+6 | −Z |
-| Home (isometric) | Ctrl+0 | front-right-top corner |
+| Home (isometric) | Ctrl+0 | shallower front-right-top |
 | Fit to scene | Ctrl+F | (no direction change) |
 
 Side views use +Z view-up; top and bottom use ±Y, because a view-up parallel
@@ -655,10 +685,11 @@ editing `editor.json`.
 
 ## GOO inspection
 
-The File menu gains three items: **Open GOO for inspection…**, **Close opened
-GOO**, and **Verify GOO (deep check)…**. The verify item runs exactly
-`verify_goo`, the same function `voxelmill verify` calls, so a result reached in
-the editor is the same result the CLI would report on that file.
+**File → Open GOO or CTB for inspection…** and **Close opened slice file** load
+or dismiss a finished slice file. **Verification → Verify GOO or CTB (deep
+check)…** runs exactly `verify_goo`, the same function `voxelmill verify` calls,
+so a result reached in the editor is the same result the CLI would report on
+that file.
 
 The Layers tab's layer slider is vertical and runs bottom-to-top, so its
 travel matches the print: layer 0 is the plate. The horizontal slider beneath
@@ -706,20 +737,19 @@ A cached layer is redrawn with no background job.
 
 ## STL inspection and validation
 
-The File menu also gains **Inspect STL (mesh inventory)…** and **Validate STL
-(reslice and check)…**. They run `pipeline.inspect_stl` and
-`pipeline.validate_stl`, the same functions `voxelmill inspect` and `voxelmill
-validate` call, so a result reached in the editor is the same result the CLI
-would report on that file. Neither writes anything, and neither touches the
-currently loaded document — the picked file is independent of whatever is
-open in the editor.
+**Verification → Inspect STL (mesh inventory)…** and **Validate STL (reslice
+and check)…** run `pipeline.inspect_stl` and `pipeline.validate_stl`, the same
+functions `voxelmill inspect` and `voxelmill validate` call, so a result reached
+in the editor is the same result the CLI would report on that file. Neither
+writes anything, and neither touches the currently loaded document — the picked
+file is independent of whatever is open in the editor.
 
 Results go to the Report tab as JSON, and the validate one also populates the
 selectable diagnostic list. The inspect status line reports triangles,
 connected components, degenerate triangles, nonmanifold edges, and
 self-intersections.
 
-**File → Measure STL...** is the same shape of command — writes nothing,
+**Parts → Measure STL...** is the same shape of command — writes nothing,
 independent of the open document — but answers a size/fit question rather
 than a topology or validation one; see
 [Scale, mirror and the measurement row](#scale-mirror-and-the-measurement-row)
@@ -751,20 +781,20 @@ badge out and appends `(stale)` rather than continuing to show a result that
 now describes geometry the user has since changed. The grayed color applies
 whether the badge is showing `not checked` or a stale count. Once the new
 assembly finishes building, `_finish_union` re-earns the badge automatically
-when **Re-check islands after every edit** (Edit menu, on by default) is
+when **Re-check islands after every edit** (Verification menu, on by default) is
 checked and no export is pending; the toggle can be turned off to scan only
-on demand. **Check islands now** (Edit menu, Ctrl+I) runs the scan
+on demand. **Check islands now** (Verification menu, Ctrl+I) runs the scan
 immediately, in the background like every other expensive stage, and shows
 a status-bar message naming the checks it did not examine when it finishes.
-This badge and the **Check print → Islands** menu item run the same
+This badge and the **Verification → Islands** menu item run the same
 underlying scan; the badge always covers the whole build (it has no
-correction loop of its own), while Check print reads the assembly exactly as
+correction loop of its own), while Verification reads the assembly exactly as
 it stands at the moment it is invoked.
 
 ## Profile library
 
-**File → Profile library…** opens `ProfileLibraryDialog`, the editor's view
-onto the same discoverable printer/resin library and provenance/diff/save
+**Configuration → Profile library…** opens `ProfileLibraryDialog`, the editor's
+view onto the same discoverable printer/resin library and provenance/diff/save
 machinery `voxelmill profile` and `voxelmill resin` use from the command line —
 both sides call the same `voxelmill.profiles` functions, so a profile picked
 here resolves identically to the same reference passed to `--printer`/
@@ -793,7 +823,7 @@ Follow both rules for any new test that touches a render window.
 
 ## Complete operation options
 
-**File → Run operation (all options)…** offers every noninteractive CLI
+**Tasks → Run operation (all options)…** offers every noninteractive CLI
 operation and its complete argument form. This includes preparation correction
 passes (`--max-passes`, 1–10), component STLs, manual and suppressed contact JSON
 files, `.voxmil` project output, analysis switches (including
@@ -820,10 +850,10 @@ for cleanup. Exit 2 means validation failed, with the report retained. The
 operation's output does not replace the interactive preview; open its STL or GOO
 explicitly to inspect the completed result.
 
-**Support presets** offers light, medium and heavy starting points, loading a
-portable JSON preset and saving the current applied support settings. Applying a
-preset is undoable, preserves printer/resin settings and rebuilds supports.
-These names describe geometry, not calibrated print strength. See
+**Parts → Support presets** offers light, medium and heavy starting points,
+loading a portable JSON preset and saving the current applied support settings.
+Applying a preset is undoable, preserves printer/resin settings and rebuilds
+supports. These names describe geometry, not calibrated print strength. See
 [support-presets.md](support-presets.md).
 
 Fresh-start tests now cover loading, support construction, switching to Layers

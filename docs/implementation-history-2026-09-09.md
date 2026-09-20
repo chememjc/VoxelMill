@@ -28,7 +28,7 @@ User UI test comes at the end.
 - [x] New jobs default to `base_type=grid`.
 - [x] Plate outer perimeter `raft_slope_deg=30` putty-knife bevel; plate
       contact area unchanged; `base_edge_slope_deg` still refused on plate.
-- [x] `--add-model` / File → Add model: refuse only model-solid intersections;
+- [x] `--add-model` / Parts → Add model: refuse only model-solid intersections;
       shared support field so parts can anchor on each other. Extra models are
       path records, not yet extra ZIP members.
 
@@ -413,7 +413,7 @@ This continuation used one smaller worker sequentially alongside the primary,
 with at most two agents active. Prior working-tree edits were preserved; no
 native source was changed in this continuation and no rebuild was required.
 All background commands and delegated work have finished. Restart an existing
-GUI to load the Python changes; open File → Printer/Resin/Support editor.
+GUI to load the Python changes; open Configuration → Printer/Resin/Support editor.
 
 ## Prior work — Tier 1: profiles, resin economics, compensation, islands, transforms (2026-09-07)
 
@@ -602,7 +602,7 @@ would have rasterized as empty.
 - [x] Background requests now carry request IDs: obsolete same-name progress
       and results cannot replace a newer layer or remove its cancellation token.
       Two new overlapping/cancellation tests pass (one delegated agent).
-- [x] File → Run operation exposes every CLI command/option in a responsive
+- [x] Tasks → Run operation exposes every CLI command/option in a responsive
       subprocess form, including correction passes, component STLs, contact
       files, project output, analysis flags and per-operation profiles. Editor
       settings/pose/contacts supply defaults; explicit overrides win.
@@ -705,9 +705,10 @@ left.
       grid, plus clipped triangles and layers. `clipped_geometry` is an error
       diagnostic, so an export is still withheld without `--allow-unresolved`.
 - 0.5 Open GOO and fix/cache layer previews. Layers-tab source selector,
-      File > Open/Close/Verify GOO, `mask_to_image` normalises before scaling
-      and decimates by block maximum, and `layer_cache` is a byte-bounded LRU
-      keyed by source. `chopchop gui --goo PATH` opens one at startup.
+      File > Open/Close GOO plus Verification → Verify GOO, `mask_to_image`
+      normalises before scaling and decimates by block maximum, and
+      `layer_cache` is a byte-bounded LRU keyed by source. `voxelmill gui --goo
+      PATH` opens one at startup.
 - 0.6 Standalone decoded-GOO topology verification and export integration.
       `chopchop verify <file.goo>` and the editor's Verify item run the same
       `verify_goo`. `slice_stl` records `verification.layer_topology =
@@ -722,8 +723,8 @@ left.
       the scenarios needing the 50-300 MB originals.
 - `inspect` and `validate` were CLI-only, and `cmd_validate` held its
       analysis inline in `cli.py`. Both now live in `pipeline.inspect_stl` /
-      `pipeline.validate_stl`; the CLI and the editor's File menu call the same
-      function, and a test compares the two reports for the same file.
+      `pipeline.validate_stl`; the CLI and the editor's Verification menu call
+      the same function, and a test compares the two reports for the same file.
 - The Setup tab shows the exposure schedule `chopchop profile` prints.
 - `chopchop gui --view NAME` and `--goo PATH` bridge the two GUI-only
       affordances (camera view, opened GOO) to the command line.
@@ -865,7 +866,7 @@ new command cannot land on one side only. `gui` (the editor itself) and
 are the two deliberate exceptions.
 
 - [x] All preparation flags and per-invocation verify profiles are exposed by
-      File → Run operation. Direct interactive export remains a one-pass export
+      Tasks → Run operation. Direct interactive export remains a one-pass export
       of the current assembly; choose Run operation for correction passes.
 
 ## Discovered while implementing Tier 0.3-0.6 (2026-09-07)

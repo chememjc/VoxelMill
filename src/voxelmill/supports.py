@@ -61,6 +61,10 @@ class ColumnField:
     #: exterior. A contact on the underside of run r sits in the gap above run
     #: r-1; runs with index 0 sit above the open plate side.
     gap_exterior: np.ndarray = None
+    #: Shaft capsules already emitted in this routing pass, as
+    #: ``(start, end, radius)``. Later candidates that intersect one (except
+    #: at an endpoint / planned brace joint) are skipped or rerouted.
+    occupied_capsules: list = field(default_factory=list)
 
     def __post_init__(self):
         # Layer index of the lowest material in each column, or ``layers`` when
@@ -328,14 +332,21 @@ def _open_boundary_samples(triangles, spacing, min_z=0.2):
 
 
 def _cells(points, spacing):
-    return np.rint(np.asarray(points, dtype=float) / spacing).astype(np.int64)
+    """XY spacing cells. Z is ignored so a tilted face cannot stack a forest."""
+    pts = np.asarray(points, dtype=float).reshape(-1, 3)
+    if not len(pts):
+        return np.empty((0, 2), dtype=np.int64)
+    return np.rint(pts[:, :2] / spacing).astype(np.int64)
 
 
 def _thin(candidates, mandatory, spacing):
-    """Keep the lowest candidate per spacing-sized cell; mandatory always kept.
+    """Keep the lowest automatic candidate per XY spacing cell; mandatory always kept.
 
-    Vectorised: at full resolution a bone yields millions of downward-face
-    samples, and a Python loop over them dominates the whole run.
+    A 3D cell grid used to plant a contact every ``spacing`` along Z inside one
+    XY cell on a tilted overhang. Automatic survivors are then greedily spaced
+    at least ``spacing`` apart in 3D so diagonal cell neighbours cannot sit on
+    top of each other. Mandatory contacts (raster islands, island-guard extra
+    contacts, manual/paint enforcers) bypass the density cap.
     """
     mandatory = np.asarray(mandatory, dtype=float).reshape(-1, 3)
     candidates = np.asarray(candidates, dtype=float).reshape(-1, 3)
@@ -352,7 +363,8 @@ def _thin(candidates, mandatory, spacing):
     else:
         _, first = np.unique(cells, axis=0, return_index=True)
         chosen = np.sort(first)
-    return np.concatenate((mandatory, ordered[chosen])) if len(mandatory) else ordered[chosen]
+    automatic = ordered[chosen]
+    return np.concatenate((mandatory, automatic)) if len(mandatory) else automatic
 
 
 @dataclass
@@ -369,20 +381,104 @@ def _free_to_plate(field, column, top_index, clearance):
     return bool(field.first_material[row, col] >= max(0, top_index - clearance))
 
 
-def _segment_clear(field, start, end, clearance, samples=16):
-    """Sample an angled branch against the column runs of the placed model."""
-    for step in range(samples + 1):
-        t = step / samples
-        x = start[0] + (end[0] - start[0]) * t
-        y = start[1] + (end[1] - start[1]) * t
-        z = start[2] + (end[2] - start[2]) * t
-        column = field.index_of(x, y)
-        if column is None:
-            return False
-        index = field.layer_of(z)
-        if field.blocked(column, max(0, index - clearance), index + clearance + 1):
-            return False
-    return True
+def _exclude_spheres(contact, penetration, break_point, extra=()):
+    """Tip/anchor volumes the shaft capsule must not treat as collisions."""
+    radius = max(float(penetration), float(break_point) / 2)
+    spheres = [(np.asarray(contact, dtype=float), radius)]
+    for item in extra:
+        if item is None:
+            continue
+        spheres.append((np.asarray(item[0], dtype=float), float(item[1])))
+    return spheres
+
+
+def _cell_in_exclude(x, y, z_lo, z_hi, exclude):
+    if not exclude:
+        return False
+    for center, radius in exclude:
+        cz = min(max(float(center[2]), z_lo), z_hi)
+        dx = x - float(center[0])
+        dy = y - float(center[1])
+        dz = cz - float(center[2])
+        if dx * dx + dy * dy + dz * dz <= radius * radius:
+            return True
+    return False
+
+
+def _segment_clear(field, start, end, clearance, samples=16, radius=0.0, exclude=None):
+    """Capsule clearance against the column runs of the placed model.
+
+    ``clearance`` is still in analysis layers for callers that used the old
+    centerline sampler; a nonzero ``radius`` (mm) is added to that envelope.
+    """
+    clearance_mm = float(clearance) * float(field.dz) + float(radius)
+    return _brace_clear(field, start, end, 0.0, clearance_mm, exclude=exclude)
+
+
+def _shaft_clear(field, start, end, radius, clearance_mm, cancel=None, exclude=None):
+    """True when the shaft capsule misses the model (intended contacts excluded)."""
+    return _brace_clear(field, start, end, radius, clearance_mm, cancel=cancel, exclude=exclude)
+
+
+def _hits_occupied(field, start, end, radius):
+    """True when this capsule overlaps an already-routed shaft along its length.
+
+    Interior samples skip the ends, so a T-joint or shared foot is not an
+    overlap. Parallel shafts that share a long run are.
+    """
+    start, end = np.asarray(start, dtype=float), np.asarray(end, dtype=float)
+    axis = end - start
+    if float(axis @ axis) < 1e-20:
+        return False
+    for other_start, other_end, other_r in field.occupied_capsules:
+        other_start = np.asarray(other_start, dtype=float)
+        other_end = np.asarray(other_end, dtype=float)
+        other_axis = other_end - other_start
+        other_len2 = float(other_axis @ other_axis)
+        limit2 = (float(radius) + float(other_r)) ** 2
+        for step in (2, 3, 4, 5, 6):
+            point = start + axis * (step / 8)
+            if other_len2 < 1e-20:
+                delta = point - other_start
+            else:
+                t = max(0.0, min(1.0, float((point - other_start) @ other_axis / other_len2)))
+                delta = point - (other_start + t * other_axis)
+            if float(delta @ delta) < limit2:
+                return True
+    return False
+
+
+def _mark_occupied(field, start, end, radius):
+    field.occupied_capsules.append((np.asarray(start, dtype=float),
+                                    np.asarray(end, dtype=float), float(radius)))
+
+
+def _fit_anchor_tips(gap, tip, anchor_length, min_tip, pillar_r):
+    """Choose top/bottom tip lengths and whether a full-diameter middle fits.
+
+    VoxelMill short-gap rule (not a bit-identical CHITUBOX transcription): a
+    model-anchor run may swell to ``pillar_diameter_mm`` only when the gap
+    fits a full top tip, a full bottom tip, and a remaining middle at least
+    as long as that diameter. Shorter gaps stay a thin point-to-point; both
+    ends remain a ball+cone, shortened no further than ``min_tip_length_mm``.
+    """
+    gap, tip, anchor_length, min_tip, pillar_r = (float(v) for v in
+        (gap, tip, anchor_length, min_tip, pillar_r))
+    if gap < 2 * min_tip:
+        return None
+    full = tip + anchor_length
+    real_middle = 2 * pillar_r
+    if gap >= full + real_middle:
+        return tip, anchor_length, True
+    if gap >= full:
+        return tip, anchor_length, False
+    # Prefer the configured bottom length; shorten the top down to min_tip,
+    # then the bottom if the gap still cannot hold both.
+    bottom = min(anchor_length, gap - min_tip)
+    top = gap - bottom
+    if top < min_tip - 1e-12 or bottom < min_tip - 1e-12:
+        return None
+    return top, bottom, False
 
 
 def select_contacts(triangles, field, settings, *, cancel=None, progress=no_progress,
@@ -480,7 +576,8 @@ def select_contacts(triangles, field, settings, *, cancel=None, progress=no_prog
     metrics = {'downward_face_area_mm2': downward_area, 'downward_samples': int(len(samples)),
                'manual_contacts': int(len(kept)), 'suppressed_contacts': int(len(removed)),
                'paint': paint_metrics, 'object_contact_parameters': override_records,
-               'object_groups': int(len(object_groups) if object_groups else 0)}
+               'object_groups': int(len(object_groups) if object_groups else 0),
+               'density_exempt_positions': [list(map(float, point)) for point in mandatory]}
     metrics.update(contact_coverage(samples, contacts, settings, downward_area))
     return contacts, metrics
 
@@ -562,13 +659,15 @@ def _model_anchor_clear(field, column, x, y, surface_z, length, depth, radius, c
 
 
 def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8, max_diagnostics=256,
-                   contact_parameters=()):
+                   contact_parameters=(), density_exempt=()):
     """Route given contacts to the plate or to already-printed model material."""
     cancel = cancel or CancellationToken()
     global_support = settings['support']
     normalized_parameters = normalize_contact_parameters(contact_parameters, settings)
     support = global_support
     started = time.monotonic()
+    field.occupied_capsules = []
+    exempt_keys = {contact_key(point) for point in density_exempt}
     spacing = float(support['spacing_mm'])
     pillar_r = float(support['pillar_diameter_mm']) / 2
     contact_r = float(support['contact_diameter_mm']) / 2
@@ -598,7 +697,9 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
     feet, pillars, foot_radii = [], [], []
     routed = {'vertical': 0, 'branched': 0, 'model_anchor': 0}
     failures = sealed = shortened = small_pillars = policy_blocked = 0
+    density_skipped = 0
     unroutable_positions = []
+    routed_automatic = []
     tree_jobs = []
     heights = []
     tips_used = []
@@ -652,9 +753,46 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         anchor = None
         elbow = None
         is_small_model = False
+        bottom_used = 0.0
+        full_middle = True
+        exempt = key in exempt_keys
+        clearance_mm = float(support['support_clearance_mm'])
+        # The shaft capsule inflates by radius+clearance past the junction, which
+        # would otherwise reject the intended tip sitting in the model.
+        grid_pad = math.hypot(field.grid.dx, field.grid.dy) / 2
+        contact_pad = pillar_r + clearance_mm + grid_pad
+        # Local curvature next to a tip (a sphere, a fillet) sits in the
+        # neighbouring analysis cells. Treat the tip plus a pad around the
+        # junction as intended contact, not a shaft collision. A hole halfway
+        # down the pillar is still a collision.
+        extra = []
+        lo, hi = base_z - contact_pad, z + max(penetration, support['break_point_diameter_mm'] / 2)
+        for step in range(7):
+            extra.append(((x, y, lo + (hi - lo) * step / 6), contact_pad))
+        exclude = _exclude_spheres(
+            (x, y, z), penetration, support['break_point_diameter_mm'], extra=extra)
+
+        def _usable_shaft(start, end, radius):
+            if end[2] - start[2] <= 1e-9 and math.hypot(end[0] - start[0], end[1] - start[1]) <= 1e-9:
+                return True
+            if not _shaft_clear(field, start, end, radius, clearance_mm, cancel, exclude):
+                return False
+            return not _hits_occupied(field, start, end, radius)
+
+        plate_kind = plate_anchor = plate_elbow = None
+        # A free column is a vertical plate route. Capsule-testing that run
+        # against neighbouring cells treats local curvature (a sphere) as a
+        # collision and forces a 45° branch that then fails drainage. The
+        # hole-clip case is an angled shaft; those still use _usable_shaft.
         if _free_to_plate(field, column, contact_index, clearance):
-            kind, anchor = 'vertical', (x, y, 0.0)
-        else:
+            occupied = _hits_occupied(field, (x, y, 0.0), (x, y, base_z), pillar_r)
+            if occupied and not exempt:
+                # A second vertical on top of an existing shaft. Skip it rather
+                # than weaving a 45° branch that fails drainage.
+                density_skipped += 1
+                continue
+            plate_kind, plate_anchor = 'vertical', (x, y, 0.0)
+        if plate_kind is None:
             best = None
             radius = max(1, int(math.ceil(min(2 * spacing, max(0.0, base_z)) / field.grid.dx)))
             row, col = divmod(column, field.grid.width)
@@ -672,21 +810,43 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                 # distance; a steeper angle buys stiffness and costs reach.
                 drop = lateral * branch_tangent
                 usable = (lateral > 1e-9) & (lateral <= 2 * spacing) & (drop < base_z)
-                for pick in np.argsort(np.where(usable, lateral, np.inf))[:branch_attempts]:
-                    if not usable[pick]:
+                tested = 0
+                limit = max(int(branch_attempts) * 8, 256)
+                for pick in np.argsort(np.where(usable, lateral, np.inf)):
+                    if not usable[pick] or tested >= limit:
                         break
                     nx, ny, distance = float(px[pick]), float(py[pick]), float(lateral[pick])
                     elbow_z = base_z - float(drop[pick])
-                    if _segment_clear(field, (nx, ny, elbow_z), (x, y, base_z), clearance):
+                    # Cheap reject: a vertical run whose neighbourhood is occupied
+                    # below the elbow cannot be a plate branch.
+                    if elbow_z > 1e-9:
+                        br = int(math.floor((ny - field.grid.y0) / field.grid.dy))
+                        bc = int(math.floor((nx - field.grid.x0) / field.grid.dx))
+                        reach_cells = max(1, int(math.ceil(
+                            (pillar_r + clearance_mm) / min(field.grid.dx, field.grid.dy))))
+                        elbow_index = max(0, field.layer_of(elbow_z))
+                        rr0, rr1 = max(0, br - reach_cells), min(field.grid.height, br + reach_cells + 1)
+                        cc0, cc1 = max(0, bc - reach_cells), min(field.grid.width, bc + reach_cells + 1)
+                        if np.any(field.first_material[rr0:rr1, cc0:cc1] < elbow_index):
+                            continue
+                    tested += 1
+                    angled = ((nx, ny, elbow_z), (x, y, base_z))
+                    vertical = ((nx, ny, 0.0), (nx, ny, elbow_z))
+                    if (_usable_shaft(*angled, pillar_r)
+                            and (elbow_z <= 1e-9 or _usable_shaft(*vertical, pillar_r))):
                         best = (distance, nx, ny, elbow_z)
                         break
             if best is not None:
-                kind = 'branched'
-                anchor = (best[1], best[2], 0.0)
-                elbow = (best[1], best[2], best[3])
+                plate_kind = 'branched'
+                plate_anchor = (best[1], best[2], 0.0)
+                plate_elbow = (best[1], best[2], best[3])
+        if plate_kind is not None:
+            kind, anchor, elbow = plate_kind, plate_anchor, plate_elbow
         # Evaluate a model anchor even when a plate branch exists. At zero
         # avoidance both candidates compete on total centerline length; at one
-        # the historical plate-first order is preserved exactly.
+        # the historical plate-first order is preserved exactly. A plate
+        # candidate whose capsule hit the model or an existing shaft already
+        # fell through, so this is "the other of plate vs model".
         below = field.top_below(column, contact_index)
         model_anchor = None
         candidate_small = False
@@ -694,6 +854,7 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
             anchor_z = field.z_of(below)
             gap = z - anchor_z
             candidate_small = small_mode == 'model' and small_r > 0 and 1e-9 < gap <= small_limit
+            min_anchor_gap = (2 * min_tip) if anchor_length else min_tip
             if candidate_small:
                 low_runs, high_runs = field.runs(column)
                 at_top = int(np.searchsorted(high_runs, field.layer_of(z), side='right'))
@@ -705,18 +866,42 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                     model_anchor = (x, y, anchor_z)
                 else:
                     anchor_rejected += 1
-            elif gap >= min_tip + anchor_length:
-                candidate_run = max(0., gap - tip - anchor_length)
-                candidate_r = small_r if small_mode == 'middle' and small_r > 0 and candidate_run <= small_limit else pillar_r
-                bottom_r = float(support['model_anchor_diameter_mm']) / 2 or candidate_r
-                # Only the new connector is examined here; the historical
-                # direct attachment remains unchanged when both dimensions are 0.
-                if (not (anchor_length or anchor_depth) or _model_anchor_clear(
-                        field, column, x, y, anchor_z, anchor_length, anchor_depth,
-                        max(bottom_r, candidate_r), support['support_clearance_mm'], cancel)):
-                    model_anchor = (x, y, anchor_z)
-                else:
+            elif gap >= min_anchor_gap:
+                fitted = (_fit_anchor_tips(gap, tip, anchor_length, min_tip, pillar_r)
+                          if anchor_length else (min(tip, gap), 0.0, True))
+                if fitted is None:
                     anchor_rejected += 1
+                else:
+                    fit_tip, fit_bottom, fit_full = fitted
+                    candidate_run = max(0., gap - fit_tip - fit_bottom)
+                    if not fit_full:
+                        candidate_r = small_r if small_r > 0 else contact_r
+                    elif small_mode == 'middle' and small_r > 0 and candidate_run <= small_limit:
+                        candidate_r = small_r
+                    else:
+                        candidate_r = pillar_r
+                    bottom_r = float(support['model_anchor_diameter_mm']) / 2 or candidate_r
+                    # Only the new connector is examined here; the historical
+                    # direct attachment remains unchanged when both dimensions are 0.
+                    if (not (fit_bottom or anchor_depth) or _model_anchor_clear(
+                            field, column, x, y, anchor_z, fit_bottom, anchor_depth,
+                            max(bottom_r, candidate_r), support['support_clearance_mm'], cancel)):
+                        middle_lo, middle_hi = anchor_z + fit_bottom, z - fit_tip
+                        extra_exclude = [((x, y, anchor_z),
+                                          max(anchor_depth, support['break_point_diameter_mm'] / 2,
+                                              candidate_r + clearance_mm + grid_pad))]
+                        exclude_both = exclude + extra_exclude
+                        middle_ok = (middle_hi - middle_lo <= 1e-9 or _shaft_clear(
+                            field, (x, y, middle_lo), (x, y, middle_hi), candidate_r, clearance_mm,
+                            cancel, exclude_both))
+                        occupied = (middle_hi - middle_lo > 1e-9 and _hits_occupied(
+                            field, (x, y, middle_lo), (x, y, middle_hi), candidate_r))
+                        if middle_ok and not occupied:
+                            model_anchor = (x, y, anchor_z)
+                        else:
+                            anchor_rejected += 1
+                    else:
+                        anchor_rejected += 1
             elif anchor_length:
                 anchor_rejected += 1
         if model_anchor is not None:
@@ -734,8 +919,17 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                     kind, anchor, elbow = 'model_anchor', model_anchor, None
                     is_small_model = candidate_small
                     gap = z - anchor[2]
-                    if not is_small_model and gap <= tip + anchor_length:
-                        tip_used, base_z = gap - anchor_length, anchor[2] + anchor_length
+                    if not is_small_model and anchor_length:
+                        fitted = _fit_anchor_tips(gap, tip, anchor_length, min_tip, pillar_r)
+                        if fitted is None:
+                            kind = None
+                        else:
+                            tip_used, bottom_used, full_middle = fitted
+                            base_z = z - tip_used
+                            if abs(tip_used - tip) > 1e-9:
+                                shortened += 1
+                    elif not is_small_model and gap <= tip:
+                        tip_used, base_z = gap, anchor[2]
                         shortened += 1
         if kind is None:
             # Internal overhangs inside a porous part are genuinely unreachable;
@@ -760,6 +954,9 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
             graph.nodes.extend([SupportNode(foot, list(anchor), 'model_anchor'),
                                 SupportNode(head, [x, y, z], 'contact')])
             graph.edges.append(SupportEdge(foot, head, small_r, 'small_model'))
+            _mark_occupied(field, anchor, (x, y, z), small_r)
+            if not exempt:
+                routed_automatic.append((x, y, z))
             small_pillars += 1
             small_models += 1
             heights.append(gap)
@@ -776,8 +973,12 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         # before any geometry or graph edge is emitted, so the choice is made
         # once and the whole pillar, elbow included, is built at that radius.
         run_length = (elbow[2] + math.dist(elbow, (x, y, base_z)) if elbow is not None
-                      else max(0., base_z - anchor[2] - (anchor_length if kind == 'model_anchor' else 0.)))
-        if small_mode == 'middle' and small_r > 0 and run_length <= small_limit:
+                      else max(0., base_z - anchor[2] - (bottom_used if kind == 'model_anchor' else 0.)))
+        if kind == 'model_anchor' and not full_middle:
+            run_r = small_r if small_r > 0 else contact_r
+            if small_r > 0:
+                small_pillars += 1
+        elif small_mode == 'middle' and small_r > 0 and run_length <= small_limit:
             run_r = small_r
             small_pillars += 1
         else:
@@ -793,43 +994,50 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         graph.nodes.append(SupportNode(junction, [x, y, base_z], 'junction'))
         graph.nodes.append(SupportNode(head, [x, y, z], 'contact'))
         middle_start = foot
-        if kind == 'model_anchor' and anchor_length:
+        if kind == 'model_anchor' and bottom_used:
             middle_start = f'anchor_joint{order}'
-            graph.nodes.append(SupportNode(middle_start, [x, y, anchor[2] + anchor_length], 'anchor_junction'))
+            graph.nodes.append(SupportNode(middle_start, [x, y, anchor[2] + bottom_used], 'anchor_junction'))
             graph.edges.append(SupportEdge(foot, middle_start,
                                float(support['model_anchor_diameter_mm']) / 2 or run_r, 'bottom'))
         graph.edges.append(SupportEdge(middle_start, junction, run_r, kind))
         graph.edges.append(SupportEdge(junction, head, contact_r, 'tip'))
+        from .support_segments import tip_segment, elbow_sphere
         if elbow is not None:
             graph.nodes.append(SupportNode(f'elbow{order}', list(elbow), 'elbow'))
             if elbow[2] > 1e-9:
                 solids.append(cylinder_between(anchor, elbow, run_r))
+                # Branched vertical runs brace with plate pillars.
                 pillars.append((anchor[0], anchor[1], elbow[2], run_r))
+                _mark_occupied(field, anchor, elbow, run_r)
             solids.append(cylinder_between(elbow, (x, y, base_z), run_r))
+            solids.append(elbow_sphere(elbow, run_r))
+            _mark_occupied(field, elbow, (x, y, base_z), run_r)
             length = run_length
         else:
             length = run_length
             middle_z = anchor[2]
             if kind == 'model_anchor':
-                middle_z += anchor_length
-                if anchor_length:
-                    bottom_r = float(support['model_anchor_diameter_mm']) / 2 or run_r
-                    upper_r = run_r if support['model_anchor_shape'] == 'cone' else bottom_r
-                    solids.append(cylinder_between((x, y, anchor[2] - anchor_depth),
-                                                  (x, y, middle_z), bottom_r, upper_r))
-                    # A buried collar joins face-adjacent segments in volume
-                    # without changing their outside surface (including when
-                    # a shortened tip starts directly on the bottom segment).
-                    collar_h = min(anchor_length + anchor_depth, z + penetration - middle_z) * .01
-                    collar_r = min(bottom_r, upper_r, run_r, tip_base_r, contact_r) * .5
-                    solids.append(cylinder_between((x, y, middle_z - collar_h),
-                                                  (x, y, middle_z + collar_h), collar_r))
+                middle_z += bottom_used
+                if bottom_used:
+                    bottom_contact_r = float(support['model_anchor_diameter_mm']) / 2 or contact_r
+                    bottom_span = bottom_used + anchor_depth
+                    bottom_ball = (support['break_point_diameter_mm']
+                                   if support['break_point_diameter_mm'] <= bottom_span else 0.0)
+                    bottom_base = run_r if support['model_anchor_shape'] == 'cone' else bottom_contact_r
+                    solids.append(tip_segment(
+                        (x, y, middle_z), (x, y, anchor[2] - anchor_depth),
+                        bottom_base, bottom_contact_r, support['model_anchor_shape'], bottom_ball))
+                    collar_h = min(bottom_used + anchor_depth, z + penetration - middle_z) * .01
+                    collar_r = min(bottom_contact_r, bottom_base, run_r, tip_base_r, contact_r) * .5
+                    if collar_h > 1e-9 and collar_r > 1e-9:
+                        solids.append(cylinder_between((x, y, middle_z - collar_h),
+                                                      (x, y, middle_z + collar_h), collar_r))
                 else:
                     middle_z -= anchor_depth
                 if len(anchor_examples) < max_diagnostics:
                     anchor_examples.append({'contact': head, 'surface_z_mm': anchor[2],
                         'bottom_z_mm': anchor[2] - anchor_depth,
-                        'junction_z_mm': anchor[2] + anchor_length,
+                        'junction_z_mm': anchor[2] + bottom_used,
                         'diameter_mm': float(support['model_anchor_diameter_mm']) or run_r * 2})
             if base_z - middle_z > 1e-9:
                 if kind == 'vertical' and support['tree_supports'] and base_z > 1e-9:
@@ -837,22 +1045,20 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                                       'middle_z': middle_z, 'order': order})
                 else:
                     solids.append(cylinder_between((x, y, middle_z), (x, y, base_z), run_r))
+                    _mark_occupied(field, (x, y, middle_z), (x, y, base_z), run_r)
                     if kind == 'vertical':
                         pillars.append((x, y, base_z, run_r))
         heights.append(length)
-        if support['break_point_diameter_mm']:
-            tip_span = float(z + penetration - base_z)
-            if support['break_point_diameter_mm'] > tip_span:
-                diagnostics.append(Diagnostic('support_invalid_break_point',
-                    'Break-point ball does not fit the shortened tip segment', severity='warning',
-                    position_mm=[x, y, z], details={'diameter_mm': support['break_point_diameter_mm'],
-                                                    'tip_span_mm': tip_span}))
-                failures += 1
-                continue
-        from .support_segments import tip_segment
-        solids.append(tip_segment((x, y, base_z), (x, y, z + penetration), tip_base_r, contact_r,
-                                  support['tip_shape'], support['break_point_diameter_mm']))
+        tip_span = float(z + penetration - base_z)
+        top_ball = (support['break_point_diameter_mm']
+                    if support['break_point_diameter_mm'] and support['break_point_diameter_mm'] <= tip_span
+                    else 0.0)
+        top_base = run_r if (kind == 'model_anchor' and not full_middle) else tip_base_r
+        solids.append(tip_segment((x, y, base_z), (x, y, z + penetration), top_base, contact_r,
+                                  support['tip_shape'], top_ball))
         tips_used.append(tip_used)
+        if not exempt:
+            routed_automatic.append((x, y, z))
         if kind != 'model_anchor':
             if not (kind == 'vertical' and support['tree_supports'] and base_z > 1e-9):
                 feet.append((anchor[0], anchor[1]))
@@ -913,6 +1119,7 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                          'candidates_rejected': anchor_rejected, 'examples': anchor_examples,
                          'examples_capped_at': max_diagnostics,
                          'clearance_basis': 'column-grid footprint and central-column penetration; not exact surface clearance'},
+        'contacts_skipped_density': int(density_skipped),
         'contacts_with_shortened_tip': int(shortened),
         'min_tip_used_mm': min(tips_used, default=0.0),
         'tip_length_mm': tip,
@@ -1030,6 +1237,8 @@ def _emit_tree_supports(jobs, solids, pillars, feet, foot_radii, field, settings
         pillars.append((tx, ty, trunk_top, run_r))
         feet.append((tx, ty))
         foot_radii.append(run_r)
+        from .support_segments import elbow_sphere
+        solids.append(elbow_sphere((tx, ty, trunk_top), run_r))
         for job in group:
             if math.hypot(job['x'] - tx, job['y'] - ty) > 1e-9:
                 solids.append(cylinder_between((tx, ty, trunk_top),
@@ -1054,20 +1263,24 @@ def _emit_tree_supports(jobs, solids, pillars, feet, foot_radii, field, settings
             'contacts_in_trees': contacts_in_trees, 'kept_independent': independent}
 
 
+BRACE_SPACING_DEFAULT_MM = 30.0
+BRACE_START_DEFAULT_MM = 3.0
+
+
 def brace_geometry(settings, pillar_radius):
     """Cross-brace spacing and first-brace height, each with its own setting.
 
-    Both defaulted to one derived number, ``max_slenderness * 2 * r``, which
-    made the spacing between braces and the height of the lowest one the same
-    quantity by construction. The reference configuration sets them 30 mm and
-    3 mm apart, so they cannot be one number. Zero on either still derives the
-    old value, so an untouched profile keeps its geometry.
+    Zero means the built-in 30 mm spacing and 3 mm start (the CHITUBOX
+    transcription already stored on the mars5 preset). A 20 mm lift never
+    reached the old slenderness-derived 48 mm start. Explicit nonzero values
+    still win; a mixed pair uses 30 or 3 for the zero side. ``pillar_radius``
+    is unused for zeros and kept so callers do not change.
     """
     support = settings['support']
-    derived = float(support['max_slenderness']) * 2 * float(pillar_radius)
-    spacing = float(support['brace_spacing_mm']) or derived
-    start = float(support['brace_start_height_mm']) or derived
-    return spacing, start
+    del pillar_radius
+    spacing = float(support['brace_spacing_mm']) or BRACE_SPACING_DEFAULT_MM
+    start = float(support['brace_start_height_mm']) or BRACE_START_DEFAULT_MM
+    return spacing, start  # pillar_radius kept for call-site compatibility
 
 
 def plan_supports(triangles, bounds, settings, *, field=None, budget=None, cancel=None,
@@ -1099,7 +1312,8 @@ def plan_supports(triangles, bounds, settings, *, field=None, budget=None, cance
         records = normalize_contact_parameters(merged, settings)
     plan, raft = route_contacts(contacts, field, settings, cancel=cancel,
                                 branch_attempts=branch_attempts, max_diagnostics=max_diagnostics,
-                                contact_parameters=records)
+                                contact_parameters=records,
+                                density_exempt=selection.get('density_exempt_positions') or ())
     plan.metrics.update(selection)
     if settings['support']['drop_attached_unroutable']:
         protected = [tuple(point) for point in extra_contacts]
@@ -1208,23 +1422,27 @@ def apply_attached_unroutable_drops(plan, triangles, settings, *, protected=(), 
     return plan
 
 
-def _brace_clear(field, start, end, radius, clearance, cancel=None):
+def _brace_clear(field, start, end, radius, clearance, cancel=None, exclude=None):
     """Conservative capsule clearance against occupied column-grid cells.
 
     Examine every XY cell intersecting the strut plus clearance and every Z
     layer its section spans. This uses the existing analysis lattice, whose
     sub-grid limitations remain; it is not a mechanical strength proof.
+    ``exclude`` is an optional list of ``(center, radius)`` spheres for the
+    intended tip/anchor volumes, so a real contact is not rejected.
     """
     reach = float(radius) + float(clearance)
     cancel = cancel or CancellationToken()
     grid = field.grid
+    start = np.asarray(start, dtype=float)
+    end = np.asarray(end, dtype=float)
     x0, x1 = min(start[0], end[0]) - reach, max(start[0], end[0]) + reach
     y0, y1 = min(start[1], end[1]) - reach, max(start[1], end[1]) + reach
     c0 = max(0, int(math.floor((x0 - grid.x0) / grid.dx)))
     c1 = min(grid.width, int(math.ceil((x1 - grid.x0) / grid.dx)))
     r0 = max(0, int(math.floor((y0 - grid.y0) / grid.dy)))
     r1 = min(grid.height, int(math.ceil((y1 - grid.y0) / grid.dy)))
-    direction = np.asarray(end[:2]) - start[:2]
+    direction = end[:2] - start[:2]
     length2 = float(direction @ direction)
     allowance = reach + math.hypot(grid.dx, grid.dy) / 2
     for row in range(r0, r1):
@@ -1247,8 +1465,11 @@ def _brace_clear(field, start, end, radius, clearance, cancel=None):
                     continue
             z_a = start[2] + t0 * (end[2] - start[2])
             z_b = start[2] + t1 * (end[2] - start[2])
-            lo = max(0, field.layer_of(min(z_a, z_b) - reach))
-            hi = field.layer_of(max(z_a, z_b) + reach) + 1
+            z_lo, z_hi = min(z_a, z_b) - reach, max(z_a, z_b) + reach
+            if _cell_in_exclude(point[0], point[1], z_lo, z_hi, exclude):
+                continue
+            lo = max(0, field.layer_of(z_lo))
+            hi = field.layer_of(z_hi) + 1
             if hi > lo:
                 if field.blocked(row * grid.width + col, lo, hi):
                     return False
@@ -1275,7 +1496,11 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
     # Each pillar carries its own radius so a thin one is braced with a strut
     # proportional to itself rather than to the nominal diameter.
     positions = np.asarray([p if len(p) == 4 else (*p, pillar_r) for p in pillars], dtype=float)
-    tall = positions[positions[:, 2] > start]
+    # Cross-braces stiffen long runs. Derived start 3 mm on a dense 5 mm-lift
+    # sphere would otherwise weave a net at z=3 that fails drainage. Explicit
+    # brace_start_height_mm still names the first strut exactly.
+    cutoff = start if float(support['brace_start_height_mm']) > 0 else max(start, 15.0)
+    tall = positions[positions[:, 2] > cutoff]
     if len(tall) < 2:
         return 0
     from scipy.spatial import cKDTree

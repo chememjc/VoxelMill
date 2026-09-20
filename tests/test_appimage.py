@@ -96,6 +96,13 @@ def test_pyinstaller_mac_bundle_is_not_background_only():
     assert "console=sys.platform != 'darwin'" in text
     assert "'LSBackgroundOnly': False" in text
     assert 'NSPrincipalClass' in text
+    # Finder/Dock use the bundle icns, not Qt's window icon. icon=None was
+    # the Python rocket.
+    assert 'voxelmill.icns' in text
+    assert "'CFBundleIconFile': 'voxelmill.icns'" in text
+    assert (ROOT / 'packaging' / 'voxelmill.icns').is_file()
+    assert (ROOT / 'packaging' / 'voxelmill.icns').read_bytes()[:4] == b'icns'
+    assert (ROOT / 'packaging' / 'voxelmill.ico').is_file()
 
 
 def test_site_copy_keeps_numpy_core_tests():
@@ -123,3 +130,51 @@ def test_cli_rewrites_empty_argv_to_gui_when_pyside_is_present(tmp_path, monkeyp
     monkeypatch.setattr('voxelmill.cli._gui_is_importable', lambda: False)
     assert _desktop_argv([]) == []
     assert _desktop_argv([str(stl)]) == [str(stl)]
+    # Frozen Windows EXE: Explorer empty-argv must open GUI even if the
+    # PySide6 probe fails after freeze (sys._MEIPASS / delayed import).
+    monkeypatch.setattr(sys, 'frozen', True, raising=False)
+    assert _desktop_argv([]) == ['gui']
+    assert _desktop_argv([str(stl)]) == ['gui', str(stl)]
+    assert _desktop_argv(['prepare', str(stl)]) == ['prepare', str(stl)]
+    assert _desktop_argv(['--version']) == ['--version']
+    assert _desktop_argv(['gui']) == ['gui']
+    monkeypatch.setattr(sys, 'argv', [r'C:\VoxelMill\VoxelMill.exe'])
+    assert _desktop_argv(None) == ['gui']
+
+
+def test_windows_vm_uses_software_opengl_only_in_virtualbox(monkeypatch):
+    from voxelmill import cli as cli_mod
+
+    monkeypatch.delenv('QT_OPENGL', raising=False)
+    monkeypatch.setattr(cli_mod.sys, 'platform', 'linux')
+    assert cli_mod._windows_vm_software_gl() is False
+
+    monkeypatch.setattr(cli_mod.sys, 'platform', 'win32')
+
+    class _Key:
+        pass
+
+    def _open(_hive, path):
+        if path.endswith('VBoxGuest'):
+            return _Key()
+        raise OSError('missing')
+
+    fake_winreg = type('winreg', (), {
+        'HKEY_LOCAL_MACHINE': object(),
+        'OpenKey': staticmethod(_open),
+    })
+    monkeypatch.setitem(sys.modules, 'winreg', fake_winreg)
+    assert cli_mod._windows_vm_software_gl() is True
+    monkeypatch.setenv('QT_OPENGL', 'desktop')
+    assert cli_mod._windows_vm_software_gl() is False
+    monkeypatch.delenv('QT_OPENGL')
+
+    def _missing(_hive, _path):
+        raise OSError('missing')
+
+    monkeypatch.setitem(sys.modules, 'winreg',
+                        type('winreg', (), {
+                            'HKEY_LOCAL_MACHINE': object(),
+                            'OpenKey': staticmethod(_missing),
+                        }))
+    assert cli_mod._windows_vm_software_gl() is False

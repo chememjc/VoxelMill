@@ -25,21 +25,36 @@ VIEWS = {
     'top':    ((0.0, 0.0, 1.0), (0.0, 1.0, 0.0)),
     'bottom': ((0.0, 0.0, -1.0), (0.0, -1.0, 0.0)),
     # Looking at the front-right-top corner, so the green front edge and the
-    # plate are both visible on opening.
+    # plate are both visible on opening. Shallower than ``iso_+-+`` on purpose:
+    # home is a working view, the cube corner is a true isometric.
     'iso':    ((1.0, -1.0, 0.8), (0.0, 0.0, 1.0)),
 }
 
+# Eight cube-corner isometrics. Signs are the camera-direction octant
+# (+X right, +Y back, +Z top), matching the chamfered-cube pick positions.
+for _sx, _sy, _sz in (
+        (1, 1, 1), (1, 1, -1), (1, -1, 1), (1, -1, -1),
+        (-1, 1, 1), (-1, 1, -1), (-1, -1, 1), (-1, -1, -1)):
+    VIEWS['iso_' + ('+' if _sx > 0 else '-') + ('+' if _sy > 0 else '-')
+          + ('+' if _sz > 0 else '-')] = (
+        (float(_sx), float(_sy), float(_sz)), (0.0, 0.0, 1.0))
+del _sx, _sy, _sz
+
 HOME_VIEW = 'iso'
 
-#: Keyboard shortcuts, mirrored by the View menu.
+#: Keyboard shortcuts, mirrored by the View menu. Corner isos are cube picks,
+#: not menu items, so they stay out of this map.
 SHORTCUTS = {'front': 'Ctrl+1', 'back': 'Ctrl+2', 'left': 'Ctrl+3', 'right': 'Ctrl+4',
              'top': 'Ctrl+5', 'bottom': 'Ctrl+6', 'iso': 'Ctrl+0'}
 
-#: Face labels carried by the annotated cube, and the view each one selects.
+#: Face labels carried by the navigation cube, and the view each one selects.
 #: Picking the +X face means "show me the right side", which is the ``right``
 #: view -- the camera moves to +X, it does not look toward +X.
 FACE_VIEWS = {'Front': 'front', 'Back': 'back', 'Left': 'left',
               'Right': 'right', 'Top': 'top', 'Bottom': 'bottom'}
+
+#: FreeCAD-style orbit arrows around the cube, in view space.
+ARROW_TURNS = ('left', 'right', 'up', 'down')
 
 
 def _unit(vector):
@@ -63,6 +78,66 @@ def orthonormal_up(direction, up):
     if float(np.linalg.norm(residual)) < 1e-9:
         raise ValueError('view up is parallel to the view direction')
     return residual / float(np.linalg.norm(residual))
+
+
+def _rotate_about(vector, axis, angle):
+    """Rodrigues rotation of ``vector`` around unit ``axis`` by ``angle`` rad."""
+    axis = _unit(axis)
+    cosine, sine = math.cos(angle), math.sin(angle)
+    return (vector * cosine
+            + np.cross(axis, vector) * sine
+            + axis * float(np.dot(axis, vector)) * (1.0 - cosine))
+
+
+def rotate_view_90(direction, up, turn):
+    """Orbit a camera pose 90° in view space.
+
+    ``turn`` is one of :data:`ARROW_TURNS` (the four FreeCAD NavCube arrows).
+    ``direction`` is camera-minus-focal, the same convention as :data:`VIEWS`.
+    Both the direction and the up vector rotate, so a turn from front onto
+    top cannot leave the camera with an up parallel to its view direction.
+    """
+    if turn not in ARROW_TURNS:
+        raise ValueError(f'unknown orbit {turn!r}; expected one of {ARROW_TURNS}')
+    direction = _unit(direction)
+    up = orthonormal_up(direction, up)
+    # VTK view-right: ViewUp × (Position - FocalPoint).
+    right = _unit(np.cross(up, direction))
+    quarter = math.pi / 2
+    if turn == 'right':
+        axis, angle = up, quarter
+    elif turn == 'left':
+        axis, angle = up, -quarter
+    elif turn == 'up':
+        axis, angle = right, -quarter
+    else:
+        axis, angle = right, quarter
+    new_direction = _rotate_about(direction, axis, angle)
+    new_up = _rotate_about(up, axis, angle)
+    return _unit(new_direction), orthonormal_up(new_direction, new_up)
+
+
+def named_view_near(direction, up, max_degrees=12.0):
+    """Named view matching both direction and roll, or None.
+
+    Direction-only matching would "unroll" a 90° orbit that left a side face
+    with Y up (the honest result of turning right from top) onto the canned
+    Z-up ``right`` view. Both vectors have to agree.
+    """
+    direction = _unit(direction)
+    up = orthonormal_up(direction, up)
+    limit = math.cos(math.radians(max_degrees))
+    best_name, best_score = None, -1.0
+    for name, (view_direction, view_up) in VIEWS.items():
+        view_direction = _unit(view_direction)
+        view_up = orthonormal_up(view_direction, view_up)
+        score = (float(np.dot(direction, view_direction))
+                 + float(np.dot(up, view_up))) * 0.5
+        if score > best_score:
+            best_name, best_score = name, score
+    if best_score >= limit:
+        return best_name
+    return None
 
 
 class CameraController:
@@ -121,11 +196,54 @@ class CameraController:
     def home(self):
         return self.set_view(HOME_VIEW)
 
+    def rotate_90(self, turn):
+        """Orbit the current camera 90°; snap to a named view when the roll matches."""
+        camera = self.camera
+        focal = np.asarray(camera.GetFocalPoint(), dtype=float)
+        direction = np.asarray(camera.GetPosition(), dtype=float) - focal
+        up = np.asarray(camera.GetViewUp(), dtype=float)
+        new_direction, new_up = rotate_view_90(direction, up, turn)
+        name = named_view_near(new_direction, new_up)
+        if name is not None:
+            return self.set_view(name)
+        distance = float(np.linalg.norm(direction)) or 1.0
+        self.apply((focal + new_direction * distance, focal, new_up))
+        self.current = None
+        return None
+
     def fit(self):
         self.renderer.ResetCamera()
         self.renderer.ResetCameraClippingRange()
 
     # ---- transitions ----------------------------------------------------
+    def steps_toward(self, direction, up, steps=12):
+        """Intermediate poses toward an explicit camera direction and up."""
+        steps = max(1, int(steps))
+        focal = self.focal_point()
+        distance = float(self.camera.GetDistance()) or 1.0
+        start_dir = _unit(np.asarray(self.camera.GetPosition(), dtype=float) - focal)
+        start_up = np.asarray(self.camera.GetViewUp(), dtype=float)
+        end_dir = _unit(direction)
+        try:
+            end_up = orthonormal_up(end_dir, up)
+        except ValueError:
+            end_up = np.asarray(up, dtype=float)
+        poses = []
+        for step in range(1, steps + 1):
+            fraction = step / steps
+            heading = (1 - fraction) * start_dir + fraction * end_dir
+            if float(np.linalg.norm(heading)) < 1e-9:
+                heading = end_dir           # exactly opposite views
+            else:
+                heading = _unit(heading)
+            rolled = (1 - fraction) * start_up + fraction * end_up
+            try:
+                rolled = orthonormal_up(heading, rolled)
+            except ValueError:
+                rolled = end_up
+            poses.append((focal + heading * distance, focal, rolled))
+        return poses
+
     def steps_to(self, name, steps=12):
         """Intermediate ``(position, focal, up)`` poses toward a named view.
 
@@ -133,28 +251,10 @@ class CameraController:
         so the camera swings around the model rather than cutting through it.
         A single step is a jump, which is what a headless caller wants.
         """
-        steps = max(1, int(steps))
-        focal = self.focal_point()
-        distance = float(self.camera.GetDistance()) or 1.0
-        start_dir = _unit(np.asarray(self.camera.GetPosition(), dtype=float) - focal)
-        start_up = np.asarray(self.camera.GetViewUp(), dtype=float)
-        end_position, _focal, end_up = self.pose(name, distance)
-        end_dir = _unit(end_position - focal)
-        poses = []
-        for step in range(1, steps + 1):
-            fraction = step / steps
-            direction = (1 - fraction) * start_dir + fraction * end_dir
-            if float(np.linalg.norm(direction)) < 1e-9:
-                direction = end_dir           # exactly opposite views
-            else:
-                direction = _unit(direction)
-            up = (1 - fraction) * start_up + fraction * end_up
-            try:
-                up = orthonormal_up(direction, up)
-            except ValueError:
-                up = end_up
-            poses.append((focal + direction * distance, focal, up))
-        return poses
+        if name not in VIEWS:
+            raise KeyError(f'unknown view {name!r}; expected one of {sorted(VIEWS)}')
+        direction, up = VIEWS[name]
+        return self.steps_toward(direction, up, steps)
 
     def apply(self, pose):
         position, focal, up = pose

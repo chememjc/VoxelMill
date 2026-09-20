@@ -14,7 +14,7 @@ from voxelmill.supports import build_column_field, route_contacts
 
 def scene():
     settings = resolve_settings(overrides={'support': {'base_type': 'none'}})
-    solid = m.Manifold.cube((30, 30, 4), True).translate((-15, -15, 2))
+    solid = m.Manifold.cube((30, 30, 4), True).translate((0, 0, 10))
     triangles = manifold_triangles(solid).astype(np.float32)
     bounds = np.asarray(solid.bounding_box()).reshape(2, 3)
     field = build_column_field(triangles, bounds, settings, pitch_mm=.5)
@@ -36,7 +36,7 @@ def test_normalization_is_deep_and_exact_coordinate_lookup():
 
 def test_two_contacts_can_have_independent_radius_and_tip_geometry():
     settings, field = scene()
-    points = [[-10, 0, 3.9], [-5, 0, 3.9]]
+    points = [[-10, 0, 8.0], [-5, 0, 8.0]]
     overrides = [
         {'position_mm': points[0], 'parameters': {'pillar_diameter_mm': .6}},
         {'position_mm': points[1], 'parameters': {'pillar_diameter_mm': 1.6}},
@@ -51,8 +51,8 @@ def test_two_contacts_can_have_independent_radius_and_tip_geometry():
 
 def test_unmatched_override_is_reported_and_not_applied():
     settings, field = scene()
-    plan, _ = route_contacts([[-10, 0, 3.9]], field, settings, contact_parameters=[
-        {'position_mm': [7, 7, 4], 'parameters': {'pillar_diameter_mm': .6}},
+    plan, _ = route_contacts([[-10, 0, 8.0]], field, settings, contact_parameters=[
+        {'position_mm': [7, 7, 8], 'parameters': {'pillar_diameter_mm': .6}},
     ])
     assert plan.metrics['contact_parameters'] == {'authored': 1, 'matched': 0, 'unmatched': 1}
     assert any(d.code == 'contact_parameters_unmatched' for d in plan.diagnostics)

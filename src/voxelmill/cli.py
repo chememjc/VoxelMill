@@ -730,7 +730,29 @@ def cmd_resin(args):
     return 0
 
 
+def _windows_vm_software_gl():
+    """True when a Windows guest needs software OpenGL to show the editor.
+
+    VirtualBox 3D (SVGA3D) often hangs ``QVTKRenderWindowInteractor`` during
+    widget construction, before ``window.show()``, so Explorer launch looks
+    like a black console and no editor. Hardware GL stays the default on a
+    real GPU; ``QT_OPENGL`` already set is left alone.
+    """
+    if sys.platform != 'win32' or os.environ.get('QT_OPENGL'):
+        return False
+    try:
+        import winreg
+        winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                       r'SYSTEM\CurrentControlSet\Services\VBoxGuest')
+        return True
+    except OSError:
+        return False
+
+
 def cmd_gui(args):
+    if _windows_vm_software_gl():
+        os.environ['QT_OPENGL'] = 'software'
+        os.environ.setdefault('LIBGL_ALWAYS_SOFTWARE', '1')
     from .gui import run
     return run(_settings(args), args)
 
@@ -1354,21 +1376,31 @@ def _gui_is_importable() -> bool:
     return True
 
 
+def _is_frozen() -> bool:
+    return bool(getattr(sys, 'frozen', False))
+
+
 def _desktop_argv(argv):
     """Match AppRun: no args, or a single existing file, opens the editor.
 
     Finder / Explorer / a double-clicked ``.app`` otherwise hit argparse's
     required subcommand and exit before any window appears. ``-psn_*`` is the
     classic macOS Finder process-serial-number flag. Subcommands, ``--help``
-    and ``--version`` are left alone, and PySide6 is imported only when a
-    rewrite is actually being considered.
+    and ``--version`` are left alone. Source installs rewrite only when
+    PySide6 imports; frozen builds always rewrite (GUI is bundled).
     """
     if argv is None:
         argv = sys.argv[1:]
     argv = [item for item in argv if not str(item).startswith('-psn_')]
     rewrite = (not argv) or (
         len(argv) == 1 and not str(argv[0]).startswith('-') and os.path.exists(argv[0]))
-    if not rewrite or not _gui_is_importable():
+    if not rewrite:
+        return argv
+    # Frozen OR PySide6: CLI-only source installs must not rewrite.
+    # On win32, Explorer launches have no parent console so argparse errors
+    # are invisible — rewrite must not depend on a probe that can fail after
+    # freeze (sys._MEIPASS / delayed PySide6 import).
+    if not (_is_frozen() or _gui_is_importable()):
         return argv
     if not argv:
         return ['gui']

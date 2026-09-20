@@ -3,6 +3,7 @@
 The viewport splits into a Qt-free :class:`Scene` and a widget precisely so the
 whole editor except the render window can be exercised without a display.
 """
+from copy import deepcopy
 from dataclasses import asdict
 import json
 import os
@@ -331,8 +332,9 @@ window.show()
 window.viewport.start()
 window.scene.set_mesh('model', manifold_triangles(m.Manifold.sphere(12, 64)))
 window.viewport.reset_camera()
-for _ in range(4):
+for _ in range(8):
     app.processEvents()
+window.viewport.add_navigation_cube()
 window.viewport.render()
 
 # The navigation cube only exists once there is a real interactor, and its
@@ -344,7 +346,7 @@ window.viewport.set_view('front', animate=False)
 window.viewport.render()
 size = window.viewport.interactor.GetRenderWindow().GetSize()
 face = window.viewport.cube_face_under(int(0.90 * size[0]), int(0.88 * size[1]))
-cube_enabled = bool(window.viewport.cube_widget.GetEnabled())
+cube_enabled = bool(window.viewport.cube_widget and window.viewport.cube_widget.GetEnabled())
 
 grab = window.grab()
 saved = grab.save(target)
@@ -697,9 +699,10 @@ def test_view_transition_lands_exactly_on_the_named_pose():
 def test_window_exposes_every_view_as_an_action(application, source):
     from voxelmill.gui.camera import SHORTCUTS, VIEWS
     window = MainWindow(small_settings(), None, headless=True)
-    for name in VIEWS:
+    for name in SHORTCUTS:
         assert f'view_{name}' in window.actions_map
         assert window.actions_map[f'view_{name}'].shortcut().toString() == SHORTCUTS[name].replace('Ctrl', 'Ctrl')
+        assert name in VIEWS
     assert window.set_view('front') == 'front'
     assert window.camera.current == 'front'
     with pytest.raises(VoxelMillError, match='Unknown view'):
@@ -823,6 +826,7 @@ def test_added_object_pose_controls_are_undoable_and_quit_is_last(application, t
     assert window.document.extra_models[0]['lift_mm'] == 7.0
     assert window.document.undo_label == 'move model'
     assert window.actions_map['quit'].text() == 'Quit'
+    assert window.file_menu.actions()[-1] is window.actions_map['quit']
     window.object_panel.list.setCurrentRow(1)
     window.object_overrides.setText('{"pillar_diameter_mm": 1.6}')
     assert window.apply_object_overrides()
@@ -1183,4 +1187,148 @@ def test_finish_islands_fills_the_report_dock_and_offers_the_island_code(applica
     assert 'island scan only' in payload
     assert 'raster_island' in [window.layers.picker.itemData(i)
                                for i in range(window.layers.picker.count())]
+    window.close()
+
+
+def _shown_title(window):
+    """Expand Qt's ``[*]`` placeholder the way a window manager would."""
+    title = window.windowTitle()
+    if '[*]' in title:
+        return title.replace('[*]', '*' if window.isWindowModified() else '')
+    return title
+
+
+def test_actions_map_exposes_the_new_file_and_parts_keys(application):
+    window = MainWindow(small_settings(), None, headless=True)
+    for key in ('new_project', 'save_project_as', 'allow_part_to_part', 'reset_all_lifts'):
+        assert key in window.actions_map
+    assert window.file_menu.actions()[-1] is window.actions_map['quit']
+    assert window.actions_map['quit'].text() == 'Quit'
+    assert window.actions_map['save_project'].text() == 'Save project...'
+    window.close()
+
+
+def test_save_project_with_a_path_does_not_open_a_dialog(application, tmp_path, monkeypatch):
+    window = MainWindow(small_settings(), None, headless=True)
+    path = tmp_path / 'named.voxmil'
+    window.document.add_contact([1.0, 2.0, 3.0])
+    window.project_path = str(path)
+    called = []
+    monkeypatch.setattr(QtWidgets.QFileDialog, 'getSaveFileName',
+                        lambda *args, **kwargs: called.append(True) or ('', ''))
+    assert window.save_project() is True
+    assert called == []
+    assert path.exists()
+    assert not window.document.dirty
+    assert window.actions_map['save_project'].text() == 'Save project'
+    assert _shown_title(window) == f'{path.name} — VoxelMill'
+    window.close()
+
+
+def test_save_project_as_remembers_the_path(application, tmp_path, monkeypatch):
+    window = MainWindow(small_settings(), None, headless=True)
+    target = tmp_path / 'as.voxmil'
+    monkeypatch.setattr(QtWidgets.QFileDialog, 'getSaveFileName',
+                        lambda *args, **kwargs: (str(target), 'VoxelMill (*.voxmil)'))
+    window.document.add_contact([1.0, 2.0, 3.0])
+    assert window.save_project_as() is True
+    assert window.project_path == str(target.resolve())
+    assert not window.document.dirty
+    assert window.actions_map['save_project'].text() == 'Save project'
+    called = []
+    window.document.add_contact([4.0, 5.0, 6.0])
+    monkeypatch.setattr(QtWidgets.QFileDialog, 'getSaveFileName',
+                        lambda *args, **kwargs: called.append(True) or ('', ''))
+    assert window.save_project() is True
+    assert called == []
+    window.close()
+
+
+def test_new_project_keeps_settings_and_clears_the_document(application, tmp_path):
+    window = MainWindow(small_settings(), None, headless=True)
+    settings = deepcopy(window.document.settings)
+    settings['support']['spacing_mm'] = 9.0
+    window.document.set_settings(settings)
+    window.document.add_contact([1.0, 2.0, 3.0])
+    window.project_path = str(tmp_path / 'old.voxmil')
+    window._refresh_window_title()
+    assert window.document.dirty
+    assert window.new_project() is True
+    assert window.document.settings['support']['spacing_mm'] == pytest.approx(9.0)
+    assert window.document.source is None
+    assert window.document.manual_contacts == []
+    assert window.document.extra_models == []
+    assert window.document.undo_label is None
+    assert window.project_path is None
+    assert _shown_title(window) == 'VoxelMill'
+    assert not window.document.dirty
+    assert not window.isWindowModified()
+    window.close()
+
+
+def test_dirty_document_marks_the_window_title(application, tmp_path):
+    window = MainWindow(small_settings(), None, headless=True)
+    assert _shown_title(window) == 'VoxelMill'
+    assert not window.isWindowModified()
+    window.document.add_contact([1.0, 2.0, 3.0])
+    window._refresh_undo()
+    assert window.isWindowModified()
+    assert _shown_title(window) == 'VoxelMill*'
+    window.project_path = str(tmp_path / 'foo.voxmil')
+    window._refresh_window_title()
+    assert _shown_title(window) == 'foo.voxmil — VoxelMill*'
+    window.close()
+
+
+def test_set_plate_floor_preserves_relative_gaps_and_undoes(tmp_path):
+    document = Document()
+    document.set_orientation([0.0, 0.0, 0.0], [0.0, 0.0], 5.0)
+    document.add_extra_model({'path': tmp_path / 'extra.stl', 'lift_mm': 12.0})
+    document.set_plate_floor(20)
+    assert document.model_lift_mm == pytest.approx(20.0)
+    assert document.extra_models[0]['lift_mm'] == pytest.approx(27.0)
+    document.undo()
+    assert document.model_lift_mm == pytest.approx(5.0)
+    assert document.extra_models[0]['lift_mm'] == pytest.approx(12.0)
+    document.reset_all_lifts(20)
+    assert document.model_lift_mm == pytest.approx(20.0)
+    assert document.extra_models[0]['lift_mm'] == pytest.approx(20.0)
+
+
+def test_setup_lift_commits_the_plate_floor_immediately(application, tmp_path):
+    window = MainWindow(small_settings(), None, headless=True)
+    window.reload = lambda: None
+    window.document.set_orientation([0.0, 0.0, 0.0], [0.0, 0.0], 5.0)
+    window.document.add_extra_model({'path': tmp_path / 'extra.stl', 'lift_mm': 12.0})
+    window._sync_widgets_from_document()
+    assert window.lift.value() == pytest.approx(5.0)
+    window.lift.setValue(20)
+    assert window.document.model_lift_mm == pytest.approx(20.0)
+    assert window.document.extra_models[0]['lift_mm'] == pytest.approx(27.0)
+    assert window.lift.value() == pytest.approx(20.0)
+    window.apply_settings()
+    assert window.document.model_lift_mm == pytest.approx(20.0)
+    assert window.document.extra_models[0]['lift_mm'] == pytest.approx(27.0)
+    window.close()
+
+
+def test_apply_settings_does_not_flatten_extra_part_lifts(application, tmp_path):
+    window = MainWindow(small_settings(), None, headless=True)
+    window.reload = lambda: None
+    window.document.set_orientation([0.0, 0.0, 0.0], [0.0, 0.0], 5.0)
+    window.document.add_extra_model({'path': tmp_path / 'extra.stl', 'lift_mm': 12.0})
+    window._sync_widgets_from_document()
+    window.apply_settings()
+    assert window.document.model_lift_mm == pytest.approx(5.0)
+    assert window.document.extra_models[0]['lift_mm'] == pytest.approx(12.0)
+    window.close()
+
+
+def test_allow_part_to_part_checkbox_toggles_the_setting(application):
+    window = MainWindow(small_settings(), None, headless=True)
+    assert window.document.settings['support']['allow_part_to_part'] is True
+    window.actions_map['allow_part_to_part'].setChecked(False)
+    assert window.document.settings['support']['allow_part_to_part'] is False
+    window.actions_map['allow_part_to_part'].setChecked(True)
+    assert window.document.settings['support']['allow_part_to_part'] is True
     window.close()

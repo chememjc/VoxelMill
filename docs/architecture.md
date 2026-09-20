@@ -285,11 +285,11 @@ Optional PySide6 GUI components: the main window and its menus/docks, the VTK
 viewport and translate/rotate gizmo, the layer scrubber with per-issue-code
 markers, document state and undo, background jobs, and `services.py`'s
 Qt-free wrappers around the same core the CLI calls (including
-`run_print_checks` behind the Check print menu and `route_attachments` behind
-Compute attachments).
+`run_print_checks` behind the Verification menu and `route_attachments` behind
+Parts → Compute attachments).
 
 ### gui/profiles.py
-`ProfileLibraryDialog`, opened from **File → Profile library…** in
+`ProfileLibraryDialog`, opened from **Configuration → Profile library…** in
 `gui/window.py`. Lists every profile `voxelmill.profiles.discover` finds, and
 puts `config.resolve_settings`, `profiles.diff_settings`,
 `profiles.provenance`, `profiles.save_printer_profile`, and

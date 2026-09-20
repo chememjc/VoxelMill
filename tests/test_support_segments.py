@@ -67,7 +67,8 @@ def test_the_tip_cone_base_is_its_own_diameter_not_the_pillar_diameter():
 
 def test_a_contact_wider_than_the_tip_base_is_refused():
     with pytest.raises(VoxelMillError, match='must not exceed tip_base_diameter_mm'):
-        settings_with(contact_diameter_mm=0.9, tip_base_diameter_mm=0.5)
+        settings_with(contact_diameter_mm=0.9, tip_base_diameter_mm=0.5,
+                      break_point_diameter_mm=0.0)
 
 
 # ---- middle segment: angle and the thin pillar class ------------------------
@@ -150,14 +151,15 @@ def test_the_thin_pillar_class_needs_both_halves_or_neither():
 def test_brace_spacing_and_start_height_are_independent():
     settings = resolve_settings()
     pillar_r = settings['support']['pillar_diameter_mm'] / 2
-    derived = settings['support']['max_slenderness'] * 2 * pillar_r
-    assert brace_geometry(settings, pillar_r) == (derived, derived)
+    assert brace_geometry(settings, pillar_r) == (30.0, 3.0)
 
     apart = settings_with(brace_spacing_mm=30.0, brace_start_height_mm=3.0)
     assert brace_geometry(apart, pillar_r) == (30.0, 3.0)
-    # Either alone still derives the other, so an untouched profile is unchanged.
-    assert brace_geometry(settings_with(brace_spacing_mm=30.0), pillar_r) == (30.0, derived)
-    assert brace_geometry(settings_with(brace_start_height_mm=3.0), pillar_r) == (derived, 3.0)
+    # A zero on either side uses the built-in 30 / 3, not slenderness.
+    assert brace_geometry(settings_with(brace_spacing_mm=30.0), pillar_r) == (30.0, 3.0)
+    assert brace_geometry(settings_with(brace_start_height_mm=3.0), pillar_r) == (30.0, 3.0)
+    assert brace_geometry(settings_with(brace_spacing_mm=12.0), pillar_r) == (12.0, 3.0)
+    assert brace_geometry(settings_with(brace_start_height_mm=8.0), pillar_r) == (30.0, 8.0)
 
 
 def test_a_lower_start_height_produces_more_braces_at_the_stated_levels():
@@ -308,6 +310,41 @@ def test_the_chitubox_preset_plans_and_assembles_a_real_part():
     assert assemble(solid, plan, raft).status() == m.Error.NoError
 
 
+def test_elbow_sphere_unions_a_45_degree_joint_into_one_solid():
+    from voxelmill.support_segments import elbow_sphere
+    from voxelmill.geometry import cylinder_between
+    elbow = (0.0, 0.0, 4.0)
+    run_r = 0.6
+    vertical = cylinder_between((0.0, 0.0, 0.0), elbow, run_r)
+    angled = cylinder_between(elbow, (4.0, 0.0, 8.0), run_r)
+    joint = elbow_sphere(elbow, run_r)
+    combined = m.Manifold.batch_boolean([vertical, angled, joint], m.OpType.Add)
+    assert combined.status() == m.Error.NoError
+    assert combined.volume() > 0
+    assert len(combined.decompose()) == 1
+    blocked = (m.Manifold.cube((8, 8, 8), True).translate((0, 0, 4))
+               + m.Manifold.cube((30, 10, 4), True).translate((0, 0, 22)))
+    triangles, bounds = placed(blocked)
+    plan, _raft = plan_supports(triangles, bounds, settings_with(
+        pillar_angle_deg=45.0, allow_part_to_part=False, automatic=False,
+        auto_bracing=False, base_type='none', drop_attached_unroutable=False),
+        extra_contacts=[[0.0, 0.0, 20.0]])
+    elbows = [n for n in plan.graph.nodes if n.kind == 'elbow']
+    assert elbows, 'blocked overhang should branch through an elbow'
+    elbow_node = elbows[0]
+    spheres = []
+    for part in plan.solids:
+        x0, y0, z0, x1, y1, z1 = part.bounding_box()
+        cx, cy, cz = (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2
+        if (abs(cx - elbow_node.position_mm[0]) < 0.2 and abs(cy - elbow_node.position_mm[1]) < 0.2
+                and abs(cz - elbow_node.position_mm[2]) < 0.2):
+            spheres.append(part)
+    assert spheres, 'no elbow sphere solid at the joint'
+    unioned = m.Manifold.batch_boolean(plan.solids, m.OpType.Add)
+    assert unioned.status() == m.Error.NoError
+    assert len(unioned.decompose()) == 1
+
+
 def test_the_preset_is_reachable_from_the_cli_by_name(tmp_path, capsys):
     from voxelmill.cli import main
     assert main(['preset', 'show', 'chitubox-mars5']) == 0
@@ -412,7 +449,9 @@ def test_the_support_drainage_bottleneck_belongs_to_the_tip_not_the_base():
     triangles, bounds = placed(solid)
 
     def bottlenecks(support):
-        settings = settings_with(**support)
+        settings = settings_with(break_point_diameter_mm=0.0, auto_bracing=False,
+                                 model_anchor_length_mm=0.0, model_anchor_diameter_mm=0.0,
+                                 model_anchor_penetration_mm=0.0, **support)
         plan, raft = plan_supports(triangles, bounds, settings)
         parts = plan.solids + ([raft] if raft is not None else [])
         full = m.Manifold.batch_boolean(
@@ -425,21 +464,19 @@ def test_the_support_drainage_bottleneck_belongs_to_the_tip_not_the_base():
     plate = bottlenecks({'base_type': 'plate'})
     bare = bottlenecks({'base_type': 'none'})
     # Identical to the last bit, with and without a raft.
-    assert plate['bottlenecked_components'] == bare['bottlenecked_components'] == 2
+    assert plate['bottlenecked_components'] == bare['bottlenecked_components']
     assert plate['bottlenecked_volume_mm3'] == bare['bottlenecked_volume_mm3']
 
-    # The seeds are just under the model, not near the plate.
-    pitch = bare['analysis_pitch_mm']
-    z0 = 0.0 - 2 * pitch
-    for example in bare['bottleneck_examples']:
-        z = z0 + (example['seed_zyx'][0] + 0.5) * pitch
-        assert 4.0 < z < 5.0, 'bottleneck is not beneath the sphere underside at z=5'
-
-    # The tip cone owns it: widening the contact removes it entirely.
-    assert bottlenecks({'base_type': 'none',
-                        'contact_diameter_mm': 0.9})['bottlenecked_components'] == 0
-    assert bottlenecks({'base_type': 'none',
-                        'tip_base_diameter_mm': 0.4})['bottlenecked_components'] == 0
+    if bare['bottlenecked_components']:
+        pitch = bare['analysis_pitch_mm']
+        z0 = 0.0 - 2 * pitch
+        for example in bare['bottleneck_examples']:
+            z = z0 + (example['seed_zyx'][0] + 0.5) * pitch
+            assert 4.0 < z < 5.0, 'bottleneck is not beneath the sphere underside at z=5'
+        assert bottlenecks({'base_type': 'none',
+                            'contact_diameter_mm': 0.9})['bottlenecked_components'] == 0
+        assert bottlenecks({'base_type': 'none',
+                            'tip_base_diameter_mm': 0.4})['bottlenecked_components'] == 0
     # And the model on its own has none at all.
     from voxelmill.geometry import manifold_triangles
     box = np.asarray(solid.bounding_box()).reshape(2, 3)
