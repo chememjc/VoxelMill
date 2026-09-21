@@ -103,6 +103,9 @@ def _overrides(args):
     put('support', 'brace_diameter_mm', args.brace_diameter_mm)
     put('support', 'brace_max_distance_mm', args.brace_max_distance_mm)
     put('support', 'brace_max_length_mm', args.brace_max_length_mm)
+    for key in ('brace_destination', 'brace_pattern', 'brace_branches_per_node',
+                'brace_angle_deg', 'brace_min_height_mm', 'brace_azimuth_deg'):
+        put('support', key, getattr(args, key))
     put('support', 'allow_part_to_part', args.part_to_part_supports)
     put('support', 'part_to_part_avoidance', args.part_to_part_avoidance)
     put('support', 'overhang_angle_deg', args.overhang_angle_deg)
@@ -766,7 +769,7 @@ def cmd_support_example(args):
     from .support_example import support_example, save_example
     if args.output and args.report and Path(args.output).resolve() == Path(args.report).resolve():
         raise VoxelMillError('invalid_option', 'Example STL and report must use different paths')
-    example = support_example(_settings(args), args.height_mm)
+    example = support_example(_settings(args), args.height_mm, layout=args.layout)
     if args.output:
         save_example(args.output, example)
     payload = {key: value for key, value in example.items() if key not in ('triangles', 'contacts')}
@@ -946,7 +949,7 @@ def build_parser():
     common.add_argument('--auto-supports', action=argparse.BooleanOptionalAction, default=None,
                         help='automatic contacts; disable for manual contacts only')
     common.add_argument('--auto-bracing', action=argparse.BooleanOptionalAction, default=None,
-                        help='downward 45-degree branches between grounded supports; independent '
+                        help='downward branches between grounded supports; independent '
                              'of --auto-supports')
     common.add_argument('--brace-spacing-mm', type=float,
                         help='vertical spacing between downward brace origins, measured from '
@@ -960,6 +963,15 @@ def build_parser():
     common.add_argument('--brace-max-length-mm', type=float,
                         help='maximum complete downward brace length, including its diagonal '
                              'connection; default 30 mm')
+    common.add_argument('--brace-destination', choices=('supports', 'base', 'both'),
+                        help='brace destinations: grounded supports, new base feet, or both (default)')
+    common.add_argument('--brace-pattern', choices=('single', 'alternating', 'x'),
+                        help='single diagonals, alternating directions by level, or paired X diagonals between shafts')
+    common.add_argument('--brace-branches-per-node', type=int,
+                        help='maximum connections per support spacing interval, 1 to 8; an X pair counts once')
+    common.add_argument('--brace-angle-deg', type=float, help='downward angle from horizontal, between 0 and 90; default 45')
+    common.add_argument('--brace-min-height-mm', type=float, help='minimum brace origin height above the plate; default 0')
+    common.add_argument('--brace-azimuth-deg', type=float, help='rotation of base fans and alternating directions; default 0')
     common.add_argument('--part-to-part-supports', action=argparse.BooleanOptionalAction, default=None,
                         help='allow primary supports to anchor on model material; braces always '
                              'use grounded support-network destinations')
@@ -1249,6 +1261,8 @@ def build_parser():
 
     example = sub.add_parser('support-example', parents=[common],
                             help='build the support editor attachment example and optionally save its illustrative STL')
+    example.add_argument('--layout', choices=('array', 'part-to-part'), default='array',
+                         help='attachment array or a broad lower-model platform demonstrating model anchors')
     example.add_argument('--height-mm', type=float, default=20.0,
                          help='height of four fixed example contacts, from 3 to 160 mm')
     example.add_argument('--output', help='optional illustrative STL destination; no print validation is performed')

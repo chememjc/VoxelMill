@@ -8,7 +8,7 @@ import tempfile
 
 from PySide6 import QtCore, QtWidgets
 
-from ..config import (BASE_TYPES, MODEL_ANCHOR_SHAPES, SMALL_PILLAR_MODES,
+from ..config import (BRACE_DESTINATIONS, BRACE_PATTERNS, BASE_TYPES, MODEL_ANCHOR_SHAPES, SMALL_PILLAR_MODES,
                       SMALL_PILLAR_SHAPES, TIP_SHAPES, resolve_settings, validate_settings)
 from ..contracts import VoxelMillError
 from .. import profiles
@@ -20,7 +20,9 @@ from .jobs import JobRunner
 SECTIONS = {'printer': ('printer',), 'resin': ('resin', 'process'), 'support': ('support',)}
 FILTERS = {'printer': 'Printer profile (*.ptr)', 'resin': 'Resin profile (*.res)',
            'support': 'Support preset (*.json)'}
-ENUMS = {('support', 'base_type'): BASE_TYPES,
+ENUMS = {('support', 'brace_destination'): BRACE_DESTINATIONS,
+         ('support', 'brace_pattern'): BRACE_PATTERNS,
+         ('support', 'base_type'): BASE_TYPES,
          ('support', 'model_anchor_shape'): MODEL_ANCHOR_SHAPES,
          ('support', 'small_pillar_mode'): SMALL_PILLAR_MODES,
          ('support', 'small_pillar_shape'): SMALL_PILLAR_SHAPES,
@@ -34,10 +36,16 @@ HELP = {
     'tree_cluster_mm': 'Tree cluster radius. 0 uses twice the support spacing.',
     'part_to_part_avoidance': '0: compare routes equally by length. 1: prefer any available plate route. '
                               'At 0.5 a model route must be less than half the plate route length.',
+    'brace_destination': 'Supports only: grounded support network. Base only: new checked feet. Supports or base: try grounded supports first. Model parts never anchor braces.',
+    'brace_pattern': 'Single diagonals; alternating XY directions at successive levels; or paired X diagonals between vertical shaft spans. X crossings share a junction. Base feet use fan branches in every pattern.',
+    'brace_branches_per_node': 'Maximum distinct neighbour connections per vertical spacing interval, 1–8. Incoming connections count too. Each X pair consumes one slot. Clearance can reduce the result.',
+    'brace_angle_deg': 'Downward angle from horizontal, between 0 and 90 degrees. Default 45 gives equal horizontal travel and vertical drop.',
+    'brace_min_height_mm': 'Minimum origin height above the plate. 0 allows every shoulder-derived level.',
+    'brace_azimuth_deg': 'Rotate base fans and the alternating direction axis around Z, in degrees.',
     'brace_diameter_mm': 'Brace diameter. 0 derives half the thinner adjoining pillar diameter.',
     'brace_max_distance_mm': 'Maximum neighbor distance for finding an existing support destination. 0 derives 1.5 times primary support spacing.',
     'brace_spacing_mm': 'Vertical spacing between downward brace origins, measured from each support shoulder. Default 15 mm.',
-    'brace_max_length_mm': 'Maximum complete 45-degree downward brace length, including the diagonal connection. Default 30 mm; unreachable candidates are omitted.',
+    'brace_max_length_mm': 'Maximum complete downward brace length, including the diagonal connection. Default 30 mm; unreachable candidates are omitted.',
     'tip_base_diameter_mm': 'Tip cone lower diameter. 0 uses the nominal pillar diameter.',
     'tip_shape': 'Top contact shape. Cone tapers from the tip-base diameter to the contact diameter; cylinder keeps the contact diameter.',
     'break_point_diameter_mm': 'Optional ball at the top contact for a controlled snap-off. 0 disables it. When set it must be at least the contact diameter and must fit in the tip length plus penetration.',
@@ -66,6 +74,25 @@ HELP = {
     'pixel_pitch_mm': 'Pixel width and height in mm, as a JSON array.',
     'layer_height_range_mm': 'Hard minimum and maximum layer height in mm, as a JSON array.',
     'motion': 'Reference motion fields as a JSON object; these are not a calibrated timing or strength model.',
+}
+
+
+BRACE_LABELS = {
+    'auto_bracing': 'Enable bracing',
+    'brace_spacing_mm': 'Vertical brace spacing (mm)',
+    'brace_max_distance_mm': 'Support-to-support reach (mm; 0 = auto)',
+    'brace_max_length_mm': 'Maximum branch length (mm)',
+    'brace_diameter_mm': 'Branch diameter (mm; 0 = auto)',
+    'brace_destination': 'Brace destinations',
+    'brace_branches_per_node': 'Connections per node (1–8)',
+    'brace_angle_deg': 'Branch angle from horizontal (°)',
+    'brace_pattern': 'Bracing pattern',
+    'brace_min_height_mm': 'Minimum origin height (mm)',
+    'brace_azimuth_deg': 'Fan / alternating rotation (°)',
+}
+BRACE_CHOICE_LABELS = {
+    'brace_destination': {'supports': 'Supports only', 'base': 'Base only', 'both': 'Supports or base'},
+    'brace_pattern': {'single': 'Single diagonals', 'alternating': 'Alternating diagonals', 'x': 'X bracing'},
 }
 
 
@@ -111,7 +138,7 @@ class ConfigurationEditor(QtWidgets.QDialog):
                        'resin': 'Resin properties and exposure process for the current printer. '
                        'A resin save also includes the current support settings.',
                        'support': 'Support dimensions, routing, bases and bracing. '
-                       'The example uses four fixed contacts; project contact selection is separate.'}[kind]
+                       'Choose an attachment array or a part-to-part gap example. Project contact selection is separate.'}[kind]
         intro = QtWidgets.QLabel(description)
         intro.setWordWrap(True)
         layout.addWidget(intro)
@@ -119,18 +146,30 @@ class ConfigurationEditor(QtWidgets.QDialog):
         layout.addWidget(splitter, 1)
         tabs = QtWidgets.QTabWidget()
         splitter.addWidget(tabs)
-        for section in SECTIONS[kind]:
+        self.tabs = tabs
+        if kind == 'support':
+            brace_keys = list(BRACE_LABELS)
+            anchor_keys = [key for key in self.draft['support'] if
+                           key.startswith(('model_anchor_', 'small_pillar_', 'part_to_part_'))
+                           or key == 'allow_part_to_part']
+            groups = [('Bracing', 'support', brace_keys),
+                      ('Pillars, tips & bases', 'support', [key for key in self.draft['support']
+                       if key not in brace_keys + anchor_keys]),
+                      ('Part-to-part', 'support', anchor_keys)]
+        else:
+            groups = [(section.title(), section, list(self.draft[section])) for section in SECTIONS[kind]]
+        for title, section, keys in groups:
             scroll = QtWidgets.QScrollArea()
             scroll.setWidgetResizable(True)
             holder = QtWidgets.QWidget()
             form = QtWidgets.QFormLayout(holder)
-            for key, value in self.draft[section].items():
-                field = self._field(section, key, value)
+            for key in keys:
+                field = self._field(section, key, self.draft[section][key])
                 self.fields[(section, key)] = field
-                label = key.replace('_', ' ').capitalize()
+                label = BRACE_LABELS.get(key, key.replace('_', ' ').capitalize())
                 form.addRow(label, field)
             scroll.setWidget(holder)
-            tabs.addTab(scroll, section.title())
+            tabs.addTab(scroll, title)
         self.status = QtWidgets.QLabel()
         self.status.setWordWrap(True)
         self.viewport = None
@@ -146,6 +185,15 @@ class ConfigurationEditor(QtWidgets.QDialog):
             right = QtWidgets.QWidget()
             right_layout = QtWidgets.QVBoxLayout(right)
             if kind == 'support':
+                self.example_layout = QtWidgets.QComboBox()
+                self.example_layout.addItem('Attachment array (pillars / trees / bracing)', 'array')
+                self.example_layout.addItem('Part-to-part gap (lower and upper model)', 'part-to-part')
+                self.example_layout.currentIndexChanged.connect(self._changed)
+                right_layout.addWidget(self.example_layout)
+                self.model_anchor_demo = QtWidgets.QPushButton('Show part-to-part supports')
+                self.model_anchor_demo.setToolTip('Select the model gap, enable part-to-part routing and set plate avoidance to 0 in this draft.')
+                self.model_anchor_demo.clicked.connect(self._show_model_anchors)
+                right_layout.addWidget(self.model_anchor_demo)
                 controls = QtWidgets.QHBoxLayout()
                 controls.addWidget(QtWidgets.QLabel('Example contact height (mm)'))
                 self.height = QtWidgets.QDoubleSpinBox()
@@ -183,8 +231,9 @@ class ConfigurationEditor(QtWidgets.QDialog):
             field.toggled.connect(self._changed)
         elif (section, key) in ENUMS:
             field = QtWidgets.QComboBox()
-            field.addItems(ENUMS[(section, key)])
-            field.setCurrentText(value)
+            for choice in ENUMS[(section, key)]:
+                field.addItem(BRACE_CHOICE_LABELS.get(key, {}).get(choice, choice), choice)
+            field.setCurrentIndex(field.findData(value))
             field.currentTextChanged.connect(self._changed)
         else:
             field = QtWidgets.QLineEdit(value if isinstance(value, str) else json.dumps(value))
@@ -200,7 +249,7 @@ class ConfigurationEditor(QtWidgets.QDialog):
             if isinstance(field, QtWidgets.QCheckBox):
                 value = field.isChecked()
             elif isinstance(field, QtWidgets.QComboBox):
-                value = field.currentText()
+                value = field.currentData()
             elif isinstance(old, str):
                 value = field.text()
             else:
@@ -244,8 +293,9 @@ class ConfigurationEditor(QtWidgets.QDialog):
             self.status.setText('Build volume shown to scale; front bottom edge is green.')
         elif self.kind == 'support':
             height = self.height.value()
+            example_layout = self.example_layout.currentData()
             self.jobs.submit('example', lambda token, progress: support_example(
-                settings, height, cancel=token))
+                settings, height, layout=example_layout, cancel=token))
 
     def _preview_finished(self, result):
         if not result.ok:
@@ -258,11 +308,20 @@ class ConfigurationEditor(QtWidgets.QDialog):
         if self.viewport is not None and self._started:
             self.viewport.reset_camera()
         metrics = self.example['metrics']
-        self.status.setText(f"Example: {metrics['contacts_routed']}/4 routed, "
+        self.status.setText(f"Example: {metrics['contacts_routed']}/{len(self.example['contacts'])} routed, "
                             f"{metrics['routing']['model_anchor']} model anchors, "
                             f"{metrics['braces']} braces, "
                             f"{metrics['braces_collision_rejected']} braces blocked by model. "
-                            'Geometry illustration; no print validation or strength proof.')
+                            + self.example.get('hint', '') + ' Geometry illustration; no print validation or strength proof.')
+
+    def _show_model_anchors(self):
+        self._loading = True
+        self.example_layout.setCurrentIndex(self.example_layout.findData('part-to-part'))
+        self.fields['support', 'allow_part_to_part'].setChecked(True)
+        self.fields['support', 'part_to_part_avoidance'].setText('0')
+        self.tabs.setCurrentIndex(2)
+        self._loading = False
+        self._changed()
 
     def _populate(self, settings):
         self._loading = True
@@ -272,7 +331,7 @@ class ConfigurationEditor(QtWidgets.QDialog):
             if isinstance(field, QtWidgets.QCheckBox):
                 field.setChecked(value)
             elif isinstance(field, QtWidgets.QComboBox):
-                field.setCurrentText(value)
+                field.setCurrentIndex(field.findData(value))
             else:
                 field.setText(value if isinstance(value, str) else json.dumps(value))
         self._loading = False

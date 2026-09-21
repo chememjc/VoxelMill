@@ -38,9 +38,14 @@ The editor's **Configuration** menu includes dedicated **Printer**, **Resin**,
 and **Support** editors with portable configuration saves. The support editor
 renders an example attachment array as dimensions change. Primary part-to-part
 supports require explicit enabling and have an adjustable routing preference.
-Braces descend at 45° from each support shoulder, with independent diameter,
+Braces descend at 45° by default from each support shoulder, with independent diameter,
 vertical spacing (15 mm), neighbour reach, and maximum diagonal length (30 mm).
 They connect only to grounded supports or new plate feet, never model parts.
+**Unreleased:** brace destinations (`supports`, `base`, or `both`), branch angle,
+single/alternating/X patterns, per-node connection limits, minimum origin
+height, and azimuth are configurable. The Support editor puts these controls
+on its Bracing tab and includes a separate Part-to-part tab with an explicit
+model-gap example action.
 Supports land on a selectable base —
 default porous `grid`, the original convex `plate`, bare `none` feet, per-foot
 `pad` or `skate` shapes, a spanning-tree `skeleton`, or a `hex` lattice,

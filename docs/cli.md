@@ -37,10 +37,16 @@ These are accepted by every command except `goo-info`.
 | `--contour-supports` / `--no-contour-supports` | Also sample the outer perimeter of downward-face clusters. Off by default. |
 | `--boundary-supports` / `--no-boundary-supports` | Also sample open mesh boundary edges (crop cuts). Closed solids add none. Off by default. |
 | `--auto-bracing` / `--no-auto-bracing` | Automatic bracing, switched independently of contacts. |
-| `--brace-spacing-mm` | Vertical spacing between downward 45° brace origins, measured from each support shoulder, `support.brace_spacing_mm` (default 15 mm). |
+| `--brace-spacing-mm` | Vertical spacing between downward brace origins, measured from each support shoulder, `support.brace_spacing_mm` (default 15 mm). |
 | `--brace-diameter-mm` | Cross-brace diameter, `support.brace_diameter_mm`. `0` (default) derives it from the thinner of the two connected pillars. |
 | `--brace-max-distance-mm` | Farthest a pillar neighbour may be and still be braced, `support.brace_max_distance_mm`. `0` (default) derives `1.5 * spacing_mm`. |
-| `--brace-max-length-mm` | Maximum complete downward diagonal brace length, `support.brace_max_length_mm` (default 30 mm). Candidates that cannot reach a valid grounded destination are omitted. |
+| `--brace-max-length-mm` | Maximum complete downward diagonal brace length, `support.brace_max_length_mm` (default 30 mm). Candidates that cannot reach a valid configured destination are omitted. |
+| `--brace-destination {supports,base,both}` | Restrict brace destinations to grounded supports, new base feet, or both. `both` prefers supports and is the default. |
+| `--brace-pattern {single,alternating,x}` | Use single diagonals, alternate direction by vertical level, or paired X diagonals between reciprocal vertical shaft spans. Base landings fan in every pattern. |
+| `--brace-branches-per-node N` | Maximum distinct connections per vertical spacing interval, from 1 to 8. Shared incoming connections count; an X pair uses one neighbor slot. |
+| `--brace-angle-deg DEG` | Downward branch angle from horizontal, strictly between 0° and 90°; default 45° gives equal horizontal travel and vertical drop. |
+| `--brace-min-height-mm` | Minimum brace origin height above the plate, `support.brace_min_height_mm`; default 0 allows every shoulder-derived level. |
+| `--brace-azimuth-deg` | Rotate base landing fans and the alternating direction axis around Z, `support.brace_azimuth_deg`; default 0°. |
 | `--part-to-part-supports` / `--no-part-to-part-supports` | Allow or forbid primary support anchors on model material. Braces always require a support-only path to the plate or generated base. |
 | `--part-to-part-avoidance VALUE` | Route preference from `0` (equal length competition) to `1` (historical plate preference); intermediate values require a proportionally shorter model route. |
 | `--peel-analysis` / `--no-peel-analysis` | Enable or skip the uncalibrated downward-surface peel advisory. Skipping reports `not_run`. Thresholds use `--set peel.KEY=VALUE`. |
@@ -55,6 +61,10 @@ These are accepted by every command except `goo-info`.
 | `--acceleration {auto,cpu,cuda}` | Raster morphology backend. `auto` (default) uses CUDA after a successful runtime and device probe, otherwise CPU. `cuda` is refused when no device is available rather than silently falling back. |
 | `--cuda-device N` | Zero-based CUDA device used when acceleration selects CUDA. |
 | `--report PATH`, `--progress` | Report destination, and progress on stderr. |
+
+The destination, pattern, per-node limit, angle, minimum-height, and azimuth
+brace options are **Unreleased** additions; the 0.5.3 release record covers the
+earlier shoulder-branch controls only.
 
 Precedence runs defaults → printer → matching resin process → explicit options,
 so a flag always beats a profile. `voxelmill profile` prints the result of that
@@ -691,10 +701,11 @@ summary instead of that line.
 
 ## `support-example`
 
-    voxelmill support-example --height-mm 20 --output output/support-example.stl
+    voxelmill support-example --height-mm 20 --layout array --output output/support-example.stl
 
-Builds the same four-contact attachment illustration used by the support
-editor. `--height-mm` accepts 3–160 mm; `--output` optionally writes its
+Builds the attachment illustration used by the support editor. `--layout array`
+(the default) uses four contacts; `--layout part-to-part` uses a broad lower
+and upper model platform to demonstrate model anchors. `--height-mm` accepts 3–160 mm; `--output` optionally writes its
 illustrative STL. It uses the production router and reports routing and brace
 evidence, but performs no print validation, drainage certification, or strength
 proof. The output is a visual example only.
@@ -706,6 +717,11 @@ evidence are included in the JSON report. Skate, skeleton, grid and hex also
 honor their `base_*` settings through `--set`, including
 `support.base_edge_slope_deg` for a base that tapers inward from the plate;
 values are preserved in portable support presets.
+
+Use `--layout part-to-part --part-to-part-supports --part-to-part-avoidance 0`
+to select the lower/upper model-gap example and explicitly enable its primary
+model anchor. The bracing controls still apply to the selected layout, and
+brace destinations never use model material.
 
 `--model-anchor-shape cone|cylinder` selects the independent bottom connector.
 Defaults are `model_anchor_length_mm=2`, `model_anchor_diameter_mm=0.4`, and

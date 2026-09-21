@@ -1175,12 +1175,26 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
 
 - **Support "bridging" is called bracing in this codebase.** The feature is
   `supports._brace`, gated by `support.auto_bracing` and sized by
-  `brace_spacing_mm`, `brace_max_length_mm`, `brace_diameter_mm` and
-  `brace_max_distance_mm`. Version 0.5.3 removes the old bottom-up
-  `brace_start_height_mm`. Grep for `bridge` and you will find only a GUI/CLI
-  docstring. Both GUI surfaces expose all five by construction — they are
-  generated from `config.DEFAULTS` — so a missing bracing control can only ever
-  be a CLI gap.
+  `brace_spacing_mm`, `brace_max_length_mm`, `brace_diameter_mm`,
+  `brace_max_distance_mm`, and the unreleased destination, pattern, angle,
+  density, minimum-height, and azimuth controls. Version 0.5.3 removes the old
+  bottom-up `brace_start_height_mm`. Grep for `bridge` and you will find only a
+  GUI/CLI docstring. Generated fields alone did not make these controls easy
+  to find: brace spacing and reach were buried in Advanced settings and the
+  long support form. The Bracing tab now groups them explicitly, and the
+  main Setup form exposes the common controls at the Simple tier.
+
+- **An inclined cylinder cap leaves a notch beneath a horizontal tip base.**
+  A connected boolean alone does not catch this visible defect. Probe volumes
+  below the tip base at 20°, 45°, and 70° expose the missing sector. A lower
+  hemisphere fills it within the checked shaft capsule; a small buried collar
+  provides volumetric overlap without widening the tip taper.
+
+- **Alternating brace levels need shared bands.** Counting every incoming
+  diagonal endpoint against the next origin with a symmetric distance test
+  suppresses every second alternating level. Alternating and X patterns count
+  connections in shoulder-derived bands; the original single pattern retains
+  its minimum shared-height interval.
 
 - **Raising `--workers` does nothing, because only the prefetch is parallel.**
   The bracket `prepare` takes 61.3, 61.2, 61.6, 61.0 and 60.5 s at 2, 4, 8, 16
@@ -1474,3 +1488,10 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
 - **Windows VirtualBox guests hang QVTK before `window.show()`.** Detect the
   `VBoxGuest` service and set `QT_OPENGL=software` before `QApplication`; leave
   a real GPU and an already-set `QT_OPENGL` alone.
+
+- **Capture native VTK widgets through the actual window.** `QWidget.grab()`
+  repaints the native OpenGL child into a software buffer and produced corrupt
+  preview screenshots under Xvfb, although `vtkWindowToImageFilter` frames were
+  correct. `dialog.screen().grabWindow(int(dialog.winId()))` captures the rendered
+  X11 window correctly. The AppImage acceptance harness uses that path for full
+  editor images and VTK readback for viewport-only images.

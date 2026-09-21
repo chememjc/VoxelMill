@@ -349,3 +349,22 @@ VOXELMILL_SAMPLES=1 .venv/bin/python -m pytest -q -m samples   # full-resolution
 
 The full-resolution suite over the immutable originals is opt-in because it is
 slow. The GUI's real-render test needs `xvfb-run` and skips cleanly without it.
+
+
+## Configurable support illustrations (unreleased)
+
+Compare dense X bracing with a clearly visible model-to-model gap:
+
+```sh
+voxelmill support-example --brace-destination supports --brace-pattern x \
+  --brace-branches-per-node 3 --brace-spacing-mm 8 --brace-max-distance-mm 12 \
+  --brace-angle-deg 60 --output output/x-bracing.stl
+voxelmill support-example --layout part-to-part --part-to-part-supports \
+  --part-to-part-avoidance 0 --output output/model-gap.stl
+```
+
+These examples use the production router but are illustrations, not validated
+print jobs. The Support editor exposes the same options in **Bracing** and
+**Part-to-part**, with a **Show part-to-part supports** action for the model gap.
+X pairs require reciprocal vertical shaft spans; obstructed or unreachable
+branches are omitted. Model parts never anchor braces.

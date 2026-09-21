@@ -140,3 +140,22 @@ def small_model_pillar(start, end, radius, shape='cone', upper_depth=0.0,
     if solid.status() != m.Error.NoError or solid.is_empty() or solid.volume() <= 0:
         raise VoxelMillError('invalid_support', 'Model pillar construction did not produce valid geometry')
     return solid
+
+
+def shoulder_joint(center, radius, tip_radius, tip_span):
+    """Fill the notch between an inclined shaft and a horizontal tip base.
+
+    The lower hemisphere stays within the shaft's checked endpoint capsule.
+    A small axial collar overlaps the tip without changing its outer taper.
+    """
+    import manifold3d as m
+    from .geometry import cylinder_between
+    center = np.asarray(center, dtype=float)
+    sphere = elbow_sphere(center, radius)
+    lower = m.Manifold.cube((2 * radius, 2 * radius, radius)).translate(
+        center - np.array([radius, radius, radius]))
+    joint = sphere ^ lower
+    overlap = min(radius, tip_span) * .01
+    collar_r = min(radius, tip_radius) * .5
+    return joint + cylinder_between(center - [0., 0., overlap],
+                                    center + [0., 0., overlap], collar_r)

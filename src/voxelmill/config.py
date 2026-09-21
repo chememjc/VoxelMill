@@ -16,6 +16,8 @@ MODEL_ANCHOR_SHAPES = ('cone', 'cylinder')
 SMALL_PILLAR_MODES = ('middle', 'model')
 SMALL_PILLAR_SHAPES = ('cone', 'cylinder')
 TIP_SHAPES = ('cone', 'cylinder')
+BRACE_DESTINATIONS = ('supports', 'base', 'both')
+BRACE_PATTERNS = ('single', 'alternating', 'x')
 SUPPORT_VOID_POLICIES = ('fail', 'ignore', 'fill')
 
 DEFAULTS = {
@@ -120,13 +122,16 @@ DEFAULTS = {
         # model-to-model connector, whose two ends penetrate independently.
         'small_pillar_mode': 'middle', 'small_pillar_shape': 'cone',
         'small_pillar_upper_depth_mm': 0.0, 'small_pillar_lower_depth_mm': 0.0,
-        # Downward 45-degree brace geometry.  Origins are sampled from the
+        # Downward brace geometry (45 degrees by default).  Origins are sampled from the
         # shoulder below each tip taper; brace_spacing_mm is vertical spacing
         # between those origins.  brace_max_length_mm is the complete diagonal
         # length limit, while brace_max_distance_mm independently limits the
         # neighboring support search.
         'brace_spacing_mm': 15.0, 'brace_diameter_mm': 0.0,
         'brace_max_distance_mm': 0.0, 'brace_max_length_mm': 30.0,
+        'brace_destination': 'both', 'brace_pattern': 'single',
+        'brace_branches_per_node': 1, 'brace_angle_deg': 45.0,
+        'brace_min_height_mm': 0.0, 'brace_azimuth_deg': 0.0,
         # What the supports land on. 'grid' is the default: less resin and
         # less suction than a solid slab, still one connected base. 'plate' is
         # the convex hull raft, with a 30 degree outer putty-knife bevel.
@@ -373,6 +378,15 @@ def validate_settings(settings):
             if type(value) is not bool:
                 _error(f'support.{key} must be boolean')
             continue
+        if key in ('brace_destination', 'brace_pattern'):
+            choices = BRACE_DESTINATIONS if key == 'brace_destination' else BRACE_PATTERNS
+            if value not in choices:
+                _error(f'support.{key} must be one of {", ".join(choices)}')
+            continue
+        if key == 'brace_branches_per_node':
+            if type(value) is not int or not 1 <= value <= 8:
+                _error('support.brace_branches_per_node must be an integer from 1 to 8')
+            continue
         if key == 'base_type':
             # An enum needs its own branch; the catch-all below requires a
             # positive finite number and would reject any string.
@@ -396,17 +410,17 @@ def validate_settings(settings):
             if type(value) is not int or not 1 <= value <= 10:
                 _error('support.max_island_passes must be an integer from 1 to 10')
             continue
-        if key == 'base_rotation_deg':
-            _number(value, 'support.base_rotation_deg', minimum=-360)
+        if key in ('base_rotation_deg', 'brace_azimuth_deg'):
+            _number(value, f'support.{key}', minimum=-360)
             if value > 360:
-                _error('support.base_rotation_deg must be between -360 and 360')
+                _error(f'support.{key} must be between -360 and 360')
             continue
         _number(value, f'support.{key}', positive=key not in (
             'penetration_mm', 'raft_expansion_mm', 'max_contact_gap_mm', 'max_contact_load_mm2',
             'tip_base_diameter_mm', 'small_pillar_diameter_mm', 'small_pillar_max_length_mm',
             'model_anchor_length_mm', 'model_anchor_diameter_mm', 'model_anchor_penetration_mm',
             'small_pillar_upper_depth_mm', 'small_pillar_lower_depth_mm',
-            'brace_diameter_mm', 'brace_max_distance_mm', 'part_to_part_avoidance',
+            'brace_diameter_mm', 'brace_max_distance_mm', 'brace_min_height_mm', 'part_to_part_avoidance',
             'base_touch_diameter_mm', 'base_thickness_mm', 'break_point_diameter_mm',
             'base_skate_length_mm', 'base_strut_width_mm', 'base_edge_slope_deg',
             'raft_slope_deg', 'tree_cluster_mm'))
@@ -424,6 +438,8 @@ def validate_settings(settings):
         _error('support.part_to_part_avoidance must be between 0 and 1')
     if not 0 < s['overhang_angle_deg'] < 90:
         _error('support.overhang_angle_deg must be between 0 and 90 exclusive')
+    if not 0 < s['brace_angle_deg'] < 90:
+        _error('support.brace_angle_deg must be between 0 and 90 exclusive')
     if not 0 < s['pillar_angle_deg'] < 90:
         _error('support.pillar_angle_deg must be between 0 and 90 exclusive')
     if s['tip_base_diameter_mm'] and s['contact_diameter_mm'] > s['tip_base_diameter_mm']:

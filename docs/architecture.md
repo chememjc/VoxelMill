@@ -102,8 +102,8 @@ Core data types and exceptions.
 | `MeshAsset(path, sha256, triangle_count, bounds, ...)` | Input file metadata |
 | `Placement(matrix, rotation_deg, center_offset_mm, model_lift_mm, bounds, search, scale=[1,1,1], mirror=[False,False,False])` | Affine placement plus search metadata. `scale`/`mirror` are the resolved per-axis factors and flips; defaulting to the identity keeps every pre-existing caller and archive resolving unchanged |
 | `ValidationReport(diagnostics, checks, metrics, ...)` | Evidence summary; `.passed` property checks all checks are run and none failed |
-| `SupportNode(id, position_mm, kind)` | Support graph vertex (foot, junction, contact, elbow, model_anchor) |
-| `SupportEdge(start, end, radius_mm, kind)` | Support graph edge (pillar, branched, tip, model_anchor) |
+| `SupportNode(id, position_mm, kind)` | Support graph vertex (foot, junction, contact, elbow, model_anchor, brace_junction) |
+| `SupportEdge(start, end, radius_mm, kind)` | Support graph edge (pillar, branched, tip, model_anchor, tree_trunk, tree_branch, brace, brace_foot) |
 | `SupportGraph(nodes, edges, overrides, diagnostics)` | Support tree and rejection list |
 | `Diagnostic(code, message, severity, layer, position_mm, details)` | Single evidence finding |
 

@@ -7,13 +7,20 @@ any nonzero sample as material so CTB 7-bit greys do not punch holes. Editor
 operation dumps skip keys a selected `--support-preset` overlays. Physical
 printing remains FEP-blocked. `todo.md` is the current restart ledger.
 
-Current support contract (0.5.3 alpha): primary part-to-part anchors are
+Released support contract (0.5.3 alpha): primary part-to-part anchors are
 opt-in (`allow_part_to_part=false` by default). Automatic braces are downward
 45° branches from the shoulder below each tip taper, with 15 mm vertical
 spacing and a 30 mm complete diagonal length limit. Brace destinations are
 always grounded support-network nodes or valid plate landings; model parts
 never anchor a brace. Earlier roadmap references to generic cross-bracing or a
 brace start height describe historical work and are superseded by this contract.
+
+Unreleased local update: brace destination mode, 1–8 connections per node,
+branch angle, single/alternating/X patterns, minimum origin height, and fan
+rotation are editable. The Bracing editor tab exposes distance controls, the
+Part-to-part example explicitly demonstrates model anchors, and angled/tree
+tip shoulders have continuous blends. See [local verification](reports/support-options-local.md);
+this update has not been pushed or published.
 
 Review update (2026-09-09, later): Editor STL open no longer crashes on
 `extra_models=None`. Multi-object pose controls, portable extra meshes, File >

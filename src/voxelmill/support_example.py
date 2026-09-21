@@ -14,7 +14,7 @@ from .geometry import manifold_triangles
 from .supports import build_column_field, route_contacts
 
 
-def support_example(settings, height_mm=20.0, *, cancel=None):
+def support_example(settings, height_mm=20.0, *, layout='array', cancel=None):
     """Return model/support/base triangle groups and routing evidence.
 
     Four fixed contacts sit under a floating beam. A pedestal beneath one
@@ -36,6 +36,13 @@ def support_example(settings, height_mm=20.0, *, cancel=None):
         (-spacing, -spacing, height_mm))
     pedestal = m.Manifold.cube((spacing * .8, spacing * .8, height_mm * .4)).translate(
         (-spacing * .9, -spacing * .9, 0))
+    if layout not in ('array', 'part-to-part'):
+        raise VoxelMillError('invalid_example', 'Example layout must be array or part-to-part')
+    if layout == 'part-to-part':
+        # A broad lower platform makes the model-to-model gap legible. The
+        # router still obeys the user's allow/avoidance settings without edits.
+        pedestal = m.Manifold.cube((2 * spacing, 2 * spacing, height_mm * .4)).translate(
+            (-spacing, -spacing, 0))
     model = beam + pedestal
     triangles = manifold_triangles(model).astype(np.float32)
     bounds = np.asarray(model.bounding_box()).reshape(2, 3)
@@ -47,6 +54,8 @@ def support_example(settings, height_mm=20.0, *, cancel=None):
               'raft': (manifold_triangles(base) if base is not None
                        else np.empty((0, 3, 3)))}
     return {'triangles': groups, 'contacts': contacts, 'metrics': plan.metrics,
+            'layout': layout, 'hint': ('Enable part-to-part supports and set avoidance to 0 to compare model routes.'
+                                      if layout == 'part-to-part' else ''),
             'height_mm': float(height_mm), 'analysis_pitch_mm': .5,
             'basis': 'four fixed contacts; production router and geometry; '
                      'illustration only, no print validation or strength proof'}

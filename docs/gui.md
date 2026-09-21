@@ -307,8 +307,15 @@ production router. Its height control is 3–160 mm, and changing a setting
 invalidates the previous preview before an asynchronous replacement job is
 submitted. The status reports routed contacts, model anchors, generated
 downward braces, and braces rejected by model collision checks. Braces begin
-at the full-width shoulder below each tip taper, travel at 45°, and never
-anchor on model parts. Export example STL
+at the full-width shoulder below each tip taper, use the configured angle
+(45° by default), and never anchor on model parts. **Unreleased:** the first
+editor tab is
+**Bracing**: it contains spacing, support reach, maximum complete length,
+destination (`supports`, `base`, or `both`), pattern (`single`, `alternating`,
+or `x`), per-node connection limit, angle, minimum origin height, azimuth, and
+diameter. The separate **Part-to-part** tab contains model-anchor settings and
+a nearby selectable model-gap example. The “Show part-to-part supports” action explicitly enables primary
+part-to-part routing and sets plate avoidance to 0 in the draft. Export example STL
 writes this illustrative geometry only; it has no print validation or strength
 claim. Cancellation and stale-job results are discarded.
 The shared **base type** choices are `plate`, `none`, `pad`, `skate`,

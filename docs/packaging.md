@@ -230,3 +230,12 @@ image under the CUDA Toolkit EULA rather than under the MIT license. For a
 release artifact that carries no NVIDIA terms at all, build on a machine
 without CUDA or configure with `-DCMAKE_CUDA_COMPILER=`; the CPU morphology
 fallback covers the loss.
+
+
+For the unreleased configurable support update, add `--support-options` to
+`scripts/appimage_acceptance.py`. This exercises all three brace destination
+modes, density and angle edits, alternating and X patterns, the tree-junction
+preview, and enabled/disabled model anchors using the extracted application's
+Python, Qt, and VTK. It also checks support preset/project round trips and saves
+rendered PNGs beside `acceptance.json`. See the
+[local support-update verification](../reports/support-options-local.md).

@@ -11,7 +11,7 @@ from typing import Any
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from ..config import (
-    BASE_TYPES, DEFAULTS, MODEL_ANCHOR_SHAPES, SMALL_PILLAR_MODES,
+    BRACE_DESTINATIONS, BRACE_PATTERNS, BASE_TYPES, DEFAULTS, MODEL_ANCHOR_SHAPES, SMALL_PILLAR_MODES,
     SMALL_PILLAR_SHAPES, SUPPORT_VOID_POLICIES, TIP_SHAPES,
 )
 
@@ -38,6 +38,12 @@ SIMPLE_PATHS = {
 
 # Dedicated CLI flags mirrored from MainWindow.SETTING_KEYS.
 CLI_FLAGS = {
+    'support.brace_azimuth_deg': '--brace-azimuth-deg',
+    'support.brace_min_height_mm': '--brace-min-height-mm',
+    'support.brace_angle_deg': '--brace-angle-deg',
+    'support.brace_branches_per_node': '--brace-branches-per-node',
+    'support.brace_pattern': '--brace-pattern',
+    'support.brace_destination': '--brace-destination',
     'process.layer_height_mm': '--layer-height-mm',
     'support.spacing_mm': '--support-spacing-mm',
     'support.brace_spacing_mm': '--brace-spacing-mm',
@@ -57,6 +63,8 @@ CLI_FLAGS = {
 }
 
 ENUM_CHOICES = {
+    'support.brace_destination': BRACE_DESTINATIONS,
+    'support.brace_pattern': BRACE_PATTERNS,
     'support.base_type': BASE_TYPES,
     'support.tip_shape': TIP_SHAPES,
     'support.model_anchor_shape': MODEL_ANCHOR_SHAPES,
@@ -102,16 +110,23 @@ OVERRIDES: dict[str, dict[str, Any]] = {
     'process.tolerance_offset_mm': {'tier': 'expert', 'unit': 'mm', 'risk': 'uncalibrated'},
     'process.bottom_tolerance_offset_mm': {'tier': 'expert', 'unit': 'mm', 'risk': 'uncalibrated'},
     'support.spacing_mm': {'tier': 'simple', 'unit': 'mm', 'range': (0.2, 50.0)},
-    'support.brace_spacing_mm': {'tier': 'advanced', 'unit': 'mm', 'range': (0.1, 200.0),
+    'support.brace_spacing_mm': {'tier': 'simple', 'unit': 'mm', 'range': (0.1, 200.0),
                                  'risk': 'caution',
-                                 'tooltip': 'support.brace_spacing_mm — --set support.brace_spacing_mm=VALUE. Vertical spacing between downward 45° brace origins, measured from each support shoulder. Default 15 mm.'},
+                                 'tooltip': 'support.brace_spacing_mm — --set support.brace_spacing_mm=VALUE. Vertical spacing between downward brace origins, measured from each support shoulder. Default 15 mm.'},
     'support.brace_diameter_mm': {'tier': 'advanced', 'unit': 'mm', 'range': (0.0, 20.0),
                                   'risk': 'caution'},
-    'support.brace_max_distance_mm': {'tier': 'advanced', 'unit': 'mm', 'range': (0.0, 200.0),
+    'support.brace_max_distance_mm': {'tier': 'simple', 'unit': 'mm', 'range': (0.0, 200.0),
                                       'risk': 'caution'},
-    'support.brace_max_length_mm': {'tier': 'advanced', 'unit': 'mm', 'range': (0.1, 200.0),
+    'support.brace_max_length_mm': {'tier': 'simple', 'unit': 'mm', 'range': (0.1, 200.0),
                                     'risk': 'caution',
-                                    'tooltip': 'support.brace_max_length_mm — --set support.brace_max_length_mm=VALUE. Maximum complete 45° downward brace length. Default 30 mm; candidates that cannot reach a valid grounded support or plate landing are omitted.'},
+                                    'tooltip': 'support.brace_max_length_mm — --set support.brace_max_length_mm=VALUE. Maximum complete downward brace length. Default 30 mm; candidates that cannot reach a valid grounded support or plate landing are omitted.'},
+    'support.auto_bracing': {'tier': 'simple', 'label': 'Enable bracing'},
+    'support.brace_destination': {'tier': 'simple', 'label': 'Brace destinations (supports / base / both)'},
+    'support.brace_pattern': {'tier': 'simple', 'label': 'Bracing pattern'},
+    'support.brace_branches_per_node': {'tier': 'simple', 'range': (1, 8), 'label': 'Brace connections per node'},
+    'support.brace_angle_deg': {'tier': 'simple', 'unit': 'deg', 'range': (0.1, 89.9)},
+    'support.brace_min_height_mm': {'tier': 'advanced', 'unit': 'mm', 'range': (0.0, 200.0)},
+    'support.brace_azimuth_deg': {'tier': 'advanced', 'unit': 'deg', 'range': (-360.0, 360.0)},
     'support.allow_part_to_part': {'tier': 'advanced', 'risk': 'caution',
                                    'tooltip': 'support.allow_part_to_part — --set support.allow_part_to_part=VALUE. Allow primary supports to anchor on model material. Brace networks always require a continuous support-only path to the plate or generated base.'},
     'support.overhang_angle_deg': {'tier': 'simple', 'unit': 'deg', 'range': (1.0, 89.0)},

@@ -398,19 +398,39 @@ usable set. Which pillar radius (`run_r`) a routed run actually gets —
 decided once, from that run's total length (elbow included), before any
 of its cylinders or graph edges are built, so a small-pillar run is thin
 along its whole length rather than only near the tip. Elbows get a union
-sphere. Downward brace origins start at the full-width shoulder below each
+sphere. A lower-hemisphere shoulder blend and small axial collar close the
+notch where an angled or tree shaft meets the horizontal tip base; the blend
+stays within the checked endpoint capsule. Downward brace origins start at the
+full-width shoulder below each
 tip taper and are processed from highest to lowest at `brace_spacing_mm`
-(default 15 mm). Each branch stays at 45° and is limited by its complete
-diagonal `brace_max_length_mm` (default 30 mm); the independent
-`brace_max_distance_mm` controls which neighbors are considered. The router
-chooses the shortest valid existing grounded support or a valid plate landing,
-merges at the first support intersection, and suppresses duplicate connections
-inside the spacing interval. Model parts can never be brace destinations,
-even when primary part-to-part supports are enabled. Branches that collide
-with model material, leave the build volume, or cannot reach a valid landing
-are rejected and reported. Each strut's radius is scaled to the thinner of
-the two pillars it connects, so a small-pillar run is braced with a strut
-sized to itself rather than to the nominal diameter.
+(default 15 mm). Each branch uses `brace_angle_deg` (strictly between 0° and
+90°, default 45°) and is limited by its complete diagonal
+`brace_max_length_mm` (default 30 mm); the independent
+`brace_max_distance_mm` controls which neighbors are considered. The
+`brace_destination` policy chooses grounded supports, new base feet, or both;
+the latter tries grounded supports first. The router chooses the shortest valid
+destination, merges at the first support intersection, and suppresses
+duplicate connections inside the spacing interval. Model parts can never be
+brace destinations, even when primary part-to-part supports are enabled.
+Branches that collide with model material, leave the build volume, or cannot
+reach a valid landing are rejected and reported. Base landings use fan spokes
+in every pattern and are checked with the configured base footprint.
+
+**Unreleased pattern and density controls:** `brace_pattern="single"` emits unpaired diagonals toward the shortest eligible neighbors.
+`"alternating"` changes the direction by shoulder-derived vertical level.
+`"x"` requires two reciprocal vertical shaft spans and emits paired diagonals;
+if either reciprocal branch is unavailable or collides, the pair is rejected.
+Single spacing uses the minimum shared-height interval. Alternating and X
+patterns count shared connections in their shoulder-derived level bands;
+this prevents incoming diagonal ends from suppressing every second alternating
+level. An X pair
+uses one neighbor slot in each touched band and overlapping endpoint bands count
+once. `brace_branches_per_node` limits distinct connections per interval from
+1 to 8 and counts incoming connections. `brace_min_height_mm` excludes lower
+origins, and `brace_azimuth_deg` rotates base fans and the alternating axis.
+Each strut's radius is scaled to the thinner of the two pillars it connects,
+so a small-pillar run is braced with a strut sized to itself rather than to the
+nominal diameter.
 
 A new plate landing uses a short vertical foot stem below the diagonal so the
 tilted end cap stays above Z=0. The length limit applies to the diagonal axis;

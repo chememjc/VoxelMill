@@ -1046,7 +1046,9 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
             if base_z - middle_z > 1e-9:
                 if kind == 'vertical' and support['tree_supports'] and base_z > 1e-9:
                     tree_jobs.append({'x': x, 'y': y, 'base_z': base_z, 'run_r': run_r,
-                                      'middle_z': middle_z, 'order': order})
+                                      'middle_z': middle_z, 'order': order,
+                                      'tip_radius': min(tip_base_r, contact_r),
+                                      'tip_span': float(z + penetration - base_z)})
                 else:
                     solids.append(cylinder_between((x, y, middle_z), (x, y, base_z), run_r))
                     _mark_occupied(field, (x, y, middle_z), (x, y, base_z), run_r)
@@ -1060,6 +1062,9 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         top_base = run_r if (kind == 'model_anchor' and not full_middle) else tip_base_r
         solids.append(tip_segment((x, y, base_z), (x, y, z + penetration), top_base, contact_r,
                                   support['tip_shape'], top_ball))
+        if elbow is not None:
+            from .support_segments import shoulder_joint
+            solids.append(shoulder_joint((x, y, base_z), run_r, min(top_base, contact_r), tip_span))
         tips_used.append(tip_used)
         if not exempt:
             routed_automatic.append((x, y, z))
@@ -1139,7 +1144,9 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         'brace_origins_examined': brace_evidence.get('origins_examined', 0),
         'brace_spacing_mm': brace_geometry(settings, pillar_r)[0],
         'brace_max_length_mm': brace_geometry(settings, pillar_r)[1],
-        'brace_geometry': 'downward 45 degrees; origins descend from full-width shoulders',
+        'brace_geometry': f"downward {support['brace_angle_deg']:g} degrees; origins descend from full-width shoulders",
+        **{key: support[key] for key in ('brace_destination', 'brace_pattern',
+            'brace_branches_per_node', 'brace_angle_deg', 'brace_min_height_mm', 'brace_azimuth_deg')},
         'brace_rejections': {key: value for key, value in brace_evidence.items()
                              if key.endswith('_rejected')},
         'brace_new_feet': brace_evidence.get('new_feet', 0),
@@ -1256,6 +1263,11 @@ def _emit_tree_supports(jobs, solids, pillars, feet, foot_radii, field, settings
             elif job['base_z'] - trunk_top > 1e-9:
                 solids.append(cylinder_between((tx, ty, trunk_top),
                                                (tx, ty, job['base_z']), job['run_r']))
+        from .support_segments import shoulder_joint
+        for job in group:
+            solids.append(shoulder_joint((job['x'], job['y'], job['base_z']), job['run_r'],
+                job.get('tip_radius', min(job['run_r'], float(support['contact_diameter_mm']) / 2)),
+                job.get('tip_span', float(support['tip_length_mm']))))
         if graph is not None:
             old_feet = {f"foot{job['order']}" for job in group}
             graph.nodes[:] = [node for node in graph.nodes if node.id not in old_feet]
@@ -1473,10 +1485,10 @@ def _brace_clear(field, start, end, radius, clearance, cancel=None, exclude=None
     return True
 
 
-def _cone_intersections(origin, start, end):
-    """Points on a segment meeting the downward 45-degree cone."""
+def _cone_intersections(origin, start, end, tangent=1.0):
+    """Points on a segment meeting a cone with rise/run equal to tangent."""
     offset, direction = start - origin, end - start
-    metric = np.array([1., 1., -1.])
+    metric = np.array([tangent * tangent, tangent * tangent, -1.])
     a = float((direction * metric) @ direction)
     b = float(2 * (offset * metric) @ direction)
     c = float((offset * metric) @ offset)
@@ -1516,7 +1528,7 @@ def _brace_base_clear(field, bounds, clearance, cancel):
 
 def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
            cancel=None, graph=None, feet=None, foot_radii=None):
-    """Grow grounded 45-degree branches downward, preserving the primary shafts.
+    """Grow configurable grounded branches downward, preserving the primary shafts.
 
     Only shaft edges reachable from plate feet without passing through a model
     contact are admitted. Every accepted branch joins that grounded network or
@@ -1530,7 +1542,8 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
     evidence = evidence if evidence is not None else {}
     for key in ('collision_rejected', 'bounds_rejected', 'foot_rejected',
                 'length_rejected', 'spacing_rejected', 'ungrounded_rejected',
-                'no_destination_rejected', 'examined', 'origins_examined', 'new_feet'):
+                'no_destination_rejected', 'pattern_rejected', 'duplicate_rejected',
+                'examined', 'origins_examined', 'new_feet'):
         evidence.setdefault(key, 0)
     evidence.setdefault('capped', False)
     radius = float(support['pillar_diameter_mm']) / 2
@@ -1538,6 +1551,14 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
     if interval <= 0 or max_length <= 0:
         return 0
     max_distance = float(support['brace_max_distance_mm']) or float(support['spacing_mm']) * 1.5
+    destination_mode = support['brace_destination']
+    pattern = support['brace_pattern']
+    quota = support['brace_branches_per_node']
+    tangent = math.tan(math.radians(support['brace_angle_deg']))
+    azimuth = math.radians(support['brace_azimuth_deg'])
+    minimum_height = support['brace_min_height_mm']
+    connections = []
+    used_rays = {}
     clearance = float(support['support_clearance_mm'])
     build = np.asarray(settings['printer']['build_mm'], dtype=float)
     margin = float(settings['printer']['edge_clearance_mm'])
@@ -1611,8 +1632,16 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
     added = 0
 
     def close_interval(owners, z):
-        return any(abs(z - previous) < interval - 1e-8
-                   for owner in owners for previous in connected.get(owner, ()))
+        def same_interval(owner, previous):
+            if pattern == 'single':
+                return abs(z - previous) < interval - 1e-8
+            # Alternating and X patterns share shoulder-derived level bands.
+            # Counting an incoming lower end against the next level would
+            # suppress every second alternating diagonal.
+            band = lambda height: math.floor((shoulders[owner] - height + 1e-8) / interval)
+            return band(z) == band(previous)
+        return any(sum(any(same_interval(owner, height) for height in previous)
+                       for previous in connected.get(owner, ())) >= quota for owner in owners)
 
     def attempt():
         cancel.check()
@@ -1656,6 +1685,48 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
                 return segment
         return None
 
+    def duplicate(owner, target_owners, z, destination_z):
+        return any(((owner in first and target_owners & second
+                     and abs(z - high) < interval - 1e-8)
+                    or (owner in second and target_owners & first
+                        and abs(destination_z - high) < interval - 1e-8))
+                   for first, second, high in connections)
+
+    def allowed_direction(origin, destination, level):
+        if pattern != 'alternating':
+            return True
+        delta = destination[:2] - origin[:2]
+        rotated = np.array([math.cos(azimuth), math.sin(azimuth)])
+        forward = float(delta @ rotated)
+        if abs(forward) < 1e-8:
+            forward = float(delta @ np.array([-rotated[1], rotated[0]]))
+        return forward * (-1 if level % 2 else 1) > 1e-8
+
+    def reciprocal(origin, destination, owner, target):
+        # Paired Xs need two complete, parallel vertical shaft spans. Tree or
+        # elbow spans that do not have this geometry are rejected explicitly.
+        if target['edge'].kind == 'brace' or len(target['owners']) != 1:
+            return None
+        target_owner = next(iter(target['owners']))
+        high = np.array([*destination[:2], origin[2]])
+        low = np.array([*origin[:2], destination[2]])
+        for who, a, b in ((owner, origin, low), (target_owner, high, destination)):
+            midpoint = (a + b) / 2
+            if any(segment_at(who, point) is None for point in (a, midpoint, b)):
+                return None
+        # A reciprocal diagonal cannot bypass a different grounded shaft.
+        distance = float(np.linalg.norm(low - high))
+        direction = (low - high) / distance
+        for segment in segments:
+            if segment['owners'] & {owner, target_owner}:
+                continue
+            for point in _cone_intersections(high, segment['start'], segment['end'], tangent):
+                delta = point - high
+                if (np.linalg.norm(delta) < distance - 1e-7
+                        and np.linalg.norm(delta / np.linalg.norm(delta) - direction) < 1e-7):
+                    return None
+        return high, low, target_owner
+
     while origins:
         cancel.check()
         if evidence['origins_examined'] >= limit:
@@ -1671,148 +1742,214 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
             next_point = lo + (hi - lo) * ((next_z - lo[2]) / (hi[2] - lo[2]))
             heapq.heappush(origins, (-next_z, float(next_point[0]), float(next_point[1]),
                                     owner, lo_tuple, hi_tuple, shaft_r))
+        if z < minimum_height - 1e-8:
+            continue
+        level = round((shoulders[owner] - z) / interval)
         if close_interval({owner}, z):
             evidence['spacing_rejected'] += 1
             continue
-        strut_r = float(support['brace_diameter_mm']) / 2 or shaft_r * .5
-        candidates = []
-        for index, segment in enumerate(segments):
-            if index % 64 == 0:
-                cancel.check()
-            if owner in segment['owners']:
-                continue
-            a, b = segment['start'], segment['end']
-            if np.linalg.norm(np.maximum(np.maximum(np.minimum(a[:2], b[:2]) - origin[:2],
-                                                   origin[:2] - np.maximum(a[:2], b[:2])), 0)) > max_distance:
-                continue
-            for point in _cone_intersections(origin, a, b):
-                distance = float(np.linalg.norm(point - origin))
-                if np.linalg.norm(point[:2] - origin[:2]) <= max_distance + 1e-8:
-                    candidates.append((distance, index, tuple(point)))
-        # Keep the first centerline crossing on each downward ray, even when
-        # its spacing interval is occupied: continuing through it would add an
-        # unrecorded junction and bypass shared-connection suppression.
-        rays = []
-        first_candidates = []
-        for candidate in sorted(candidates):
-            delta = np.asarray(candidate[2]) - origin
-            direction = delta / candidate[0]
-            if any(np.linalg.norm(direction - ray) < 1e-7 for ray in rays):
-                continue
-            rays.append(direction)
-            first_candidates.append(candidate)
-        accepted = None
-        for distance, index, destination in first_candidates:
-            if not attempt():
-                return added
-            segment = segments[index]
-            strut_r = (float(support['brace_diameter_mm']) / 2
-                       or min(shaft_r, segment['edge'].radius_mm) * .5)
-            if distance > max_length + 1e-8:
-                evidence['length_rejected'] += 1
-                continue
-            if close_interval(segment['owners'], destination[2]):
-                evidence['spacing_rejected'] += 1
-                continue
-            destination = np.asarray(destination)
-            if not inside(origin, destination, strut_r):
-                evidence['bounds_rejected'] += 1
-                continue
-            if field is not None and not _brace_clear(field, origin, destination, strut_r, clearance, cancel):
-                evidence['collision_rejected'] += 1
-                continue
-            accepted = (destination, segment)
-            break
-        if accepted is None:
-            # A short vertical landing stem keeps the entire diagonal cylinder
-            # above Z=0, including its tilted end disc. It joins the configured
-            # base and is also valid with bare feet (base_type=none).
+        for slot in range(quota):
+            if close_interval({owner}, z):
+                break
             strut_r = float(support['brace_diameter_mm']) / 2 or shaft_r * .5
-            landing_z = strut_r
-            drop = z - landing_z
-            if drop > 1e-6 and math.sqrt(2) * drop <= max_length + 1e-8:
-                for angle in np.arange(16) * (2 * math.pi / 16):
+            candidates = []
+            ray_key = (owner, tuple(origin))
+            previous_rays = used_rays.setdefault(ray_key, [])
+            for index, segment in enumerate(segments):
+                if index % 64 == 0:
+                    cancel.check()
+                if destination_mode == 'base' or owner in segment['owners']:
+                    continue
+                a, b = segment['start'], segment['end']
+                if np.linalg.norm(np.maximum(np.maximum(np.minimum(a[:2], b[:2]) - origin[:2],
+                                                       origin[:2] - np.maximum(a[:2], b[:2])), 0)) > max_distance:
+                    continue
+                for point in _cone_intersections(origin, a, b, tangent):
+                    distance = float(np.linalg.norm(point - origin))
+                    if np.linalg.norm(point[:2] - origin[:2]) <= max_distance + 1e-8:
+                        candidates.append((distance, index, tuple(point)))
+            # Keep the first centerline crossing on each downward ray, even when
+            # its spacing interval is occupied: continuing through it would add an
+            # unrecorded junction and bypass shared-connection suppression.
+            rays = []
+            first_candidates = []
+            for candidate in sorted(candidates):
+                delta = np.asarray(candidate[2]) - origin
+                direction = delta / candidate[0]
+                if any(np.linalg.norm(direction - ray) < 1e-7 for ray in rays):
+                    continue
+                rays.append(direction)
+                first_candidates.append(candidate)
+            accepted = None
+            reverse = None
+            for distance, index, destination in first_candidates:
+                if not attempt():
+                    return added
+                segment = segments[index]
+                destination = np.asarray(destination)
+                if not allowed_direction(origin, destination, level):
+                    evidence['pattern_rejected'] += 1
+                    continue
+                direction = (destination - origin) / distance
+                if (any(np.linalg.norm(direction - ray) < 1e-7 for ray in previous_rays)
+                        or duplicate(owner, segment['owners'], z, destination[2])):
+                    evidence['duplicate_rejected'] += 1
+                    continue
+                strut_r = (float(support['brace_diameter_mm']) / 2
+                           or min(shaft_r, segment['edge'].radius_mm) * .5)
+                if distance > max_length + 1e-8:
+                    evidence['length_rejected'] += 1
+                    continue
+                if close_interval(segment['owners'], destination[2]):
+                    evidence['spacing_rejected'] += 1
+                    continue
+                destination = np.asarray(destination)
+                if not inside(origin, destination, strut_r):
+                    evidence['bounds_rejected'] += 1
+                    continue
+                if field is not None and not _brace_clear(field, origin, destination, strut_r, clearance, cancel):
+                    evidence['collision_rejected'] += 1
+                    continue
+                if pattern == 'x':
                     if not attempt():
                         return added
-                    destination = np.array([origin[0] + drop * math.cos(angle),
-                                            origin[1] + drop * math.sin(angle), landing_z])
-                    direction = (destination - origin) / np.linalg.norm(destination - origin)
-                    # Existing intersections already failed their policy or
-                    # clearance checks above. A new foot must not pass through
-                    # one of them and silently make an extra connection.
-                    crossing = False
-                    for segment in segments:
-                        if owner in segment['owners']:
-                            continue
-                        for point in _cone_intersections(origin, segment['start'], segment['end']):
-                            delta = point - origin
-                            if (np.linalg.norm(delta) < np.linalg.norm(destination - origin) - 1e-7
-                                    and np.linalg.norm(delta / np.linalg.norm(delta) - direction) < 1e-7):
-                                crossing = True
-                                break
-                        if crossing:
-                            break
-                    if crossing:
+                    reverse = reciprocal(origin, destination, owner, segment)
+                    if reverse is None:
+                        evidence['pattern_rejected'] += 1
+                        continue
+                    high, low, target_owner = reverse
+                    if close_interval({target_owner}, high[2]) or close_interval({owner}, low[2]):
                         evidence['spacing_rejected'] += 1
                         continue
-                    if not inside(origin, destination, strut_r):
+                    if not inside(high, low, strut_r):
                         evidence['bounds_rejected'] += 1
                         continue
-                    bottom = np.array([*destination[:2], 0.])
-                    pad = build_base([destination[:2]], settings, radius,
-                                     foot_radii=[strut_r], cancel=cancel)['solid']
-                    if pad is not None:
-                        bounds = np.asarray(pad.bounding_box()).reshape(2, 3)
-                        if np.any(bounds[0] < lower - 1e-8) or np.any(bounds[1] > upper + 1e-8):
-                            evidence['foot_rejected'] += 1
-                            continue
-                        if field is not None and not _brace_base_clear(field, bounds, clearance, cancel):
-                            evidence['foot_rejected'] += 1
-                            continue
-                    if field is not None and (not _brace_clear(field, origin, destination, strut_r, clearance, cancel)
-                            or not _brace_clear(field, bottom, destination, strut_r, clearance, cancel)):
+                    if field is not None and not _brace_clear(field, high, low, strut_r, clearance, cancel):
                         evidence['collision_rejected'] += 1
                         continue
-                    accepted = (destination, None)
-                    break
-            elif drop > 1e-6:
-                evidence['length_rejected'] += 1
-        if accepted is None:
-            evidence['no_destination_rejected'] += 1
-            continue
-        destination, target = accepted
-        origin_segment = segment_at(owner, origin)
-        if origin_segment is None:
-            evidence['ungrounded_rejected'] += 1
-            continue
-        origin_id = split(origin_segment, origin)
-        if target is None:
-            foot_id, destination_id = f'brace_foot{added}', f'brace_landing{added}'
-            bottom = [*destination[:2], 0.]
-            for node in (SupportNode(foot_id, bottom, 'foot'),
-                         SupportNode(destination_id, destination.tolist(), 'brace_junction')):
-                graph.nodes.append(node)
-                nodes[node.id] = node
-            stem = SupportEdge(foot_id, destination_id, strut_r, 'brace_foot')
-            graph.edges.append(stem)
-            solids.append(cylinder_between(bottom, destination, strut_r))
-            feet.append(tuple(destination[:2]))
-            foot_radii.append(strut_r)
-            evidence['new_feet'] += 1
-            owners = {owner}
-            segments.append({'start': np.asarray(bottom), 'end': destination,
-                             'edge': stem, 'owners': owners})
-        else:
-            destination_id = split(target, destination)
-            owners = {owner} | target['owners']
-            for target_owner in target['owners']:
-                connected[target_owner].append(float(destination[2]))
-        connected[owner].append(z)
-        edge = SupportEdge(origin_id, destination_id, strut_r, 'brace')
-        graph.edges.append(edge)
-        segments.append({'start': origin, 'end': destination, 'edge': edge, 'owners': owners})
-        solids.append(cylinder_between(origin, destination, strut_r))
-        added += 1
+                accepted = (destination, segment)
+                break
+            if accepted is None and destination_mode != 'supports':
+                reverse = None
+                # A short vertical landing stem keeps the entire diagonal cylinder
+                # above Z=0, including its tilted end disc. It joins the configured
+                # base and is also valid with bare feet (base_type=none).
+                strut_r = float(support['brace_diameter_mm']) / 2 or shaft_r * .5
+                landing_z = strut_r
+                drop = z - landing_z
+                travel = drop / tangent
+                if drop > 1e-6 and math.hypot(travel, drop) <= max_length + 1e-8:
+                    for spoke in (0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15):
+                        angle = azimuth + spoke * (2 * math.pi / 16)
+                        if not attempt():
+                            return added
+                        destination = np.array([origin[0] + travel * math.cos(angle),
+                                                origin[1] + travel * math.sin(angle), landing_z])
+                        direction = (destination - origin) / np.linalg.norm(destination - origin)
+                        if any(np.linalg.norm(direction - ray) < 1e-7 for ray in previous_rays):
+                            evidence['duplicate_rejected'] += 1
+                            continue
+                        if not allowed_direction(origin, destination, level):
+                            evidence['pattern_rejected'] += 1
+                            continue
+                        # Existing intersections already failed their policy or
+                        # clearance checks above. A new foot must not pass through
+                        # one of them and silently make an extra connection.
+                        crossing = False
+                        for segment in segments:
+                            if owner in segment['owners']:
+                                continue
+                            for point in _cone_intersections(origin, segment['start'], segment['end'], tangent):
+                                delta = point - origin
+                                if (np.linalg.norm(delta) < np.linalg.norm(destination - origin) - 1e-7
+                                        and np.linalg.norm(delta / np.linalg.norm(delta) - direction) < 1e-7):
+                                    crossing = True
+                                    break
+                            if crossing:
+                                break
+                        if crossing:
+                            evidence['spacing_rejected'] += 1
+                            continue
+                        if not inside(origin, destination, strut_r):
+                            evidence['bounds_rejected'] += 1
+                            continue
+                        bottom = np.array([*destination[:2], 0.])
+                        pad = build_base([destination[:2]], settings, radius,
+                                         foot_radii=[strut_r], cancel=cancel)['solid']
+                        if pad is not None:
+                            bounds = np.asarray(pad.bounding_box()).reshape(2, 3)
+                            if np.any(bounds[0] < lower - 1e-8) or np.any(bounds[1] > upper + 1e-8):
+                                evidence['foot_rejected'] += 1
+                                continue
+                            if field is not None and not _brace_base_clear(field, bounds, clearance, cancel):
+                                evidence['foot_rejected'] += 1
+                                continue
+                        if field is not None and (not _brace_clear(field, origin, destination, strut_r, clearance, cancel)
+                                or not _brace_clear(field, bottom, destination, strut_r, clearance, cancel)):
+                            evidence['collision_rejected'] += 1
+                            continue
+                        accepted = (destination, None)
+                        break
+                elif drop > 1e-6:
+                    evidence['length_rejected'] += 1
+            if accepted is None:
+                evidence['no_destination_rejected'] += 1
+                break
+            destination, target = accepted
+            origin_segment = segment_at(owner, origin)
+            if origin_segment is None:
+                evidence['ungrounded_rejected'] += 1
+                break
+            origin_id = split(origin_segment, origin)
+            if target is None:
+                foot_id, destination_id = f'brace_foot{added}', f'brace_landing{added}'
+                bottom = [*destination[:2], 0.]
+                for node in (SupportNode(foot_id, bottom, 'foot'),
+                             SupportNode(destination_id, destination.tolist(), 'brace_junction')):
+                    graph.nodes.append(node)
+                    nodes[node.id] = node
+                stem = SupportEdge(foot_id, destination_id, strut_r, 'brace_foot')
+                graph.edges.append(stem)
+                solids.append(cylinder_between(bottom, destination, strut_r))
+                feet.append(tuple(destination[:2]))
+                foot_radii.append(strut_r)
+                evidence['new_feet'] += 1
+                owners = {owner}
+                segments.append({'start': np.asarray(bottom), 'end': destination,
+                                 'edge': stem, 'owners': owners})
+            else:
+                connections.append(({owner}, set(target['owners']), z))
+                destination_id = split(target, destination)
+                owners = {owner} | target['owners']
+                for target_owner in target['owners']:
+                    connected[target_owner].append((float(destination[2]),))
+            connected[owner].append((z,))
+            edge = SupportEdge(origin_id, destination_id, strut_r, 'brace')
+            graph.edges.append(edge)
+            segments.append({'start': origin, 'end': destination, 'edge': edge, 'owners': owners})
+            solids.append(cylinder_between(origin, destination, strut_r))
+            previous_rays.append((destination - origin) / np.linalg.norm(destination - origin))
+            added += 1
+            if reverse is not None:
+                high, low, target_owner = reverse
+                # Both diagonals are checked before changing geometry. The crossing
+                # is a shared graph junction, not two unrecorded overlapping edges.
+                center = (origin + destination) / 2
+                center_id = split(segments[-1], center)
+                high_id = split(segment_at(target_owner, high), high)
+                low_id = split(segment_at(owner, low), low)
+                for first, second in ((high_id, center_id), (center_id, low_id)):
+                    cross_edge = SupportEdge(first, second, strut_r, 'brace')
+                    graph.edges.append(cross_edge)
+                    segments.append({'start': np.asarray(nodes[first].position_mm),
+                                     'end': np.asarray(nodes[second].position_mm),
+                                     'edge': cross_edge, 'owners': owners})
+                solids.append(cylinder_between(high, low, strut_r))
+                # An X is one connection group per neighbour and interval. Use the
+                # upper endpoints for scheduling both supports consistently.
+                connected[target_owner][-1] = (z, float(destination[2]))
+                connected[owner][-1] = (z, float(low[2]))
+                added += 1
     return added
 
 

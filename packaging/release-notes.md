@@ -1,6 +1,20 @@
 Alpha {version}: portable Linux / macOS / Windows builds. Unsigned.
 
-Bracing now grows downward at 45° from the full-width shoulder below each support tip, while retaining the main pillars. Vertical branch spacing defaults to 15 mm and maximum actual branch length to 30 mm; both are editable independently of support spacing and neighbour distance. The obsolete bottom-up brace-start setting has been removed.
+## Unreleased support update
+
+The next support update adds configurable brace destinations (`supports`,
+`base`, or `both`), branch angle, single/alternating/X patterns, per-node
+connection limits, minimum origin height, and azimuth. The Support editor has
+a dedicated Bracing tab and a separate Part-to-part tab with an explicit model
+gap example action. These changes are unreleased and do not change the 0.5.3
+verification record.
+
+Angled and tree support shafts now blend continuously into conical tip bases.
+The source changes have been tested locally; they are not a new published release.
+
+## Existing support behavior
+
+Bracing grows downward at 45° by default from the full-width shoulder below each support tip, while retaining the main pillars. Vertical branch spacing defaults to 15 mm and maximum actual branch length to 30 mm; both are editable independently of support spacing and neighbour distance. The obsolete bottom-up brace-start setting has been removed.
 
 Branches connect to grounded supports or existing branches, or form a new plate landing using the configured base style. Model parts never anchor braces. Full branch thickness, model clearance, build boundaries and complete new feet are checked before a branch is accepted. Support graphs and reports include branch connections and rejection evidence.
 

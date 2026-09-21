@@ -168,6 +168,37 @@ lit = int((np.abs(second[:, :3].astype(int) - [31,33,38]).sum(axis=1) > 30).sum(
 changed = int((first != second).any(axis=1).sum())
 assert lit > 1000, lit
 assert changed > 100, changed
+# Exercise the visible controls and both requested illustrative cases in VTK.
+for key, value in [('brace_destination', 'supports'), ('brace_pattern', 'x')]:
+    field = dialog.fields['support', key]
+    field.setCurrentIndex(field.findData(value))
+dialog.fields['support', 'brace_branches_per_node'].setText('3')
+dialog.fields['support', 'brace_spacing_mm'].setText('8')
+frame()
+assert dialog.example['metrics']['brace_pattern'] == 'x'
+assert dialog.example['metrics']['braces'] > 0
+
+def save_frame(name):
+    from pathlib import Path
+    image = vtk.vtkWindowToImageFilter()
+    image.SetInput(dialog.viewport.interactor.GetRenderWindow())
+    image.Update()
+    writer = vtk.vtkPNGWriter()
+    writer.SetFileName(str(Path(__file__).with_name(name)))
+    writer.SetInputConnection(image.GetOutputPort())
+    writer.Write()
+
+save_frame('x-bracing.png')
+dialog.fields['support', 'pillar_diameter_mm'].setText('1.2')
+dialog.fields['support', 'auto_bracing'].setChecked(False)
+dialog.fields['support', 'tree_supports'].setChecked(True)
+frame()
+assert dialog.example['metrics']['tree']['trunks'] > 0
+save_frame('tree-junctions.png')
+dialog.model_anchor_demo.click()
+frame()
+assert dialog.example['metrics']['routing']['model_anchor'] == 4
+save_frame('part-to-part.png')
 dialog.reject()
 printer = ConfigurationEditor(Document(), 'printer')
 printer.show()
@@ -211,3 +242,30 @@ def test_apply_invalidates_parent_jobs_before_the_dialog_closes(app, monkeypatch
     monkeypatch.setattr(ConfigurationEditor, 'exec', edit)
     window.support_editor_dialog()
     window.close()
+
+
+def test_bracing_tab_and_model_gap_round_trip(app, tmp_path):
+    document = Document()
+    dialog = ConfigurationEditor(document, 'support', headless=True)
+    assert dialog.tabs.tabText(0) == 'Bracing'
+    for key, value in {'brace_spacing_mm': '8', 'brace_max_distance_mm': '12',
+                       'brace_branches_per_node': '3', 'brace_angle_deg': '60',
+                       'brace_min_height_mm': '4', 'brace_azimuth_deg': '30'}.items():
+        dialog.fields['support', key].setText(value)
+    for key, value in [('brace_destination', 'supports'), ('brace_pattern', 'x')]:
+        field = dialog.fields['support', key]
+        field.setCurrentIndex(field.findData(value))
+    path = tmp_path / 'bracing.json'
+    dialog.save_file(str(path))
+    restored = load_component('support', path, resolve_settings())
+    assert restored['support'] == dialog.settings()['support']
+    dialog.model_anchor_demo.click()
+    example = wait_example(dialog, app)
+    assert example['layout'] == 'part-to-part'
+    assert example['metrics']['routing']['model_anchor'] == 4
+    assert not document.settings['support']['allow_part_to_part']
+    dialog.apply()
+    assert document.settings['support']['allow_part_to_part']
+    document.undo()
+    assert not document.settings['support']['allow_part_to_part']
+    dialog.reject()

@@ -58,8 +58,13 @@ lets model and plate routes compete by length, while `1` keeps the historical
 plate preference and intermediate values require a proportionally shorter
 model route. `brace_spacing_mm` (15 mm by default) sets vertical origin
 spacing below each shoulder, `brace_max_length_mm` (30 mm by default) limits
-the complete 45° branch, and `brace_diameter_mm` and `brace_max_distance_mm`
-independently control brace thickness and neighbor reach. Brace candidates
+the complete branch, and `brace_diameter_mm` and `brace_max_distance_mm`
+independently control brace thickness and neighbor reach. **Unreleased**
+`brace_destination` (`supports`, `base`, or `both`), `brace_pattern`
+(`single`, `alternating`, or `x`), `brace_branches_per_node` (1–8),
+`brace_angle_deg` (strictly between 0° and 90°), `brace_min_height_mm`, and
+`brace_azimuth_deg` add destination, pattern, density, angle, height, and
+orientation controls. Brace candidates
 always require a support-only grounded path; model parts are never brace
 anchors, even when primary part-to-part supports are enabled. Candidates that
 intersect occupied model columns on the analysis grid are rejected and

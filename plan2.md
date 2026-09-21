@@ -719,7 +719,10 @@ bottom-up cross-brace implementation. The shipped contract now uses downward
 45° branches from the shoulder below each tip taper. `brace_spacing_mm` is
 vertical shoulder spacing (15 mm default), `brace_max_length_mm` is the
 complete diagonal limit (30 mm default), and `brace_max_distance_mm` remains
-the separate neighbor reach. `brace_start_height_mm` no longer exists.
+the separate neighbor reach. `brace_start_height_mm` no longer exists. The
+unreleased local update adds selectable support/base destinations, node density,
+angle, single/alternating/X patterns, minimum origin height, and fan rotation;
+see [local verification](reports/support-options-local.md).
 
 At the start of this plan, `route_contacts` built exactly two segments — one
 uniform cylinder and one cone whose taper length *is* `tip_length_mm` — with one

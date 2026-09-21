@@ -97,3 +97,26 @@ def test_tree_rejects_a_trunk_whose_thickness_hits_the_model():
     for support in solids:
         overlap = support ^ obstacle
         assert overlap.is_empty() or overlap.volume() == pytest.approx(0.)
+
+
+@pytest.mark.parametrize('tip_shape', ['cone', 'cylinder'])
+@pytest.mark.parametrize('angle', [20., 45., 70.])
+def test_shoulder_blend_fills_angled_cap_notch_without_widening_tip(tip_shape, angle):
+    import math
+    import numpy as np
+    from voxelmill.geometry import cylinder_between
+    from voxelmill.support_segments import tip_segment, shoulder_joint
+    shoulder = np.array([0., 0., 8.])
+    start = shoulder - [3., 0., 3 * math.tan(math.radians(angle))]
+    shaft = cylinder_between(start, shoulder, .6)
+    tip = tip_segment(shoulder, shoulder + [0., 0., 2.], .4, .2, tip_shape)
+    joint = shoulder_joint(shoulder, .6, .2, 2.)
+    # This region sits directly below the horizontal tip base, outside the
+    # angled cylinder's end disc: the visible crescent notch in the old mesh.
+    probe = m.Manifold.cube((.04, .04, .02), True).translate((.15, 0., 7.99))
+    assert ((shaft + tip) ^ probe).volume() < probe.volume() * .05
+    assert ((shaft + tip + joint) ^ probe).volume() == pytest.approx(probe.volume())
+    assert len((shaft + tip + joint).decompose()) == 1
+    # Above the shoulder the blend is a tiny collar buried within the tip.
+    above = m.Manifold.cube((4., 4., 4.)).translate((-2., -2., 8.))
+    assert ((joint ^ above) - tip).volume() == pytest.approx(0., abs=1e-10)

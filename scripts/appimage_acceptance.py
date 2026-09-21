@@ -220,6 +220,8 @@ def run_acceptance(args):
         "--inside-appdir", str(appdir), "--source", source,
         "--output-dir", output, "--expected-version", args.expected_version,
     ]
+    if args.support_options:
+        inside.append("--support-options")
     if args.skip_gui:
         inside.append("--skip-gui")
         gui_command = inside
@@ -260,7 +262,7 @@ def run_acceptance(args):
         "gui_command": gui_evidence,
         "coverage": {
             "physical_print": "not run",
-            "non_linux_artifacts": "build-only in release workflow",
+            "non_linux_artifacts": ("build-only in release workflow" if args.workflow_url else "not run"),
         },
     }
     destination = output / "acceptance.json"
@@ -393,7 +395,85 @@ def run_inside(args):
         assert payload["brace_count"] > 0, payload
         reopened.jobs.wait(5000)
         reopened.close()
+        if args.support_options:
+            payload["support_options"] = _support_options_gui(app, output)
     (output / "gui.json").write_text(json.dumps(payload, indent=2) + "\n")
+
+
+def _support_options_gui(app, output):
+    """Exercise the new editor using only imports from the packaged runtime."""
+    from voxelmill.gui.document import Document
+    from voxelmill.gui.editors import ConfigurationEditor, load_component
+    from voxelmill.config import resolve_settings
+    import vtkmodules.all as vtk
+
+    document = Document()
+    dialog = ConfigurationEditor(document, 'support')
+    dialog.show()
+    assert dialog.tabs.tabText(0) == 'Bracing'
+    cases = {}
+
+    def preview(name):
+        dialog.refresh_preview()
+        deadline = time.monotonic() + 60
+        while dialog.example is None and time.monotonic() < deadline:
+            app.processEvents()
+            time.sleep(.01)
+        assert dialog.example is not None, dialog.status.text()
+        for _ in range(5):
+            app.processEvents()
+        dialog.viewport.render()
+        shot = vtk.vtkWindowToImageFilter()
+        shot.SetInput(dialog.viewport.interactor.GetRenderWindow())
+        shot.Update()
+        writer = vtk.vtkPNGWriter()
+        writer.SetFileName(str(output / (name + '.png')))
+        writer.SetInputConnection(shot.GetOutputPort())
+        writer.Write()
+        # QWidget.grab re-paints native VTK children into a software buffer
+        # incorrectly; capture the real X11 window after the VTK render.
+        dialog.screen().grabWindow(int(dialog.winId())).save(str(output / (name + '-editor.png')))
+        cases[name] = dialog.example['metrics']
+        return cases[name]
+
+    def choice(key, value):
+        field = dialog.fields['support', key]
+        field.setCurrentIndex(field.findData(value))
+
+    dialog.fields['support', 'brace_spacing_mm'].setText('8')
+    dialog.fields['support', 'brace_max_distance_mm'].setText('12')
+    dialog.fields['support', 'brace_branches_per_node'].setText('3')
+    dialog.fields['support', 'brace_angle_deg'].setText('60')
+    for mode in ('supports', 'base', 'both'):
+        choice('brace_destination', mode)
+        metrics = preview('destinations-' + mode)
+        assert metrics['brace_destination'] == mode
+        assert metrics['braces'] > 0
+        if mode == 'supports':
+            assert metrics['brace_new_feet'] == 0
+        if mode == 'base':
+            assert metrics['brace_new_feet'] > 0
+    choice('brace_destination', 'supports')
+    for pattern in ('alternating', 'x'):
+        choice('brace_pattern', pattern)
+        metrics = preview('pattern-' + pattern)
+        assert metrics['brace_pattern'] == pattern and metrics['braces'] > 0
+    preset = output / 'support-options.json'
+    dialog.save_file(str(preset))
+    assert load_component('support', preset, resolve_settings())['support'] == dialog.settings()['support']
+    dialog.apply()
+    project = output / 'support-options.voxmil'
+    document.save(project)
+    assert Document.load(project).settings['support'] == document.settings['support']
+    dialog.fields['support', 'auto_bracing'].setChecked(False)
+    dialog.fields['support', 'tree_supports'].setChecked(True)
+    assert preview('tree-junctions')['tree']['trunks'] > 0
+    dialog.model_anchor_demo.click()
+    assert preview('part-to-part')['routing']['model_anchor'] == 4
+    dialog.fields['support', 'allow_part_to_part'].setChecked(False)
+    assert preview('part-to-part-disabled')['routing']['model_anchor'] == 0
+    dialog.reject()
+    return {'cases': cases, 'preset_roundtrip': True, 'project_roundtrip': True}
 
 
 def build_parser():
@@ -405,6 +485,8 @@ def build_parser():
     parser.add_argument("--workflow-url", help="published workflow run URL or other provenance")
     parser.add_argument("--skip-gui", action="store_true",
                         help="only for hosts without Xvfb; records unavailable render coverage")
+    parser.add_argument("--support-options", action="store_true",
+                        help="also test configurable brace styles, tree tips, and model anchors in the packaged editor")
     parser.add_argument("--inside-appdir", help=argparse.SUPPRESS)
     return parser
 
