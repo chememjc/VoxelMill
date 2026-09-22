@@ -688,7 +688,9 @@ are emitted is what keeps each quad's splitting diagonal out of the outline,
 and doing it in geometry rather than through a coincident-topology render mode
 keeps anything from running inside a paint. One cell per actor is not a style
 choice: a polydata with several line cells renders only its first under a
-virtual machine's generic OpenGL, which erased these outlines entirely there.
+virtual machine's generic OpenGL. Nor is the way a loop closes -- with a
+duplicated point rather than a repeated index -- which is what erased these
+outlines there even after the cells were split.
 
 Six screen-space glyphs sit in the marker viewport around the cube. Four are
 FreeCAD-style orbit arrows, one per side, and they step **45 degrees**, which

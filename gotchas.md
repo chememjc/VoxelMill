@@ -1533,6 +1533,16 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   breath: splitting the box into a red actor and a green one was a real
   improvement and still left eleven of twelve edges missing.
 
+  Two further shapes matter once the cells are split. An *open* polyline
+  renders there; a loop closed by re-referencing vertex index zero does not,
+  and drops the entire cell. Close a loop by appending a copy of the first
+  point so the last segment references a distinct vertex. The navigation
+  cube's facet outlines are all closed loops, which is why none of them drew
+  until this was found. Mixing the shapes into the build volume is what
+  caught it: the marker is about seventy pixels across in a guest, far too
+  small to show a missing 1.2 pixel outline, while a missing face of the
+  build volume is obvious. Keep that mix, it is the canary.
+
 - **Nav cube glyph placement is coupled to its own hit test.** `cube_hit_under`
   consults the orbit arrows before it picks the cube body, so an arrow hit zone
   defined as an outer band of the marker viewport has to stay wider than the
