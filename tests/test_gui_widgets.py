@@ -1,6 +1,7 @@
 """Focused-only wheel on spin boxes, dual-handle Z clip, Darwin VTK backend."""
 from __future__ import annotations
 
+import json
 import os
 import sys
 from dataclasses import asdict
@@ -149,3 +150,40 @@ def test_main_window_has_a_vertical_z_clip_slider(application):
     assert window.z_clip_slider.objectName() == 'view_z_clip'
     assert window.z_clip_slider.show_all.objectName() == 'view_z_clip_show_all'
     window.close()
+
+
+def test_report_parameter_view_never_raises_on_an_odd_payload():
+    """A report view that raises while someone copies it out is a bug.
+
+    ``json.dumps(default=str)`` rescues an unserializable value but not an
+    unserializable key, and ``toPlainText`` backs the Copy action as well as
+    every assertion that used to read the old text box.
+    """
+    from PySide6 import QtWidgets
+    from voxelmill.gui.widgets import ReportParameterView
+
+    QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    view = ReportParameterView()
+    payloads = [
+        None, 'plain message', 7, [1, 2, 3], {}, [],
+        {'a': {'b': {'c': {'d': {'e': 1}}}}},
+        [1, 'two', {'three': 3}, [4]],
+        {1: 'one', (2, 3): 'tuple key', None: 'none'},
+        {'nan': float('nan'), 'inf': float('inf')},
+        {'bytes': b'abc'},
+        ({'a': 1},),
+    ]
+    for payload in payloads:
+        view.set_payload(payload)
+        text = view.toPlainText()
+        assert isinstance(text, str), (payload, type(text))
+        assert view.payload() is payload
+
+    # A normal report still round-trips as the exact JSON it came from.
+    report = {'passed': True, 'checks': {'islands': 'pass'},
+              'metrics': {'triangles': 29334},
+              'diagnostics': [{'code': 'drain', 'message': 'no drain analysis',
+                               'severity': 'warning'}]}
+    view.set_payload(report)
+    assert json.loads(view.toPlainText()) == report
+    assert view.topLevelItemCount() == len(report)

@@ -86,8 +86,15 @@ def _showcase_geometry(m, spacing, height_mm):
     # the router has to branch sideways rather than fail. Deliberately low:
     # anchoring on it would be a near-full-height connector, which avoidance
     # rejects in favour of the branch.
-    blocker = m.Manifold.cube((1.0 * spacing, 2 * half_y, height_mm * .2)).translate(
-        (stations['branched'] - .5 * spacing, -half_y, 0))
+    #
+    # Its width is capped against the contact height, not just the spacing.
+    # The branch has to reach past this block, so its sideways travel grows
+    # with the width while the drop does not; at 30 mm spacing over a 20 mm
+    # bar that detour got long enough that anchoring on the block won instead,
+    # and the branch case vanished from the demo.
+    blocker_width = min(1.0 * spacing, .5 * height_mm)
+    blocker = m.Manifold.cube((blocker_width, 2 * half_y, height_mm * .2)).translate(
+        (stations['branched'] - blocker_width / 2, -half_y, 0))
     # Tall enough that anchoring on it is clearly shorter than branching round
     # it, and still far enough under the bar for a full connector rather than
     # a thin pillar.
@@ -118,8 +125,8 @@ def support_example(settings, height_mm=20.0, *, layout='array', cancel=None):
 
     In ``array`` and ``part-to-part``, four fixed contacts sit under a floating
     beam and a pedestal beneath one contact offers a model anchor competing
-    with a route around it to the plate. ``showcase`` instead spreads five
-    contacts over five shapes so every route kind appears, and forces the
+    with a route around it to the plate. ``showcase`` instead spreads six
+    contacts over five stations so every route kind appears, and forces the
     settings those routes need (:data:`SHOWCASE_OVERRIDES`). Contact selection
     is deliberately fixed in all three so dimension edits are comparable.
     """
@@ -130,6 +137,12 @@ def support_example(settings, height_mm=20.0, *, layout='array', cancel=None):
     if layout not in LAYOUTS:
         raise VoxelMillError('invalid_example',
                         'Example layout must be one of ' + ', '.join(LAYOUTS))
+    if layout == 'showcase' and height_mm < SHOWCASE_MIN_HEIGHT_MM:
+        raise VoxelMillError(
+            'invalid_example',
+            f'The showcase layout needs at least {SHOWCASE_MIN_HEIGHT_MM:g} mm of height to '
+            'show every support kind; shorter bars sit below the tip and connector lengths. '
+            'Use the array layout for a shorter example.')
     spacing = float(settings['support']['spacing_mm'])
     if not 1 <= spacing <= 30:
         raise VoxelMillError('invalid_example', 'Example supports spacing from 1 to 30 mm; '
@@ -181,6 +194,13 @@ def support_example(settings, height_mm=20.0, *, layout='array', cancel=None):
 #: land on. Braces are reported either way.
 SHOWCASE_ROUTE_KINDS = ('vertical', 'branched', 'model_anchor',
                         'small_model_pillar', 'raster_islands')
+
+#: Shortest bar height at which ``showcase`` can keep its promise. Below this
+#: the whole structure is smaller than the fixed features standing in it -- a
+#: 2 mm tip and a 2 mm bottom connector -- and the branch station stops
+#: branching, because going around the block costs more than anchoring on it.
+#: Refused outright rather than quietly returning four kinds out of six.
+SHOWCASE_MIN_HEIGHT_MM = 8.0
 
 
 def example_categories(metrics, field):

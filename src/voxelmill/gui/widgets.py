@@ -387,12 +387,20 @@ class ReportParameterView(QtWidgets.QTreeWidget):
         self.set_payload(text if isinstance(text, str) else None)
 
     def toPlainText(self):
-        """The payload as pretty JSON, the same text the old box held."""
+        """The payload as pretty JSON, the same text the old box held.
+
+        Always a string. ``default=str`` rescues an unserializable *value*,
+        but not an unserializable *key*, and a report view that raises while
+        someone copies it out is worse than one that shows a repr.
+        """
         if self._payload is None:
             return ''
         if isinstance(self._payload, str):
             return self._payload
-        return json.dumps(self._payload, indent=2, default=str)
+        try:
+            return json.dumps(self._payload, indent=2, default=str)
+        except (TypeError, ValueError):
+            return repr(self._payload)
 
     # ---- construction ----------------------------------------------------
     def _add_children(self, parent, pairs):

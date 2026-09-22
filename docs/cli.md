@@ -710,28 +710,37 @@ settings exactly, so a dimension edit is comparable before and after, which
 also means `part-to-part` routes nothing until `allow_part_to_part` is
 enabled.
 
-`--layout showcase` exists for the opposite reason. It spreads five contacts
-over five shapes chosen to force a different route each, so every kind the
+`--layout showcase` exists for the opposite reason. It spreads six contacts
+over five stations, each shaped to force a different route, so every kind the
 router can emit is visible at once: a clear column to the plate (`vertical`),
 a low blocker with a free neighbour (`branched`), a tall platform
 (`model_anchor`), a post stopping just under the bar (`small_model_pillar`),
-and a floating slab with nothing beneath it (raster island). The brace
-network appears too. To do that it forces six settings, copying the caller's
-settings rather than editing them, and reports the ones that actually differed
-under `overrides`: `auto_bracing=true`, `allow_part_to_part=true`,
-`part_to_part_avoidance=0.4`, `small_pillar_mode="model"`,
-`small_pillar_diameter_mm=0.6`, `small_pillar_max_length_mm=2.5`. Bracing is
-among them because the brace network is one of the kinds the layout promises
-to show, and the caller's draft may have it off. Avoidance is deliberately not 0: at 0 the
+and a floating slab with nothing beneath it (raster island). The plate-route
+station is a pair rather than a single contact, because two grounded pillars
+close together give the brace network somewhere to land even under
+`brace_destination=supports`, which accepts only an already grounded node.
+
+To do that it forces six settings, copying the caller's settings rather than
+editing them, and reports the ones that actually differed under `overrides`:
+`auto_bracing=true`, `allow_part_to_part=true`, `part_to_part_avoidance=0.4`,
+`small_pillar_mode="model"`, `small_pillar_diameter_mm=0.6`,
+`small_pillar_max_length_mm=2.5`. Avoidance is deliberately not 0: at 0 the
 shorter route always wins, a model route around any obstruction is always
 shorter than branching past it, and the branch case would never appear.
-The showcase also analyses at the production column pitch rather than the
-0.5 mm the older layouts keep, since the surface an anchor lands on is read
-from that raster.
 
-Every layout reports a `categories` count per support kind.
-`--height-mm` accepts 3–160 mm; `--output` optionally writes its
-illustrative STL. It uses the production router and reports routing and brace
+Brace *geometry* is deliberately not forced, so your own destination, pattern
+and angle choices stay visible in the picture. That means the five route kinds
+are guaranteed while the brace count is not: a tuning that reaches nothing to
+land on shows no braces, which costs no route. The showcase also analyses at
+the production column pitch rather than the 0.5 mm the older layouts keep,
+since the surface an anchor lands on is read from that raster.
+
+Every layout reports a `categories` count per support kind. `--height-mm`
+accepts 3–160 mm, except for `showcase`, which needs at least 8 mm and refuses
+anything shorter: below that the bar is shorter than the fixed features
+standing in it (a 2 mm tip and a 2 mm bottom connector), the branch station
+stops branching, and the layout would quietly show four kinds instead of six.
+`--output` optionally writes its illustrative STL. It uses the production router and reports routing and brace
 evidence, but performs no print validation, drainage certification, or strength
 proof. The output is a visual example only.
 The sample accepts support spacing from 1–30 mm; larger or smaller valid project

@@ -15,9 +15,9 @@ import pytest
 
 from voxelmill.config import DEFAULTS
 from voxelmill.contracts import VoxelMillError
-from voxelmill.support_example import (LAYOUTS, SHOWCASE_OVERRIDES,
-                                       SHOWCASE_ROUTE_KINDS, support_example,
-                                       save_example)
+from voxelmill.support_example import (LAYOUTS, SHOWCASE_MIN_HEIGHT_MM,
+                                       SHOWCASE_OVERRIDES, SHOWCASE_ROUTE_KINDS,
+                                       support_example, save_example)
 
 pytest.importorskip('manifold3d')
 
@@ -117,11 +117,38 @@ def test_showcase_route_kinds_survive_any_bracing_choice(bracing):
     assert example['categories']['braces'] > 0, bracing
 
 
-@pytest.mark.parametrize('height_mm', [10.0, 20.0, 40.0, 160.0])
-def test_showcase_categories_survive_the_height_range(height_mm):
-    categories = _example('showcase', height_mm)['categories']
-    for kind, count in categories.items():
-        assert count > 0, (height_mm, kind, categories)
+@pytest.mark.parametrize('height_mm', [8.0, 9.0, 20.0, 40.0, 160.0])
+@pytest.mark.parametrize('spacing_mm', [1.0, 3.0, 15.0, 30.0])
+def test_showcase_keeps_its_promise_across_the_whole_supported_range(height_mm, spacing_mm):
+    """Every route kind, at every accepted size.
+
+    The branch station is the fragile one: its detour around the block grows
+    with the spacing while the drop to the plate does not, so at wide spacing
+    over a short bar the router preferred anchoring on the block and the
+    branch case disappeared. The block's width is capped against the height
+    for exactly this reason.
+    """
+    example = _example('showcase', height_mm, spacing_mm=spacing_mm)
+    assert example['metrics']['contacts_failed'] == 0
+    for kind in SHOWCASE_ROUTE_KINDS:
+        assert example['categories'][kind] > 0, (
+            height_mm, spacing_mm, kind, example['categories'])
+
+
+def test_showcase_refuses_a_bar_too_short_to_show_every_kind():
+    """Refused outright, not quietly reduced to four kinds out of six.
+
+    Below this height the structure is shorter than the fixed features
+    standing in it: a 2 mm tip and a 2 mm bottom connector.
+    """
+    assert SHOWCASE_MIN_HEIGHT_MM == 8.0
+    with pytest.raises(VoxelMillError) as error:
+        _example('showcase', SHOWCASE_MIN_HEIGHT_MM - 0.5)
+    assert error.value.code == 'invalid_example'
+    assert 'showcase' in str(error.value)
+    # The older layouts still take the full documented 3 to 160 mm.
+    assert _example('array', 3.0)['height_mm'] == 3.0
+    assert _example('part-to-part', 3.0)['height_mm'] == 3.0
 
 
 def test_showcase_reports_what_it_forced_and_leaves_the_caller_alone():

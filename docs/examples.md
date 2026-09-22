@@ -370,13 +370,15 @@ voxelmill support-example --layout showcase --output output/showcase.stl \
   --report output/showcase.json
 ```
 
-Five contacts over five shapes, one per route: a clear column to the plate,
+Six contacts over five stations, one per route: a clear column to the plate,
 a low blocker with a free neighbour to branch around, a tall platform to
 anchor on, a post stopping just under the bar for a thin model pillar, and a
 floating slab with nothing beneath it. The brace network appears too, and the
-`categories` block in the report counts what was actually produced. This is
+`categories` block in the report counts what was actually produced. It needs
+at least 8 mm of height and refuses anything shorter rather than showing fewer
+kinds than it promises. This is
 the one layout that does not obey the caller's settings exactly: it forces
-the five it needs and lists them under `overrides`. It also analyses at the
+the six it needs and lists them under `overrides`. It also analyses at the
 production column pitch, because the surface an anchor lands on is read from
 that raster.
 
