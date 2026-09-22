@@ -104,6 +104,14 @@ shipping a binary image.
 `gotchas.md` is the verified lessons log: read it before changing the
 rasterizer, the drainage analysis, the GUI tests or the native build.
 
+## Contributing
+
+[CONTRIBUTING.md](CONTRIBUTING.md) covers the style, the tests, and why the
+Python and C++ split falls where it does. [SECURITY.md](SECURITY.md) explains
+what to do about a vulnerability, and what the real attack surface is, which
+for a desktop tool is the files it parses. The
+[code of conduct](CODE_OF_CONDUCT.md) is one sentence long.
+
 ## Measurement scripts
 
 These answer questions about the program rather than doing work for a print.

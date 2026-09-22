@@ -424,5 +424,8 @@ Run `scripts/equivalence.py` after each item. Commit each item separately.
 - The hot kernels are already C++ (native/raster.cpp, mesh.cpp, voxel.cpp,
   goo.cpp, ctb.cpp, distance.cpp, intersections.cpp). Rewriting them in C gains
   nothing; the win is architectural.
-- `native/module.cpp:29-35` binds `tbb::global_control` as a worker *ceiling*.
-  No kernel anywhere calls `tbb::parallel_for`. Nothing is actually parallel.
+- `native/module.cpp:29-35` binds `tbb::global_control` as a worker *ceiling*,
+  which creates no work of its own. Only `native/edt.cpp` calls
+  `tbb::parallel_for`; the other nine files in `native/` are still serial.
+  (Corrected 2026-09-22: this entry previously said nothing anywhere was
+  parallel, which `edt.cpp` contradicts.)

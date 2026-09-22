@@ -1,0 +1,98 @@
+name: Bug report
+description: Something produced the wrong result, crashed, or refused valid input.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not report a security issue here. Use a
+        [private advisory](https://github.com/chememjc/VoxelMill/security/advisories/new)
+        instead; see `SECURITY.md`.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `voxelmill --version`, or the release you downloaded.
+      placeholder: VoxelMill 0.5.4
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Linux (AppImage)
+        - Linux (from source)
+        - macOS Intel (DMG)
+        - macOS Apple Silicon (DMG)
+        - Windows (zip)
+        - Other / from source
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where it happened
+      options:
+        - CLI
+        - Editor (GUI)
+        - Both
+        - Building from source
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected instead
+      description: |
+        If a validation report or a slice looks wrong, say which number is
+        wrong and what it should have been. "It failed" is hard to act on.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: |
+        The exact command, or the sequence of clicks. Include the settings you
+        changed from the defaults, as `--set section.key=value` lines or an
+        attached profile.
+      placeholder: |
+        voxelmill prepare part.stl --support-spacing-mm 4 --output out.stl --report out.json
+    validations:
+      required: true
+
+  - type: textarea
+    id: report
+    attributes:
+      label: Report JSON or error output
+      description: |
+        Attach the `--report` JSON if there is one. From the editor, the Report
+        tab's right-click menu has **Copy report as JSON**. Paste it here or
+        attach the file. Please include the whole thing rather than the line
+        you think matters.
+      render: json
+
+  - type: textarea
+    id: model
+    attributes:
+      label: Model
+      description: |
+        If the model is what triggers it and you can share it, attach it. If
+        you cannot, say so and give its triangle count and rough dimensions.
+        A geometry bug that cannot be reproduced usually cannot be fixed.
+
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked this against the latest release.
+          required: true
+        - label: I read the relevant part of `docs/`, and this is not the documented behaviour.
+          required: false

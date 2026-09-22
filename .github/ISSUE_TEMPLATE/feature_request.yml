@@ -1,0 +1,45 @@
+name: Feature request
+description: Suggest a capability, a setting, or a change in behaviour.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: |
+        Describe the print or the workflow, not the feature. The best
+        suggestions here have come from a part that would not print.
+    validations:
+      required: true
+
+  - type: textarea
+    id: today
+    attributes:
+      label: What do you do about it today?
+      description: The workaround, the other tool, or the manual step.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like instead?
+      description: |
+        If it is a new setting, say what it would do to the geometry and what
+        its default should be. If it is a validation check, say what a failure
+        would mean and what the user should do about it.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This would need a claim about physical print behaviour (strength, drainage, exposure).
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        If you ticked that box: those claims need measured prints behind them,
+        and anything unfitted ships labelled **uncalibrated**. Say what
+        evidence exists.
