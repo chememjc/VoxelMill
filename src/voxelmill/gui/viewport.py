@@ -494,16 +494,20 @@ def line_actor(loop, colour, width=2.5, closed=False):
     thickness.
     """
     points = [tuple(float(c) for c in point) for point in loop]
+    if closed and points:
+        # A duplicated *point*, not a second reference to index 0. Closing a
+        # loop by re-referencing the first vertex dropped the whole cell under
+        # a virtual machine's generic OpenGL, while the same path left open
+        # rendered normally; the build volume's top face was the one piece of
+        # geometry large enough to catch it.
+        points = points + [points[0]]
     holder = vtk.vtkPoints()
     for point in points:
         holder.InsertNextPoint(*point)
-    count = len(points)
     cells = vtk.vtkCellArray()
-    cells.InsertNextCell(count + 1 if closed else count)
-    for index in range(count):
+    cells.InsertNextCell(len(points))
+    for index in range(len(points)):
         cells.InsertCellPoint(index)
-    if closed:
-        cells.InsertCellPoint(0)
     data = vtk.vtkPolyData()
     data.SetPoints(holder)
     data.SetLines(cells)
