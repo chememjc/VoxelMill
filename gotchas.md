@@ -1517,6 +1517,22 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   it as static line cells. A geometric offset beats a coincident-topology render
   mode here: nothing runs during a paint.
 
+- **A polydata with several line cells renders only its first under generic
+  OpenGL.** In a VirtualBox guest with no 3D acceleration, the build volume
+  drew one edge of twelve and the navigation cube's outlines did not appear,
+  while triangles, text and the 2D arrow glyphs all drew normally. Neither
+  hardware GL nor Mesa llvmpipe on Linux reproduces it, so a local software-GL
+  run proves nothing; both platforms bundle the same VTK 9.7.0. The cause is
+  the context, not the library: VTK creates its own context against the system
+  `opengl32`, which in that guest is Microsoft's GDI generic OpenGL 1.1, while
+  `QT_OPENGL=software` only redirects *Qt's* rendering to the Mesa
+  `opengl32sw.dll` PySide6 ships. Give every drawn line its own actor with one
+  cell (`viewport.line_actor`). A tube filter would also work, since triangles
+  render, but it trades pixel-constant line width for thickness that grows as
+  you zoom. Per-cell colour scalars on lines are worth avoiding in the same
+  breath: splitting the box into a red actor and a green one was a real
+  improvement and still left eleven of twelve edges missing.
+
 - **Nav cube glyph placement is coupled to its own hit test.** `cube_hit_under`
   consults the orbit arrows before it picks the cube body, so an arrow hit zone
   defined as an outer band of the marker viewport has to stay wider than the

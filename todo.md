@@ -6,10 +6,14 @@ lessons go in `gotchas.md`.
 
 ## Now
 
-- [ ] Build-volume wireframe: under VirtualBox's software OpenGL path only the
-      green front edge draws, never the red outline. Long-standing, not a
-      0.5.4 regression, and unrelated to the model and navigation cube, which
-      render normally there. See [the 0.5.4 record](reports/releases/v0.5.4.md#windows-11-virtualbox).
+- [x] Build-volume wireframe under VirtualBox's generic OpenGL: fixed after
+      the v0.5.4 tag by giving every drawn line its own single-cell actor. A
+      polydata with several line cells rendered only its first there. Verified
+      in the guest; see `gotchas.md`.
+- [ ] Ship the line-actor fix: it is on `master` but **not** in the published
+      v0.5.4 assets, so it needs a release. Also still unverified whether the
+      navigation cube's outlines return in the guest, since the marker is too
+      small to resolve at 1024x768.
 
 - [x] Release 0.5.4 alpha: local and workflow AppImage acceptance, all four builds, tag published as a pre-release, and the published Linux, macOS Intel and Windows artifacts tested. See [the record](reports/releases/v0.5.4.md). Apple Silicon is built but untested; no host.
 
