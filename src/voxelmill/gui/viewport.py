@@ -482,19 +482,31 @@ def _centered_label_actor(text, face_center, orientation, scale):
     return actor
 
 
-def _edge_actor(points, edges, colour, width=2.5):
-    """One flat-coloured line actor over a shared point list."""
+def line_actor(loop, colour, width=2.5, closed=False):
+    """One flat-coloured actor holding exactly one line cell.
+
+    One cell, deliberately. A polydata carrying several line cells renders
+    only its first under the generic OpenGL a VirtualBox guest falls back to,
+    which is what left the build volume as a single edge and erased the
+    navigation cube's outlines entirely there, while triangles kept drawing
+    normally. One cell per actor costs nothing at these counts and keeps the
+    pixel-constant line width that a tube would trade away for zoom-dependent
+    thickness.
+    """
+    points = [tuple(float(c) for c in point) for point in loop]
     holder = vtk.vtkPoints()
     for point in points:
-        holder.InsertNextPoint(*(float(c) for c in point))
-    lines = vtk.vtkCellArray()
-    for start, end in edges:
-        lines.InsertNextCell(2)
-        lines.InsertCellPoint(int(start))
-        lines.InsertCellPoint(int(end))
+        holder.InsertNextPoint(*point)
+    count = len(points)
+    cells = vtk.vtkCellArray()
+    cells.InsertNextCell(count + 1 if closed else count)
+    for index in range(count):
+        cells.InsertCellPoint(index)
+    if closed:
+        cells.InsertCellPoint(0)
     data = vtk.vtkPolyData()
     data.SetPoints(holder)
-    data.SetLines(lines)
+    data.SetLines(cells)
     mapper = vtk.vtkPolyDataMapper()
     mapper.SetInputData(data)
     actor = vtk.vtkActor()
@@ -520,24 +532,6 @@ def _pad_actor():
     actor.PickableOff()
     actor.nav_role = 'pad'
     return actor
-
-
-def _perimeter_polydata(loops):
-    """Closed polylines for facet perimeters, as static line cells."""
-    points, cells = vtk.vtkPoints(), vtk.vtkCellArray()
-    index = 0
-    for loop in loops:
-        count = len(loop)
-        cells.InsertNextCell(count + 1)
-        for point in loop:
-            points.InsertNextPoint(*(float(c) for c in point))
-            cells.InsertCellPoint(index)
-            index += 1
-        cells.InsertCellPoint(index - count)
-    data = vtk.vtkPolyData()
-    data.SetPoints(points)
-    data.SetLines(cells)
-    return data
 
 
 def _arrow_triangle_uv(direction):
@@ -629,16 +623,10 @@ def navigation_cube_prop():
     body.GetProperty().SetEdgeVisibility(False)
     body.nav_role = 'body'
     assembly.AddPart(body)
-    outline_mapper = vtk.vtkPolyDataMapper()
-    outline_mapper.SetInputData(_perimeter_polydata(loops))
-    outline = vtk.vtkActor()
-    outline.SetMapper(outline_mapper)
-    outline.GetProperty().SetColor(0.16, 0.17, 0.20)
-    outline.GetProperty().SetLineWidth(1.2)
-    outline.GetProperty().SetLighting(False)
-    outline.PickableOff()
-    outline.nav_role = 'outline'
-    assembly.AddPart(outline)
+    for loop in loops:
+        outline = line_actor(loop, (0.16, 0.17, 0.20), width=1.2, closed=True)
+        outline.nav_role = 'outline'
+        assembly.AddPart(outline)
     assembly.AddPart(_pad_actor())
     scale = _vector_text_scale('Bottom', 2.0 * CUBE_FACE_HALF)
     lift = CUBE_HALF + CUBE_LABEL_LIFT
@@ -709,9 +697,10 @@ class Scene:
         )
         for edges, colour in ((other_edges, (1.0, 0.0, 0.0)),
                               (front_edge, (0.0, 1.0, 0.0))):
-            actor = _edge_actor(corners, edges, colour)
-            self._plate.append(actor)
-            self.renderer.AddActor(actor)
+            for start, end in edges:
+                actor = line_actor((corners[start], corners[end]), colour)
+                self._plate.append(actor)
+                self.renderer.AddActor(actor)
 
     def set_mesh(self, role, triangles, opacity=1.0, settings=None, paint=None, *, key=None,
                  object_index=None):

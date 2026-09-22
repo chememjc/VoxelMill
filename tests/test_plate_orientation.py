@@ -31,25 +31,24 @@ def test_build_volume_has_colored_oriented_edges():
     scene = Scene()
     scene.show_build_volume(BUILD)
 
-    assert len(scene._plate) == 2
-    by_colour = {tuple(actor.GetProperty().GetColor()): actor for actor in scene._plate}
-    assert set(by_colour) == {(1.0, 0.0, 0.0), (0.0, 1.0, 0.0)}
-    red, green = by_colour[(1.0, 0.0, 0.0)], by_colour[(0.0, 1.0, 0.0)]
-
-    red_edges, green_edges = _edges(red), _edges(green)
-    assert len(red_edges) == 11
-    assert len(green_edges) == 1
-    # Twelve edges of a box, over its eight corners, however they are split.
+    # Twelve edges of a box, one actor each; see the one-cell test below.
+    assert len(scene._plate) == 12
+    red = [a for a in scene._plate if a.GetProperty().GetColor() == (1.0, 0.0, 0.0)]
+    green = [a for a in scene._plate if a.GetProperty().GetColor() == (0.0, 1.0, 0.0)]
+    assert len(red) == 11
+    assert len(green) == 1
     for actor in scene._plate:
-        assert actor.GetMapper().GetInput().GetNumberOfPoints() == 8
         assert actor.GetProperty().GetLineWidth() > 1.0
 
     # The green edge is the front-bottom one: (-X,-Y,0) -> (+X,-Y,0), because
     # the front of the printer is the -Y face.
-    np.testing.assert_allclose(green_edges[0], [[-50.0, -40.0, 0.0], [50.0, -40.0, 0.0]])
-    assert all(len(edge) == 2 for edge in red_edges)
+    np.testing.assert_allclose(_edges(green[0])[0],
+                               [[-50.0, -40.0, 0.0], [50.0, -40.0, 0.0]])
 
-    corners = {tuple(point) for edge in red_edges + green_edges for point in edge}
+    red_edges = [edge for actor in red for edge in _edges(actor)]
+    assert len(red_edges) == 11
+    assert all(len(edge) == 2 for edge in red_edges)
+    corners = {tuple(point) for edge in red_edges + _edges(green[0]) for point in edge}
     assert len(corners) == 8
     assert all(abs(x) == 50.0 and abs(y) == 40.0 and z in (0.0, 165.0)
                for x, y, z in corners)
@@ -81,6 +80,40 @@ def test_showing_the_build_volume_twice_replaces_it():
     scene.show_build_volume({'printer': {'build_mm': [120.0, 60.0, 200.0]}})
     assert scene.renderer.GetActors().GetNumberOfItems() == before
     assert all(actor not in scene._plate for actor in first)
+    assert len(scene._plate) == 12
     green = [a for a in scene._plate if a.GetProperty().GetColor() == (0.0, 1.0, 0.0)][0]
     np.testing.assert_allclose(_edges(green)[0],
                                [[-60.0, -30.0, 0.0], [60.0, -30.0, 0.0]])
+
+
+def test_every_line_actor_holds_exactly_one_cell():
+    """One line cell per actor, everywhere lines are drawn.
+
+    A polydata carrying several line cells renders only its first under the
+    generic OpenGL a VirtualBox guest falls back to: the build volume showed
+    one edge and the navigation cube's outlines vanished, while triangles kept
+    drawing. The counts here are small enough that one actor per cell costs
+    nothing, and it keeps the pixel-constant width a tube would trade away.
+    """
+    from voxelmill.gui.viewport import navigation_cube_prop
+
+    scene = Scene()
+    scene.show_build_volume(BUILD)
+    assert len(scene._plate) == 12
+    for actor in scene._plate:
+        assert actor.GetMapper().GetInput().GetNumberOfLines() == 1
+
+    cube = navigation_cube_prop()
+    parts = cube.GetParts()
+    parts.InitTraversal()
+    outlines = []
+    while True:
+        part = parts.GetNextProp()
+        if part is None:
+            break
+        if getattr(part, 'nav_role', None) == 'outline':
+            outlines.append(part)
+    # Six faces, twelve bevels, eight corners.
+    assert len(outlines) == 26
+    for actor in outlines:
+        assert actor.GetMapper().GetInput().GetNumberOfLines() == 1
