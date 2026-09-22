@@ -720,7 +720,7 @@ bottom-up cross-brace implementation. The shipped contract now uses downward
 vertical shoulder spacing (15 mm default), `brace_max_length_mm` is the
 complete diagonal limit (30 mm default), and `brace_max_distance_mm` remains
 the separate neighbor reach. `brace_start_height_mm` no longer exists. The
-unreleased local update adds selectable support/base destinations, node density,
+0.5.4 update adds selectable support/base destinations, node density,
 angle, single/alternating/X patterns, minimum origin height, and fan rotation;
 see [local verification](reports/support-options-local.md).
 

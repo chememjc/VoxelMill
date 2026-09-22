@@ -56,8 +56,8 @@ def make_vtk_interactor(parent=None):
     return _VTKInteractor(parent)
 
 from .camera import (
-    CameraController, FACE_VIEWS, HOME_VIEW as CAMERA_HOME,
-    named_view_near, rotate_view_90,
+    ARROW_TURNS, CameraController, FACE_VIEWS, HOME_VIEW as CAMERA_HOME,
+    NAV_STEP_DEG, ROLL_TURNS, named_view_near, roll_view_by, rotate_view_by,
 )
 from .gizmo import TransformGizmo
 
@@ -168,11 +168,31 @@ CUBE_HALF = 0.5
 #: so "Bottom" still has room, small enough that a corner is a real target.
 CUBE_FACE_HALF = 0.28
 #: Invisible bounds pad so the orientation marker frames a margin around the
-#: cube for the four orbit arrows.
-CUBE_PAD_HALF = 0.75
+#: cube for the orbit arrows and the two roll buttons.
+#:
+#: ``ResetCamera`` frames the bounding *sphere* of these bounds, so the cube's
+#: silhouette reaches ``0.5 + 0.5 * CUBE_HALF / (CUBE_PAD_HALF * sqrt(3))`` in
+#: the marker's normalized viewport -- only 0.69 at the old 0.75, which is why
+#: the arrows sat so far out. Barely above ``CUBE_HALF`` puts the cube's edge
+#: at 0.76, close under the glyphs and still clear of their touch zones.
+CUBE_PAD_HALF = 0.55
 #: Longest face label ("Bottom") fills this fraction of the face square.
 CUBE_LABEL_FILL = 0.70
 CUBE_LABEL_LIFT = 0.01
+#: Facet outlines are pushed this far along their own normal. A geometric
+#: offset computed once beats any coincident-topology render state: nothing
+#: runs during a paint, which is what the Cocoa expose hang taught us.
+_OUTLINE_LIFT = 0.004
+
+#: Arrow glyph centres in the marker's normalized viewport. Close to the cube
+#: because the hit test follows the glyphs rather than claiming an outer band.
+ARROW_CENTRES_UV = {'right': (0.86, 0.50), 'left': (0.14, 0.50),
+                    'up': (0.50, 0.86), 'down': (0.50, 0.14)}
+#: The two roll buttons share the up arrow's row and flank it.
+ROLL_CENTRES_UV = {'left': (0.30, 0.86), 'right': (0.70, 0.86)}
+#: Each arrow triangle is grown this much about its centre for touch slack.
+ARROW_TOUCH_GROW = 1.6
+ROLL_TOUCH_RADIUS = 0.06
 
 _FACE_RGB = (184, 190, 198)
 _EDGE_RGB = (138, 146, 156)
@@ -194,30 +214,76 @@ def _iso_name(position):
     return 'iso_' + ''.join('+' if float(c) > 0 else '-' for c in position)
 
 
-def cube_arrow_at(u, v, inner=0.16, corner=0.22):
-    """Orbit arrow under a normalized marker-viewport point, or None.
+def _edge_name(position):
+    """View name for a pick on one of the twelve 45° bevel facets.
 
-    The chamfered cube is framed with padding, so the outer band around the
-    widget is the four FreeCAD-style arrows. Viewport corners are ignored: a
-    diagonal click is not an arrow.
+    The axis the bevel is flat along is the smallest coordinate and reads as
+    ``0``, so the front-right vertical bevel is ``edge_+-0``.
     """
+    flat = int(np.argmin(np.abs(np.asarray(position, dtype=float))))
+    return 'edge_' + ''.join(
+        '0' if index == flat else ('+' if float(value) > 0 else '-')
+        for index, value in enumerate(position))
+
+
+def _marker_uv(u, v):
+    """A finite normalized marker-viewport point, or None."""
     try:
         u, v = float(u), float(v)
     except (TypeError, ValueError):
         return None
-    if not (0.0 <= u <= 1.0 and 0.0 <= v <= 1.0):
-        return None
     if not (np.isfinite(u) and np.isfinite(v)):
         return None
-    du, dv = u - 0.5, v - 0.5
-    au, av = abs(du), abs(dv)
-    if au < 0.5 - inner and av < 0.5 - inner:
+    if not (0.0 <= u <= 1.0 and 0.0 <= v <= 1.0):
         return None
-    if au > 0.5 - corner and av > 0.5 - corner:
+    return u, v
+
+
+def _inside_polygon(point, vertices, grow=1.0):
+    """Whether ``point`` is inside a convex polygon grown about its centroid."""
+    polygon = np.asarray(vertices, dtype=float).reshape(-1, 2)
+    centre = polygon.mean(axis=0)
+    polygon = centre + (polygon - centre) * float(grow)
+    point = np.asarray(point, dtype=float).reshape(2)
+    edges = np.roll(polygon, -1, axis=0) - polygon
+    cross = (edges[:, 0] * (point[1] - polygon[:, 1])
+             - edges[:, 1] * (point[0] - polygon[:, 0]))
+    return bool(np.all(cross >= -1e-12) or np.all(cross <= 1e-12))
+
+
+def cube_arrow_at(u, v, grow=ARROW_TOUCH_GROW):
+    """Orbit arrow under a normalized marker-viewport point, or None.
+
+    Tested against each arrow's own triangle rather than an outer band. A band
+    would have to be wider than the cube's silhouette to stay unambiguous, and
+    :meth:`Viewport.cube_hit_under` consults the arrows before it picks the
+    body, so a band is exactly what used to force the arrows far out from a
+    small cube. ``grow`` scales each triangle about its centre for touch
+    tolerance without moving the glyph.
+    """
+    point = _marker_uv(u, v)
+    if point is None:
         return None
-    if au > av:
-        return 'right' if du > 0 else 'left'
-    return 'up' if dv > 0 else 'down'
+    for direction in ARROW_TURNS:
+        if _inside_polygon(point, _arrow_triangle_uv(direction), grow):
+            return direction
+    return None
+
+
+def cube_roll_at(u, v, radius=ROLL_TOUCH_RADIUS):
+    """Roll button under a normalized marker-viewport point, or None.
+
+    The two buttons sit on the top row flanking the up arrow, so they are
+    tested before the arrows and their zones must not reach ``u = 0.5``.
+    """
+    point = _marker_uv(u, v)
+    if point is None:
+        return None
+    for turn in ROLL_TURNS:
+        centre = np.asarray(ROLL_CENTRES_UV[turn], dtype=float)
+        if float(np.hypot(*(np.asarray(point) - centre))) <= float(radius):
+            return turn
+    return None
 
 
 def _arrow_from_cube_point(position):
@@ -235,14 +301,17 @@ def _arrow_from_cube_point(position):
 def cube_hit_at(position, tolerance=0.15):
     """Classify a navigation-cube pick.
 
-    A 3-vector is cube-local: ``('face', 'Front')``, ``('corner', 'iso_+-+')``,
+    A 3-vector is cube-local: ``('face', 'Front')``, ``('edge', 'edge_+-0')``
+    for one of the twelve 45° bevels, ``('corner', 'iso_+-+')``,
     ``('arrow', 'right')`` for a point clearly outside the body, or ``None``
-    when the hit is too close to the centre or sits on an ambiguous edge.
-    A 2-vector is a normalized marker-viewport coordinate and only names an
-    orbit arrow.
+    when the hit is too close to the centre. A 2-vector is a normalized
+    marker-viewport coordinate and names a roll button or an orbit arrow.
     """
     position = np.asarray(position, dtype=float).reshape(-1)
     if position.shape == (2,):
+        roll = cube_roll_at(position[0], position[1])
+        if roll is not None:
+            return ('roll', roll)
         arrow = cube_arrow_at(position[0], position[1])
         return ('arrow', arrow) if arrow is not None else None
     if position.shape != (3,) or not np.isfinite(position).all():
@@ -263,6 +332,11 @@ def cube_hit_at(position, tolerance=0.15):
     if max(others) <= CUBE_FACE_HALF + 0.02:
         sign = 1 if position[axis] > 0 else -1
         return ('face', _CUBE_FACES[(axis, sign)])
+    # Two axes out at the chamfer and one flat: a 45° bevel facet. The cube
+    # has drawn these twelve since the start; only the classifier was missing
+    # them, so clicking one did nothing while its corners and faces worked.
+    if ordered[1] > CUBE_FACE_HALF + 0.02:
+        return ('edge', _edge_name(position))
     return None
 
 
@@ -270,7 +344,8 @@ def cube_face_at(position, tolerance=0.15):
     """Face label for a pick on the navigation cube, or None near its center.
 
     Kept as the face-only helper so existing tests and the xvfb Front pick
-    stay on the six printer faces. Corners, edges and arrows are :func:`cube_hit_at`.
+    stay on the six printer faces. Corners, bevel edges, arrows and the roll
+    buttons are :func:`cube_hit_at`.
     """
     hit = cube_hit_at(position, tolerance)
     if hit is not None and hit[0] == 'face':
@@ -278,18 +353,42 @@ def cube_face_at(position, tolerance=0.15):
     return None
 
 
-def _emit_triangle(triangles, colors, points, rgb):
+def _lifted_loop(points):
+    """A facet's perimeter, pushed out along its own normal.
+
+    The lift is what keeps the outline off the surface it traces. Doing it in
+    the geometry, once, avoids any coincident-topology render state: nothing
+    the outline needs may run inside a paint.
+    """
+    loop = [np.asarray(p, dtype=float) for p in points]
+    normal = np.cross(loop[1] - loop[0], loop[2] - loop[0])
+    length = float(np.linalg.norm(normal))
+    if length <= 0:
+        return loop
+    normal = normal / length
+    if float(np.dot(normal, np.mean(loop, axis=0))) < 0:
+        normal = -normal
+    return [point + normal * _OUTLINE_LIFT for point in loop]
+
+
+def _emit_triangle(triangles, colors, points, rgb, loops=None):
     tri = [np.asarray(p, dtype=float) for p in points]
     normal = np.cross(tri[1] - tri[0], tri[2] - tri[0])
     if float(np.dot(normal, np.mean(tri, axis=0))) < 0:
         tri = [tri[0], tri[2], tri[1]]
     triangles.append(tri)
     colors.append(rgb)
+    if loops is not None:
+        loops.append(_lifted_loop(tri))
 
 
-def _emit_quad(triangles, colors, p0, p1, p2, p3, rgb):
+def _emit_quad(triangles, colors, p0, p1, p2, p3, rgb, loops=None):
+    # The two inner calls never collect: their shared diagonal is exactly the
+    # line that used to be drawn across every face.
     _emit_triangle(triangles, colors, (p0, p1, p2), rgb)
     _emit_triangle(triangles, colors, (p0, p2, p3), rgb)
+    if loops is not None:
+        loops.append(_lifted_loop((p0, p1, p2, p3)))
 
 
 def chamfered_cube_triangles(half=CUBE_HALF, face=CUBE_FACE_HALF):
@@ -298,9 +397,13 @@ def chamfered_cube_triangles(half=CUBE_HALF, face=CUBE_FACE_HALF):
     Six squares, twelve rectangles, eight triangles -- FreeCAD's 26-pick
     NavCube layout -- still bounded by ``[-half, half]`` so picking math stays
     in cube space.
+
+    Returns ``(triangles, colors, loops)``. ``loops`` is one closed perimeter
+    per facet, 26 in all, collected here rather than reconstructed later so
+    the outline cannot drift from the surface it traces.
     """
     half, face = float(half), float(face)
-    triangles, colors = [], []
+    triangles, colors, loops = [], [], []
     for axis in range(3):
         for sign in (-1.0, 1.0):
             u_axis, v_axis = (axis + 1) % 3, (axis + 2) % 3
@@ -313,7 +416,7 @@ def chamfered_cube_triangles(half=CUBE_HALF, face=CUBE_FACE_HALF):
                 return point
 
             _emit_quad(triangles, colors, pt(-1, -1), pt(1, -1), pt(1, 1), pt(-1, 1),
-                       _FACE_RGB)
+                       _FACE_RGB, loops)
     for a in range(3):
         for b in range(a + 1, 3):
             e = 3 - a - b
@@ -335,7 +438,7 @@ def chamfered_cube_triangles(half=CUBE_HALF, face=CUBE_FACE_HALF):
                         return point
 
                     _emit_quad(triangles, colors, pt_a(-1), pt_a(1), pt_b(1), pt_b(-1),
-                               _EDGE_RGB)
+                               _EDGE_RGB, loops)
     for sx in (-1.0, 1.0):
         for sy in (-1.0, 1.0):
             for sz in (-1.0, 1.0):
@@ -343,8 +446,9 @@ def chamfered_cube_triangles(half=CUBE_HALF, face=CUBE_FACE_HALF):
                     np.array([sx * half, sy * face, sz * face]),
                     np.array([sx * face, sy * half, sz * face]),
                     np.array([sx * face, sy * face, sz * half]),
-                ), _CORNER_RGB)
-    return np.asarray(triangles, dtype=np.float32), np.asarray(colors, dtype=np.uint8)
+                ), _CORNER_RGB, loops)
+    return (np.asarray(triangles, dtype=np.float32),
+            np.asarray(colors, dtype=np.uint8), loops)
 
 
 def _vector_text_scale(text, face_size, fill=CUBE_LABEL_FILL):
@@ -394,10 +498,26 @@ def _pad_actor():
     return actor
 
 
+def _perimeter_polydata(loops):
+    """Closed polylines for facet perimeters, as static line cells."""
+    points, cells = vtk.vtkPoints(), vtk.vtkCellArray()
+    index = 0
+    for loop in loops:
+        count = len(loop)
+        cells.InsertNextCell(count + 1)
+        for point in loop:
+            points.InsertNextPoint(*(float(c) for c in point))
+            cells.InsertCellPoint(index)
+            index += 1
+        cells.InsertCellPoint(index - count)
+    data = vtk.vtkPolyData()
+    data.SetPoints(points)
+    data.SetLines(cells)
+    return data
+
+
 def _arrow_triangle_uv(direction):
-    centres = {'right': (0.93, 0.50), 'left': (0.07, 0.50),
-               'up': (0.50, 0.93), 'down': (0.50, 0.07)}
-    cx, cy = centres[direction]
+    cx, cy = ARROW_CENTRES_UV[direction]
     if direction == 'right':
         return ((cx + 0.035, cy), (cx - 0.028, cy + 0.04), (cx - 0.028, cy - 0.04))
     if direction == 'left':
@@ -407,33 +527,58 @@ def _arrow_triangle_uv(direction):
     return ((cx, cy - 0.035), (cx - 0.04, cy + 0.028), (cx + 0.04, cy + 0.028))
 
 
+def _roll_chevron_uv(turn):
+    """Two stacked triangles reading as a 45° in-plane turn.
+
+    A curved arrow is not worth the vertex count in a 2D mapper; a chevron
+    pointing the way the view will roll says the same thing.
+    """
+    cx, cy = ROLL_CENTRES_UV[turn]
+    sign = 1.0 if turn == 'right' else -1.0
+    return tuple(
+        ((cx + sign * (offset + 0.024), cy),
+         (cx + sign * (offset - 0.010), cy + 0.026),
+         (cx + sign * (offset - 0.010), cy - 0.026))
+        for offset in (-0.004, 0.020))
+
+
+def _screen_triangle_actor(triangles, tag_name, tag_value):
+    """One flat 2D actor in normalized-viewport space for the given triangles."""
+    points, cells = vtk.vtkPoints(), vtk.vtkCellArray()
+    index = 0
+    for triangle in triangles:
+        cells.InsertNextCell(3)
+        for u, v in triangle:
+            points.InsertNextPoint(u, v, 0.0)
+            cells.InsertCellPoint(index)
+            index += 1
+    data = vtk.vtkPolyData()
+    data.SetPoints(points)
+    data.SetPolys(cells)
+    mapper = vtk.vtkPolyDataMapper2D()
+    coord = vtk.vtkCoordinate()
+    coord.SetCoordinateSystemToNormalizedViewport()
+    mapper.SetTransformCoordinate(coord)
+    mapper.SetInputData(data)
+    actor = vtk.vtkActor2D()
+    actor.SetMapper(mapper)
+    actor.GetProperty().SetColor(*_ARROW_RGB)
+    actor.PickableOff()
+    setattr(actor, tag_name, tag_value)
+    return actor
+
+
 def navigation_arrow_actors():
     """Screen-space orbit arrows in normalized marker-viewport coordinates."""
-    actors = []
-    for direction in ('left', 'right', 'up', 'down'):
-        points = vtk.vtkPoints()
-        for u, v in _arrow_triangle_uv(direction):
-            points.InsertNextPoint(u, v, 0.0)
-        cells = vtk.vtkCellArray()
-        cells.InsertNextCell(3)
-        cells.InsertCellPoint(0)
-        cells.InsertCellPoint(1)
-        cells.InsertCellPoint(2)
-        data = vtk.vtkPolyData()
-        data.SetPoints(points)
-        data.SetPolys(cells)
-        mapper = vtk.vtkPolyDataMapper2D()
-        coord = vtk.vtkCoordinate()
-        coord.SetCoordinateSystemToNormalizedViewport()
-        mapper.SetTransformCoordinate(coord)
-        mapper.SetInputData(data)
-        actor = vtk.vtkActor2D()
-        actor.SetMapper(mapper)
-        actor.GetProperty().SetColor(*_ARROW_RGB)
-        actor.PickableOff()
-        actor.nav_arrow = direction
-        actors.append(actor)
-    return actors
+    return [_screen_triangle_actor((_arrow_triangle_uv(direction),),
+                                   'nav_arrow', direction)
+            for direction in ARROW_TURNS]
+
+
+def navigation_roll_actors():
+    """Screen-space 45° roll buttons flanking the up arrow."""
+    return [_screen_triangle_actor(_roll_chevron_uv(turn), 'nav_roll', turn)
+            for turn in ROLL_TURNS]
 
 
 def navigation_cube_prop():
@@ -445,7 +590,7 @@ def navigation_cube_prop():
     ``cube_hit_at`` already understands.
     """
     assembly = vtk.vtkAssembly()
-    triangles, colors = chamfered_cube_triangles()
+    triangles, colors, loops = chamfered_cube_triangles()
     mapper = vtk.vtkPolyDataMapper()
     mapper.SetInputData(polydata_from_triangles(triangles, face_colors=colors))
     mapper.SetScalarModeToUseCellData()
@@ -453,13 +598,23 @@ def navigation_cube_prop():
     body = vtk.vtkActor()
     body.SetMapper(mapper)
     body.GetProperty().SetColor(0.62, 0.66, 0.72)
-    # Mesh edges, not vtkFeatureEdges: a render flag, not a filter that ran
-    # inside a Cocoa expose and hung the Intel 0.5.0 editor.
-    body.GetProperty().SetEdgeVisibility(True)
-    body.GetProperty().SetEdgeColor(0.16, 0.17, 0.20)
-    body.GetProperty().SetLineWidth(1.2)
+    # Every mesh edge, the flag this used to set, drew each facet's own
+    # triangulation diagonal too, because the body is unshared-vertex triangle
+    # soup. Perimeters come from precomputed line cells instead -- still no
+    # vtkFeatureEdges, which is the filter that hung the Cocoa expose.
+    body.GetProperty().SetEdgeVisibility(False)
     body.nav_role = 'body'
     assembly.AddPart(body)
+    outline_mapper = vtk.vtkPolyDataMapper()
+    outline_mapper.SetInputData(_perimeter_polydata(loops))
+    outline = vtk.vtkActor()
+    outline.SetMapper(outline_mapper)
+    outline.GetProperty().SetColor(0.16, 0.17, 0.20)
+    outline.GetProperty().SetLineWidth(1.2)
+    outline.GetProperty().SetLighting(False)
+    outline.PickableOff()
+    outline.nav_role = 'outline'
+    assembly.AddPart(outline)
     assembly.AddPart(_pad_actor())
     scale = _vector_text_scale('Bottom', 2.0 * CUBE_FACE_HALF)
     lift = CUBE_HALF + CUBE_LABEL_LIFT
@@ -892,7 +1047,7 @@ class Viewport(QtWidgets.QWidget):
         widget.InteractiveOff()
         renderer = widget.GetRenderer()
         if renderer is not None:
-            for actor in navigation_arrow_actors():
+            for actor in navigation_arrow_actors() + navigation_roll_actors():
                 # vtkOpenGLRenderer on this VTK build does not wrap AddActor2D.
                 renderer.AddViewProp(actor)
         self.cube, self.cube_widget = cube, widget
@@ -923,6 +1078,9 @@ class Viewport(QtWidgets.QWidget):
         if span_x > 0 and span_y > 0:
             u = (x - left * width) / span_x
             v = (y - bottom * height) / span_y
+            roll = cube_roll_at(u, v)
+            if roll is not None:
+                return ('roll', roll)
             arrow = cube_arrow_at(u, v)
             if arrow is not None:
                 return ('arrow', arrow)
@@ -952,13 +1110,31 @@ class Viewport(QtWidgets.QWidget):
         self._transition.start()
         return name
 
-    def rotate_view(self, turn, animate=True):
-        """Orbit 90° in view space, matching a named view when the roll agrees."""
+    def rotate_view(self, turn, animate=True, degrees=NAV_STEP_DEG):
+        """Orbit in view space, matching a named view when the roll agrees.
+
+        The step is 45° so an arrow click lands on a facet the cube itself
+        shows, which is also why the twelve bevel views are named: most steps
+        now snap rather than leaving the camera between views.
+        """
         camera = self.camera.camera
         focal = np.asarray(camera.GetFocalPoint(), dtype=float)
         direction = np.asarray(camera.GetPosition(), dtype=float) - focal
         up = np.asarray(camera.GetViewUp(), dtype=float)
-        new_direction, new_up = rotate_view_90(direction, up, turn)
+        new_direction, new_up = rotate_view_by(direction, up, turn, degrees=degrees)
+        return self._turn_to(new_direction, new_up, turn, focal, direction, animate)
+
+    def roll_view(self, turn, animate=True, degrees=NAV_STEP_DEG):
+        """Roll the view in its own plane, leaving the camera where it stands."""
+        camera = self.camera.camera
+        focal = np.asarray(camera.GetFocalPoint(), dtype=float)
+        direction = np.asarray(camera.GetPosition(), dtype=float) - focal
+        up = np.asarray(camera.GetViewUp(), dtype=float)
+        new_direction, new_up = roll_view_by(direction, up, turn, degrees=degrees)
+        return self._turn_to(new_direction, new_up, turn, focal, direction, animate)
+
+    def _turn_to(self, new_direction, new_up, turn, focal, direction, animate):
+        """Animate or jump to an orbited or rolled pose."""
         name = named_view_near(new_direction, new_up)
         if name is not None:
             return self.set_view(name, animate=animate)
@@ -1024,10 +1200,12 @@ class Viewport(QtWidgets.QWidget):
             kind, payload = hit
             if kind == 'face':
                 self.set_view(FACE_VIEWS[payload])
-            elif kind == 'corner':
+            elif kind in ('corner', 'edge'):
                 self.set_view(payload)
             elif kind == 'arrow':
                 self.rotate_view(payload)
+            elif kind == 'roll':
+                self.roll_view(payload)
             return
         if self.gizmo.attached_index is not None and self.gizmo.begin_drag(x, y):
             # Grabbed a handle: this click drives the gizmo, not a pick/paint,

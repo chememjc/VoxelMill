@@ -12,6 +12,8 @@ is Zmax, and Show all restores the full interval (no clip planes).
 """
 from __future__ import annotations
 
+import json
+
 from PySide6 import QtCore, QtGui, QtWidgets
 
 
@@ -322,3 +324,141 @@ class ZClipSlider(QtWidgets.QWidget):
         painter.drawText(0, groove.bottom() + 1, self.width(), 12,
                          QtCore.Qt.AlignHCenter, f'{self._lo:.1f}')
         painter.end()
+
+
+class ReportParameterView(QtWidgets.QTreeWidget):
+    """The validation report as named parameters rather than raw JSON.
+
+    A pretty-printed JSON dump is the report's exact content and nothing else:
+    every reader has to parse braces to find one number. The same payload as a
+    Parameter/Value tree is scannable, and groups stay collapsible so a long
+    diagnostics list does not bury the metrics above it.
+
+    ``toPlainText`` still returns the JSON, so anything that read the old text
+    box -- copying the report out, and the tests that assert on it -- keeps
+    working against the exact same bytes.
+    """
+
+    #: Groups worth opening on arrival. Everything else starts collapsed so
+    #: the top of the report stays readable.
+    EXPANDED = ('metrics', 'checks', 'validation', 'report')
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._payload = None
+        self.setColumnCount(2)
+        self.setHeaderLabels(['Parameter', 'Value'])
+        self.setRootIsDecorated(True)
+        self.setAlternatingRowColors(True)
+        self.setUniformRowHeights(True)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        self.header().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+        self.header().setStretchLastSection(True)
+        copy_json = QtGui.QAction('Copy report as JSON', self)
+        copy_json.triggered.connect(self._copy_json)
+        self.addAction(copy_json)
+
+    # ---- content ---------------------------------------------------------
+    def payload(self):
+        """The last payload shown, exactly as it was handed over."""
+        return self._payload
+
+    def set_payload(self, payload):
+        """Show a report payload, replacing whatever was there."""
+        self._payload = payload
+        self.clear()
+        if payload is None:
+            return
+        if isinstance(payload, dict):
+            self._add_children(self.invisibleRootItem(), payload.items())
+        elif isinstance(payload, list):
+            self._add_children(self.invisibleRootItem(),
+                              ((str(index), value) for index, value in enumerate(payload)))
+        else:
+            self._leaf(self.invisibleRootItem(), 'value', payload)
+        for index in range(self.topLevelItemCount()):
+            item = self.topLevelItem(index)
+            if item.text(0) in self.EXPANDED:
+                item.setExpanded(True)
+
+    def setPlainText(self, text):
+        """Accept a plain string so a bare message can still be displayed."""
+        self.set_payload(text if isinstance(text, str) else None)
+
+    def toPlainText(self):
+        """The payload as pretty JSON, the same text the old box held."""
+        if self._payload is None:
+            return ''
+        if isinstance(self._payload, str):
+            return self._payload
+        return json.dumps(self._payload, indent=2, default=str)
+
+    # ---- construction ----------------------------------------------------
+    def _add_children(self, parent, pairs):
+        for name, value in pairs:
+            if isinstance(value, dict):
+                node = self._branch(parent, name, f'{len(value)} field(s)')
+                self._add_children(node, value.items())
+            elif isinstance(value, (list, tuple)):
+                self._add_list(parent, str(name), list(value))
+            else:
+                self._leaf(parent, name, value)
+
+    def _add_list(self, parent, name, values):
+        # A list of scalars reads better on one line than as numbered rows;
+        # a list of records needs a row each, labelled by whatever names it.
+        if all(not isinstance(value, (dict, list, tuple)) for value in values):
+            self._leaf(parent, name, ', '.join(_format_value(v) for v in values)
+                       if values else 'none')
+            return
+        node = self._branch(parent, name, f'{len(values)} item(s)')
+        for index, value in enumerate(values):
+            label = str(index)
+            if isinstance(value, dict):
+                for key in ('code', 'name', 'id', 'check'):
+                    if isinstance(value.get(key), str):
+                        label = f'{index}: {value[key]}'
+                        break
+                child = self._branch(node, label, _summarise(value))
+                self._add_children(child, value.items())
+            else:
+                self._add_children(node, ((label, value),))
+
+    def _branch(self, parent, name, summary):
+        item = QtWidgets.QTreeWidgetItem(parent, [str(name), summary])
+        font = item.font(0)
+        font.setBold(True)
+        item.setFont(0, font)
+        return item
+
+    def _leaf(self, parent, name, value):
+        text = _format_value(value)
+        item = QtWidgets.QTreeWidgetItem(parent, [str(name), text])
+        item.setToolTip(1, text)
+        return item
+
+    def _copy_json(self):
+        clipboard = QtGui.QGuiApplication.clipboard()
+        if clipboard is not None:
+            clipboard.setText(self.toPlainText())
+
+
+def _format_value(value):
+    if value is None:
+        return ''
+    if isinstance(value, bool):
+        return 'yes' if value else 'no'
+    if isinstance(value, float):
+        # Enough digits for a millimetre dimension, without 17-digit noise.
+        return f'{value:.6g}'
+    return str(value)
+
+
+def _summarise(record):
+    """One-line gist of a diagnostic-shaped record, for its collapsed row."""
+    for key in ('message', 'severity', 'status'):
+        value = record.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return f'{len(record)} field(s)'

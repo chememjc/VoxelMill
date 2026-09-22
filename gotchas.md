@@ -1176,7 +1176,7 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
 - **Support "bridging" is called bracing in this codebase.** The feature is
   `supports._brace`, gated by `support.auto_bracing` and sized by
   `brace_spacing_mm`, `brace_max_length_mm`, `brace_diameter_mm`,
-  `brace_max_distance_mm`, and the unreleased destination, pattern, angle,
+  `brace_max_distance_mm`, and the 0.5.4 destination, pattern, angle,
   density, minimum-height, and azimuth controls. Version 0.5.3 removes the old
   bottom-up `brace_start_height_mm`. Grep for `bridge` and you will find only a
   GUI/CLI docstring. Generated fields alone did not make these controls easy
@@ -1495,3 +1495,51 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   correct. `dialog.screen().grabWindow(int(dialog.winId()))` captures the rendered
   X11 window correctly. The AppImage acceptance harness uses that path for full
   editor images and VTK readback for viewport-only images.
+
+- **A startup modal with no skip gate hangs every unattended launch.** The
+  first-run wizard and the FreeCAD prompt skip on headless / `VOXELMILL_NO_WIZARD`
+  / no TTY. `_maybe_offer_recovery` did not, so on any machine that had once
+  crashed with work open, `~/.cache/voxelmill/autosave.voxmil` existed and every
+  non-interactive start stopped forever on a `QMessageBox` nobody could click:
+  `gui --screenshot`, the packaged acceptance smoke, CI. Any new startup prompt
+  needs the same three gates. Assert such a modal is never *constructed* rather
+  than letting it open and checking the result, or the test hangs the way the
+  bug did.
+
+- **Only facet perimeters, and not via a filter.** `SetEdgeVisibility(True)` on
+  the nav cube drew every triangle edge, and because the body is unshared-vertex
+  triangle soup that included each quad's splitting diagonal, so every face had
+  a line across it. `vtkFeatureEdges` would extract the perimeters but is the
+  filter that hung the Cocoa expose. Collect one closed loop per facet where the
+  triangles are emitted (`_emit_quad` appends its own four-point loop; the two
+  `_emit_triangle` calls inside it do not, which is exactly what drops the
+  diagonal), offset each loop along its own facet normal in geometry, and draw
+  it as static line cells. A geometric offset beats a coincident-topology render
+  mode here: nothing runs during a paint.
+
+- **Nav cube glyph placement is coupled to its own hit test.** `cube_hit_under`
+  consults the orbit arrows before it picks the cube body, so an arrow hit zone
+  defined as an outer band of the marker viewport has to stay wider than the
+  cube's silhouette or it steals the body's own clicks. That coupling is what
+  forced the glyphs far out from a small cube. Hit-test each glyph against its
+  own triangle instead and the two become independent. Remember `ResetCamera`
+  frames the bounding *sphere* of the marker bounds, so the silhouette reaches
+  `0.5 + 0.5 * CUBE_HALF / (CUBE_PAD_HALF * sqrt(3))`, not `CUBE_HALF / CUBE_PAD_HALF`.
+
+- **`QScreen.grabWindow` is not portable for unattended capture.** It captures
+  the composited window including native VTK children, which is why the AppImage
+  acceptance harness uses it, but it goes through the window server: on macOS
+  that needs Screen Recording permission, which a process launched over SSH
+  cannot be granted, and it returns nothing there. `gui --screenshot` therefore
+  composites instead, `QWidget.grab()` for the Qt tree plus
+  `vtkWindowToImageFilter` painted over the blank native child area, scaled by
+  the pixmap's device pixel ratio. That also sidesteps the corrupt-native-child
+  problem above, since the child's area is overwritten wholesale.
+
+- **One help table, two-level keys.** Field explanations live in
+  `gui/helptext.py` and are read by both the generated Setup rows and the
+  dedicated editors; documenting a field in one surface only is how the
+  part-to-part and thin-pillar keys ended up bare in both. Look entries up with
+  `help_for('section.field')`, never by direct subscript: four field names
+  (`id`, `name`, `enabled`, `voxel_size_mm`) repeat across sections and are
+  keyed by path, and a bare-key subscript silently skips those.

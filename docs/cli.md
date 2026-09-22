@@ -63,7 +63,7 @@ These are accepted by every command except `goo-info`.
 | `--report PATH`, `--progress` | Report destination, and progress on stderr. |
 
 The destination, pattern, per-node limit, angle, minimum-height, and azimuth
-brace options are **Unreleased** additions; the 0.5.3 release record covers the
+brace options are additions in **0.5.4**. The 0.5.3 release record covers the
 earlier shoulder-branch controls only.
 
 Precedence runs defaults → printer → matching resin process → explicit options,
@@ -705,7 +705,32 @@ summary instead of that line.
 
 Builds the attachment illustration used by the support editor. `--layout array`
 (the default) uses four contacts; `--layout part-to-part` uses a broad lower
-and upper model platform to demonstrate model anchors. `--height-mm` accepts 3–160 mm; `--output` optionally writes its
+and upper model platform to demonstrate model anchors. Both obey the caller's
+settings exactly, so a dimension edit is comparable before and after, which
+also means `part-to-part` routes nothing until `allow_part_to_part` is
+enabled.
+
+`--layout showcase` exists for the opposite reason. It spreads five contacts
+over five shapes chosen to force a different route each, so every kind the
+router can emit is visible at once: a clear column to the plate (`vertical`),
+a low blocker with a free neighbour (`branched`), a tall platform
+(`model_anchor`), a post stopping just under the bar (`small_model_pillar`),
+and a floating slab with nothing beneath it (raster island). The brace
+network appears too. To do that it forces six settings, copying the caller's
+settings rather than editing them, and reports the ones that actually differed
+under `overrides`: `auto_bracing=true`, `allow_part_to_part=true`,
+`part_to_part_avoidance=0.4`, `small_pillar_mode="model"`,
+`small_pillar_diameter_mm=0.6`, `small_pillar_max_length_mm=2.5`. Bracing is
+among them because the brace network is one of the kinds the layout promises
+to show, and the caller's draft may have it off. Avoidance is deliberately not 0: at 0 the
+shorter route always wins, a model route around any obstruction is always
+shorter than branching past it, and the branch case would never appear.
+The showcase also analyses at the production column pitch rather than the
+0.5 mm the older layouts keep, since the surface an anchor lands on is read
+from that raster.
+
+Every layout reports a `categories` count per support kind.
+`--height-mm` accepts 3–160 mm; `--output` optionally writes its
 illustrative STL. It uses the production router and reports routing and brace
 evidence, but performs no print validation, drainage certification, or strength
 proof. The output is a visual example only.
@@ -753,6 +778,19 @@ CLI. Needs the `gui` extra. See [gui.md](gui.md).
 | --- | --- |
 | `--view {front,back,left,right,top,bottom,iso}` | Sets the initial camera view on startup, same views as the `View` menu. Front is the −Y face the green plate edge marks. |
 | `--goo PATH` | Opens this GOO file for layer inspection on startup, as if **File → Open GOO or CTB for inspection…** were used immediately after launch. |
+| `--screenshot PNG` | Writes a PNG of the editor window, 3D view included, then exits with the capture's status. |
+| `--screenshot-delay-ms N` | How long to let the window settle first; default 1500. |
+
+`--screenshot` composites two sources. `QWidget.grab` renders the Qt tree
+through Qt's own painter, which needs no permission but cannot see inside the
+native VTK child, so the render window is read back separately with
+`vtkWindowToImageFilter` and drawn into place (scaled by the pixmap's device
+pixel ratio, so a Retina window lands correctly). `QScreen.grabWindow` would
+capture both at once but goes through the window server, which on macOS means
+Screen Recording permission a process started over SSH cannot be granted.
+Because the app captures its own window, this works over SSH on every
+platform. Losing the 3D content is reported on stderr and does not fail the
+capture; failing to write the PNG exits nonzero.
 
 Empty argv (and a single existing file path) rewrites to `gui` when the binary
 is frozen or PySide6 imports. On Windows VirtualBox guests, `cmd_gui` sets

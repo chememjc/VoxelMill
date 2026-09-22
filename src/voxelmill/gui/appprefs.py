@@ -11,6 +11,8 @@ import base64
 import binascii
 import json
 
+from PySide6 import QtWidgets
+
 from .notifications import config_dir
 
 #: Degrees. Five is fine enough to place a part deliberately and coarse enough
@@ -32,11 +34,19 @@ MOTION_MODE_CHOICES = ('relative', 'absolute')
 #: plate feature; Shift multiplies it by ten.
 DEFAULT_TRANSLATE_STEP_MM = 1.0
 
+#: Milliseconds the pointer must rest on a control before its hover text
+#: appears. Qt's own default is around 700 ms and is not configurable per
+#: application without a style, so the editor installs one. 0 shows hover text
+#: immediately; the cap keeps a typo from making hover text unreachable.
+DEFAULT_TOOLTIP_DELAY_MS = 1000
+MAX_TOOLTIP_DELAY_MS = 10000
+
 #: Window geometry and dock/toolbar layout, as ``QMainWindow.saveGeometry()``/
 #: ``saveState()`` produce them. ``None`` means "nothing remembered yet": the
 #: editor's own built-in sizing is the default, not an empty memory of one.
 DEFAULTS = {'snap_angle_deg': DEFAULT_SNAP_ANGLE_DEG, 'motion_mode': DEFAULT_MOTION_MODE,
            'translate_step_mm': DEFAULT_TRANSLATE_STEP_MM,
+           'tooltip_delay_ms': DEFAULT_TOOLTIP_DELAY_MS,
            'window_geometry': None, 'window_state': None,
            # Empty means unset; FreeCAD is only needed for STEP import.
            'freecad_path': ''}
@@ -94,6 +104,13 @@ def load_preferences() -> dict:
         step = None
     if step is not None and step == step and 0 < step <= 50:
         values['translate_step_mm'] = step
+    delay = data.get('tooltip_delay_ms')
+    try:
+        delay = int(delay)
+    except (TypeError, ValueError):
+        delay = None
+    if delay is not None and 0 <= delay <= MAX_TOOLTIP_DELAY_MS:
+        values['tooltip_delay_ms'] = delay
     for key in ('window_geometry', 'window_state'):
         stored = data.get(key)
         if _valid_base64_text(stored):
@@ -123,3 +140,57 @@ def snap_angle(value, step):
     if not step > 0:
         return value
     return round(value / step) * step
+
+
+class HoverDelayStyle(QtWidgets.QProxyStyle):
+    """Applies the stored hover-text delay to every widget in the editor.
+
+    Qt reads the wake-up delay from the style, not from the widget or the
+    tooltip, so there is no per-control setting to change and no signal to
+    connect: a style is the only place the number can come from. Wrapping the
+    current style rather than naming one keeps the platform look.
+    """
+
+    def __init__(self, delay_ms=DEFAULT_TOOLTIP_DELAY_MS, base=None):
+        super().__init__(base) if base is not None else super().__init__()
+        self._delay_ms = DEFAULT_TOOLTIP_DELAY_MS
+        self.set_delay(delay_ms)
+
+    def delay(self):
+        return self._delay_ms
+
+    def set_delay(self, delay_ms):
+        """Clamp and store a new delay; takes effect on the next hover."""
+        try:
+            delay_ms = int(delay_ms)
+        except (TypeError, ValueError):
+            return self._delay_ms
+        self._delay_ms = max(0, min(int(MAX_TOOLTIP_DELAY_MS), delay_ms))
+        return self._delay_ms
+
+    def styleHint(self, hint, option=None, widget=None, data=None):
+        if hint == QtWidgets.QStyle.SH_ToolTip_WakeUpDelay:
+            return self._delay_ms
+        # Once shown, a tooltip should not vanish faster than it appeared.
+        if hint == QtWidgets.QStyle.SH_ToolTip_FallAsleepDelay:
+            return max(self._delay_ms, super().styleHint(hint, option, widget, data))
+        return super().styleHint(hint, option, widget, data)
+
+
+def install_hover_delay(application, delay_ms=None):
+    """Put a :class:`HoverDelayStyle` on ``application``, or retune the one there.
+
+    Called again on every Apply in the preferences dialog, so it has to be
+    idempotent: installing a second proxy over the first would nest them.
+    """
+    if application is None:
+        return None
+    if delay_ms is None:
+        delay_ms = load_preferences()['tooltip_delay_ms']
+    current = application.style()
+    if isinstance(current, HoverDelayStyle):
+        current.set_delay(delay_ms)
+        return current
+    style = HoverDelayStyle(delay_ms, current)
+    application.setStyle(style)
+    return style

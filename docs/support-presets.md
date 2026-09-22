@@ -59,7 +59,7 @@ plate preference and intermediate values require a proportionally shorter
 model route. `brace_spacing_mm` (15 mm by default) sets vertical origin
 spacing below each shoulder, `brace_max_length_mm` (30 mm by default) limits
 the complete branch, and `brace_diameter_mm` and `brace_max_distance_mm`
-independently control brace thickness and neighbor reach. **Unreleased**
+independently control brace thickness and neighbor reach. **New in 0.5.4:**
 `brace_destination` (`supports`, `base`, or `both`), `brace_pattern`
 (`single`, `alternating`, or `x`), `brace_branches_per_node` (1–8),
 `brace_angle_deg` (strictly between 0° and 90°), `brace_min_height_mm`, and

@@ -381,7 +381,47 @@ def run_inside(args):
             shot.GetOutput().GetPointData().GetScalars())[:, :3].astype(int)
         lit = int(np.count_nonzero(np.abs(pixels - [31, 33, 38]).sum(axis=1) > 30))
         assert lit > 1000, lit
+
+        # Navigation cube, in the packaged runtime: all 26 facets pickable,
+        # perimeter outlines with no facet diagonals, and the six screen
+        # glyphs present. The picks are pure math, but running them here
+        # proves the bundled module is the one carrying them.
+        from voxelmill.gui.viewport import (ARROW_CENTRES_UV, ROLL_CENTRES_UV,
+                                            chamfered_cube_triangles, cube_hit_at)
+        from voxelmill.gui.window import capture_window
+        reopened.viewport.add_navigation_cube()
+        reopened.viewport.render()
+        _, _, loops = chamfered_cube_triangles()
+        cube_evidence = {
+            "facet_outlines": len(loops),
+            "edge_pick": cube_hit_at((0.40, 0.40, 0.0)),
+            "corner_pick": cube_hit_at((0.40, 0.40, 0.40)),
+            "face_pick": cube_hit_at((0.50, 0.10, 0.10)),
+            "arrow_picks": {name: cube_hit_at(uv) for name, uv in ARROW_CENTRES_UV.items()},
+            "roll_picks": {name: cube_hit_at(uv) for name, uv in ROLL_CENTRES_UV.items()},
+            "widget_enabled": bool(reopened.viewport.cube_widget
+                                   and reopened.viewport.cube_widget.GetEnabled()),
+        }
+        assert cube_evidence["facet_outlines"] == 26, cube_evidence
+        assert cube_evidence["edge_pick"] == ["edge", "edge_++0"] or \
+            cube_evidence["edge_pick"] == ("edge", "edge_++0"), cube_evidence
+        assert cube_evidence["widget_enabled"], cube_evidence
+        assert all(hit and hit[0] == "arrow"
+                   for hit in cube_evidence["arrow_picks"].values()), cube_evidence
+        assert all(hit and hit[0] == "roll"
+                   for hit in cube_evidence["roll_picks"].values()), cube_evidence
+        cube_evidence["edge_views"] = sum(
+            1 for name in __import__('voxelmill.gui.camera', fromlist=['VIEWS']).VIEWS
+            if name.startswith('edge_'))
+        assert cube_evidence["edge_views"] == 12, cube_evidence
+
+        # The window screenshot path itself, which is how non-Linux hosts get
+        # visual evidence at all. It must include the 3D view, not a blank hole.
+        window_shot = capture_window(reopened, output / "editor-window.png")
+        cube_evidence["window_screenshot"] = str(window_shot)
+
         payload = {
+            "navigation_cube": cube_evidence,
             "voxelmill_origin": str(origin), "cuda_status": acceleration,
             "gui_skipped": False,
             "actual_render_surface_pixels": lit,
@@ -410,7 +450,10 @@ def _support_options_gui(app, output):
     document = Document()
     dialog = ConfigurationEditor(document, 'support')
     dialog.show()
-    assert dialog.tabs.tabText(0) == 'Bracing'
+    # Anchor and thin-pillar settings are separate tabs: thin pillars in
+    # middle mode apply to every pillar, not only to part-to-part routes.
+    assert [dialog.tabs.tabText(index) for index in range(dialog.tabs.count())] == [
+        'Bracing', 'Pillars, tips and bases', 'Part-to-part anchors', 'Thin pillars']
     cases = {}
 
     def preview(name):
@@ -472,8 +515,31 @@ def _support_options_gui(app, output):
     assert preview('part-to-part')['routing']['model_anchor'] == 4
     dialog.fields['support', 'allow_part_to_part'].setChecked(False)
     assert preview('part-to-part-disabled')['routing']['model_anchor'] == 0
+
+    # The showcase layout has to produce every route kind with no settings
+    # hunt, which is the whole reason it exists. Brace geometry is put back to
+    # its defaults first: the cases above left an unusual combination behind,
+    # and the layout deliberately does not force brace settings, so what is
+    # asserted here is the showcase with ordinary bracing.
+    choice('brace_destination', 'both')
+    choice('brace_pattern', 'single')
+    dialog.fields['support', 'brace_spacing_mm'].setText('15')
+    dialog.fields['support', 'brace_max_distance_mm'].setText('0')
+    dialog.fields['support', 'brace_branches_per_node'].setText('1')
+    dialog.fields['support', 'brace_angle_deg'].setText('45')
+    dialog.fields['support', 'tree_supports'].setChecked(False)
+    dialog.example_layout.setCurrentIndex(dialog.example_layout.findData('showcase'))
+    preview('showcase')
+    showcase = dialog.example
+    assert showcase['layout'] == 'showcase', showcase['layout']
+    categories = showcase['categories']
+    missing = [kind for kind, count in categories.items() if not count]
+    assert not missing, (missing, categories)
+    assert showcase['overrides'], 'the showcase must report what it forced'
+    assert showcase['analysis_pitch_mm'] < 0.2, showcase['analysis_pitch_mm']
     dialog.reject()
-    return {'cases': cases, 'preset_roundtrip': True, 'project_roundtrip': True}
+    return {'cases': cases, 'preset_roundtrip': True, 'project_roundtrip': True,
+            'showcase_categories': categories, 'showcase_overrides': showcase['overrides']}
 
 
 def build_parser():
@@ -481,7 +547,7 @@ def build_parser():
     parser.add_argument("appimage", nargs="?", help="built or downloaded AppImage")
     parser.add_argument("--source", default=str(DEFAULT_SOURCE), help="acceptance STL")
     parser.add_argument("--output-dir", required=True, help="durable evidence directory")
-    parser.add_argument("--expected-version", default="0.5.3")
+    parser.add_argument("--expected-version", default="0.5.4")
     parser.add_argument("--workflow-url", help="published workflow run URL or other provenance")
     parser.add_argument("--skip-gui", action="store_true",
                         help="only for hosts without Xvfb; records unavailable render coverage")

@@ -6,6 +6,8 @@ lessons go in `gotchas.md`.
 
 ## Now
 
+- [ ] Release 0.5.4 alpha: verify local AppImage, push tested commits, pass all four manual builds, tag/publish, and test the published Linux artifact.
+
 Headline **2.32 s / 350 MB**. Stay on `master`; no release branch until a later stable.
 
 - [x] Sanitize public tree (no machine-absolute paths; vestigial C-CLI cancelled).

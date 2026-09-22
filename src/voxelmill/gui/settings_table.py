@@ -10,6 +10,7 @@ from typing import Any
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
+from .helptext import help_for
 from ..config import (
     BRACE_DESTINATIONS, BRACE_PATTERNS, BASE_TYPES, DEFAULTS, MODEL_ANCHOR_SHAPES, SMALL_PILLAR_MODES,
     SMALL_PILLAR_SHAPES, SUPPORT_VOID_POLICIES, TIP_SHAPES,
@@ -111,15 +112,13 @@ OVERRIDES: dict[str, dict[str, Any]] = {
     'process.bottom_tolerance_offset_mm': {'tier': 'expert', 'unit': 'mm', 'risk': 'uncalibrated'},
     'support.spacing_mm': {'tier': 'simple', 'unit': 'mm', 'range': (0.2, 50.0)},
     'support.brace_spacing_mm': {'tier': 'simple', 'unit': 'mm', 'range': (0.1, 200.0),
-                                 'risk': 'caution',
-                                 'tooltip': 'support.brace_spacing_mm — --set support.brace_spacing_mm=VALUE. Vertical spacing between downward brace origins, measured from each support shoulder. Default 15 mm.'},
+                                 'risk': 'caution'},
     'support.brace_diameter_mm': {'tier': 'advanced', 'unit': 'mm', 'range': (0.0, 20.0),
                                   'risk': 'caution'},
     'support.brace_max_distance_mm': {'tier': 'simple', 'unit': 'mm', 'range': (0.0, 200.0),
                                       'risk': 'caution'},
     'support.brace_max_length_mm': {'tier': 'simple', 'unit': 'mm', 'range': (0.1, 200.0),
-                                    'risk': 'caution',
-                                    'tooltip': 'support.brace_max_length_mm — --set support.brace_max_length_mm=VALUE. Maximum complete downward brace length. Default 30 mm; candidates that cannot reach a valid grounded support or plate landing are omitted.'},
+                                    'risk': 'caution'},
     'support.auto_bracing': {'tier': 'simple', 'label': 'Enable bracing'},
     'support.brace_destination': {'tier': 'simple', 'label': 'Brace destinations (supports / base / both)'},
     'support.brace_pattern': {'tier': 'simple', 'label': 'Bracing pattern'},
@@ -127,8 +126,7 @@ OVERRIDES: dict[str, dict[str, Any]] = {
     'support.brace_angle_deg': {'tier': 'simple', 'unit': 'deg', 'range': (0.1, 89.9)},
     'support.brace_min_height_mm': {'tier': 'advanced', 'unit': 'mm', 'range': (0.0, 200.0)},
     'support.brace_azimuth_deg': {'tier': 'advanced', 'unit': 'deg', 'range': (-360.0, 360.0)},
-    'support.allow_part_to_part': {'tier': 'advanced', 'risk': 'caution',
-                                   'tooltip': 'support.allow_part_to_part — --set support.allow_part_to_part=VALUE. Allow primary supports to anchor on model material. Brace networks always require a continuous support-only path to the plate or generated base.'},
+    'support.allow_part_to_part': {'tier': 'advanced', 'risk': 'caution'},
     'support.overhang_angle_deg': {'tier': 'simple', 'unit': 'deg', 'range': (1.0, 89.0)},
     'support.part_to_part_avoidance': {'tier': 'advanced', 'risk': 'caution', 'range': (0.0, 1.0)},
     'support.tree_supports': {'tier': 'advanced', 'risk': 'caution'},
@@ -222,7 +220,17 @@ def _default_range(value_type: str, value) -> tuple[float, float] | None:
 
 
 def _tooltip(path: str, label: str, risk: str, flag: str | None) -> str:
+    """Hover text for one generated row.
+
+    The explanation comes from the shared :data:`~voxelmill.gui.helptext.HELP`
+    table, which the dedicated editors read too. Without it a row's tooltip
+    was its own label plus the config key, which told a reader nothing they
+    could not already see.
+    """
+    explanation = help_for(path)
     parts = [label, f'Config key: {path}.']
+    if explanation:
+        parts.insert(1, explanation)
     if flag:
         parts.append(f'Set it from the command line with {flag}, or with --set {path}=VALUE.')
     else:
@@ -266,7 +274,7 @@ def build_descriptors(defaults=None) -> tuple[SettingDescriptor, ...]:
         label = override.get('label') or _humanise(path.split('.')[-1])
         choices = ENUM_CHOICES.get(path)
         flag = CLI_FLAGS.get(path)
-        tip = override.get('tooltip') or _tooltip(path, label, risk, flag)
+        tip = _tooltip(path, label, risk, flag)
         rows.append(SettingDescriptor(
             path=path,
             value_type=value_type,

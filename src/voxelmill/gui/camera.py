@@ -40,6 +40,22 @@ for _sx, _sy, _sz in (
         (float(_sx), float(_sy), float(_sz)), (0.0, 0.0, 1.0))
 del _sx, _sy, _sz
 
+# Twelve cube-edge views, one per 45 degree bevel facet. Naming mirrors the
+# corner isos with ``0`` marking the axis the bevel is flat along, so
+# ``edge_+-0`` is the front-right vertical bevel. A plain Z up is safe for all
+# twelve: ``orthonormal_up`` only fails when the direction is exactly +/-Z, and
+# every edge direction keeps a nonzero horizontal component by construction.
+for _a, _b in ((0, 1), (0, 2), (1, 2)):
+    for _sa in (1, -1):
+        for _sb in (1, -1):
+            _chars = ['0', '0', '0']
+            _chars[_a] = '+' if _sa > 0 else '-'
+            _chars[_b] = '+' if _sb > 0 else '-'
+            _direction = [0.0, 0.0, 0.0]
+            _direction[_a], _direction[_b] = float(_sa), float(_sb)
+            VIEWS['edge_' + ''.join(_chars)] = (tuple(_direction), (0.0, 0.0, 1.0))
+del _a, _b, _sa, _sb, _chars, _direction
+
 HOME_VIEW = 'iso'
 
 #: Keyboard shortcuts, mirrored by the View menu. Corner isos are cube picks,
@@ -55,6 +71,13 @@ FACE_VIEWS = {'Front': 'front', 'Back': 'back', 'Left': 'left',
 
 #: FreeCAD-style orbit arrows around the cube, in view space.
 ARROW_TURNS = ('left', 'right', 'up', 'down')
+
+#: The two in-plane roll buttons flanking the up arrow.
+ROLL_TURNS = ('left', 'right')
+
+#: Degrees one arrow or roll click moves. 45 matches the cube's bevel facets,
+#: so every click lands on a facet the cube itself shows.
+NAV_STEP_DEG = 45.0
 
 
 def _unit(vector):
@@ -89,8 +112,8 @@ def _rotate_about(vector, axis, angle):
             + axis * float(np.dot(axis, vector)) * (1.0 - cosine))
 
 
-def rotate_view_90(direction, up, turn):
-    """Orbit a camera pose 90° in view space.
+def rotate_view_by(direction, up, turn, degrees=NAV_STEP_DEG):
+    """Orbit a camera pose ``degrees`` in view space.
 
     ``turn`` is one of :data:`ARROW_TURNS` (the four FreeCAD NavCube arrows).
     ``direction`` is camera-minus-focal, the same convention as :data:`VIEWS`.
@@ -99,22 +122,48 @@ def rotate_view_90(direction, up, turn):
     """
     if turn not in ARROW_TURNS:
         raise ValueError(f'unknown orbit {turn!r}; expected one of {ARROW_TURNS}')
+    degrees = float(degrees)
+    if not math.isfinite(degrees):
+        raise ValueError('an orbit step must be a finite number of degrees')
     direction = _unit(direction)
     up = orthonormal_up(direction, up)
     # VTK view-right: ViewUp × (Position - FocalPoint).
     right = _unit(np.cross(up, direction))
-    quarter = math.pi / 2
+    step = math.radians(degrees)
     if turn == 'right':
-        axis, angle = up, quarter
+        axis, angle = up, step
     elif turn == 'left':
-        axis, angle = up, -quarter
+        axis, angle = up, -step
     elif turn == 'up':
-        axis, angle = right, -quarter
+        axis, angle = right, -step
     else:
-        axis, angle = right, quarter
+        axis, angle = right, step
     new_direction = _rotate_about(direction, axis, angle)
     new_up = _rotate_about(up, axis, angle)
     return _unit(new_direction), orthonormal_up(new_direction, new_up)
+
+
+def rotate_view_90(direction, up, turn):
+    """Quarter-turn orbit, kept for callers that want face-to-face steps."""
+    return rotate_view_by(direction, up, turn, degrees=90.0)
+
+
+def roll_view_by(direction, up, turn, degrees=NAV_STEP_DEG):
+    """Roll a camera pose about its own view axis, leaving the direction alone.
+
+    This is the in-plane screen rotation the two buttons above the cube apply:
+    what the viewer sees turns, but the camera does not move around the model.
+    A world-Z yaw would only duplicate the left and right orbit arrows.
+    """
+    if turn not in ROLL_TURNS:
+        raise ValueError(f'unknown roll {turn!r}; expected one of {ROLL_TURNS}')
+    degrees = float(degrees)
+    if not math.isfinite(degrees):
+        raise ValueError('a roll step must be a finite number of degrees')
+    direction = _unit(direction)
+    up = orthonormal_up(direction, up)
+    angle = math.radians(degrees) * (1.0 if turn == 'right' else -1.0)
+    return direction, orthonormal_up(direction, _rotate_about(up, direction, angle))
 
 
 def named_view_near(direction, up, max_degrees=12.0):
@@ -196,13 +245,8 @@ class CameraController:
     def home(self):
         return self.set_view(HOME_VIEW)
 
-    def rotate_90(self, turn):
-        """Orbit the current camera 90°; snap to a named view when the roll matches."""
-        camera = self.camera
-        focal = np.asarray(camera.GetFocalPoint(), dtype=float)
-        direction = np.asarray(camera.GetPosition(), dtype=float) - focal
-        up = np.asarray(camera.GetViewUp(), dtype=float)
-        new_direction, new_up = rotate_view_90(direction, up, turn)
+    def _move_to(self, new_direction, new_up, focal, direction):
+        """Apply an orbited or rolled pose, snapping to a named view if one fits."""
         name = named_view_near(new_direction, new_up)
         if name is not None:
             return self.set_view(name)
@@ -210,6 +254,28 @@ class CameraController:
         self.apply((focal + new_direction * distance, focal, new_up))
         self.current = None
         return None
+
+    def _pose_now(self):
+        camera = self.camera
+        focal = np.asarray(camera.GetFocalPoint(), dtype=float)
+        direction = np.asarray(camera.GetPosition(), dtype=float) - focal
+        return focal, direction, np.asarray(camera.GetViewUp(), dtype=float)
+
+    def rotate_by(self, turn, degrees=NAV_STEP_DEG):
+        """Orbit the current camera; snap to a named view when the roll matches."""
+        focal, direction, up = self._pose_now()
+        return self._move_to(*rotate_view_by(direction, up, turn, degrees=degrees),
+                             focal, direction)
+
+    def rotate_90(self, turn):
+        """Quarter-turn orbit of the current camera."""
+        return self.rotate_by(turn, degrees=90.0)
+
+    def roll(self, turn, degrees=NAV_STEP_DEG):
+        """Roll the current camera in view plane; snap when the pose matches a view."""
+        focal, direction, up = self._pose_now()
+        return self._move_to(*roll_view_by(direction, up, turn, degrees=degrees),
+                             focal, direction)
 
     def fit(self):
         self.renderer.ResetCamera()

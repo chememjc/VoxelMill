@@ -83,3 +83,47 @@ def test_the_island_pass_cap_reaches_the_settings_table(app):
     dialog = PreferencesDialog(document, headless=True)
     dialog.island_passes.setValue(3)
     assert dialog.settings()['support']['max_island_passes'] == 3
+
+
+def test_hover_delay_is_a_stored_preference_applied_to_the_live_style(tmp_path, monkeypatch):
+    """Hover text is the editor's field documentation, so its delay is tunable.
+
+    Qt reads the wake-up delay from the style, never from the widget, so the
+    editor installs a proxy style. The dialog has to retune that live style,
+    not just write the file: a delay you cannot feel is one you cannot choose.
+    """
+    from PySide6 import QtWidgets
+    from voxelmill.gui import appprefs
+    from voxelmill.gui.appprefs import (DEFAULT_TOOLTIP_DELAY_MS, HoverDelayStyle,
+                                        MAX_TOOLTIP_DELAY_MS, install_hover_delay,
+                                        load_preferences)
+
+    monkeypatch.setattr(appprefs, 'preferences_path', lambda: tmp_path / 'editor.json')
+    assert load_preferences()['tooltip_delay_ms'] == DEFAULT_TOOLTIP_DELAY_MS
+
+    application = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    style = install_hover_delay(application, 1000)
+    assert isinstance(style, HoverDelayStyle)
+    assert style.styleHint(QtWidgets.QStyle.SH_ToolTip_WakeUpDelay) == 1000
+    # Installing again must retune, never nest a second proxy over the first.
+    again = install_hover_delay(application, 2500)
+    assert again is style and again.delay() == 2500
+    assert not isinstance(style.baseStyle(), HoverDelayStyle)
+    # A typo must not make hover text unreachable, or negative.
+    assert install_hover_delay(application, 10 ** 9).delay() == MAX_TOOLTIP_DELAY_MS
+    assert install_hover_delay(application, -5).delay() == 0
+    install_hover_delay(application, DEFAULT_TOOLTIP_DELAY_MS)
+
+
+def test_hover_delay_survives_a_corrupt_or_out_of_range_file(tmp_path, monkeypatch):
+    import json
+    from voxelmill.gui import appprefs
+    from voxelmill.gui.appprefs import DEFAULT_TOOLTIP_DELAY_MS, load_preferences
+
+    path = tmp_path / 'editor.json'
+    monkeypatch.setattr(appprefs, 'preferences_path', lambda: path)
+    for stored in ('nonsense', -1, 10 ** 9, None):
+        path.write_text(json.dumps({'tooltip_delay_ms': stored}))
+        assert load_preferences()['tooltip_delay_ms'] == DEFAULT_TOOLTIP_DELAY_MS, stored
+    path.write_text(json.dumps({'tooltip_delay_ms': 250}))
+    assert load_preferences()['tooltip_delay_ms'] == 250

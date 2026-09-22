@@ -125,3 +125,52 @@ def test_docks_exist_and_can_be_hidden_shown(application):
     window.tabs.setCurrentIndex(window.layers_tab_index)
     assert window.tabs.currentIndex() == window.layers_tab_index
     window.close()
+
+
+def test_every_generated_row_explains_itself():
+    """Hover text is the editor's field documentation, so no row may lack it.
+
+    The generated fallback used to be the row's own label plus its config key,
+    which told a reader nothing they could not already see on screen. That is
+    how the part-to-part and thin-pillar keys ended up undocumented in both
+    GUI surfaces at once.
+    """
+    from voxelmill.gui.helptext import help_for
+    from voxelmill.gui.settings_table import SETTINGS_DESCRIPTORS
+
+    missing = [d.path for d in SETTINGS_DESCRIPTORS if not help_for(d.path)]
+    assert not missing, missing
+    for descriptor in SETTINGS_DESCRIPTORS:
+        explanation = help_for(descriptor.path)
+        assert explanation in descriptor.tooltip, descriptor.path
+        # The explanation has to be more than the label said already.
+        assert len(explanation) > len(descriptor.label) + 10, descriptor.path
+
+
+def test_repeated_field_names_are_explained_per_section():
+    """One sentence covering two meanings serves neither.
+
+    ``id``, ``name``, ``enabled`` and ``voxel_size_mm`` each appear in two
+    sections, so they are keyed by ``section.field`` and must not collapse
+    back onto a single shared sentence.
+    """
+    from voxelmill.gui.helptext import help_for
+
+    for first, second in (('printer.id', 'resin.id'),
+                          ('printer.name', 'resin.name'),
+                          ('hollow.enabled', 'peel.enabled'),
+                          ('hollow.voxel_size_mm', 'repair.voxel_size_mm')):
+        assert help_for(first) and help_for(second)
+        assert help_for(first) != help_for(second), (first, second)
+
+
+def test_support_anchor_fields_say_what_they_measure():
+    """The complaint that started this: the anchor fields explained nothing."""
+    from voxelmill.gui.helptext import help_for
+
+    for key in ('model_anchor_length_mm', 'model_anchor_diameter_mm',
+                'model_anchor_penetration_mm', 'small_pillar_diameter_mm',
+                'small_pillar_max_length_mm'):
+        explanation = help_for(f'support.{key}')
+        assert explanation and len(explanation) > 40, key
+        assert 'surface' in explanation or 'length' in explanation or 'diameter' in explanation

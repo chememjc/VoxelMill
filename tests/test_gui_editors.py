@@ -269,3 +269,36 @@ def test_bracing_tab_and_model_gap_round_trip(app, tmp_path):
     document.undo()
     assert not document.settings['support']['allow_part_to_part']
     dialog.reject()
+
+
+def test_support_tabs_are_grouped_and_free_of_qt_mnemonics(app):
+    """Thin pillars are their own tab, and no title hides a letter.
+
+    In middle mode the `small_pillar_*` keys apply to every pillar, not only
+    to part-to-part routes, so filing them under the anchor tab misdescribed
+    them. And Qt reads '&' in a tab title as a mnemonic marker, which turned
+    "tips & bases" into "tips _bases" on screen.
+    """
+    dialog = ConfigurationEditor(Document(), 'support', headless=True)
+    titles = [dialog.tabs.tabText(index) for index in range(dialog.tabs.count())]
+    assert titles == ['Bracing', 'Pillars, tips and bases',
+                      'Part-to-part anchors', 'Thin pillars']
+    for title in titles:
+        assert '&' not in title, title
+    anchors = titles.index('Part-to-part anchors')
+    thin = titles.index('Thin pillars')
+
+    def keys_on(index):
+        page = dialog.tabs.widget(index).widget()
+        found = set()
+        for (section, key), field in dialog.fields.items():
+            if field.parentWidget() is page:
+                found.add(key)
+        return found
+
+    assert {'allow_part_to_part', 'part_to_part_avoidance'} <= keys_on(anchors)
+    assert all(key.startswith('model_anchor_') or key.startswith('part_to_part_')
+               or key == 'allow_part_to_part' for key in keys_on(anchors))
+    assert all(key.startswith('small_pillar_') for key in keys_on(thin))
+    assert 'small_pillar_diameter_mm' in keys_on(thin)
+    dialog.reject()

@@ -20,9 +20,10 @@ import time
 import numpy as np
 
 from .contracts import CancellationToken, VoxelMillError, ResourceBudget
-from .config import (BASE_TYPES, MODEL_ANCHOR_SHAPES, SMALL_PILLAR_MODES, SMALL_PILLAR_SHAPES,
-                     SUPPORT_VOID_POLICIES, TIP_SHAPES, _merge, fill_legacy_settings,
-                     layer_exposure, resin_usage, resolve_settings, validate_settings)
+from .config import (BASE_TYPES, EXAMPLE_LAYOUTS as LAYOUTS, MODEL_ANCHOR_SHAPES,
+                     SMALL_PILLAR_MODES, SMALL_PILLAR_SHAPES, SUPPORT_VOID_POLICIES,
+                     TIP_SHAPES, _merge, fill_legacy_settings, layer_exposure,
+                     resin_usage, resolve_settings, validate_settings)
 
 SECTIONS = ('printer', 'resin', 'process', 'support', 'peel', 'repair', 'assembly', 'resources', 'hollow')
 
@@ -1261,10 +1262,11 @@ def build_parser():
 
     example = sub.add_parser('support-example', parents=[common],
                             help='build the support editor attachment example and optionally save its illustrative STL')
-    example.add_argument('--layout', choices=('array', 'part-to-part'), default='array',
-                         help='attachment array or a broad lower-model platform demonstrating model anchors')
+    example.add_argument('--layout', choices=LAYOUTS, default='array',
+                         help='attachment array, a broad lower-model platform demonstrating model '
+                              'anchors, or the showcase that forces the settings every route kind needs')
     example.add_argument('--height-mm', type=float, default=20.0,
-                         help='height of four fixed example contacts, from 3 to 160 mm')
+                         help='height of the fixed example contacts, from 3 to 160 mm')
     example.add_argument('--output', help='optional illustrative STL destination; no print validation is performed')
     example.set_defaults(func=cmd_support_example)
 
@@ -1369,6 +1371,12 @@ def build_parser():
     gui.add_argument('--view', choices=('front', 'back', 'left', 'right', 'top', 'bottom', 'iso'),
                      help='initial camera view; front is the -Y face the green plate edge marks')
     gui.add_argument('--goo', help='open this GOO file for layer inspection on startup')
+    gui.add_argument('--screenshot', metavar='PNG',
+                     help='write a PNG of the editor window, 3D view included, then exit; '
+                          'captures the window itself, so no screen-recording permission '
+                          'is needed and it works over SSH')
+    gui.add_argument('--screenshot-delay-ms', type=int, default=1500,
+                     help='how long to let the window settle before --screenshot captures it')
     gui.set_defaults(func=cmd_gui)
 
     monitor = sub.add_parser('monitor', help='open the read-only printer status, camera and history monitor')

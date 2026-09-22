@@ -89,8 +89,8 @@ cmake -S . -B build/appimage-cpu -G Ninja \
 cmake --build build/appimage-cpu -j2
 
 APPIMAGE_EXTRACT_AND_RUN=1 .venv/bin/python scripts/build_appimage.py \
-  --appdir output/appimage-053/VoxelMill.AppDir \
-  --output output/appimage-053/VoxelMill-0.5.3-linux-x86_64.AppImage \
+  --appdir output/appimage-054/VoxelMill.AppDir \
+  --output output/appimage-054/VoxelMill-0.5.4-linux-x86_64.AppImage \
   --tool packaging/appimage/appimagetool \
   --native-extension build/appimage-cpu/_native.cpython-310-x86_64-linux-gnu.so
 ```
@@ -109,23 +109,23 @@ outside a restricted execution sandbox:
 
 ```sh
 .venv/bin/python scripts/appimage_acceptance.py \
-  output/appimage-053/VoxelMill-0.5.3-linux-x86_64.AppImage \
-  --output-dir output/appimage-053/acceptance-final \
-  --expected-version 0.5.3
+  output/appimage-054/VoxelMill-0.5.4-linux-x86_64.AppImage \
+  --output-dir output/appimage-054/acceptance-final \
+  --expected-version 0.5.4 --support-options
 ```
 
 For an artifact downloaded from the tagged release, use a new evidence
 directory and record the workflow run that produced it:
 
 ```sh
-mkdir -p /tmp/voxelmill-v0.5.3
-gh release download v0.5.3 \
-  --pattern 'VoxelMill-0.5.3-linux-x86_64.AppImage' \
-  --dir /tmp/voxelmill-v0.5.3
+mkdir -p /tmp/voxelmill-v0.5.4
+gh release download v0.5.4 \
+  --pattern 'VoxelMill-0.5.4-linux-x86_64.AppImage' \
+  --dir /tmp/voxelmill-v0.5.4
 .venv/bin/python scripts/appimage_acceptance.py \
-  /tmp/voxelmill-v0.5.3/VoxelMill-0.5.3-linux-x86_64.AppImage \
-  --output-dir output/appimage-053/published-acceptance \
-  --expected-version 0.5.3 \
+  /tmp/voxelmill-v0.5.4/VoxelMill-0.5.4-linux-x86_64.AppImage \
+  --output-dir output/appimage-054/published-acceptance \
+  --expected-version 0.5.4 --support-options \
   --workflow-url https://github.com/OWNER/REPOSITORY/actions/runs/RUN_ID
 ```
 
@@ -153,9 +153,9 @@ verification run their own checks, and warning diagnostics remain in their
 reports. `--skip-gui` exists only to record unavailable render coverage; it is
 not sufficient for release acceptance.
 
-The concrete v0.5.3 commands, checksum, results, warnings, and unavailable
+The concrete v0.5.4 commands, checksum, results, warnings, and unavailable
 platform or physical-print coverage are recorded in
-[`reports/releases/v0.5.3.md`](../reports/releases/v0.5.3.md).
+[`reports/releases/v0.5.4.md`](../reports/releases/v0.5.4.md).
 
 `--cli-only` omits VTK and PySide6. The editor then fails at import with a
 missing-module error rather than a missing system package. A CLI-only image
@@ -232,7 +232,7 @@ without CUDA or configure with `-DCMAKE_CUDA_COMPILER=`; the CPU morphology
 fallback covers the loss.
 
 
-For the unreleased configurable support update, add `--support-options` to
+For the configurable support controls in 0.5.4, add `--support-options` to
 `scripts/appimage_acceptance.py`. This exercises all three brace destination
 modes, density and angle edits, alternating and X patterns, the tree-junction
 preview, and enabled/disabled model anchors using the extracted application's

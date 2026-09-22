@@ -351,7 +351,7 @@ The full-resolution suite over the immutable originals is opt-in because it is
 slow. The GUI's real-render test needs `xvfb-run` and skips cleanly without it.
 
 
-## Configurable support illustrations (unreleased)
+## Configurable support illustrations (0.5.4)
 
 Compare dense X bracing with a clearly visible model-to-model gap:
 
@@ -363,8 +363,27 @@ voxelmill support-example --layout part-to-part --part-to-part-supports \
   --part-to-part-avoidance 0 --output output/model-gap.stl
 ```
 
+See every support kind in one picture, with no settings to find first:
+
+```sh
+voxelmill support-example --layout showcase --output output/showcase.stl \
+  --report output/showcase.json
+```
+
+Five contacts over five shapes, one per route: a clear column to the plate,
+a low blocker with a free neighbour to branch around, a tall platform to
+anchor on, a post stopping just under the bar for a thin model pillar, and a
+floating slab with nothing beneath it. The brace network appears too, and the
+`categories` block in the report counts what was actually produced. This is
+the one layout that does not obey the caller's settings exactly: it forces
+the five it needs and lists them under `overrides`. It also analyses at the
+production column pitch, because the surface an anchor lands on is read from
+that raster.
+
 These examples use the production router but are illustrations, not validated
-print jobs. The Support editor exposes the same options in **Bracing** and
-**Part-to-part**, with a **Show part-to-part supports** action for the model gap.
+print jobs. The Support editor exposes the same options in **Bracing**,
+**Part-to-part anchors** and **Thin pillars**, with a **Show part-to-part
+supports** action for the model gap and the same three layouts in its example
+selector.
 X pairs require reciprocal vertical shaft spans; obstructed or unreachable
 branches are omitted. Model parts never anchor braces.

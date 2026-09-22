@@ -15,12 +15,25 @@ always grounded support-network nodes or valid plate landings; model parts
 never anchor a brace. Earlier roadmap references to generic cross-bracing or a
 brace start height describe historical work and are superseded by this contract.
 
-Unreleased local update: brace destination mode, 1–8 connections per node,
+0.5.4 update: brace destination mode, 1–8 connections per node,
 branch angle, single/alternating/X patterns, minimum origin height, and fan
 rotation are editable. The Bracing editor tab exposes distance controls, the
 Part-to-part example explicitly demonstrates model anchors, and angled/tree
 tip shoulders have continuous blends. See [local verification](reports/support-options-local.md);
-this update has not been pushed or published.
+release verification is tracked in [the 0.5.4 record](reports/releases/v0.5.4.md).
+
+0.5.4 editor update: all 26 navigation-cube facets are pickable, facet
+outlines carry no diagonals, the orbit arrows step 45° close to the cube and
+two chevrons roll the view in plane. Every setting has hover text from one
+shared table, with an adjustable delay. The Report tab lists report fields
+rather than raw JSON. A `showcase` support example exercises every route kind
+at once, and `gui --screenshot` captures the window for unattended
+verification. Part-to-part anchors and thin pillars are separate editor tabs.
+Still open: the historical `part-to-part` example layout routes nothing under
+default settings, which is why the showcase forces its own; and the four
+field names that repeat across settings sections (`id`, `name`, `enabled`,
+`voxel_size_mm`) are keyed by path in the help table rather than the table
+being section-aware throughout.
 
 Review update (2026-09-09, later): Editor STL open no longer crashes on
 `extra_models=None`. Multi-object pose controls, portable extra meshes, File >

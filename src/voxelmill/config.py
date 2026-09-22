@@ -19,6 +19,9 @@ TIP_SHAPES = ('cone', 'cylinder')
 BRACE_DESTINATIONS = ('supports', 'base', 'both')
 BRACE_PATTERNS = ('single', 'alternating', 'x')
 SUPPORT_VOID_POLICIES = ('fail', 'ignore', 'fill')
+#: Layouts of the illustrative support fixture. Here rather than in
+#: ``support_example`` so the CLI can offer them without importing the router.
+EXAMPLE_LAYOUTS = ('array', 'part-to-part', 'showcase')
 
 DEFAULTS = {
     'schema_version': 1,

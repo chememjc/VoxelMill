@@ -1,26 +1,26 @@
 Alpha {version}: portable Linux / macOS / Windows builds. Unsigned.
 
-## Unreleased support update
+## Configurable supports
 
-The next support update adds configurable brace destinations (`supports`,
-`base`, or `both`), branch angle, single/alternating/X patterns, per-node
-connection limits, minimum origin height, and azimuth. The Support editor has
-a dedicated Bracing tab and a separate Part-to-part tab with an explicit model
-gap example action. These changes are unreleased and do not change the 0.5.3
-verification record.
+- A dedicated **Bracing** tab exposes vertical spacing, support-to-support reach, maximum branch length, and diameter. Common controls are also visible in Simple Setup.
+- Choose **Supports only**, **Base only**, or **Supports or base** destinations. Adjust density from 1–8 connections per node, branch angle, minimum origin height, and fan rotation.
+- Select single diagonals, alternating diagonals, or X bracing. X pairs require reciprocal vertical shaft spans and share a junction at their crossing.
+- Use **Show part-to-part supports** to demonstrate model anchors in a clear lower/upper model-gap example. The action explicitly enables model anchors and sets avoidance to zero in the editor draft.
+- Angled and tree shafts now join conical tip bases continuously, closing the visible notch beneath the tip.
+- A new **Showcase** example puts every support kind in one picture: a plate route, a branch around a blocker, a model anchor, a thin model pillar, a supported island, and the brace network. It forces the six settings those routes need and lists them under the picture, so nothing has to be found first. Part-to-part anchor fields and thin-pillar fields are now separate tabs, since thin pillars in middle mode apply to every pillar, not only to part-to-part routes.
 
-Angled and tree support shafts now blend continuously into conical tip bases.
-The source changes have been tested locally; they are not a new published release.
+## Editor navigation and clarity
 
-## Existing support behavior
+- The navigation cube's twelve 45° sides are now clickable, so all 26 facets it draws select a view. Only facet perimeters are outlined; the lines that used to cross every face are gone.
+- The orbit arrows step **45°**, matching the sides the cube shows, and sit close to the cube instead of far out from it. Two new chevrons on the top row roll the view 45° left or right in its own plane.
+- Every option carries hover text explaining what it does, from one shared table both the Setup rows and the dedicated editors read. Previously the part-to-part and thin-pillar fields had no explanation in either place. The **hover text delay** is adjustable in Configuration → Preferences (default 1000 ms) and applies immediately.
+- The Report tab lists every report field as Parameter / Value rows with collapsible groups, instead of a raw JSON dump. Right-click still gives **Copy report as JSON**; the payload is unchanged.
+- `gui --screenshot PNG` writes an image of the window, 3D view included. It captures the app's own window, so it needs no screen-recording permission and works over SSH on every platform.
+- Fixed: a leftover autosave made every unattended launch stop on a recovery prompt nobody could answer. That prompt now skips when the wizard does, and the autosave is left in place for the next interactive start.
 
-Bracing grows downward at 45° by default from the full-width shoulder below each support tip, while retaining the main pillars. Vertical branch spacing defaults to 15 mm and maximum actual branch length to 30 mm; both are editable independently of support spacing and neighbour distance. The obsolete bottom-up brace-start setting has been removed.
+The CLI, presets, projects, and routing reports preserve these options. Main pillars remain; default brace spacing is 15 mm, maximum complete length is 30 mm, and angle is 45°. Model parts never anchor braces. Branch thickness, clearance, build boundaries, complete base footprints, cancellation, and candidate limits remain checked.
 
-Branches connect to grounded supports or existing branches, or form a new plate landing using the configured base style. Model parts never anchor braces. Full branch thickness, model clearance, build boundaries and complete new feet are checked before a branch is accepted. Support graphs and reports include branch connections and rejection evidence.
-
-Primary part-to-part supports now require explicit enabling. That setting does not relax brace grounding or model clearance.
-
-Generated grid bases are simplified within STL coordinate precision to prevent collapsed triangles on reopening. Connected braces can still narrow drainage channels; existing drainage failures continue to block ordinary export.
+Linux verification includes the full test suite, prepared-mesh and decoded-layer connectivity checks, and actual-render AppImage acceptance. A few tests require unavailable reference files, FreeCAD, or shells. Support struts are checked for reaching what they were routed to by unioning the router's own solids and requiring a single connected component. Physical print strength has not been validated.
 
 This is an alpha. The GUI editor, CLI (`prepare`, `slice`, …), and CPU-only native kernels are bundled. CUDA is not. Qt is used via PySide6 under LGPL v3; see `licenses/THIRD-PARTY.md`.
 

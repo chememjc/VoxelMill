@@ -1334,3 +1334,83 @@ def test_allow_part_to_part_checkbox_toggles_the_setting(application):
     window.actions_map['allow_part_to_part'].setChecked(True)
     assert window.document.settings['support']['allow_part_to_part'] is True
     window.close()
+
+
+# Same child-process reasoning as RENDER_CHILD: a real X server, because VTK
+# opens a genuine X window. This one exercises capture_window, whose whole
+# point is that Qt's own grab cannot see inside that native child.
+CAPTURE_CHILD = """
+import json, sys
+import numpy as np
+from PySide6 import QtWidgets, QtCore
+import manifold3d as m
+from voxelmill.config import resolve_settings
+from voxelmill.geometry import manifold_triangles
+from voxelmill.gui.window import MainWindow, capture_window
+
+target = sys.argv[1]
+app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+settings = resolve_settings(overrides={
+    'printer': {'pixels': [1000, 800], 'pixel_pitch_mm': [0.1, 0.1],
+                'build_mm': [100., 80., 165.]},
+    'resources': {'workers': 2}})
+window = MainWindow(settings, headless=False)
+window.show()
+window.viewport.start()
+window.scene.set_mesh('model', manifold_triangles(m.Manifold.sphere(12, 64)))
+window.viewport.add_navigation_cube()
+window.viewport.reset_camera()
+for _ in range(8):
+    app.processEvents()
+window.viewport.render()
+
+path = capture_window(window, target)
+interactor = window.viewport.interactor
+origin = interactor.mapTo(window, QtCore.QPoint(0, 0))
+print(json.dumps({'path': str(path),
+                  'viewport': [origin.x(), origin.y(),
+                               interactor.width(), interactor.height()],
+                  'window': [window.width(), window.height()]}))
+window.close()
+"""
+
+
+@pytest.mark.gui
+def test_screenshot_captures_the_3d_view_not_a_blank_hole(tmp_path):
+    """``--screenshot`` has to show the render window, or it is not evidence.
+
+    ``QWidget.grab`` renders the Qt tree only, so the native VTK child comes
+    out blank; ``QScreen.grabWindow`` would catch both but needs macOS Screen
+    Recording permission, which an SSH session cannot be granted. So the
+    capture composites the VTK framebuffer in, and the thing worth asserting
+    is that the viewport rectangle of the PNG is not empty.
+    """
+    if shutil.which('xvfb-run') is None:
+        pytest.skip('a real X server (xvfb-run) is needed to open a VTK window')
+    script = tmp_path / 'capture_child.py'
+    script.write_text(CAPTURE_CHILD)
+    shot = tmp_path / 'editor.png'
+    finished = subprocess.run(
+        ['xvfb-run', '-a', '--server-args=-screen 0 1280x1024x24',
+         sys.executable, str(script), str(shot)],
+        capture_output=True, text=True, timeout=600,
+        env={**os.environ, 'QT_QPA_PLATFORM': 'xcb',
+             'VOXELMILL_NO_WIZARD': '1', 'XDG_CACHE_HOME': str(tmp_path / 'cache')})
+    assert finished.returncode == 0, (
+        f'capture child died: stdout={finished.stdout[-2000:]} stderr={finished.stderr[-2000:]}')
+    report = json.loads(finished.stdout.strip().splitlines()[-1])
+    assert shot.stat().st_size > 1000
+
+    from PySide6 import QtGui
+    image = QtGui.QImage(str(shot))
+    assert not image.isNull()
+    left, top, width, height = report['viewport']
+    assert width > 100 and height > 100
+    # Sample a grid inside the viewport rectangle. A blank hole is one flat
+    # colour; a rendered scene is not.
+    seen = set()
+    for row in range(top + 10, top + height - 10, max(1, height // 12)):
+        for column in range(left + 10, left + width - 10, max(1, width // 12)):
+            if 0 <= row < image.height() and 0 <= column < image.width():
+                seen.add(image.pixel(column, row))
+    assert len(seen) > 3, f'the viewport area is flat: {seen}'

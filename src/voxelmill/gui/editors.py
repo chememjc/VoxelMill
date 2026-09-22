@@ -14,6 +14,7 @@ from ..contracts import VoxelMillError
 from .. import profiles
 from ..presets import apply_preset, save_preset
 from ..support_example import support_example
+from .helptext import help_for
 from .jobs import JobRunner
 
 
@@ -27,53 +28,42 @@ ENUMS = {('support', 'brace_destination'): BRACE_DESTINATIONS,
          ('support', 'small_pillar_mode'): SMALL_PILLAR_MODES,
          ('support', 'small_pillar_shape'): SMALL_PILLAR_SHAPES,
          ('support', 'tip_shape'): TIP_SHAPES}
-HELP = {
-    'allow_part_to_part': 'Allow primary supports to anchor on model material. Brace networks always require a continuous support-only path to the plate or generated base.',
-    'drop_attached_unroutable': 'After routing, drop contacts that will not fit if they already have material one printer layer below. Island and manual contacts are never dropped.',
-    'tree_supports': 'Cluster nearby vertical plate supports onto one trunk with branches. Off keeps independent pillars.',
-    'contour_supports': 'Also sample the outer perimeter of downward-face clusters, not just face centroids and interior lattices.',
-    'boundary_supports': 'Also sample open mesh boundary edges (crop cuts). Closed solids add none.',
-    'tree_cluster_mm': 'Tree cluster radius. 0 uses twice the support spacing.',
-    'part_to_part_avoidance': '0: compare routes equally by length. 1: prefer any available plate route. '
-                              'At 0.5 a model route must be less than half the plate route length.',
-    'brace_destination': 'Supports only: grounded support network. Base only: new checked feet. Supports or base: try grounded supports first. Model parts never anchor braces.',
-    'brace_pattern': 'Single diagonals; alternating XY directions at successive levels; or paired X diagonals between vertical shaft spans. X crossings share a junction. Base feet use fan branches in every pattern.',
-    'brace_branches_per_node': 'Maximum distinct neighbour connections per vertical spacing interval, 1–8. Incoming connections count too. Each X pair consumes one slot. Clearance can reduce the result.',
-    'brace_angle_deg': 'Downward angle from horizontal, between 0 and 90 degrees. Default 45 gives equal horizontal travel and vertical drop.',
-    'brace_min_height_mm': 'Minimum origin height above the plate. 0 allows every shoulder-derived level.',
-    'brace_azimuth_deg': 'Rotate base fans and the alternating direction axis around Z, in degrees.',
-    'brace_diameter_mm': 'Brace diameter. 0 derives half the thinner adjoining pillar diameter.',
-    'brace_max_distance_mm': 'Maximum neighbor distance for finding an existing support destination. 0 derives 1.5 times primary support spacing.',
-    'brace_spacing_mm': 'Vertical spacing between downward brace origins, measured from each support shoulder. Default 15 mm.',
-    'brace_max_length_mm': 'Maximum complete downward brace length, including the diagonal connection. Default 30 mm; unreachable candidates are omitted.',
-    'tip_base_diameter_mm': 'Tip cone lower diameter. 0 uses the nominal pillar diameter.',
-    'tip_shape': 'Top contact shape. Cone tapers from the tip-base diameter to the contact diameter; cylinder keeps the contact diameter.',
-    'break_point_diameter_mm': 'Optional ball at the top contact for a controlled snap-off. 0 disables it. When set it must be at least the contact diameter and must fit in the tip length plus penetration.',
-    'model_anchor_shape': 'Bottom connector from the lower model surface to the middle pillar. Cone tapers to the middle radius; cylinder keeps one diameter.',
-    'model_anchor_length_mm': 'Bottom connector height above the lower model surface. 0 keeps the direct anchor route.',
-    'model_anchor_diameter_mm': 'Bottom connector diameter at its buried endpoint. 0 derives it from the selected middle pillar.',
-    'model_anchor_penetration_mm': 'Depth below the sampled model surface for a model anchor. Independent of the top contact penetration.',
-    'small_pillar_mode': 'Where the small-pillar geometry applies: middle segments or model-anchor connectors.',
-    'small_pillar_shape': 'Buried end shape: cone tapers to a point; cylinder keeps the shaft diameter. Both use independent upper/lower depths.',
-    'small_pillar_upper_depth_mm': 'Penetration into the upper model surface. Requires model mode; 0 ends at the surface.',
-    'small_pillar_lower_depth_mm': 'Penetration into the lower model surface. Requires model mode; 0 ends at the surface.',
-    'base_skate_length_mm': 'Skate capsule total length. 0 derives the length from the touch diameter.',
-    'base_rotation_deg': 'Skate orientation around each foot, or grid orientation, in degrees.',
-    'base_strut_width_mm': 'Skeleton/grid strut width. 0 derives the width from the nominal pillar diameter.',
-    'base_cell_size_mm': 'Lattice cell spacing, center to center, in mm. Grid and hex share it.',
-    'base_edge_slope_deg': 'Base wall angle from the plate, widest where it touches. '
-                           '0 keeps a vertical wall; the taper is quantised to printed layers.',
-    'raft_slope_deg': 'Plate outer-perimeter wall from the plate, for a putty knife. 0 is a near-vertical rim.',
-    'base_type': 'grid is the default porous lattice. plate is a solid hull with a 30 degree outer bevel. none is feet only.',
-    'base_touch_diameter_mm': 'Pad and per-foot footprint diameter. 0 derives it from the raft expansion.',
-    'base_thickness_mm': 'Pad and per-foot footprint thickness. 0 derives it from raft thickness.',
-    'density_g_cm3': 'Resin density. 0 means unknown; no weight is estimated.',
-    'cost_per_liter': 'Resin price per liter in the chosen currency. 0 means unknown.',
-    'build_mm': 'Build width, depth, height in mm, as a JSON array. Width/depth must match pixels times pitch.',
-    'pixels': 'LCD width and height in pixels, as a JSON array of integers.',
-    'pixel_pitch_mm': 'Pixel width and height in mm, as a JSON array.',
-    'layer_height_range_mm': 'Hard minimum and maximum layer height in mm, as a JSON array.',
-    'motion': 'Reference motion fields as a JSON object; these are not a calibrated timing or strength model.',
+
+
+#: Plain-language labels for the anchor and thin-pillar keys. The generated
+#: "Model anchor length mm" reads like the config key it came from and says
+#: nothing about what the number measures; these say where it is measured.
+ANCHOR_LABELS = {
+    'allow_part_to_part': 'Allow anchoring on the model',
+    'part_to_part_avoidance': 'Prefer plate routes (0 = never, 1 = always)',
+    'model_anchor_shape': 'Bottom connector shape',
+    'model_anchor_length_mm': 'Bottom connector height above surface (mm)',
+    'model_anchor_diameter_mm': 'Bottom connector buried diameter (mm)',
+    'model_anchor_penetration_mm': 'Bottom connector depth into surface (mm)',
+    'small_pillar_mode': 'Applies to',
+    'small_pillar_diameter_mm': 'Thin pillar diameter (mm)',
+    'small_pillar_max_length_mm': 'Use thin pillar up to this length (mm)',
+    'small_pillar_shape': 'Buried end shape',
+    'small_pillar_upper_depth_mm': 'Depth into upper surface (mm)',
+    'small_pillar_lower_depth_mm': 'Depth into lower surface (mm)',
+}
+
+#: Shown above a tab's fields. The thin-pillar note exists because these keys
+#: used to sit under "Part-to-part" while, in middle mode, they apply to every
+#: pillar -- which is a large part of why the group read as unclear.
+GROUP_NOTES = {
+    'Part-to-part anchors': (
+        'How a support attaches when it lands on the model instead of the plate. '
+        'Bottom to top a part-to-part support is: a bottom connector buried in the '
+        'lower body, then the middle pillar, then the tip at the contact. The fields '
+        'here describe only that bottom connector. The lower surface height comes '
+        'from the analysis raster, so it is as exact as that pitch and no more.'),
+    'Thin pillars': (
+        'A second, thinner pillar class for short runs. Diameter and maximum length '
+        'must both be set, or the class is off. In middle mode it applies to the '
+        'straight middle segment of any pillar short enough, part-to-part or not; '
+        'in model mode it applies only to a connector bridging a short '
+        'model-to-model gap, and the two depth fields take effect.'),
 }
 
 
@@ -138,7 +128,8 @@ class ConfigurationEditor(QtWidgets.QDialog):
                        'resin': 'Resin properties and exposure process for the current printer. '
                        'A resin save also includes the current support settings.',
                        'support': 'Support dimensions, routing, bases and bracing. '
-                       'Choose an attachment array or a part-to-part gap example. Project contact selection is separate.'}[kind]
+                       'Choose an attachment array, a part-to-part gap, or the showcase that shows '
+                       'every route kind at once. Project contact selection is separate.'}[kind]
         intro = QtWidgets.QLabel(description)
         intro.setWordWrap(True)
         layout.addWidget(intro)
@@ -149,13 +140,19 @@ class ConfigurationEditor(QtWidgets.QDialog):
         self.tabs = tabs
         if kind == 'support':
             brace_keys = list(BRACE_LABELS)
-            anchor_keys = [key for key in self.draft['support'] if
-                           key.startswith(('model_anchor_', 'small_pillar_', 'part_to_part_'))
+            # Two groups, not one. "small_pillar_*" in middle mode applies to
+            # every pillar, so filing it under part-to-part misdescribed it.
+            thin_keys = [key for key in self.draft['support']
+                         if key.startswith('small_pillar_')]
+            anchor_keys = [key for key in self.draft['support']
+                           if key.startswith(('model_anchor_', 'part_to_part_'))
                            or key == 'allow_part_to_part']
+            grouped = brace_keys + anchor_keys + thin_keys
             groups = [('Bracing', 'support', brace_keys),
-                      ('Pillars, tips & bases', 'support', [key for key in self.draft['support']
-                       if key not in brace_keys + anchor_keys]),
-                      ('Part-to-part', 'support', anchor_keys)]
+                      ('Pillars, tips and bases', 'support', [key for key in self.draft['support']
+                       if key not in grouped]),
+                      ('Part-to-part anchors', 'support', anchor_keys),
+                      ('Thin pillars', 'support', thin_keys)]
         else:
             groups = [(section.title(), section, list(self.draft[section])) for section in SECTIONS[kind]]
         for title, section, keys in groups:
@@ -163,10 +160,16 @@ class ConfigurationEditor(QtWidgets.QDialog):
             scroll.setWidgetResizable(True)
             holder = QtWidgets.QWidget()
             form = QtWidgets.QFormLayout(holder)
+            note = GROUP_NOTES.get(title)
+            if note:
+                caption = QtWidgets.QLabel(note)
+                caption.setWordWrap(True)
+                form.addRow(caption)
             for key in keys:
                 field = self._field(section, key, self.draft[section][key])
                 self.fields[(section, key)] = field
-                label = BRACE_LABELS.get(key, key.replace('_', ' ').capitalize())
+                label = (BRACE_LABELS.get(key) or ANCHOR_LABELS.get(key)
+                         or key.replace('_', ' ').capitalize())
                 form.addRow(label, field)
             scroll.setWidget(holder)
             tabs.addTab(scroll, title)
@@ -188,6 +191,12 @@ class ConfigurationEditor(QtWidgets.QDialog):
                 self.example_layout = QtWidgets.QComboBox()
                 self.example_layout.addItem('Attachment array (pillars / trees / bracing)', 'array')
                 self.example_layout.addItem('Part-to-part gap (lower and upper model)', 'part-to-part')
+                self.example_layout.addItem('Showcase (every support kind at once)', 'showcase')
+                self.example_layout.setToolTip(
+                    'Array and part-to-part obey this draft exactly, so a dimension edit is '
+                    'comparable before and after; part-to-part needs part-to-part routing '
+                    'enabled before it shows anything. Showcase forces the settings each route '
+                    'kind needs and lists them under the picture.')
                 self.example_layout.currentIndexChanged.connect(self._changed)
                 right_layout.addWidget(self.example_layout)
                 self.model_anchor_demo = QtWidgets.QPushButton('Show part-to-part supports')
@@ -239,7 +248,8 @@ class ConfigurationEditor(QtWidgets.QDialog):
             field = QtWidgets.QLineEdit(value if isinstance(value, str) else json.dumps(value))
             field.textChanged.connect(self._changed)
         field.setObjectName(f'{section}.{key}')
-        field.setToolTip(f'{section}.{key} — CLI: --set {section}.{key}=VALUE\n' + HELP.get(key, ''))
+        field.setToolTip(f'{section}.{key} — CLI: --set {section}.{key}=VALUE\n'
+                         + (help_for(f'{section}.{key}') or ''))
         return field
 
     def settings(self):
@@ -308,11 +318,18 @@ class ConfigurationEditor(QtWidgets.QDialog):
         if self.viewport is not None and self._started:
             self.viewport.reset_camera()
         metrics = self.example['metrics']
-        self.status.setText(f"Example: {metrics['contacts_routed']}/{len(self.example['contacts'])} routed, "
-                            f"{metrics['routing']['model_anchor']} model anchors, "
-                            f"{metrics['braces']} braces, "
-                            f"{metrics['braces_collision_rejected']} braces blocked by model. "
-                            + self.example.get('hint', '') + ' Geometry illustration; no print validation or strength proof.')
+        categories = self.example.get('categories') or {}
+        kinds = ', '.join(f'{count} {kind.replace("_", " ")}'
+                          for kind, count in categories.items() if count)
+        overrides = self.example.get('overrides') or {}
+        forced = (' Forced for this preview: '
+                  + ', '.join(f'{key}={value}' for key, value in overrides.items())
+                  + '.') if overrides else ''
+        self.status.setText(f"Example: {metrics['contacts_routed']}/{len(self.example['contacts'])} routed"
+                            + (f' -- {kinds}' if kinds else '')
+                            + f", {metrics['braces_collision_rejected']} braces blocked by model. "
+                            + self.example.get('hint', '') + forced
+                            + ' Geometry illustration; no print validation or strength proof.')
 
     def _show_model_anchors(self):
         self._loading = True

@@ -416,7 +416,7 @@ Branches that collide with model material, leave the build volume, or cannot
 reach a valid landing are rejected and reported. Base landings use fan spokes
 in every pattern and are checked with the configured base footprint.
 
-**Unreleased pattern and density controls:** `brace_pattern="single"` emits unpaired diagonals toward the shortest eligible neighbors.
+**Pattern and density controls (0.5.4):** `brace_pattern="single"` emits unpaired diagonals toward the shortest eligible neighbors.
 `"alternating"` changes the direction by shoulder-derived vertical level.
 `"x"` requires two reciprocal vertical shaft spans and emits paired diagonals;
 if either reciprocal branch is unavailable or collides, the pair is rejected.

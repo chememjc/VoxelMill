@@ -97,3 +97,42 @@ def test_headless_startup_does_not_prompt_for_recovery(application, tmp_path, mo
     # Headless must not auto-load; only offer_recovery does.
     assert window.document.source is None
     window.close()
+
+
+def test_non_interactive_startup_never_builds_a_recovery_modal(application, tmp_path, monkeypatch):
+    """A leftover autosave must not hang a start nobody is watching.
+
+    The wizard and the FreeCAD prompt already skip on headless / NO_WIZARD /
+    no TTY. The recovery prompt did not, so on any machine that had once
+    crashed with work open, every non-interactive start -- the packaged
+    acceptance smoke, ``gui --screenshot``, a CI run -- stopped forever on a
+    modal with no one to click it.
+
+    The modal is asserted never to be *constructed*, rather than letting it
+    open and checking the result: an ungated ``exec()`` would hang this test
+    exactly as it hung the real startup.
+    """
+    monkeypatch.setenv('XDG_CACHE_HOME', str(tmp_path / 'cache'))
+    monkeypatch.setenv('XDG_CONFIG_HOME', str(tmp_path / 'config'))
+    monkeypatch.setenv('VOXELMILL_NO_WIZARD', '1')
+    mark_wizard_done()
+    source = tmp_path / 'part.stl'
+    write_stl(source, manifold_triangles(m.Manifold.cube((4, 4, 4))))
+    document = Document(small_settings(), source)
+    path = autosave_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    document.save(path)
+    assert path.exists() and path.stat().st_size > 0
+
+    class Refuse:
+        def __init__(self, *args, **kwargs):
+            raise AssertionError('a non-interactive start must not build a modal')
+
+    window = MainWindow(small_settings(), None)
+    monkeypatch.setattr(QtWidgets, 'QMessageBox', Refuse)
+    assert window._maybe_offer_recovery() is None
+    window.complete_startup()
+    # Skipped, not consumed: the next interactive start still offers it.
+    assert path.exists() and path.stat().st_size > 0
+    assert window.document.source is None
+    window.close()

@@ -29,10 +29,11 @@ from .camera import CameraController, SHORTCUTS, VIEWS
 from .faults import FaultView, fault_overlay
 from .layerview import ISSUE_COLORS, LayerView
 from .objects import TOOLS, AttachmentSettings, ObjectPanel, ToolSelector
-from .appprefs import DEFAULT_MOTION_MODE, load_preferences, save_preferences
+from .appprefs import (DEFAULT_MOTION_MODE, install_hover_delay, load_preferences,
+                       save_preferences)
 from .notifications import NotificationBanner, NotificationCenter
 from .viewport import Viewport
-from .widgets import ZClipSlider, install_focused_wheel_filter
+from .widgets import ReportParameterView, ZClipSlider, install_focused_wheel_filter
 
 STAGES = ('place', 'model', 'supports', 'union', 'validate')
 THEMES = ('system', 'light', 'dark')
@@ -417,8 +418,13 @@ class MainWindow(QtWidgets.QMainWindow):
             'Double-click a diagnostic to open the Layers tab at that layer.')
         self.diagnostic_list.itemActivated.connect(self._select_diagnostic)
         self.diagnostic_list.itemDoubleClicked.connect(self._select_diagnostic)
-        self.diagnostics = QtWidgets.QPlainTextEdit()
-        self.diagnostics.setReadOnly(True)
+        # Named parameters, not a JSON dump: the payload is identical and
+        # still copyable as JSON, but a reader can find one number without
+        # counting braces. ``toPlainText`` keeps returning that JSON.
+        self.diagnostics = ReportParameterView()
+        self.diagnostics.setObjectName('report_parameters')
+        self.diagnostics.setToolTip(
+            'Every field of the last report. Right-click to copy the whole report as JSON.')
         report_layout.addWidget(self.diagnostic_list, 1)
         report_layout.addWidget(self.diagnostics, 2)
 
@@ -2567,8 +2573,20 @@ class MainWindow(QtWidgets.QMainWindow):
         return self._accept_freecad_path(path)
 
     def _maybe_offer_recovery(self):
+        """Offer a leftover autosave once, when someone is there to answer.
+
+        Same skip gates as the first-run wizard and the FreeCAD prompt
+        (headless / NO_WIZARD / no TTY). Without them a machine that had ever
+        crashed with work open would hang every non-interactive start on a
+        modal nobody can click, including the packaged acceptance smoke and
+        ``--screenshot``. Skipping leaves the autosave in place, so the next
+        interactive start still offers it.
+        """
         path = autosave_path()
-        if self.headless or not path.exists() or path.stat().st_size <= 0:
+        if (self.headless or os.environ.get('VOXELMILL_NO_WIZARD')
+                or not sys.stdin.isatty()):
+            return None
+        if not path.exists() or path.stat().st_size <= 0:
             return None
         if self.project_path and Path(self.project_path).resolve() == path.resolve():
             return None
@@ -2831,7 +2849,7 @@ class MainWindow(QtWidgets.QMainWindow):
             mirror=document.mirror_axes, cancel=token, progress=progress))
 
     def _finish_measure(self, value):
-        self.diagnostics.setPlainText(json.dumps(value, indent=2, default=str))
+        self.diagnostics.set_payload(value)
         size = value['placed_size_mm']
         self.statusBar().showMessage(
             'measured ' + ' x '.join(f'{v:.3f}' for v in size)
@@ -2865,7 +2883,7 @@ class MainWindow(QtWidgets.QMainWindow):
             path, settings, cancel=token, progress=progress))
 
     def _finish_inspect(self, value):
-        self.diagnostics.setPlainText(json.dumps(value, indent=2, default=str))
+        self.diagnostics.set_payload(value)
         mesh = value['meshes'][0]
         self.statusBar().showMessage(
             f"{Path(value['input']).name}: {mesh['triangle_count']} triangles, "
@@ -2877,7 +2895,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def _finish_validate_file(self, value):
         report = value['report']
         self._set_report(report)
-        self.diagnostics.setPlainText(json.dumps(value, indent=2, default=str))
+        self.diagnostics.set_payload(value)
         state = 'passed' if report['passed'] else 'FAILED'
         self.statusBar().showMessage(
             f"{Path(value['input']).name}: validation {state}", 15000)
@@ -3011,7 +3029,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # The header, the settings taken from the file and the claim boundary
         # matter as much as the checks, so the full payload replaces the
         # report-only text the list view populated.
-        self.diagnostics.setPlainText(json.dumps(value, indent=2, default=str))
+        self.diagnostics.set_payload(value)
         state = 'passed' if report['passed'] else 'FAILED'
         self.statusBar().showMessage(
             f"GOO verification {state}: {len(report['diagnostics'])} diagnostics", 15000)
@@ -3068,14 +3086,14 @@ class MainWindow(QtWidgets.QMainWindow):
         message = f'{name} failed: {error.get("message", "")}'
         self.notify(message, category=error.get('code') or name, level='error')
         self.statusBar().showMessage(message, 10000)
-        self.diagnostics.setPlainText(json.dumps({'error': error}, indent=2, default=str))
+        self.diagnostics.set_payload({'error': error})
 
     def _set_report(self, report, *, note=None):
-        """Show full JSON plus selectable diagnostics without losing either."""
+        """Show every report field plus selectable diagnostics, losing neither."""
         payload = report.to_dict() if hasattr(report, 'to_dict') else report
         if note:
             payload = {'note': note, 'validation': payload}
-        self.diagnostics.setPlainText(json.dumps(payload, indent=2, default=str))
+        self.diagnostics.set_payload(payload)
         self.diagnostic_list.clear()
         diagnostics = report.diagnostics if hasattr(report, 'diagnostics') else report.get('diagnostics', [])
         issue_layers = {}
@@ -3290,7 +3308,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _finish_goo(self, value):
         self._discard_validation_path()
-        self.diagnostics.setPlainText(json.dumps(value, indent=2, default=str))
+        self.diagnostics.set_payload(value)
         self.statusBar().showMessage(f"exported {value.get('output', 'GOO file')}", 10000)
 
     # ---- interaction ---------------------------------------------------
@@ -3755,9 +3773,74 @@ class MainWindow(QtWidgets.QMainWindow):
         return self.validate()
 
 
+def capture_window(window, path):
+    """Write a PNG of ``window``, 3D view included, without any OS permission.
+
+    Composited from two sources on purpose. ``QWidget.grab`` renders the Qt
+    tree through Qt's own painter, which is correct everywhere and needs no
+    screen-recording grant; it cannot see inside the native VTK child, which
+    comes out blank. So the render window is read back separately with
+    ``vtkWindowToImageFilter`` and drawn into place.
+
+    ``QScreen.grabWindow`` would capture both at once, but on macOS it goes
+    through the window server and needs Screen Recording permission, which a
+    process started over SSH cannot be granted. This path works there.
+    """
+    path = Path(path)
+    pixmap = window.grab()
+    viewport = getattr(window, 'viewport', None)
+    interactor = getattr(viewport, 'interactor', None)
+    if interactor is not None:
+        try:
+            _draw_render_window(window, interactor, pixmap)
+        except Exception as error:                  # pragma: no cover - driver dependent
+            # A screenshot is evidence, not a feature: losing the 3D content is
+            # worth reporting, never worth failing the capture over.
+            print(f'screenshot: 3D view not captured ({error})', file=sys.stderr)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not pixmap.save(str(path), 'PNG'):
+        raise VoxelMillError('screenshot', f'Could not write a PNG to {path}')
+    return path
+
+
+def _draw_render_window(window, interactor, pixmap):
+    """Read the VTK framebuffer back and paint it over the blank child area."""
+    from vtkmodules.util import numpy_support
+    render_window = interactor.GetRenderWindow()
+    render_window.Render()
+    shot = vtk.vtkWindowToImageFilter()
+    shot.SetInput(render_window)
+    shot.ReadFrontBufferOff()
+    shot.Update()
+    image = shot.GetOutput()
+    width, height, _ = image.GetDimensions()
+    if width <= 0 or height <= 0:
+        raise ValueError('the render window reported an empty framebuffer')
+    pixels = numpy_support.vtk_to_numpy(image.GetPointData().GetScalars())
+    pixels = pixels.reshape(height, width, -1)[::-1]    # VTK origin is bottom-left
+    if pixels.shape[2] == 3:
+        pixels = np.dstack([pixels, np.full((height, width, 1), 255, dtype=pixels.dtype)])
+    pixels = np.ascontiguousarray(pixels, dtype=np.uint8)
+    frame = QtGui.QImage(pixels.data, width, height, 4 * width,
+                         QtGui.QImage.Format_RGBA8888).copy()
+    # grab() works in device pixels, so a Retina window needs the ratio applied
+    # to the child's logical position before the frame lands in the right place.
+    ratio = float(pixmap.devicePixelRatio() or 1.0)
+    origin = interactor.mapTo(window, QtCore.QPoint(0, 0))
+    target = QtCore.QRect(int(round(origin.x() * ratio)), int(round(origin.y() * ratio)),
+                          int(round(interactor.width() * ratio)),
+                          int(round(interactor.height() * ratio)))
+    painter = QtGui.QPainter(pixmap)
+    painter.drawImage(target, frame)
+    painter.end()
+
+
 def run(settings, args):
     application = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     application.setWindowIcon(application_icon())
+    # Hover text is the editor's field documentation, so its delay is a real
+    # preference. Qt only reads it from the style, hence a proxy style here.
+    install_hover_delay(application)
     window = MainWindow(settings, getattr(args, 'input', None))
     window.show()
     application.processEvents()
@@ -3770,4 +3853,22 @@ def run(settings, args):
     if goo:
         window.open_goo(goo)
     window.complete_startup()
+    screenshot = getattr(args, 'screenshot', None)
+    if screenshot:
+        # Let the first real paint and any startup job settle before capturing,
+        # otherwise the evidence is a half-built window.
+        delay = max(0, int(getattr(args, 'screenshot_delay_ms', 0) or 0))
+        status = {'code': 0}
+
+        def capture():
+            try:
+                print(f'screenshot: {capture_window(window, screenshot)}')
+            except Exception as error:
+                print(f'screenshot failed: {error}', file=sys.stderr)
+                status['code'] = 1
+            application.quit()
+
+        QtCore.QTimer.singleShot(delay, capture)
+        application.exec()
+        return status['code']
     return application.exec()

@@ -141,7 +141,24 @@ are refused in middle mode. Model mode checks the whole shaft footprint on
 the column grid and refuses penetration beyond the central column's material
 run. It retains ordinary routing failures and the part-to-part policy.
 
-The ordinary model-anchor bottom is independent of the top tip:
+The ordinary model-anchor bottom is independent of the top tip. Bottom to
+top, a part-to-part support is a bottom connector buried in the lower body,
+then the middle pillar, then the tip at the contact; the four
+`model_anchor_*` settings describe only that bottom connector:
+
+```
+                 ___/\___      tip, contact_diameter_mm at the contact
+                    ||          middle pillar, pillar_diameter_mm
+    junction   ____/\____      model_anchor_length_mm above the surface
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~   lower model surface
+                   \  /         model_anchor_penetration_mm below it,
+                    \/          model_anchor_diameter_mm across
+```
+
+The lower surface height is read from the analysis column raster, not from
+the mesh, so it is exact only to that pitch; `route_contacts` reports this as
+`clearance_basis`. The editor's **Showcase** example analyses at the
+production pitch for exactly this reason (see [examples.md](examples.md)).
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
@@ -167,7 +184,7 @@ fill historical zeros through `fill_legacy_settings` / `_LEGACY_SUPPORT_OFF`
 rather than sprouting the new nonzero defaults. Explicit zeros already stored
 in a project are kept as zeros.
 
-**Unreleased brace controls:** Downward braces begin at the full-width shoulder
+**Brace controls (0.5.4):** Downward braces begin at the full-width shoulder
 below each tip taper and proceed at `brace_angle_deg` (45° by default) toward a
 grounded support network or a valid plate landing.
 `brace_spacing_mm` is their vertical origin spacing and defaults to 15 mm;

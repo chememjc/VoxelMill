@@ -180,6 +180,17 @@ means 37.5. The rotation snap increment is set in Configuration → Preferences 
 not in the settings table: it changes nothing about the output, so it must
 not travel inside a printer profile or a `.voxmil` project.
 
+Every option in the editor carries hover text saying what it does, drawn
+from one shared table (`gui/helptext.py`) that both the generated Setup rows
+and the dedicated printer / resin / support editors read, so a field cannot
+be documented in one surface and bare in the other. The **hover text delay**
+is set in Configuration → Preferences (default 1000 ms, 0 shows it
+immediately, 10000 ms is the cap) and stored in `editor.json` beside the
+other editor preferences. Qt reads that delay from the style rather than from
+the widget, so the editor installs a `QProxyStyle` over the platform style;
+Apply retunes the live style, so a new delay takes effect at once instead of
+at the next launch.
+
 Arrow keys nudge the selected part(s) in the plate's XY: Left/Right move X,
 Up/Down move Y, PageUp/PageDown move Z, by the object panel's translate step
 (1 mm; Shift nudges by ten times that). Unlike the rotation snap increment,
@@ -308,7 +319,7 @@ invalidates the previous preview before an asynchronous replacement job is
 submitted. The status reports routed contacts, model anchors, generated
 downward braces, and braces rejected by model collision checks. Braces begin
 at the full-width shoulder below each tip taper, use the configured angle
-(45° by default), and never anchor on model parts. **Unreleased:** the first
+(45° by default), and never anchor on model parts. **New in 0.5.4:** the first
 editor tab is
 **Bracing**: it contains spacing, support reach, maximum complete length,
 destination (`supports`, `base`, or `both`), pattern (`single`, `alternating`,
@@ -473,9 +484,19 @@ sits on top of the stack.
 using the document's own rotation (substituting an unrotated pose when the
 document's orientation is set to automatic, since `measure` refuses
 `auto`), center offset, lift, scale and mirror. It writes nothing and does
-not touch the open document. The result goes to the Report tab as JSON, and
-the status bar shows the placed size, whether it fits, and the transform
-note when there is one.
+not touch the open document. The result goes to the Report tab, and the
+status bar shows the placed size, whether it fits, and the transform note
+when there is one.
+
+The Report tab shows the selectable diagnostics list above a **parameter
+view**: every field of the last report as Parameter / Value rows, nested
+groups collapsible, each diagnostic labelled by its code with its message on
+the collapsed row. `metrics`, `checks`, `validation` and `report` open on
+arrival; the rest starts collapsed. It replaced a pretty-printed JSON dump,
+which held the same content but made a reader count braces to find one
+number. The payload is unchanged and still exactly recoverable: right-click
+gives **Copy report as JSON**, and the widget's `toPlainText` returns the
+same JSON text the old box held.
 
 The Layers tab renders one printer-pitch layer at a time. Its layer slider is
 vertical (layer 0 at the plate) and the zoom slider is horizontal; Ctrl+wheel
@@ -644,12 +665,38 @@ a gizmo drag.
 
 Picking a face means "show me that side": picking the +X face moves the
 camera to +X, it does not look toward +X. A corner click selects one of the
-eight `iso_*` views. Four FreeCAD-style orbit arrows sit in the marker
-viewport (screen space) around the cube. A pick within 0.15 of the cube's
-center (by dominant axis component) is refused rather than guessed, since
-snapping the camera somewhere the user did not click is worse than doing
-nothing. Home iso remains a shallower front-right-top than a true cube-corner
-isometric.
+eight `iso_*` views, and a click on one of the twelve 45 degree bevel facets
+selects one of the twelve `edge_*` views (named for the two axes it faces,
+with `0` for the axis it is flat along, so `edge_+-0` is the front-right
+vertical bevel). All 26 facets the cube draws are pickable. A pick within
+0.15 of the cube's center (by dominant axis component) is refused rather than
+guessed, since snapping the camera somewhere the user did not click is worse
+than doing nothing. Home iso remains a shallower front-right-top than a true
+cube-corner isometric.
+
+Only facet perimeters are outlined. The body carries no edge-visibility flag;
+the outline is a separate actor built from precomputed line cells, one closed
+loop per facet, offset 0.004 along each facet's own normal. Collecting the
+loops where the triangles are emitted is what keeps each quad's splitting
+diagonal out of the outline, and doing it in geometry rather than through a
+coincident-topology render mode keeps anything from running inside a paint.
+
+Six screen-space glyphs sit in the marker viewport around the cube. Four are
+FreeCAD-style orbit arrows, one per side, and they step **45 degrees**, which
+matches the bevel facets the cube shows, so most steps land on a named view.
+Two chevrons on the top row flank the up arrow and roll the view 45 degrees
+in its own plane (the `up` vector turns about the view direction; the camera
+does not move around the model). Each glyph is hit-tested against its own
+triangle, grown 1.6x for touch tolerance, rather than by claiming an outer
+band of the marker viewport: a band has to be wider than the cube's
+silhouette to stay unambiguous, which is what used to force the glyphs far
+out from a small cube. `CUBE_PAD_HALF` sets the framing, and because
+`ResetCamera` frames the bounding *sphere* of those bounds the cube's
+silhouette reaches `0.5 + 0.5 * CUBE_HALF / (CUBE_PAD_HALF * sqrt(3))` in
+normalized viewport coordinates. The marker rectangle is 0.20 by 0.24 of the
+render window, so `u` and `v` are anisotropic and the glyphs are slightly
+skewed; that is accepted rather than corrected, because the hit tests are
+pure math checked without a display.
 
 The `View` menu and matching shortcuts:
 

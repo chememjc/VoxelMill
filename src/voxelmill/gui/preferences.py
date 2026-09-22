@@ -6,8 +6,9 @@ from PySide6 import QtCore, QtWidgets
 from ..acceleration import cuda_status, resolve_backend
 from ..config import validate_settings
 from ..contracts import VoxelMillError
-from .appprefs import (DEFAULT_TRANSLATE_STEP_MM, SNAP_ANGLE_CHOICES,
-                       load_preferences, save_preferences)
+from .appprefs import (DEFAULT_TRANSLATE_STEP_MM, MAX_TOOLTIP_DELAY_MS,
+                       SNAP_ANGLE_CHOICES, install_hover_delay, load_preferences,
+                       save_preferences)
 
 
 class PreferencesDialog(QtWidgets.QDialog):
@@ -73,6 +74,19 @@ class PreferencesDialog(QtWidgets.QDialog):
             'Distance one arrow-key press or one +/- button moves the selected part. '
             'Shift moves ten times as far. Editor preference: not stored in a profile '
             'or a project.')
+        self.tooltip_delay = QtWidgets.QSpinBox()
+        self.tooltip_delay.setObjectName('tooltip_delay_ms')
+        self.tooltip_delay.setRange(0, int(MAX_TOOLTIP_DELAY_MS))
+        self.tooltip_delay.setSingleStep(100)
+        self.tooltip_delay.setSuffix(' ms')
+        self.tooltip_delay.setSpecialValueText('immediately')
+        self.tooltip_delay.setValue(int(self.editor_preferences['tooltip_delay_ms']))
+        self.tooltip_delay.setToolTip(
+            'How long the pointer must rest on a control before its hover text appears. '
+            'Every option in the editor carries hover text explaining what it does, so '
+            'raise this if the text gets in the way and lower it while learning the '
+            'settings. Applies at once, to this window too. Editor preference: not '
+            'stored in a profile or a project.')
         self.freecad_path = QtWidgets.QLineEdit()
         self.freecad_path.setObjectName('freecad_path')
         self.freecad_path.setText(self.editor_preferences.get('freecad_path') or '')
@@ -98,6 +112,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         form.addRow('Memory ceiling', self.memory)
         form.addRow('Rotation snap', self.snap_angle)
         form.addRow('Nudge step', self.translate_step)
+        form.addRow('Hover text delay', self.tooltip_delay)
         form.addRow('FreeCAD (STEP import)', freecad_row)
         form.addRow('Island correction passes', self.island_passes)
         form.addRow('Detected', self.status)
@@ -168,8 +183,13 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.editor_preferences = {**load_preferences(),
                                    'snap_angle_deg': float(self.snap_angle.currentData()),
                                    'translate_step_mm': float(self.translate_step.value()),
+                                   'tooltip_delay_ms': int(self.tooltip_delay.value()),
                                    'freecad_path': self.freecad_path.text().strip()}
         save_preferences(self.editor_preferences)
+        # Retune the live style rather than waiting for a restart: a delay you
+        # cannot feel immediately is a delay you cannot choose.
+        install_hover_delay(QtWidgets.QApplication.instance(),
+                            self.editor_preferences['tooltip_delay_ms'])
         self.editor_preferences_applied.emit(dict(self.editor_preferences))
         self._refresh()
         return settings
