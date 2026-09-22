@@ -689,18 +689,27 @@ class Scene:
         # The front of the printer is the -Y face, so the bottom edge running
         # -X to +X is the one green edge; every other edge is red. Keeping the
         # plate orientation readable at a glance is the whole point of it.
-        front_edge = ((0, 1),)
-        other_edges = (
-            (1, 2), (2, 3), (3, 0),
-            (4, 5), (5, 6), (6, 7), (7, 4),
-            (0, 4), (1, 5), (2, 6), (3, 7),
+        # Deliberately a mix of cell shapes, all of them single-cell: a
+        # two-point line, an open polyline and a closed one. The navigation
+        # cube's facet outlines are closed polylines, and this is the only
+        # geometry big enough on screen to show, in a guest whose orientation
+        # marker is about seventy pixels across, that every shape survives the
+        # generic OpenGL there. If a shape ever stops rendering, the build
+        # volume loses a visible piece of itself and says so.
+        paths = (
+            ((0, 1), (0.0, 1.0, 0.0), False),           # green front edge
+            ((1, 2, 3, 0), (1.0, 0.0, 0.0), False),     # rest of the bottom
+            ((4, 5, 6, 7), (1.0, 0.0, 0.0), True),      # closed top face
+            ((0, 4), (1.0, 0.0, 0.0), False),
+            ((1, 5), (1.0, 0.0, 0.0), False),
+            ((2, 6), (1.0, 0.0, 0.0), False),
+            ((3, 7), (1.0, 0.0, 0.0), False),
         )
-        for edges, colour in ((other_edges, (1.0, 0.0, 0.0)),
-                              (front_edge, (0.0, 1.0, 0.0))):
-            for start, end in edges:
-                actor = line_actor((corners[start], corners[end]), colour)
-                self._plate.append(actor)
-                self.renderer.AddActor(actor)
+        for indices, colour, closed in paths:
+            actor = line_actor([corners[index] for index in indices], colour,
+                               closed=closed)
+            self._plate.append(actor)
+            self.renderer.AddActor(actor)
 
     def set_mesh(self, role, triangles, opacity=1.0, settings=None, paint=None, *, key=None,
                  object_index=None):

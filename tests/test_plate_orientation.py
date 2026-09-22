@@ -31,11 +31,8 @@ def test_build_volume_has_colored_oriented_edges():
     scene = Scene()
     scene.show_build_volume(BUILD)
 
-    # Twelve edges of a box, one actor each; see the one-cell test below.
-    assert len(scene._plate) == 12
     red = [a for a in scene._plate if a.GetProperty().GetColor() == (1.0, 0.0, 0.0)]
     green = [a for a in scene._plate if a.GetProperty().GetColor() == (0.0, 1.0, 0.0)]
-    assert len(red) == 11
     assert len(green) == 1
     for actor in scene._plate:
         assert actor.GetProperty().GetLineWidth() > 1.0
@@ -45,10 +42,14 @@ def test_build_volume_has_colored_oriented_edges():
     np.testing.assert_allclose(_edges(green[0])[0],
                                [[-50.0, -40.0, 0.0], [50.0, -40.0, 0.0]])
 
-    red_edges = [edge for actor in red for edge in _edges(actor)]
-    assert len(red_edges) == 11
-    assert all(len(edge) == 2 for edge in red_edges)
-    corners = {tuple(point) for edge in red_edges + _edges(green[0]) for point in edge}
+    # Twelve distinct edges over eight corners, however the paths are split.
+    segments = set()
+    for actor in scene._plate:
+        for path in _edges(actor):
+            for first, second in zip(path, path[1:]):
+                segments.add(frozenset((tuple(first), tuple(second))))
+    assert len(segments) == 12
+    corners = {point for segment in segments for point in segment}
     assert len(corners) == 8
     assert all(abs(x) == 50.0 and abs(y) == 40.0 and z in (0.0, 165.0)
                for x, y, z in corners)
@@ -80,7 +81,6 @@ def test_showing_the_build_volume_twice_replaces_it():
     scene.show_build_volume({'printer': {'build_mm': [120.0, 60.0, 200.0]}})
     assert scene.renderer.GetActors().GetNumberOfItems() == before
     assert all(actor not in scene._plate for actor in first)
-    assert len(scene._plate) == 12
     green = [a for a in scene._plate if a.GetProperty().GetColor() == (0.0, 1.0, 0.0)][0]
     np.testing.assert_allclose(_edges(green)[0],
                                [[-60.0, -30.0, 0.0], [60.0, -30.0, 0.0]])
@@ -99,9 +99,19 @@ def test_every_line_actor_holds_exactly_one_cell():
 
     scene = Scene()
     scene.show_build_volume(BUILD)
-    assert len(scene._plate) == 12
     for actor in scene._plate:
         assert actor.GetMapper().GetInput().GetNumberOfLines() == 1
+
+    # A two-point line, an open polyline and a closed one, all present, so the
+    # build volume is the on-screen proof that each shape still renders. The
+    # navigation cube's outlines are closed polylines and its marker is far
+    # too small to show a rendering failure.
+    lengths = sorted(len(path) for actor in scene._plate for path in _edges(actor))
+    assert lengths.count(2) >= 1, lengths
+    assert any(n > 2 for n in lengths), lengths
+    closed = [path for actor in scene._plate for path in _edges(actor)
+              if len(path) > 2 and path[0] == path[-1]]
+    assert closed, 'no closed loop in the build volume'
 
     cube = navigation_cube_prop()
     parts = cube.GetParts()
