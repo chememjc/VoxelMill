@@ -1533,15 +1533,19 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   breath: splitting the box into a red actor and a green one was a real
   improvement and still left eleven of twelve edges missing.
 
-  Two further shapes matter once the cells are split. An *open* polyline
-  renders there; a loop closed by re-referencing vertex index zero does not,
-  and drops the entire cell. Close a loop by appending a copy of the first
-  point so the last segment references a distinct vertex. The navigation
-  cube's facet outlines are all closed loops, which is why none of them drew
-  until this was found. Mixing the shapes into the build volume is what
-  caught it: the marker is about seventy pixels across in a guest, far too
-  small to show a missing 1.2 pixel outline, while a missing face of the
-  build volume is obvious. Keep that mix, it is the canary.
+  Polylines are the second half of it, and the one that took three rounds.
+  A polyline of three segments renders; one of four does not, and drops the
+  whole cell. Closing it makes no difference either way, and neither does
+  closing it with a duplicated point rather than a repeated index -- that was
+  tried, and the rendered output came back byte for byte identical. Only a
+  *two-point* cell is reliable. So `viewport.line_actors` returns one actor
+  per segment, and every line in the editor goes through it.
+
+  Mixing the shapes into the build volume is what caught it: the orientation
+  marker is about seventy pixels across in a guest, far too small to show a
+  missing 1.2 pixel outline, while a missing face of the build volume is
+  obvious at a glance. If you ever consolidate these actors for tidiness,
+  that missing face is how you will find out.
 
 - **Nav cube glyph placement is coupled to its own hit test.** `cube_hit_under`
   consults the orbit arrows before it picks the cube body, so an arrow hit zone

@@ -42,7 +42,7 @@ def test_build_volume_has_colored_oriented_edges():
     np.testing.assert_allclose(_edges(green[0])[0],
                                [[-50.0, -40.0, 0.0], [50.0, -40.0, 0.0]])
 
-    # Twelve distinct edges over eight corners, however the paths are split.
+    # Twelve distinct edges over eight corners.
     segments = set()
     for actor in scene._plate:
         for path in _edges(actor):
@@ -99,19 +99,18 @@ def test_every_line_actor_holds_exactly_one_cell():
 
     scene = Scene()
     scene.show_build_volume(BUILD)
+    assert len(scene._plate) == 12
     for actor in scene._plate:
-        assert actor.GetMapper().GetInput().GetNumberOfLines() == 1
+        data = actor.GetMapper().GetInput()
+        assert data.GetNumberOfLines() == 1
+        assert data.GetNumberOfPoints() == 2
 
-    # A two-point line, an open polyline and a closed one, all present, so the
-    # build volume is the on-screen proof that each shape still renders. The
-    # navigation cube's outlines are closed polylines and its marker is far
-    # too small to show a rendering failure.
-    lengths = sorted(len(path) for actor in scene._plate for path in _edges(actor))
-    assert lengths.count(2) >= 1, lengths
-    assert any(n > 2 for n in lengths), lengths
-    closed = [path for actor in scene._plate for path in _edges(actor)
-              if len(path) > 2 and path[0] == path[-1]]
-    assert closed, 'no closed loop in the build volume'
+    # Two-point cells only. A polyline stops drawing once it carries more than
+    # three segments under a guest's generic OpenGL, closed or not, and a
+    # polydata with several cells draws only its first. This is the one shape
+    # observed to survive.
+    for path in (path for actor in scene._plate for path in _edges(actor)):
+        assert len(path) == 2, path
 
     cube = navigation_cube_prop()
     parts = cube.GetParts()
@@ -123,7 +122,10 @@ def test_every_line_actor_holds_exactly_one_cell():
             break
         if getattr(part, 'nav_role', None) == 'outline':
             outlines.append(part)
-    # Six faces, twelve bevels, eight corners.
-    assert len(outlines) == 26
+    # Six faces and twelve bevels are quads, eight corners are triangles, and
+    # every perimeter segment is its own two-point actor.
+    assert len(outlines) == (6 + 12) * 4 + 8 * 3
     for actor in outlines:
-        assert actor.GetMapper().GetInput().GetNumberOfLines() == 1
+        data = actor.GetMapper().GetInput()
+        assert data.GetNumberOfLines() == 1
+        assert data.GetNumberOfPoints() == 2

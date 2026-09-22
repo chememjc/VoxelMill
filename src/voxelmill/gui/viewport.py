@@ -482,44 +482,46 @@ def _centered_label_actor(text, face_center, orientation, scale):
     return actor
 
 
-def line_actor(loop, colour, width=2.5, closed=False):
-    """One flat-coloured actor holding exactly one line cell.
+def line_actors(path, colour, width=2.5, closed=False):
+    """A flat-coloured actor per *segment* of ``path``.
 
-    One cell, deliberately. A polydata carrying several line cells renders
-    only its first under the generic OpenGL a VirtualBox guest falls back to,
-    which is what left the build volume as a single edge and erased the
-    navigation cube's outlines entirely there, while triangles kept drawing
-    normally. One cell per actor costs nothing at these counts and keeps the
-    pixel-constant line width that a tube would trade away for zoom-dependent
-    thickness.
+    Two-point line cells only, one per actor. Under the generic OpenGL a
+    virtual machine without 3D acceleration provides, VTK draws a polydata's
+    first line cell and no others, and a polyline cell stops drawing entirely
+    once it carries more than three segments, whether or not it is closed.
+    Both were found by watching pieces of the build volume disappear in a
+    guest while its triangles rendered perfectly. A two-point line in its own
+    actor is the only shape observed to survive, and at these counts the extra
+    actors cost nothing.
+
+    A tube filter would also render, since triangles do, but it trades the
+    pixel-constant line width for thickness that grows as the view zooms in.
     """
-    points = [tuple(float(c) for c in point) for point in loop]
-    if closed and points:
-        # A duplicated *point*, not a second reference to index 0. Closing a
-        # loop by re-referencing the first vertex dropped the whole cell under
-        # a virtual machine's generic OpenGL, while the same path left open
-        # rendered normally; the build volume's top face was the one piece of
-        # geometry large enough to catch it.
+    points = [tuple(float(c) for c in point) for point in path]
+    if closed and len(points) > 2:
         points = points + [points[0]]
-    holder = vtk.vtkPoints()
-    for point in points:
-        holder.InsertNextPoint(*point)
-    cells = vtk.vtkCellArray()
-    cells.InsertNextCell(len(points))
-    for index in range(len(points)):
-        cells.InsertCellPoint(index)
-    data = vtk.vtkPolyData()
-    data.SetPoints(holder)
-    data.SetLines(cells)
-    mapper = vtk.vtkPolyDataMapper()
-    mapper.SetInputData(data)
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-    actor.GetProperty().SetColor(*colour)
-    actor.GetProperty().SetLineWidth(width)
-    actor.GetProperty().SetLighting(False)
-    actor.PickableOff()
-    return actor
+    actors = []
+    for start, end in zip(points, points[1:]):
+        holder = vtk.vtkPoints()
+        holder.InsertNextPoint(*start)
+        holder.InsertNextPoint(*end)
+        cells = vtk.vtkCellArray()
+        cells.InsertNextCell(2)
+        cells.InsertCellPoint(0)
+        cells.InsertCellPoint(1)
+        data = vtk.vtkPolyData()
+        data.SetPoints(holder)
+        data.SetLines(cells)
+        mapper = vtk.vtkPolyDataMapper()
+        mapper.SetInputData(data)
+        actor = vtk.vtkActor()
+        actor.SetMapper(mapper)
+        actor.GetProperty().SetColor(*colour)
+        actor.GetProperty().SetLineWidth(width)
+        actor.GetProperty().SetLighting(False)
+        actor.PickableOff()
+        actors.append(actor)
+    return actors
 
 
 def _pad_actor():
@@ -628,9 +630,9 @@ def navigation_cube_prop():
     body.nav_role = 'body'
     assembly.AddPart(body)
     for loop in loops:
-        outline = line_actor(loop, (0.16, 0.17, 0.20), width=1.2, closed=True)
-        outline.nav_role = 'outline'
-        assembly.AddPart(outline)
+        for outline in line_actors(loop, (0.16, 0.17, 0.20), width=1.2, closed=True):
+            outline.nav_role = 'outline'
+            assembly.AddPart(outline)
     assembly.AddPart(_pad_actor())
     scale = _vector_text_scale('Bottom', 2.0 * CUBE_FACE_HALF)
     lift = CUBE_HALF + CUBE_LABEL_LIFT
@@ -693,27 +695,19 @@ class Scene:
         # The front of the printer is the -Y face, so the bottom edge running
         # -X to +X is the one green edge; every other edge is red. Keeping the
         # plate orientation readable at a glance is the whole point of it.
-        # Deliberately a mix of cell shapes, all of them single-cell: a
-        # two-point line, an open polyline and a closed one. The navigation
-        # cube's facet outlines are closed polylines, and this is the only
-        # geometry big enough on screen to show, in a guest whose orientation
-        # marker is about seventy pixels across, that every shape survives the
-        # generic OpenGL there. If a shape ever stops rendering, the build
-        # volume loses a visible piece of itself and says so.
         paths = (
-            ((0, 1), (0.0, 1.0, 0.0), False),           # green front edge
-            ((1, 2, 3, 0), (1.0, 0.0, 0.0), False),     # rest of the bottom
-            ((4, 5, 6, 7), (1.0, 0.0, 0.0), True),      # closed top face
-            ((0, 4), (1.0, 0.0, 0.0), False),
-            ((1, 5), (1.0, 0.0, 0.0), False),
-            ((2, 6), (1.0, 0.0, 0.0), False),
-            ((3, 7), (1.0, 0.0, 0.0), False),
+            ((0, 1), (0.0, 1.0, 0.0)),                  # green front edge
+            ((1, 2, 3, 0), (1.0, 0.0, 0.0)),            # rest of the bottom
+            ((4, 5, 6, 7, 4), (1.0, 0.0, 0.0)),         # top face
+            ((0, 4), (1.0, 0.0, 0.0)),
+            ((1, 5), (1.0, 0.0, 0.0)),
+            ((2, 6), (1.0, 0.0, 0.0)),
+            ((3, 7), (1.0, 0.0, 0.0)),
         )
-        for indices, colour, closed in paths:
-            actor = line_actor([corners[index] for index in indices], colour,
-                               closed=closed)
-            self._plate.append(actor)
-            self.renderer.AddActor(actor)
+        for indices, colour in paths:
+            for actor in line_actors([corners[index] for index in indices], colour):
+                self._plate.append(actor)
+                self.renderer.AddActor(actor)
 
     def set_mesh(self, role, triangles, opacity=1.0, settings=None, paint=None, *, key=None,
                  object_index=None):
