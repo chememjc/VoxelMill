@@ -6,7 +6,7 @@ lessons go in `gotchas.md`.
 
 ## Now
 
-- [ ] Release 0.5.4 alpha: verify local AppImage, push tested commits, pass all four manual builds, tag/publish, and test the published Linux artifact.
+- [x] Release 0.5.4 alpha: local and workflow AppImage acceptance, all four builds, tag published as a pre-release, and the published Linux, macOS Intel and Windows artifacts tested. See [the record](reports/releases/v0.5.4.md). Apple Silicon is built but untested; no host.
 
 Headline **2.32 s / 350 MB**. Stay on `master`; no release branch until a later stable.
 
