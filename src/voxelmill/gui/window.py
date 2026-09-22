@@ -3823,13 +3823,13 @@ def _draw_render_window(window, interactor, pixmap):
     pixels = np.ascontiguousarray(pixels, dtype=np.uint8)
     frame = QtGui.QImage(pixels.data, width, height, 4 * width,
                          QtGui.QImage.Format_RGBA8888).copy()
-    # grab() works in device pixels, so a Retina window needs the ratio applied
-    # to the child's logical position before the frame lands in the right place.
-    ratio = float(pixmap.devicePixelRatio() or 1.0)
+    # Logical coordinates, deliberately. The pixmap from grab() carries the
+    # window's device pixel ratio, and QPainter applies that ratio itself, so
+    # scaling the rectangle here as well double-counts it: on a Retina display
+    # the 3D view landed at twice its size and spilled over the neighbouring
+    # panel, while on a ratio-1 display the bug was invisible.
     origin = interactor.mapTo(window, QtCore.QPoint(0, 0))
-    target = QtCore.QRect(int(round(origin.x() * ratio)), int(round(origin.y() * ratio)),
-                          int(round(interactor.width() * ratio)),
-                          int(round(interactor.height() * ratio)))
+    target = QtCore.QRect(origin, interactor.size())
     painter = QtGui.QPainter(pixmap)
     painter.drawImage(target, frame)
     painter.end()

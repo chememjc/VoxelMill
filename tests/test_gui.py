@@ -1414,3 +1414,25 @@ def test_screenshot_captures_the_3d_view_not_a_blank_hole(tmp_path):
             if 0 <= row < image.height() and 0 <= column < image.width():
                 seen.add(image.pixel(column, row))
     assert len(seen) > 3, f'the viewport area is flat: {seen}'
+
+
+def test_screenshot_target_rect_is_in_logical_coordinates():
+    """The composited frame must not be scaled twice on a Retina display.
+
+    ``grab()`` hands back a pixmap carrying the window's device pixel ratio,
+    and ``QPainter`` applies that ratio itself, so multiplying the target
+    rectangle by it as well puts the 3D view at twice its size and offset.
+    At ratio 1 that bug is invisible, which is why this asserts on the source
+    rather than on a rendered image: the failure only ever appears on a
+    display this test host does not have.
+    """
+    import inspect
+    from voxelmill.gui import window as window_module
+
+    source = inspect.getsource(window_module._draw_render_window)
+    target = [line for line in source.splitlines() if 'target = ' in line]
+    assert target, source
+    assert 'devicePixelRatio' not in source, (
+        'the target rectangle must stay in logical coordinates; QPainter '
+        'applies the device pixel ratio itself')
+    assert 'interactor.size()' in target[0], target
