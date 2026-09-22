@@ -482,6 +482,30 @@ def _centered_label_actor(text, face_center, orientation, scale):
     return actor
 
 
+def _edge_actor(points, edges, colour, width=2.5):
+    """One flat-coloured line actor over a shared point list."""
+    holder = vtk.vtkPoints()
+    for point in points:
+        holder.InsertNextPoint(*(float(c) for c in point))
+    lines = vtk.vtkCellArray()
+    for start, end in edges:
+        lines.InsertNextCell(2)
+        lines.InsertCellPoint(int(start))
+        lines.InsertCellPoint(int(end))
+    data = vtk.vtkPolyData()
+    data.SetPoints(holder)
+    data.SetLines(lines)
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputData(data)
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+    actor.GetProperty().SetColor(*colour)
+    actor.GetProperty().SetLineWidth(width)
+    actor.GetProperty().SetLighting(False)
+    actor.PickableOff()
+    return actor
+
+
 def _pad_actor():
     """Transparent cube that inflates the marker bounds; never pickable."""
     source = vtk.vtkCubeSource()
@@ -641,58 +665,53 @@ class Scene:
         self.picker = vtk.vtkCellPicker()
         self.picker.SetTolerance(0.002)
         self.out_of_bounds: dict[str, int] = {}
-        self._plate = None
+        #: Build-volume edges, red and green, as two flat-coloured actors.
+        self._plate: list = []
         #: ``(zmin, zmax)`` clip on model/supports/raft, or None when disabled.
         self._z_clip = None
         self.picked_object = None
 
     def show_build_volume(self, settings):
-        if self._plate is not None:
-            self.renderer.RemoveActor(self._plate)
+        """Draw the build volume as a wireframe box, front edge in green.
+
+        Two flat-coloured actors rather than one actor carrying per-cell
+        scalars. The single-actor version drew only its first edge under the
+        generic software OpenGL a VirtualBox guest falls back to, so the whole
+        box collapsed to the one green line; a flat ``SetColor`` on a plain
+        line actor is the construct the navigation cube's outline already
+        proves works there. The cells are built with the ordinary
+        ``InsertNextCell`` API for the same reason: twelve edges are far too
+        few to be worth a typed-array path whose id width has to match how VTK
+        itself was compiled.
+        """
+        for actor in self._plate:
+            self.renderer.RemoveActor(actor)
+        self._plate = []
         width, depth, height = settings['printer']['build_mm']
-        # Keep the plate orientation visible at a glance.  The front of the
-        # printer is the -Y face, so the bottom edge from -X to +X is the one
-        # green edge; every other edge is red.
-        points = vtk.vtkPoints()
-        points.SetData(numpy_support.numpy_to_vtk(
-            np.asarray((
-                (-width / 2, -depth / 2, 0),
-                ( width / 2, -depth / 2, 0),
-                ( width / 2,  depth / 2, 0),
-                (-width / 2,  depth / 2, 0),
-                (-width / 2, -depth / 2, height),
-                ( width / 2, -depth / 2, height),
-                ( width / 2,  depth / 2, height),
-                (-width / 2,  depth / 2, height),
-            ), dtype=np.float32), deep=True))
-        edges = np.asarray((
-            (0, 1), (1, 2), (2, 3), (3, 0),
+        corners = (
+            (-width / 2, -depth / 2, 0),
+            ( width / 2, -depth / 2, 0),
+            ( width / 2,  depth / 2, 0),
+            (-width / 2,  depth / 2, 0),
+            (-width / 2, -depth / 2, height),
+            ( width / 2, -depth / 2, height),
+            ( width / 2,  depth / 2, height),
+            (-width / 2,  depth / 2, height),
+        )
+        # The front of the printer is the -Y face, so the bottom edge running
+        # -X to +X is the one green edge; every other edge is red. Keeping the
+        # plate orientation readable at a glance is the whole point of it.
+        front_edge = ((0, 1),)
+        other_edges = (
+            (1, 2), (2, 3), (3, 0),
             (4, 5), (5, 6), (6, 7), (7, 4),
             (0, 4), (1, 5), (2, 6), (3, 7),
-        ), dtype=np.int64)
-        lines = vtk.vtkCellArray()
-        offsets = np.arange(0, 2 * (len(edges) + 1), 2, dtype=np.int64)
-        lines.SetData(numpy_support.numpy_to_vtkIdTypeArray(offsets, deep=True),
-                      numpy_support.numpy_to_vtkIdTypeArray(edges.reshape(-1), deep=True))
-        data = vtk.vtkPolyData()
-        data.SetPoints(points)
-        data.SetLines(lines)
-        colors = vtk.vtkUnsignedCharArray()
-        colors.SetName('EdgeColors')
-        colors.SetNumberOfComponents(3)
-        colors.SetNumberOfTuples(len(edges))
-        for index in range(len(edges)):
-            colors.SetTuple3(index, 0, 255, 0) if index == 0 else colors.SetTuple3(index, 255, 0, 0)
-        data.GetCellData().SetScalars(colors)
-        mapper = vtk.vtkPolyDataMapper()
-        mapper.SetInputData(data)
-        mapper.SetScalarModeToUseCellData()
-        mapper.SetColorModeToDirectScalars()
-        self._plate = vtk.vtkActor()
-        self._plate.SetMapper(mapper)
-        self._plate.GetProperty().SetLineWidth(2.5)
-        self._plate.PickableOff()
-        self.renderer.AddActor(self._plate)
+        )
+        for edges, colour in ((other_edges, (1.0, 0.0, 0.0)),
+                              (front_edge, (0.0, 1.0, 0.0))):
+            actor = _edge_actor(corners, edges, colour)
+            self._plate.append(actor)
+            self.renderer.AddActor(actor)
 
     def set_mesh(self, role, triangles, opacity=1.0, settings=None, paint=None, *, key=None,
                  object_index=None):

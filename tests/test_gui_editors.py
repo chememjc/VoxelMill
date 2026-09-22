@@ -205,7 +205,7 @@ printer.show()
 printer.refresh_preview()
 for _ in range(5):
     app.processEvents()
-assert printer.scene._plate is not None
+assert printer.scene._plate
 printer.reject()
 print(json.dumps({'surface_pixels': lit, 'changed_pixels': changed}))
 '''
