@@ -6,6 +6,11 @@ lessons go in `gotchas.md`.
 
 ## Now
 
+- [ ] Build-volume wireframe: under VirtualBox's software OpenGL path only the
+      green front edge draws, never the red outline. Long-standing, not a
+      0.5.4 regression, and unrelated to the model and navigation cube, which
+      render normally there. See [the 0.5.4 record](reports/releases/v0.5.4.md#windows-11-virtualbox).
+
 - [x] Release 0.5.4 alpha: local and workflow AppImage acceptance, all four builds, tag published as a pre-release, and the published Linux, macOS Intel and Windows artifacts tested. See [the record](reports/releases/v0.5.4.md). Apple Silicon is built but untested; no host.
 
 Headline **2.32 s / 350 MB**. Stay on `master`; no release branch until a later stable.
