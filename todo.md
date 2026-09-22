@@ -10,10 +10,9 @@ lessons go in `gotchas.md`.
       the v0.5.4 tag by giving every drawn line its own single-cell actor. A
       polydata with several line cells rendered only its first there. Verified
       in the guest; see `gotchas.md`.
-- [ ] Ship the line-actor fix: it is on `master` but **not** in the published
-      v0.5.4 assets, so it needs a release. Also still unverified whether the
-      navigation cube's outlines return in the guest, since the marker is too
-      small to resolve at 1024x768.
+- [ ] Ship the line-actor fix: verified on `master` against the workflow's own
+      Windows build, both the build volume and the navigation cube outlines,
+      but **not** in the published v0.5.4 assets, so it needs a release.
 
 - [x] Release 0.5.4 alpha: local and workflow AppImage acceptance, all four builds, tag published as a pre-release, and the published Linux, macOS Intel and Windows artifacts tested. See [the record](reports/releases/v0.5.4.md). Apple Silicon is built but untested; no host.
 
