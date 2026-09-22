@@ -338,10 +338,9 @@ no outlines around its facets, while the model itself renders normally.
 
 A guest without 3D acceleration gives VTK Microsoft's GDI generic OpenGL 1.1.
 Two things break there: a polydata holding several line cells renders only its
-first, and a loop closed by re-referencing its first vertex drops the whole
-cell. The editor draws every line cell as its own actor and closes loops with
-a duplicated point for these reasons, so a current build should be
-unaffected; if you see it, say which build and which hypervisor, because that
+first, and a polyline of more than three segments does not render at all. The
+editor therefore draws every line as its own two-point actor, so a current
+build should be unaffected; if you see it, say which build and which hypervisor, because that
 is a different context from the one this was found and fixed in.
 
 Everything drawn with triangles, which is the model, the supports, the raft,

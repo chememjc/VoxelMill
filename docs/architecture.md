@@ -288,10 +288,11 @@ Qt-free wrappers around the same core the CLI calls (including
 `run_print_checks` behind the Verification menu and `route_attachments` behind
 Parts → Compute attachments).
 
-`viewport.line_actor` is the only way lines are drawn: one actor per line
-cell, because a polydata holding several renders only its first under a
-virtual machine's generic OpenGL. It backs both the build volume and the
-navigation cube's facet outlines. `gui/helptext.py` is the single table of
+`viewport.line_actors` is the only way lines are drawn: one actor per
+*segment*, each a two-point cell, because under a virtual machine's generic
+OpenGL a polydata holding several cells renders only its first and a polyline
+of more than three segments renders not at all. It backs both the build volume
+and the navigation cube's facet outlines. `gui/helptext.py` is the single table of
 per-field explanations that the generated Setup rows and the dedicated
 editors both read, looked up through `help_for('section.field')`.
 

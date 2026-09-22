@@ -1527,7 +1527,7 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   `opengl32`, which in that guest is Microsoft's GDI generic OpenGL 1.1, while
   `QT_OPENGL=software` only redirects *Qt's* rendering to the Mesa
   `opengl32sw.dll` PySide6 ships. Give every drawn line its own actor with one
-  cell (`viewport.line_actor`). A tube filter would also work, since triangles
+  segment (`viewport.line_actors`). A tube filter would also work, since triangles
   render, but it trades pixel-constant line width for thickness that grows as
   you zoom. Per-cell colour scalars on lines are worth avoiding in the same
   breath: splitting the box into a red actor and a green one was a real
