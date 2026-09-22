@@ -331,6 +331,22 @@ about the STL that was sliced.
 `Canceled` is not an analysis warning and is never caught as a recoverable
 error that lets a run continue into export. Interrupting yields exit `130`.
 
+## Wireframes are missing in a virtual machine
+
+The build volume shows fewer edges than it should, or the navigation cube has
+no outlines around its facets, while the model itself renders normally.
+
+A guest without 3D acceleration gives VTK Microsoft's GDI generic OpenGL 1.1,
+and a polydata holding several line cells renders only its first there. The
+editor draws each line cell as its own actor for this reason, so a current
+build should be unaffected; if you see it, say which build and which
+hypervisor, because that is a different context from the one this was found
+and fixed in.
+
+Everything drawn with triangles, which is the model, the supports, the raft,
+the layer images and the navigation cube's faces, is unaffected either way.
+Enabling 3D acceleration for the guest avoids the degraded context entirely.
+
 ## Segfault on Preview → Layers
 
 The former pybind11 3.0.1 build could retain a deleted Python thread state when

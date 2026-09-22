@@ -52,7 +52,14 @@ model, routed supports, raft, contacts, and build volume. A vertical two-handle
 Z-clip slider sits on the right of that view (bottom handle is Zmin, top handle
 is Zmax, **All** or a double-click shows everything), the same idea as Chitubox
 and PrusaSlicer. The front bottom
-edge of the build volume (−Y, Z=0) is green; the other eleven edges are red. Its Setup tab holds
+edge of the build volume (−Y, Z=0) is green; the other eleven edges are red.
+Those twelve edges are drawn as seven actors, each holding exactly one line
+cell, because a polydata carrying several line cells renders only its first
+under the generic OpenGL a virtual machine without 3D acceleration provides.
+The shapes are mixed on purpose -- a two-point line, an open polyline and a
+closed loop -- so that the one piece of geometry large enough to see also
+proves each shape still renders; the navigation cube's outlines are closed
+polylines and its marker is far too small to show a failure. Its Setup tab holds
 the commonly tuned orientation, process, support, and repair values. The **All
 resolved settings (JSON)** box exposes every value resolved from the printer
 and resin profiles, including printer dimensions, image mirroring, repair
@@ -675,11 +682,13 @@ than doing nothing. Home iso remains a shallower front-right-top than a true
 cube-corner isometric.
 
 Only facet perimeters are outlined. The body carries no edge-visibility flag;
-the outline is a separate actor built from precomputed line cells, one closed
-loop per facet, offset 0.004 along each facet's own normal. Collecting the
-loops where the triangles are emitted is what keeps each quad's splitting
-diagonal out of the outline, and doing it in geometry rather than through a
-coincident-topology render mode keeps anything from running inside a paint.
+each facet's perimeter is its own actor holding one closed line cell, offset
+0.004 along that facet's own normal. Collecting the loops where the triangles
+are emitted is what keeps each quad's splitting diagonal out of the outline,
+and doing it in geometry rather than through a coincident-topology render mode
+keeps anything from running inside a paint. One cell per actor is not a style
+choice: a polydata with several line cells renders only its first under a
+virtual machine's generic OpenGL, which erased these outlines entirely there.
 
 Six screen-space glyphs sit in the marker viewport around the cube. Four are
 FreeCAD-style orbit arrows, one per side, and they step **45 degrees**, which

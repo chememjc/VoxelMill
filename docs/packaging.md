@@ -173,6 +173,13 @@ On Windows VirtualBox guests, launching the editor sets `QT_OPENGL=software`
 (and `LIBGL_ALWAYS_SOFTWARE`) before `QApplication` when the `VBoxGuest`
 service is present. Real GPUs and an already-set `QT_OPENGL` are unchanged.
 
+That variable redirects **Qt's** rendering to the Mesa `opengl32sw.dll`
+PySide6 ships; VTK still builds its own context against the system
+`opengl32`, which in a guest without 3D acceleration is Microsoft's GDI
+generic OpenGL 1.1. Triangles, text and 2D glyphs render there, but a
+polydata holding several line cells renders only its first, so anything drawn
+with lines gives each cell its own actor. See `gotchas.md`.
+
 The desktop file uses `Exec=voxelmill %F` and `Terminal=false`. Host OpenGL /
 X11 or Wayland libraries are still required for the editor; they are not
 bundled. Qt WebEngine and QML are omitted from the image.
