@@ -11,7 +11,8 @@ from voxelmill.cli import main
 from voxelmill.config import resolve_settings
 from voxelmill.contracts import VoxelMillError
 from voxelmill.geometry import manifold_triangles, triangle_bounds
-from voxelmill.hollow import (analyze_wall_thickness, hollow_mesh, hollow_stl_triangles)
+from voxelmill.hollow import (_bottom_open, _infill_mask, analyze_wall_thickness, hollow_mesh,
+                              hollow_stl_triangles)
 from voxelmill.mesh import write_stl
 from voxelmill.validation import analyze_drainage, drainage_check
 
@@ -124,6 +125,56 @@ def test_infill_grid_between_empty_hollow_and_solid():
     assert grid_report['volume_after_mm3'] > empty_report['volume_after_mm3']
     assert grid_report['volume_after_mm3'] < solid_volume
     assert len(grid) > len(empty)
+
+
+@pytest.mark.parametrize('kind', ['grid', 'hex', 'gyroid'])
+def test_every_infill_lattice_hollows_a_cube(kind):
+    empty, empty_report = hollow_mesh(solid_cube(10.0), small(infill='none'),
+                                      add_holes=False, force=True)
+    out, report = hollow_mesh(solid_cube(10.0), small(infill=kind, infill_pitch_mm=3.0),
+                              add_holes=False, force=True)
+    assert report['infill_voxels'] > 0
+    assert report['volume_after_mm3'] > empty_report['volume_after_mm3']
+
+
+def _bottom_open_reference(occupancy, core):
+    """The original per-column loop, kept as the definition the vector form must match."""
+    removal = core.copy()
+    for j in range(occupancy.shape[1]):
+        for i in range(occupancy.shape[2]):
+            column = core[:, j, i]
+            if column.any():
+                top = int(np.flatnonzero(column)[-1])
+                removal[:top + 1, j, i] |= occupancy[:top + 1, j, i]
+    removal[0] |= occupancy[0]
+    return removal
+
+
+def _hex_reference(cavity, period):
+    """The original per-cell hex loop, with its Z decks broadcast correctly."""
+    nz, ny, nx = cavity.shape
+    col_pitch = max(1, int(round(period * np.sqrt(3) / 2)))
+    struts = np.zeros_like(cavity)
+    for j in range(ny):
+        phase = (j // period) % 2
+        for i in range(nx):
+            if (i - phase * (col_pitch // 2)) % col_pitch == 0 or j % period == 0:
+                struts[:, j, i] = True
+    struts[np.arange(nz) % period == 0] = True
+    return cavity & struts
+
+
+def test_vectorized_voxel_loops_match_their_reference():
+    rng = np.random.default_rng(7)
+    for shape in [(1, 1, 1), (5, 7, 9), (12, 13, 11)]:
+        occupancy = rng.random(shape) < 0.6
+        core = occupancy & (rng.random(shape) < 0.2)
+        assert np.array_equal(_bottom_open(occupancy, core),
+                              _bottom_open_reference(occupancy, core))
+        for pitch_mm in (1.0, 1.5, 3.0):
+            got = _infill_mask(occupancy, 0.5, (0.0, 0.0, 0.0), 'hex', pitch_mm)
+            period = max(1, int(round(pitch_mm / 0.5)))
+            assert np.array_equal(got, _hex_reference(occupancy, period))
 
 
 def test_prepare_honours_hollow_enabled_false(tmp_path):

@@ -268,20 +268,16 @@ def _erode_core(occupancy, iterations):
 
 
 def _bottom_open(occupancy, core):
-    """Extend the cavity through the bottom of each column that contains core."""
-    removal = core.copy()
-    nz = occupancy.shape[0]
-    for j in range(occupancy.shape[1]):
-        for i in range(occupancy.shape[2]):
-            column = core[:, j, i]
-            if not column.any():
-                continue
-            top = int(np.flatnonzero(column)[-1])
-            for k in range(0, top + 1):
-                if occupancy[k, j, i]:
-                    removal[k, j, i] = True
+    """Extend the cavity through the bottom of each column that contains core.
+
+    A solid voxel is removed when some core voxel sits at or above it in the
+    same column, so every cavity drains straight down to the plate face.
+    """
+    # Reverse cumulative OR along Z: True at k when core exists at any k' >= k.
+    at_or_below_core = np.logical_or.accumulate(core[::-1], axis=0)[::-1]
+    removal = core | (occupancy & at_or_below_core)
     # Also clear any solid voxel on the padded low-Z face under the part.
-    if nz:
+    if occupancy.shape[0]:
         removal[0] |= occupancy[0]
     return removal
 
@@ -296,19 +292,14 @@ def _infill_mask(cavity, pitch_mm, origin, kind, infill_pitch_mm):
     if kind == 'grid':
         struts = ((ii % period) == 0) | ((jj % period) == 0) | ((kk % period) == 0)
     elif kind == 'hex':
-        # Vertical honeycomb: pointy-top hex centers on a triangular lattice in XY.
+        # Vertical honeycomb: pointy-top hex centers on a triangular lattice in
+        # XY. Odd rows shift by half a column; every row_pitch-th row is a wall.
         row_pitch = period
         col_pitch = max(1, int(round(period * math.sqrt(3) / 2)))
-        struts = np.zeros_like(cavity, dtype=bool)
-        for j in range(ny):
-            phase = (j // max(row_pitch, 1)) % 2
-            for i in range(nx):
-                if ((i - phase * (col_pitch // 2)) % max(col_pitch, 1)) == 0:
-                    struts[:, j, i] = True
-                if (j % max(row_pitch, 1)) == 0:
-                    struts[:, j, i] = True
+        phase = (jj // row_pitch) % 2
+        walls = (((ii - phase * (col_pitch // 2)) % col_pitch) == 0) | ((jj % row_pitch) == 0)
         # Horizontal decks every period in Z keep the lattice printable.
-        struts[(kk % period) == 0] = True
+        struts = walls | ((kk % period) == 0)
     elif kind == 'gyroid':
         scale = (2.0 * math.pi) / max(float(infill_pitch_mm), pitch_mm)
         x = origin[0] + (ii + 0.5) * pitch_mm
