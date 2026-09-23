@@ -10,9 +10,11 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import asdict
+import atexit
 import json
 import os
 from pathlib import Path
+import shutil
 import sys
 import tempfile
 
@@ -24,7 +26,7 @@ from ..contracts import VoxelMillError
 from ..config import BASE_TYPES, resolve_settings
 from . import services
 from .document import Document
-from .jobs import JobRunner
+from .jobs import JobRunner, editor_job_threads
 from .camera import CameraController, SHORTCUTS, VIEWS
 from .faults import FaultView, fault_overlay
 from .layerview import ISSUE_COLORS, LayerView
@@ -143,6 +145,17 @@ class _DockTabs(QtCore.QObject):
             self.currentChanged.emit(index)
 
 
+def _remove_dir(path):
+    """Remove one scratch directory; True when it is gone."""
+    shutil.rmtree(path, ignore_errors=True)
+    return not os.path.exists(path)
+
+
+def _remove_dirs(paths):
+    for path in list(paths):
+        _remove_dir(path)
+
+
 class MainWindow(QtWidgets.QMainWindow):
     stage_changed = QtCore.Signal(str)
 
@@ -159,7 +172,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.document.settings['support']['automatic'] = False
         self.document.baseline_settings['support']['automatic'] = False
         self._attachment_state = 'none'
-        self.jobs = JobRunner(self, max_threads=max(1, self.document.settings['resources']['workers']))
+        self.jobs = JobRunner(self, max_threads=editor_job_threads(
+            self.document.settings['resources']['workers']))
         self.jobs.progress.connect(self._on_progress)
         self.jobs.completed.connect(self._on_completed)
         self.jobs.stale.connect(lambda result: self.statusBar().showMessage(
@@ -169,6 +183,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.last_error = None
         self.placed = None
         self.scratch = None
+        # Every placement writes its triangles into a fresh scratch directory.
+        # They are removed once superseded, on close, and at interpreter exit
+        # as a backstop; the exit hook holds the list, never the window.
+        self._scratch_dirs: list[str] = []
+        atexit.register(_remove_dirs, self._scratch_dirs)
         self.viewport = None
         self.scene = None
         self.goo_source = None
@@ -273,7 +292,19 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         if not self.headless:
             self._save_window_layout()
+        self.jobs.cancel_all()
+        self.jobs.wait(5000)
+        self._release_scratch()
         super().closeEvent(event)
+
+    def _release_scratch(self, keep=None):
+        """Delete superseded placement scratch directories.
+
+        A directory that cannot be removed yet (Windows refuses while an old
+        memory map is still open) stays listed and is retried next time.
+        """
+        self._scratch_dirs[:] = [d for d in self._scratch_dirs
+                                 if d == keep or not _remove_dir(d)]
 
     def _confirm_discard_or_save(self):
         """Ask Save / Discard / Cancel when the document is dirty.
@@ -3045,7 +3076,11 @@ class MainWindow(QtWidgets.QMainWindow):
             self._validation_path = self._new_validation_path()
             target = self._validation_path
         else:
-            directory = Path(self.scratch) if self.scratch else Path(tempfile.mkdtemp(prefix='voxelmill-preview-'))
+            if self.scratch:
+                directory = Path(self.scratch)
+            else:
+                directory = Path(tempfile.mkdtemp(prefix='voxelmill-preview-'))
+                self._scratch_dirs.append(str(directory))
             directory.mkdir(parents=True, exist_ok=True)
             target = directory / 'preview.stl'
         return self.jobs.submit('validate', lambda token, progress: {
@@ -3164,6 +3199,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self._display_part_counts = [int(value['asset'].triangle_count)]
         self._display_part_counts.extend(int(part['triangles']) for part in extra.get('parts', []))
         self.scratch = value['scratch']
+        self._scratch_dirs.append(str(self.scratch))
+        self._release_scratch(keep=str(self.scratch))
         self.placement_fits = bool(value.get('fits', True))
         self.placement_overflow_mm = value.get('overflow_mm') or [0.0, 0.0, 0.0]
         if not self.placement_fits:
@@ -3650,7 +3687,11 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self._confirm_discard_or_save():
             return
         self._clear_orientation_candidates()
-        self.document = Document.load(path, extract_dir or self.scratch)
+        # Never extract into a placement scratch directory: those are deleted
+        # as soon as a newer placement lands. Without an explicit directory the
+        # document owns its extraction and removes it on reset.
+        self.document = Document.load(path, extract_dir,
+                                      scratch_dir=self.document.settings['resources']['scratch_dir'])
         self.project_path = str(Path(path).resolve())
         self.jobs.invalidate()
         self._refresh_undo()

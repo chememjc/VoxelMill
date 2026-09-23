@@ -53,13 +53,13 @@ Sorted from easiest and most significant to hardest and least valuable.
 | ID | Item | Area | Ease | Benefit | Score | Status |
 | --- | --- | --- | ---: | ---: | ---: | --- |
 | VM-001 | `hollow.infill = "hex"` crashes | Bug | 5 | 4 | 20 | done |
-| VM-002 | Editor job pool runs one job at a time by default | Bug | 5 | 4 | 20 | open |
+| VM-002 | Editor job pool runs one job at a time by default | Bug | 5 | 4 | 20 | done |
 | VM-080 | Release the line-actor fix | Release | 5 | 4 | 20 | open |
 | N12 | Resolve GOO mirroring against both references | Feature | 4 | 5 | 20 | open (hardware) |
 | VM-060 | CI workflow that runs the tests | Test/CI | 4 | 5 | 20 | open |
 | B3 | Printer database beyond the Mars 5 Ultra | Feature | 4 | 4 | 16 | open |
 | VM-011 | Release builds likely ship without TBB | Perf | 4 | 4 | 16 | open |
-| VM-003 | Editor leaks a scratch directory on every reload | Bug | 5 | 3 | 15 | open |
+| VM-003 | Editor leaks a scratch directory on every reload | Bug | 5 | 3 | 15 | done |
 | VM-010 | Vectorize `hollow._bottom_open` | Perf | 5 | 3 | 15 | done |
 | B5 | Print-time estimation: physical calibration | Feature | 3 | 5 | 15 | open (hardware) |
 | D4 | Raft adhesion / removal-force calibration | Feature | 4 | 3 | 12 | open (hardware) |
@@ -149,7 +149,7 @@ Ease 5 · Benefit 4 · Confidence: sure · Status: done
 
 ### VM-002 — Editor job pool runs one job at a time by default
 
-Ease 5 · Benefit 4 · Confidence: sure · Status: open
+Ease 5 · Benefit 4 · Confidence: sure · Status: done
 
 **Problem.** `JobRunner(max_threads=max(1, settings.resources.workers))` treats the default `workers = 0` (auto) as 1, so every background job in the editor (placement, routing, island checks, layer scrubs) waits behind the job before it.
 
@@ -159,7 +159,7 @@ Ease 5 · Benefit 4 · Confidence: sure · Status: open
 
 ### VM-003 — Editor leaks a scratch directory on every reload
 
-Ease 5 · Benefit 3 · Confidence: sure · Status: open
+Ease 5 · Benefit 3 · Confidence: sure · Status: done
 
 **Problem.** `services.load_and_place` creates a new `mkdtemp()` holding a memmapped `placed.f32` (36 bytes per triangle) on every reload: open, pose edit, undo/redo, profile apply. `MainWindow` overwrites `self.scratch` and never removes the old one, and nothing cleans them up on exit. `Document.reset` also swallows `extract.cleanup()` errors silently.
 

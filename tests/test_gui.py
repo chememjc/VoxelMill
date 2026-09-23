@@ -12,6 +12,8 @@ import subprocess
 import sys
 
 import numpy as np
+from pathlib import Path
+
 import pytest
 import manifold3d as m
 
@@ -917,6 +919,24 @@ def test_open_stl_draws_the_primary_under_the_model_actor(application, source):
     assert window.scene.actors['model'].role == 'model'
     assert window.scene.actors['model'].object_index == 0
     window.close()
+
+
+def test_reloading_removes_the_superseded_placement_scratch(application, source, tmp_path):
+    """Every placement used to leave its memory-mapped scratch copy behind."""
+    settings = small_settings()
+    settings['resources']['scratch_dir'] = str(tmp_path / 'scratch')
+    (tmp_path / 'scratch').mkdir()
+    window = MainWindow(settings, None, headless=True)
+    window.open_stl(source)
+    settle(window, application, lambda: window.scratch is not None)
+    first = Path(window.scratch)
+    assert first.is_dir()
+    window.reload()
+    settle(window, application, lambda: window.scratch is not None and Path(window.scratch) != first)
+    assert not first.exists()
+    assert Path(window.scratch).is_dir()
+    window.close()
+    assert list((tmp_path / 'scratch').iterdir()) == []
 
 
 @pytest.mark.gui

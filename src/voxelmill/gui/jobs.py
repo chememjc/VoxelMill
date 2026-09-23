@@ -67,6 +67,24 @@ class _Runnable(QtCore.QRunnable):
                                                  request_id=self.request_id))
 
 
+#: Jobs of different names overlap (a layer scrub during a routing run), but
+#: each job already runs its own worker pool, so a few are enough.
+MAX_EDITOR_JOBS = 4
+
+
+def editor_job_threads(workers):
+    """Concurrent editor jobs for a ``resources.workers`` setting.
+
+    ``0`` means derive, exactly as the CLI does; reading it literally would
+    serialize every background job behind the one before it.
+    """
+    workers = int(workers)
+    if workers <= 0:
+        from ..topology import default_workers
+        workers = max(2, default_workers())
+    return max(1, min(MAX_EDITOR_JOBS, workers))
+
+
 class JobRunner(QtCore.QObject):
     """Submits jobs and forwards only results from the current generation."""
 

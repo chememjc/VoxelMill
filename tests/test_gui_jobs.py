@@ -10,7 +10,7 @@ pytest.importorskip('vtkmodules')
 
 from PySide6 import QtCore, QtWidgets  # noqa: E402
 
-from voxelmill.gui.jobs import JobRunner  # noqa: E402
+from voxelmill.gui.jobs import MAX_EDITOR_JOBS, JobRunner, editor_job_threads  # noqa: E402
 
 
 @pytest.fixture(scope='session')
@@ -98,3 +98,13 @@ def test_canceling_latest_job_still_forwards_canceled_result(application):
     assert len(completed) == 1
     assert completed[0].name == 'cancel'
     assert completed[0].canceled
+
+
+def test_editor_job_threads_derives_auto_instead_of_serializing(monkeypatch):
+    monkeypatch.setattr('voxelmill.topology.default_workers', lambda topology=None: 8)
+    assert editor_job_threads(0) == MAX_EDITOR_JOBS
+    monkeypatch.setattr('voxelmill.topology.default_workers', lambda topology=None: 1)
+    assert editor_job_threads(0) == 2
+    assert editor_job_threads(1) == 1
+    assert editor_job_threads(3) == 3
+    assert editor_job_threads(32) == MAX_EDITOR_JOBS

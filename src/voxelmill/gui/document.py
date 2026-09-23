@@ -635,7 +635,8 @@ class Document:
         if extract is not None and hasattr(extract, 'cleanup'):
             try:
                 extract.cleanup()
-            except Exception:
+            except OSError:
+                # A leftover temporary directory is not worth failing a reset.
                 pass
         return self
 
@@ -672,12 +673,14 @@ class Document:
         return state
 
     @classmethod
-    def load(cls, path, extract_dir=None):
+    def load(cls, path, extract_dir=None, *, scratch_dir=None):
+        """Open a project. Without ``extract_dir`` the document owns a temporary
+        extraction directory under ``scratch_dir`` and removes it on reset."""
         from ..project import load_project
         import tempfile
         owned_extract = None
         if extract_dir is None:
-            owned_extract = tempfile.TemporaryDirectory(prefix='voxelmill-project-')
+            owned_extract = tempfile.TemporaryDirectory(prefix='voxelmill-project-', dir=scratch_dir)
             extract_dir = owned_extract.name
         state = load_project(path, extract_dir)
         settings = deepcopy(state.get('settings'))
