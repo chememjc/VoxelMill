@@ -50,7 +50,7 @@ on the nut.
 ## What was changed
 
 `support.min_tip_length_mm`, default 0.30 mm — the contact depth from the
-known-good CHITUBOX configuration recorded in `plan2.md` Tier 2.1. When a
+known-good CHITUBOX configuration recorded in `docs/support-presets.md`. When a
 contact sits closer to the material below it than one full tip, the tip cone
 spans the whole gap and no cylindrical pillar section is emitted. Shorter than
 that minimum is still a refusal. `contacts_with_shortened_tip` and

@@ -42,7 +42,7 @@ certify an export.
 Successful ingestion does not imply supports can be routed. The float-valve
 body's original pose still has hundreds of unreachable contacts with the
 current planner; its report remains a failed validation. See the reproducible
-measurements and next steps in `todo.md`.
+measurements in `reports/plan2/routing-summary.md`; the open routing work is tracked in [ISSUES.md](../ISSUES.md).
 
 ## `no_feasible_placement`
 

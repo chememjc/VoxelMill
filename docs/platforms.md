@@ -2,13 +2,15 @@
 
 VoxelMill ships as a Linux AppImage plus GitHub Actions portables for macOS
 and Windows on `v0.*` tags (see
-[`.github/workflows/release.yml`](.github/workflows/release.yml) and
-[docs/packaging.md](docs/packaging.md)). This page records OS differences and
+[`.github/workflows/release.yml`](../.github/workflows/release.yml) and
+[docs/packaging.md](packaging.md)). This page records OS differences and
 what must stay as it is.
 
-Related reading: [docs/packaging.md](docs/packaging.md) (AppImage and PyInstaller),
-[licenses/THIRD-PARTY.md](licenses/THIRD-PARTY.md) (dependency inventory),
-[LICENSE](LICENSE) (SCOPE OF THIS LICENSE).
+Related reading: [docs/packaging.md](packaging.md) (AppImage and PyInstaller),
+[licenses/THIRD-PARTY.md](../licenses/THIRD-PARTY.md) (dependency inventory),
+[LICENSE](../LICENSE) (SCOPE OF THIS LICENSE).
+Open platform work (signing, Windows memory ceiling, untested hardware) is
+tracked in [ISSUES.md](../ISSUES.md).
 
 ## Portability conclusion
 
@@ -113,7 +115,7 @@ line so the image does not carry the CUDA Toolkit EULA.
 
 ### Source tree
 
-The MIT grant in [LICENSE](LICENSE) covers every file in this repository
+The MIT grant in [LICENSE](../LICENSE) covers every file in this repository
 (Python under `src/voxelmill/`, C++ under `native/`, scripts, docs, schemas,
 icons, fixtures). No third-party source is vendored. That remains true for a
 macOS or Windows *source* build: porting does not change the license of the
@@ -130,8 +132,8 @@ add copyleft to the source tree.
 
 A shipped image (AppImage today; `.app` / `.exe` later) is not MIT-only. It
 bundles third-party binaries. Obligations are inventoried in
-[licenses/THIRD-PARTY.md](licenses/THIRD-PARTY.md); the operational checklist
-for the Linux image is in [docs/packaging.md](docs/packaging.md).
+[licenses/THIRD-PARTY.md](../licenses/THIRD-PARTY.md); the operational checklist
+for the Linux image is in [docs/packaging.md](packaging.md).
 
 | Component class | License signal on a binary image |
 |---|---|

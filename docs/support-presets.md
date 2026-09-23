@@ -11,7 +11,7 @@ The built-in names are:
 | `light` | `spacing_mm = 5.0`, `pillar_diameter_mm = 0.9` |
 | `medium` | The default support values from `voxelmill.config` |
 | `heavy` | `spacing_mm = 2.0`, `pillar_diameter_mm = 1.6` |
-| `chitubox-mars5` | The CHITUBOX table transcribed in `plan2.md` |
+| `chitubox-mars5` | The [reference CHITUBOX configuration](#the-reference-chitubox-configuration) below |
 
 Light and heavy are geometric starting points. They are not printer or resin
 calibration claims. Values not present in light or heavy inherit the normal
@@ -142,6 +142,43 @@ The CLI offers `preset list`, `preset show NAME_OR_PATH`, and
 commands. The GUI **Parts → Support presets** submenu applies built-ins, loads
 JSON or saves the current support section, with undo for application. All
 options are also available through **Tasks → Run operation**.
+
+## The reference CHITUBOX configuration
+
+This is the known-good CHITUBOX configuration, transcribed from a working Mars 5 Ultra print. `chitubox-mars5` is built from it.
+
+| Segment | Parameter | Value |
+|---|---|---|
+| Top | Touch Shape | None |
+| Top | Contact Depth | 0.30 mm |
+| Top | Connection Shape | Cone |
+| Top | Tip Upper Diameter | 0.30 mm |
+| Top | Tip Down Diameter | 0.80 mm |
+| Top | Connection Length | 2.00 mm |
+| Middle | Shape | Cylinder |
+| Middle | Diameter | 0.80 mm |
+| Middle | Angle | 70.00° |
+| Middle | Small Pillar Shape | Cone |
+| Middle | Small Pillar Diameter | 0.40 mm |
+| Middle | Small Pillar Upper Depth | 0.25 mm |
+| Middle | Small Pillar Lower Depth | 0.25 mm |
+| Middle | Max Cross Structure Spacing | 30.00 mm |
+| Middle | Cross Start Height | 3.00 mm |
+| Bottom | Platform Touch Shape | Skate |
+| Bottom | Touch Diameter | 10.00 mm |
+| Bottom | Thickness | 0.80 mm |
+| Bottom | Model Contact Shape | None |
+| Bottom | Contact Diameter | 0.40 mm |
+| Bottom | Contact Depth | 0.20 mm |
+| Bottom | Contact Point | 1 |
+| **Raft** | **Raft Shape** | **None** |
+
+**The Raft tab reads `Shape: None`, and every other raft field is greyed out.**
+The known-good print therefore uses **no raft at all** — supports land directly
+on the plate with a 10 mm "skate" foot, 0.80 mm thick. The greyed values are
+CHITUBOX's defaults for when a raft *is* enabled and are recorded here only as
+a starting point, explicitly uncalibrated: Area Ratio 110 %, Thickness 1.00 mm,
+Height 1.80 mm, Slope 30°, Grid Side Length 2.00 mm, Grid Width 2.00 mm.
 
 ## Process presets
 

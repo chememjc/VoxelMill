@@ -68,7 +68,7 @@ The initial `body-ingestion-probe.json` and `body-interior-filter-probe.json`
 retain the first measurements and filtered failure-position examples.
 
 The exact-path cover also fails 384 of 773 routes, so raw interior faces alone
-cannot explain these support failures. See `todo.md` and `gotchas.md` for the
+cannot explain these support failures. See `ISSUES.md` and `gotchas.md` for the
 remaining investigation and acceptance gates.
 
 ## Latch layer-view regression and preview reuse (2026-09-07)

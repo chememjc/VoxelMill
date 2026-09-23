@@ -29,8 +29,9 @@ _BUILTIN_SUPPORT = {
     'medium': deepcopy(DEFAULTS['support']),
     'heavy': {'spacing_mm': 2.0, 'pillar_diameter_mm': 1.6},
     # The configuration known to print these parts on this machine, transcribed
-    # from CHITUBOX and recorded in plan2.md. Every value below appears in that
-    # table or has an explicit derivation; gaps are called out in CHITUBOX_UNSET.
+    # from CHITUBOX and recorded in docs/support-presets.md. Every value below
+    # appears in that table or has an explicit derivation; gaps are called out
+    # in CHITUBOX_UNSET.
     #
     # Reading the table needs one piece of care. Its Raft tab says
     # "Raft Shape: None" while its Bottom tab says "Platform Touch Shape:
@@ -38,8 +39,8 @@ _BUILTIN_SUPPORT = {
     # things in CHITUBOX: the raft is the slab over every foot, the platform
     # touch shape is the foot each individual support lands on. So the print
     # uses no slab and a 10 mm skate per foot, which is base_type = 'skate'
-    # here, not 'none'. ('none' is bare pillars with no foot at all.) plan2.md's
-    # summary line says "including base = none", meaning the raft.
+    # here, not 'none'. ('none' is bare pillars with no foot at all.) The old
+    # plan2.md summary line said "including base = none", meaning the raft.
     #
     # Grayed raft defaults include Thickness 1.00 mm and Slope 30°. With the
     # raft disabled those values do not apply as a slab, but the 30° putty-knife

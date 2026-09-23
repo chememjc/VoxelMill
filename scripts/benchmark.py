@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Runtime and peak-memory baselines for the pipeline, in fresh processes.
 
-`todo.md` records that the only performance figures this project has were
+The first performance figures this project had (`docs/performance.md`) were
 measured sequentially in one Python process, so their peak RSS values are
 cumulative high-water marks and cannot be compared with each other. Every
 scenario here runs in its own child, which reports its own `RUSAGE_SELF` peak,

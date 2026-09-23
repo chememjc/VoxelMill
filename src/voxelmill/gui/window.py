@@ -2454,7 +2454,6 @@ class MainWindow(QtWidgets.QMainWindow):
             app.setPalette(palette)
             app.setStyleSheet('QToolTip { color: #ffffff; background-color: #2a2a2a; }')
             return
-        palette = QtGui.QPalette()
         app.setPalette(app.style().standardPalette())
         app.setStyleSheet('')
 

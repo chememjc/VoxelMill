@@ -95,7 +95,35 @@ This proves equality at the sampled printer lattice; it does not prove a valid
 solid between sampled planes or eliminate cancellation within the untrusted
 model group. Coarse drainage still checks the serialized soup representation.
 Raw internal faces can also generate unreachable support contacts: the measured
-body probe and outstanding routing work are recorded in `todo.md`.
+body probe is in `reports/plan2/routing-summary.md`, and the outstanding routing work is tracked in [ISSUES.md](../ISSUES.md).
+
+### Why the raster path is not a voxel union
+
+Measured on the float-valve body (2026-09-07).
+
+Union bounds are roughly 57 × 57 × 86 mm.
+
+| pitch | grid | dense bytes | verdict |
+|---|---|---|---|
+| printer-matched (0.018 / 0.05) | 3167 × 3167 × 1720 | 17.2 GB | over the 12.0 GB budget fraction and over the 24 GiB cap in `native/voxel.cpp` |
+| `repair` default 0.0577 | 988 × 988 × 1491 | 1.46 GB | affordable, but see below |
+
+The only lossless pitch is the one that cannot be afforded. Worse,
+`extract_surface` (`native/voxel.cpp`) emits one quad per exposed voxel face
+through an `unordered_map` — at 0.0577 mm that is ~12M triangles, a ~600 MB STL,
+a deviation tree over 990k against 12M triangles, and a full-resolution
+re-slice of 12M triangles. And it destroys the geometry that matters most:
+`contact_diameter_mm` is 0.4, so a contact disc becomes 7 voxels across and the
+0.15 mm penetration under 3. The supports are exact today; voxelizing trades
+certainty for nothing.
+
+The raster path's deviation is exactly zero — its only quantisation is the
+printer's own lattice, which the output gets regardless.
+
+**Escalation, if ever needed:** voxel-repair the *model only*, leaving supports
+exact, then union through the normal Manifold path. Confines all approximation
+to geometry that was already broken. Do not implement it yet — do not add dead
+config keys; settings validation already hard-rejects unimplemented options.
 
 ## Layer analysis
 

@@ -1,11 +1,11 @@
 # VoxelMill
 
-A staged Linux application for single-part resin-print preparation. Implementation status, evidence and remaining stage gates are tracked in [plan.md](plan.md).
+A staged Linux application for single-part resin-print preparation. Open work before the first stable release (bugs, performance, architecture and the feature backlog) is tracked in [ISSUES.md](ISSUES.md).
 
 v0.5.4 (alpha) keeps a Python CLI and optional GUI, with hot geometry and raster
 work in the C++ `_native` kernels. Portable builds: Linux x86_64 AppImage, two
 thin macOS DMGs (Intel and Apple Silicon), and a Windows x64 zip. See
-[docs/packaging.md](docs/packaging.md) and [platforms.md](platforms.md).
+[docs/packaging.md](docs/packaging.md) and [docs/platforms.md](docs/platforms.md).
 
 ## Install (alpha binaries)
 

@@ -15,7 +15,7 @@ VoxelMill, and the runtime site-packages into `AppDir/usr`. `AppRun` sets
 Linux x86_64 AppImage, macOS DMGs, and the Windows zip are built on GitHub
 Actions from tag `v0.*` (workflow
 [`.github/workflows/release.yml`](../.github/workflows/release.yml); see
-also [`../platforms.md`](../platforms.md)). Rehearse with `workflow_dispatch`
+also [`platforms.md`](platforms.md)). Rehearse with `workflow_dispatch`
 before tagging.
 
 ## macOS and Windows portables (PyInstaller)
