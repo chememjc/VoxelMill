@@ -1,0 +1,88 @@
+# Tests on every push and pull request. release.yml builds the portables;
+# this workflow is the safety net that runs the suite.
+#
+# Two Linux legs cover both native parallel paths: 3.10 builds without oneTBB
+# (the std::thread fallback in native/parallel.hpp, which is what the release
+# portables ship) and 3.12 builds with it.
+
+name: ci
+
+"on":
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: test (py${{ matrix.python }}${{ matrix.tbb && ', tbb' || '' }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: '3.10'
+            tbb: false
+          - python: '3.12'
+            tbb: true
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: System packages (headless Qt/VTK)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb libegl1 libgl1 \
+            libxkbcommon0 libxkbcommon-x11-0 libfontconfig1 libdbus-1-3 ninja-build
+          if [ "${{ matrix.tbb }}" = "true" ]; then sudo apt-get install -y libtbb-dev; fi
+
+      # scripts/equivalence.py drives `<root>/.venv/bin/python`, so the suite
+      # uses a venv inside the checkout, the same layout as a developer tree.
+      - name: Build and install
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install cmake pybind11==3.0.4 scikit-build-core==0.11.6
+          .venv/bin/python -m pip install --no-build-isolation '.[gui,test]'
+          .venv/bin/python -c "import voxelmill._native as n; print('HAS_TBB', n.HAS_TBB)"
+
+      - name: Tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: xvfb-run -a .venv/bin/python -m pytest -q -m "not samples" -p no:cacheprovider
+
+  golden:
+    # Report equality is exact. Float results may differ in the last bits on a
+    # CPU with other SIMD paths than the machine that recorded the goldens, so
+    # this job is advisory until it has run green here (ISSUES.md VM-060).
+    name: golden reports
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+      - name: Build and install
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install cmake pybind11==3.0.4 scikit-build-core==0.11.6
+          .venv/bin/python -m pip install --no-build-isolation .
+      - name: Compare against reports/golden
+        run: .venv/bin/python scripts/equivalence.py --jobs 4

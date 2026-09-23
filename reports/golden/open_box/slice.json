@@ -1,0 +1,397 @@
+{
+  "antialias": {
+    "levels": 1,
+    "supports": false,
+    "supports_unseparated": false
+  },
+  "dimensional_compensation": {
+    "bottom_tolerance_offset_mm": 0.0,
+    "layers_changed": 0,
+    "per_layer": [],
+    "pixels_changed": 0,
+    "shrink_percent_xy": 0.0,
+    "shrink_percent_z": {
+      "applied": false,
+      "reason": null,
+      "requested": 0.0,
+      "uncalibrated": false
+    },
+    "tolerance_offset_mm": 0.0,
+    "uncalibrated": false
+  },
+  "elephant_foot": {
+    "compensation_mm": 0.0,
+    "layers_compensated": 0,
+    "layers_requested": 4,
+    "per_layer": [],
+    "pixels_removed": 0
+  },
+  "estimated_print_time": {
+    "basis": "sum over layers of layer_exposure(settings, i) + bottom_/normal_settle_before_exposure_s + bottom_/normal_rest_after_exposure_s + bottom_/normal_wait_after_lift_s + (bottom_)lift_height/speed + (bottom_)lift_height2/speed2 + (bottom_)retract_height/speed + (bottom_)retract_height2/speed2; zero-height motion fields treated as 0 s: bottom_lift_height2, bottom_retract_height2, lift_height2, retract_height2; no invented firmware delays; ceil to whole seconds",
+    "does_not_establish": [
+      "firmware-calibrated machine duration",
+      "tilt-release or data-loading delays absent from the profile",
+      "that printer.motion units match physical millimeters and seconds"
+    ],
+    "establishes": [
+      "that the configured exposure, process waits and motion travel times sum to this schedule"
+    ],
+    "layer_count": 500,
+    "raw_seconds": 3704.75,
+    "uncalibrated": true,
+    "zero_motion_terms": [
+      "bottom_lift_height2",
+      "bottom_retract_height2",
+      "lift_height2",
+      "retract_height2"
+    ]
+  },
+  "format": "goo",
+  "layer_blob_sha256": "8606d97a9b5b0e52efd1520984ad2ce41224e5e2da607a2f659027dedb1fd419",
+  "layers": 500,
+  "output": "out.goo",
+  "print_time_s": 3705,
+  "resin_usage": {
+    "cost": null,
+    "cost_per_liter": null,
+    "currency": "$",
+    "density_g_cm3": null,
+    "mass_g": null,
+    "source": "raster_volume_mm3",
+    "volume_ml": 8.904282615,
+    "volume_mm3": 8904.282615
+  },
+  "schema_version": 1,
+  "shape_px": [
+    4320,
+    8520
+  ],
+  "source": {
+    "bounds": [
+      [
+        -12.600000381469727,
+        -12.600000381469727,
+        0.0
+      ],
+      [
+        15.300000190734863,
+        12.600000381469727,
+        25.0
+      ]
+    ],
+    "path": "prepared.stl",
+    "sha256": "b05a085d12b31b8c952f128102f2b1a7d2102a19223ca4eeda629f271c91f41a",
+    "triangles": 50638
+  },
+  "validation": {
+    "checks": {
+      "closed_surface": "pass",
+      "drainage_bottlenecks": "pass",
+      "enclosed_voids": "pass",
+      "growth_span": "pass",
+      "image_orientation": "warn",
+      "overlap": "pass",
+      "peel_risk": "warn",
+      "raster_connectivity": "pass",
+      "transient_traps": "warn"
+    },
+    "diagnostics": [
+      {
+        "code": "transient_trap",
+        "details": {
+          "definition": "empty space enclosed by already-printed material except toward the growth direction",
+          "peak_layer": 37,
+          "peak_volume_mm3": 4.860000000000866e-05
+        },
+        "layer": 37,
+        "message": "Empty space is enclosed by already-printed material during part of the build",
+        "position_mm": null,
+        "severity": "warning"
+      },
+      {
+        "code": "goo_orientation_unverified",
+        "details": {
+          "clears_when": "printer.image_mirror_verified is set true after checking a printed part",
+          "offline_check": "scripts/goo_orientation_check.py GOO STL --output REPORT.json; it reported inconclusive against both references because each slicer posed the model itself",
+          "profile": {
+            "image_mirror_x": false,
+            "image_mirror_y": false
+          },
+          "reference_files_disagree": {
+            "CHITUBOX Basic v2.3.1": {
+              "mirror_x": 1,
+              "mirror_y": 0
+            },
+            "ELEGOO SatelLite": {
+              "mirror_x": 0,
+              "mirror_y": 1
+            }
+          }
+        },
+        "layer": null,
+        "message": "The physical LCD orientation for this printer is not established. The two reference files for this machine disagree on the mirror flags, and this export uses the profile values without confirmation. A mirrored threaded or keyed part is scrap and looks correct until it is assembled.",
+        "position_mm": null,
+        "severity": "warning"
+      },
+      {
+        "code": "peel_risk",
+        "details": {
+          "basis": "oriented STL winding; exact shared-edge connectivity; native profile speed units; physical plate Z=0",
+          "bottom_layer_top_mm": 0.2,
+          "bottom_lift_speed": 0.05,
+          "build_z_mm": 165.0,
+          "candidate_triangle_count": 3672,
+          "heuristic": "uncalibrated geometry score; not a force or failure prediction",
+          "layer_height_mm": 0.05,
+          "limitations": [
+            "summed projected surface area is not instantaneous peel contact area",
+            "does not model resin, film, tilt release or actual suction pressure",
+            "open, duplicate and nonmanifold surfaces require independent validation"
+          ],
+          "max_angle_deg": 10.0,
+          "maximum_projected_area_mm2": 694.1460763030852,
+          "maximum_score": 6.941460763030852,
+          "normal_lift_speed": 0.05,
+          "reference_lift_speed": 0.05,
+          "region_count": 147,
+          "regions": [
+            {
+              "area_mm2": 694.1460763030852,
+              "bottom_layer_intersection": true,
+              "bounds": [
+                [
+                  -12.600000381469727,
+                  -12.600000381469727,
+                  0.0
+                ],
+                [
+                  15.300000190734863,
+                  12.600000381469727,
+                  0.0
+                ]
+              ],
+              "lift_speed": 0.05,
+              "mean_z_mm": 0.0,
+              "normal_layer_intersection": false,
+              "projected_area_mm2": 694.1460763030852,
+              "score": 6.941460763030852,
+              "threshold": true,
+              "triangle_count": 88,
+              "z_layer_span": [
+                0,
+                0
+              ]
+            },
+            {
+              "area_mm2": 400.0,
+              "bottom_layer_intersection": false,
+              "bounds": [
+                [
+                  -10.0,
+                  -10.0,
+                  5.0
+                ],
+                [
+                  10.0,
+                  10.0,
+                  5.0
+                ]
+              ],
+              "lift_speed": 0.05,
+              "mean_z_mm": 5.0,
+              "normal_layer_intersection": true,
+              "projected_area_mm2": 400.0,
+              "score": 4.121212121212121,
+              "threshold": true,
+              "triangle_count": 2,
+              "z_layer_span": [
+                100,
+                100
+              ]
+            }
+          ],
+          "regions_truncated": false,
+          "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
+          "source_triangle_count": 50638,
+          "status": "complete",
+          "threshold_area_mm2": 100.0,
+          "threshold_region_count": 2,
+          "total_region_count": 147
+        },
+        "layer": null,
+        "message": "Large downward surface regions warrant review of orientation and release settings",
+        "position_mm": null,
+        "severity": "warning"
+      }
+    ],
+    "metrics": {
+      "antialias_levels": 1,
+      "antialias_supports": false,
+      "crop_origin_px": [
+        3558,
+        1458
+      ],
+      "diagnostic_examples_capped": 128,
+      "drainage": {
+        "analysis_grid": [
+          153,
+          138,
+          137
+        ],
+        "analysis_pitch_mm": 0.18806319451591877,
+        "area_definition": "circular-equivalent maximum inscribed path clearance on sampled grid",
+        "bottleneck_examples": [],
+        "bottleneck_volume_definition": "eroded chamber cores; excludes narrow neck and boundary shell",
+        "bottlenecked_components": 0,
+        "bottlenecked_volume_mm3": 0,
+        "clearance_radius_mm": 0.5641895835477563,
+        "enclosed_components": 0,
+        "enclosed_volume_mm3": 0.0,
+        "ignored_bottlenecked_components": 0,
+        "ignored_bottlenecked_volume_mm3": 0,
+        "min_orifice_area_mm2": 1.0,
+        "min_void_volume_mm3": 0.0,
+        "occupancy_closed": true,
+        "sampling": "XY cell centers and Z subsamples; sub-grid walls may be missed",
+        "status": "complete",
+        "unclosed_rows": 0,
+        "unclosed_slices": 0,
+        "void_components": 1,
+        "z_subsamples_per_cell": 1
+      },
+      "enclosed_voids": {
+        "count": 0,
+        "examples": [],
+        "min_void_volume_mm3": 0.0,
+        "negligible_count": 0,
+        "negligible_volume_mm3": 0.0,
+        "nodes": 604,
+        "peak_present_trapped_layer": 37,
+        "peak_present_trapped_volume_mm3": 4.860000000000866e-05,
+        "volume_mm3": 0.0
+      },
+      "exposed_pixels": 549647075,
+      "grid": [
+        1554,
+        1404
+      ],
+      "growth_decimation": 8,
+      "growth_violation_pixels": 0,
+      "island_components": 0,
+      "island_components_on_crop_edge": 0,
+      "layer_count": 500,
+      "layer_height_mm": 0.05,
+      "nonempty_layers": 500,
+      "open_rows": 0,
+      "peel_risk": {
+        "basis": "oriented STL winding; exact shared-edge connectivity; native profile speed units; physical plate Z=0",
+        "bottom_layer_top_mm": 0.2,
+        "bottom_lift_speed": 0.05,
+        "build_z_mm": 165.0,
+        "candidate_triangle_count": 3672,
+        "heuristic": "uncalibrated geometry score; not a force or failure prediction",
+        "layer_height_mm": 0.05,
+        "limitations": [
+          "summed projected surface area is not instantaneous peel contact area",
+          "does not model resin, film, tilt release or actual suction pressure",
+          "open, duplicate and nonmanifold surfaces require independent validation"
+        ],
+        "max_angle_deg": 10.0,
+        "maximum_projected_area_mm2": 694.1460763030852,
+        "maximum_score": 6.941460763030852,
+        "normal_lift_speed": 0.05,
+        "reference_lift_speed": 0.05,
+        "region_count": 147,
+        "regions": [
+          {
+            "area_mm2": 694.1460763030852,
+            "bottom_layer_intersection": true,
+            "bounds": [
+              [
+                -12.600000381469727,
+                -12.600000381469727,
+                0.0
+              ],
+              [
+                15.300000190734863,
+                12.600000381469727,
+                0.0
+              ]
+            ],
+            "lift_speed": 0.05,
+            "mean_z_mm": 0.0,
+            "normal_layer_intersection": false,
+            "projected_area_mm2": 694.1460763030852,
+            "score": 6.941460763030852,
+            "threshold": true,
+            "triangle_count": 88,
+            "z_layer_span": [
+              0,
+              0
+            ]
+          },
+          {
+            "area_mm2": 400.0,
+            "bottom_layer_intersection": false,
+            "bounds": [
+              [
+                -10.0,
+                -10.0,
+                5.0
+              ],
+              [
+                10.0,
+                10.0,
+                5.0
+              ]
+            ],
+            "lift_speed": 0.05,
+            "mean_z_mm": 5.0,
+            "normal_layer_intersection": true,
+            "projected_area_mm2": 400.0,
+            "score": 4.121212121212121,
+            "threshold": true,
+            "triangle_count": 2,
+            "z_layer_span": [
+              100,
+              100
+            ]
+          }
+        ],
+        "regions_truncated": false,
+        "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
+        "source_triangle_count": 50638,
+        "status": "complete",
+        "threshold_area_mm2": 100.0,
+        "threshold_region_count": 2,
+        "total_region_count": 147
+      },
+      "pixel_pitch_mm": [
+        0.018,
+        0.018
+      ],
+      "raster_volume_mm3": 8904.282615,
+      "transient_traps": {
+        "definition": "empty space enclosed by already-printed material except toward the growth direction",
+        "peak_layer": 37,
+        "peak_volume_mm3": 4.860000000000866e-05
+      }
+    },
+    "passed": true,
+    "schema_version": 1
+  },
+  "verification": {
+    "antialias_levels": 1,
+    "decoded_pixels": "pass",
+    "framing": "pass",
+    "header_settings": "pass",
+    "layer_timing_motion": "pass",
+    "layer_topology": "equivalent_to_source",
+    "layer_topology_reason": "decoded_pixels passed for every layer, so the source-raster layer analysis in this report describes these pixels exactly",
+    "layers_compared": 500,
+    "pixel_comparison": "exact",
+    "standalone_check": "voxelmill verify <file.goo>"
+  },
+  "warned": false,
+  "written": true
+}

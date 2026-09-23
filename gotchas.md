@@ -1305,10 +1305,17 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   `evaluate_scenario` used to treat `old_steps is None` as an error, so the
   golden diff block was dead code and every check still paid for the v0.1.0
   tree. That is fixed: a missing old root now runs `_evaluate_golden_only`
-  against `reports/golden/v010`. A shape that exists under an *existing* old
+  against `reports/golden/`. A shape that exists under an *existing* old
   root but has no files there is still an error, so a mis-pointed `--old-root`
-  cannot silently skip into goldens. The five `fixtures/shapes/invalid/`
-  cases are covered old-vs-new only; they have no goldens yet.
+  cannot silently skip into goldens.
+- **The v0.1.0 goldens went stale unnoticed.** They sat in
+  `reports/golden/v010/` while the script defaults to `reports/golden/`, so a
+  plain run found "no golden entries". With `--golden` pointed at them, every
+  scenario differed, because supports and validation had changed by design
+  since v0.1.0. On 2026-09-23 they were re-recorded at HEAD into
+  `reports/golden/`, covering all 18 scenarios including the five invalid
+  meshes. A re-run at `--workers 2` against the 8-worker recording matched
+  18/18. A golden set that nothing runs decays, so CI now runs it.
 
 - **A check that was skipped must not report `pass`.** `checks` entries are
   initialized optimistically and only downgraded on failure, so gating a

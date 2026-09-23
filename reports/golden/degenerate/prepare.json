@@ -1,0 +1,3516 @@
+{
+  "asset": {
+    "bounds": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        20.0,
+        20.0,
+        20.0
+      ]
+    ],
+    "path": "degenerate.stl",
+    "sha256": "bd3ee0b648a8b8300a55c8a153a22ad82c71d09f1e822f5225f63a023eb9cce3",
+    "source_format": "binary_stl",
+    "triangle_count": 7,
+    "units": "mm"
+  },
+  "diagnostics": [],
+  "export": {
+    "path": "prepared.stl",
+    "triangles": 28955,
+    "warned": true,
+    "written": true
+  },
+  "passes": [
+    {
+      "exported_triangles": 28955,
+      "kind": "full_reslice",
+      "pass": 1,
+      "plate_fit": true,
+      "raft": true,
+      "raster_volume_mm3": 1910.1412547999998,
+      "supports": {
+        "allow_part_to_part": false,
+        "analysis": {
+          "analysis_pitch_mm": 0.15,
+          "columns": 19044,
+          "enclosed_void_volume_mm3": 0.0,
+          "layer_height_mm": 0.05,
+          "layers": 500,
+          "negative_winding_crossings": 11,
+          "open_contour_rows": 0,
+          "raster_islands": 1,
+          "runs": 8911,
+          "sealed_gaps": 0
+        },
+        "anchor_load": "pass",
+        "base": {
+          "cell_basis": "center-to-center spacing of adjacent cells",
+          "cell_size_mm": 6.0,
+          "connected_components": 1,
+          "contact_area_mm2": 461.24228435864103,
+          "convex_envelope_area_mm2": 466.68007456125184,
+          "does_not_establish": "plate adhesion, removal force, or print stability",
+          "establishes": "the shape and size of the base",
+          "export_simplification_basis": "one float32 coordinate step; redundant grid edges",
+          "export_simplification_mm": 9.5367431640625e-07,
+          "feet": 54,
+          "footprint_basis": "union of emitted polygon sections at the plate",
+          "grid_candidate_lines": 14,
+          "open_area_fraction": 0.011652072798957913,
+          "open_area_mm2": 5.437790202610813,
+          "pad_diameter_mm": 5.2,
+          "pad_thickness_mm": 1.0,
+          "perimeter_width_mm": 1.2,
+          "removal": "connected grid, perimeter rim and foot tree; vertical openings",
+          "rotation_deg": 0.0,
+          "skeleton_edges": 53,
+          "skeleton_length_mm": 106.25048944296479,
+          "solid": true,
+          "strut_width_mm": 1.2,
+          "tree_basis": "Euclidean minimum spanning tree; sorted ties",
+          "type": "grid",
+          "unique_feet": 54,
+          "volume_mm3": 461.2422843586411
+        },
+        "brace_angle_deg": 45.0,
+        "brace_azimuth_deg": 0.0,
+        "brace_branches_per_node": 1,
+        "brace_candidates_examined": 107,
+        "brace_destination": "both",
+        "brace_diameter_mm": 0.6,
+        "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
+        "brace_max_distance_mm": 4.5,
+        "brace_max_length_mm": 30.0,
+        "brace_min_height_mm": 0.0,
+        "brace_new_feet": 26,
+        "brace_origins_examined": 28,
+        "brace_pattern": "single",
+        "brace_rejections": {
+          "bounds_rejected": 30,
+          "collision_rejected": 0,
+          "duplicate_rejected": 0,
+          "foot_rejected": 0,
+          "length_rejected": 0,
+          "no_destination_rejected": 0,
+          "pattern_rejected": 0,
+          "spacing_rejected": 51,
+          "ungrounded_rejected": 0
+        },
+        "brace_spacing_mm": 15.0,
+        "braces": 27,
+        "braces_capped": false,
+        "braces_collision_rejected": 0,
+        "contact_load_limit_mm2": 36.0,
+        "contact_parameters": {
+          "authored": 0,
+          "matched": 0,
+          "unmatched": 0
+        },
+        "contacts_blocked_by_policy": 0,
+        "contacts_dropped_attached": 0,
+        "contacts_failed": 0,
+        "contacts_in_sealed_cavities": 0,
+        "contacts_requested": 28,
+        "contacts_routed": 28,
+        "contacts_skipped_density": 0,
+        "contacts_with_shortened_tip": 0,
+        "coverage": "pass",
+        "coverage_basis": "sampled downward faces; geometric reach, not strength",
+        "coverage_gap_limit_mm": 3.0,
+        "density_exempt_positions": [
+          [
+            -8.575000000000001,
+            -4.075000000000001,
+            5.0
+          ]
+        ],
+        "diagnostics_capped_at": 256,
+        "downward_face_area_mm2": 200.0,
+        "downward_samples": 37,
+        "manual_contacts": 0,
+        "max_contact_gap_mm": 2.8571428571428577,
+        "max_contact_load_mm2_actual": 27.027027027027025,
+        "max_pillar_length_mm": 3.0,
+        "mean_contact_gap_mm": 0.6493512553433893,
+        "mechanics": "configured heuristic limits; not a strength proof",
+        "min_tip_length_mm": 0.3,
+        "min_tip_used_mm": 2.0,
+        "model_anchor": {
+          "candidates_rejected": 0,
+          "clearance_basis": "column-grid footprint and central-column penetration; not exact surface clearance",
+          "diameter_basis": "configured endpoint diameter; 0 derives the chosen middle diameter",
+          "diameter_mm": 0.4,
+          "examples": [],
+          "examples_capped_at": 256,
+          "length_mm": 2.0,
+          "penetration_mm": 0.15,
+          "shape": "cone"
+        },
+        "object_groups": 0,
+        "object_override_contacts": 0,
+        "overhang_angle_deg": 45.0,
+        "overloaded_contacts": 0,
+        "paint": {
+          "automatic": false,
+          "block_wins_over_enforce": true,
+          "blocked_marks": 0,
+          "enforced_contacts": 0,
+          "enforced_marks": 0,
+          "samples_blocked": 0
+        },
+        "part_to_part_avoidance": 1.0,
+        "pillar_angle_deg": 45.0,
+        "raster_islands": 1,
+        "routing": {
+          "branched": 0,
+          "model_anchor": 0,
+          "vertical": 28
+        },
+        "small_model_pillars": 0,
+        "small_pillar": {
+          "diameter_mm": 0.0,
+          "enabled": false,
+          "lower_depth_mm": 0.0,
+          "max_length_mm": 0.0,
+          "mode": "middle",
+          "selection_basis": "middle centerline length",
+          "shape": "cone",
+          "upper_depth_mm": 0.0
+        },
+        "small_pillars": 0,
+        "spacing_mm": 3.0,
+        "suppressed_contacts": 0,
+        "tip_base_diameter_mm": 1.2,
+        "tip_length_mm": 2.0,
+        "tree": {
+          "clusters": 0,
+          "contacts_in_trees": 0,
+          "enabled": false,
+          "kept_independent": 0,
+          "trunks": 0
+        },
+        "uncovered_fraction": 0.0,
+        "uncovered_samples": 0,
+        "unroutable_positions": []
+      },
+      "union_bounds": [
+        [
+          -12.600000381469727,
+          -12.600000381469727,
+          0.0
+        ],
+        [
+          15.300000190734863,
+          12.600000381469727,
+          25.0
+        ]
+      ],
+      "union_triangles": 28955,
+      "union_volume_mm3": null,
+      "validation": {
+        "checks": {
+          "closed_surface": "pass",
+          "enclosed_voids": "pass",
+          "growth_span": "fail",
+          "overlap": "pass",
+          "peel_risk": "warn",
+          "plate_fit": "pass",
+          "raster_connectivity": "pass",
+          "support_anchor_load": "pass",
+          "support_coverage": "pass",
+          "support_routes": "pass",
+          "support_slenderness": "pass",
+          "transient_traps": "pass",
+          "union_raster_parity": "pass"
+        },
+        "diagnostics": [
+          {
+            "code": "growth_span",
+            "details": {
+              "decimation": 8,
+              "limit_mm": 3.0,
+              "pixels": 19
+            },
+            "layer": 100,
+            "message": "New material exceeds the configured distance to preceding material; this is a configured distance rule at printer pitch, not a strength proof",
+            "position_mm": null,
+            "severity": "error"
+          },
+          {
+            "code": "exact_union_unavailable",
+            "details": {
+              "cavity_fill": {
+                "consequence": "enclosed voids are reported by the layer analysis rather than filled",
+                "reason": "the raster union path has no solid to decompose; seal_voids requires the exact path or repair.aggressiveness = \"aggressive\"",
+                "status": "not_run"
+              },
+              "does_not_establish": "the exported STL is not a certified valid closed solid; it is not boolean-resolved or repaired",
+              "establishes": "independent occupancy OR on the printer lattice; exported carrier requires raster parity",
+              "exact_union_attempted": true,
+              "exact_union_blocked_by": [
+                {
+                  "code": "degenerate_triangles",
+                  "details": {
+                    "count": 3,
+                    "findings": {
+                      "degenerate_triangles": {
+                        "count": 3,
+                        "status": "fail"
+                      },
+                      "manifold": {
+                        "status": "not_run"
+                      },
+                      "self_intersections": {
+                        "reason": "skipped because degenerate triangles were found",
+                        "status": "not_run"
+                      },
+                      "weld": {
+                        "status": "not_run"
+                      }
+                    }
+                  },
+                  "message": "Input contains zero-area triangles; no triangles were silently removed"
+                }
+              ],
+              "groups": [
+                {
+                  "name": "model",
+                  "orientation": "untrusted",
+                  "triangles": 7
+                },
+                {
+                  "name": "supports_and_raft",
+                  "orientation": "closed_positive",
+                  "triangles": 28948
+                }
+              ],
+              "max_displacement_mm": 0.0,
+              "support_cavity_fill": null,
+              "union": "raster"
+            },
+            "layer": null,
+            "message": "Raster union used; exported STL is a triangle soup, not a certified solid",
+            "position_mm": null,
+            "severity": "warning"
+          },
+          {
+            "code": "peel_risk",
+            "details": {
+              "basis": "oriented STL winding; exact shared-edge connectivity; native profile speed units; physical plate Z=0",
+              "bottom_layer_top_mm": 0.2,
+              "bottom_lift_speed": 0.05,
+              "build_z_mm": 165.0,
+              "candidate_triangle_count": 2114,
+              "heuristic": "uncalibrated geometry score; not a force or failure prediction",
+              "layer_height_mm": 0.05,
+              "limitations": [
+                "summed projected surface area is not instantaneous peel contact area",
+                "does not model resin, film, tilt release or actual suction pressure",
+                "open, duplicate and nonmanifold surfaces require independent validation"
+              ],
+              "max_angle_deg": 10.0,
+              "maximum_projected_area_mm2": 461.24231889733403,
+              "maximum_score": 4.612423188973341,
+              "normal_lift_speed": 0.05,
+              "reference_lift_speed": 0.05,
+              "region_count": 84,
+              "regions": [
+                {
+                  "area_mm2": 461.24231889733403,
+                  "bottom_layer_intersection": true,
+                  "bounds": [
+                    [
+                      -12.600000381469727,
+                      -12.600000381469727,
+                      0.0
+                    ],
+                    [
+                      15.300000190734863,
+                      12.600000381469727,
+                      0.0
+                    ]
+                  ],
+                  "lift_speed": 0.05,
+                  "mean_z_mm": 0.0,
+                  "normal_layer_intersection": false,
+                  "projected_area_mm2": 461.24231889733403,
+                  "score": 4.612423188973341,
+                  "threshold": true,
+                  "triangle_count": 85,
+                  "z_layer_span": [
+                    0,
+                    0
+                  ]
+                },
+                {
+                  "area_mm2": 200.0,
+                  "bottom_layer_intersection": false,
+                  "bounds": [
+                    [
+                      -10.0,
+                      -10.0,
+                      5.0
+                    ],
+                    [
+                      10.0,
+                      10.0,
+                      5.0
+                    ]
+                  ],
+                  "lift_speed": 0.05,
+                  "mean_z_mm": 5.0,
+                  "normal_layer_intersection": true,
+                  "projected_area_mm2": 200.0,
+                  "score": 2.0606060606060606,
+                  "threshold": true,
+                  "triangle_count": 1,
+                  "z_layer_span": [
+                    100,
+                    100
+                  ]
+                }
+              ],
+              "regions_truncated": false,
+              "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
+              "source_triangle_count": 28955,
+              "status": "complete",
+              "threshold_area_mm2": 100.0,
+              "threshold_region_count": 2,
+              "total_region_count": 84
+            },
+            "layer": null,
+            "message": "Large downward surface regions warrant review of orientation and release settings",
+            "position_mm": null,
+            "severity": "warning"
+          }
+        ],
+        "metrics": {
+          "diagnostic_examples_capped": 128,
+          "enclosed_voids": {
+            "count": 0,
+            "examples": [],
+            "min_void_volume_mm3": 0.0,
+            "negligible_count": 0,
+            "negligible_volume_mm3": 0.0,
+            "nodes": 580,
+            "peak_present_trapped_layer": 0,
+            "peak_present_trapped_volume_mm3": 0.0,
+            "volume_mm3": 0.0
+          },
+          "exposed_pixels": 117909954,
+          "growth_decimation": 8,
+          "growth_violation_pixels": 19,
+          "island_components": 0,
+          "island_components_on_crop_edge": 0,
+          "layer_count": 500,
+          "layer_height_mm": 0.05,
+          "nonempty_layers": 500,
+          "peel_risk": {
+            "basis": "oriented STL winding; exact shared-edge connectivity; native profile speed units; physical plate Z=0",
+            "bottom_layer_top_mm": 0.2,
+            "bottom_lift_speed": 0.05,
+            "build_z_mm": 165.0,
+            "candidate_triangle_count": 2114,
+            "heuristic": "uncalibrated geometry score; not a force or failure prediction",
+            "layer_height_mm": 0.05,
+            "limitations": [
+              "summed projected surface area is not instantaneous peel contact area",
+              "does not model resin, film, tilt release or actual suction pressure",
+              "open, duplicate and nonmanifold surfaces require independent validation"
+            ],
+            "max_angle_deg": 10.0,
+            "maximum_projected_area_mm2": 461.24231889733403,
+            "maximum_score": 4.612423188973341,
+            "normal_lift_speed": 0.05,
+            "reference_lift_speed": 0.05,
+            "region_count": 84,
+            "regions": [
+              {
+                "area_mm2": 461.24231889733403,
+                "bottom_layer_intersection": true,
+                "bounds": [
+                  [
+                    -12.600000381469727,
+                    -12.600000381469727,
+                    0.0
+                  ],
+                  [
+                    15.300000190734863,
+                    12.600000381469727,
+                    0.0
+                  ]
+                ],
+                "lift_speed": 0.05,
+                "mean_z_mm": 0.0,
+                "normal_layer_intersection": false,
+                "projected_area_mm2": 461.24231889733403,
+                "score": 4.612423188973341,
+                "threshold": true,
+                "triangle_count": 85,
+                "z_layer_span": [
+                  0,
+                  0
+                ]
+              },
+              {
+                "area_mm2": 200.0,
+                "bottom_layer_intersection": false,
+                "bounds": [
+                  [
+                    -10.0,
+                    -10.0,
+                    5.0
+                  ],
+                  [
+                    10.0,
+                    10.0,
+                    5.0
+                  ]
+                ],
+                "lift_speed": 0.05,
+                "mean_z_mm": 5.0,
+                "normal_layer_intersection": true,
+                "projected_area_mm2": 200.0,
+                "score": 2.0606060606060606,
+                "threshold": true,
+                "triangle_count": 1,
+                "z_layer_span": [
+                  100,
+                  100
+                ]
+              }
+            ],
+            "regions_truncated": false,
+            "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
+            "source_triangle_count": 28955,
+            "status": "complete",
+            "threshold_area_mm2": 100.0,
+            "threshold_region_count": 2,
+            "total_region_count": 84
+          },
+          "pixel_pitch_mm": [
+            0.018,
+            0.018
+          ],
+          "raster_volume_mm3": 1910.1412547999998,
+          "reopened": {
+            "bounds": [
+              [
+                -12.600000381469727,
+                -12.600000381469727,
+                0.0
+              ],
+              [
+                15.300000190734863,
+                12.600000381469727,
+                25.0
+              ]
+            ],
+            "crop_origin_px": [
+              3558,
+              1458
+            ],
+            "grid": [
+              1554,
+              1404
+            ],
+            "negative_winding_crossings": 0,
+            "open_layers": 0,
+            "open_rows": 0,
+            "path": "prepared.stl",
+            "sha256": "fc7af1e3bc9b8a689e55f33286e6ede65233d82a3381d486a0c2c8f6b1f75c01",
+            "triangles": 28955
+          },
+          "supports": {
+            "allow_part_to_part": false,
+            "analysis": {
+              "analysis_pitch_mm": 0.15,
+              "columns": 19044,
+              "enclosed_void_volume_mm3": 0.0,
+              "layer_height_mm": 0.05,
+              "layers": 500,
+              "negative_winding_crossings": 11,
+              "open_contour_rows": 0,
+              "raster_islands": 1,
+              "runs": 8911,
+              "sealed_gaps": 0
+            },
+            "anchor_load": "pass",
+            "base": {
+              "cell_basis": "center-to-center spacing of adjacent cells",
+              "cell_size_mm": 6.0,
+              "connected_components": 1,
+              "contact_area_mm2": 461.24228435864103,
+              "convex_envelope_area_mm2": 466.68007456125184,
+              "does_not_establish": "plate adhesion, removal force, or print stability",
+              "establishes": "the shape and size of the base",
+              "export_simplification_basis": "one float32 coordinate step; redundant grid edges",
+              "export_simplification_mm": 9.5367431640625e-07,
+              "feet": 54,
+              "footprint_basis": "union of emitted polygon sections at the plate",
+              "grid_candidate_lines": 14,
+              "open_area_fraction": 0.011652072798957913,
+              "open_area_mm2": 5.437790202610813,
+              "pad_diameter_mm": 5.2,
+              "pad_thickness_mm": 1.0,
+              "perimeter_width_mm": 1.2,
+              "removal": "connected grid, perimeter rim and foot tree; vertical openings",
+              "rotation_deg": 0.0,
+              "skeleton_edges": 53,
+              "skeleton_length_mm": 106.25048944296479,
+              "solid": true,
+              "strut_width_mm": 1.2,
+              "tree_basis": "Euclidean minimum spanning tree; sorted ties",
+              "type": "grid",
+              "unique_feet": 54,
+              "volume_mm3": 461.2422843586411
+            },
+            "brace_angle_deg": 45.0,
+            "brace_azimuth_deg": 0.0,
+            "brace_branches_per_node": 1,
+            "brace_candidates_examined": 107,
+            "brace_destination": "both",
+            "brace_diameter_mm": 0.6,
+            "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
+            "brace_max_distance_mm": 4.5,
+            "brace_max_length_mm": 30.0,
+            "brace_min_height_mm": 0.0,
+            "brace_new_feet": 26,
+            "brace_origins_examined": 28,
+            "brace_pattern": "single",
+            "brace_rejections": {
+              "bounds_rejected": 30,
+              "collision_rejected": 0,
+              "duplicate_rejected": 0,
+              "foot_rejected": 0,
+              "length_rejected": 0,
+              "no_destination_rejected": 0,
+              "pattern_rejected": 0,
+              "spacing_rejected": 51,
+              "ungrounded_rejected": 0
+            },
+            "brace_spacing_mm": 15.0,
+            "braces": 27,
+            "braces_capped": false,
+            "braces_collision_rejected": 0,
+            "contact_load_limit_mm2": 36.0,
+            "contact_parameters": {
+              "authored": 0,
+              "matched": 0,
+              "unmatched": 0
+            },
+            "contacts_blocked_by_policy": 0,
+            "contacts_dropped_attached": 0,
+            "contacts_failed": 0,
+            "contacts_in_sealed_cavities": 0,
+            "contacts_requested": 28,
+            "contacts_routed": 28,
+            "contacts_skipped_density": 0,
+            "contacts_with_shortened_tip": 0,
+            "coverage": "pass",
+            "coverage_basis": "sampled downward faces; geometric reach, not strength",
+            "coverage_gap_limit_mm": 3.0,
+            "density_exempt_positions": [
+              [
+                -8.575000000000001,
+                -4.075000000000001,
+                5.0
+              ]
+            ],
+            "diagnostics_capped_at": 256,
+            "downward_face_area_mm2": 200.0,
+            "downward_samples": 37,
+            "manual_contacts": 0,
+            "max_contact_gap_mm": 2.8571428571428577,
+            "max_contact_load_mm2_actual": 27.027027027027025,
+            "max_pillar_length_mm": 3.0,
+            "mean_contact_gap_mm": 0.6493512553433893,
+            "mechanics": "configured heuristic limits; not a strength proof",
+            "min_tip_length_mm": 0.3,
+            "min_tip_used_mm": 2.0,
+            "model_anchor": {
+              "candidates_rejected": 0,
+              "clearance_basis": "column-grid footprint and central-column penetration; not exact surface clearance",
+              "diameter_basis": "configured endpoint diameter; 0 derives the chosen middle diameter",
+              "diameter_mm": 0.4,
+              "examples": [],
+              "examples_capped_at": 256,
+              "length_mm": 2.0,
+              "penetration_mm": 0.15,
+              "shape": "cone"
+            },
+            "object_groups": 0,
+            "object_override_contacts": 0,
+            "overhang_angle_deg": 45.0,
+            "overloaded_contacts": 0,
+            "paint": {
+              "automatic": false,
+              "block_wins_over_enforce": true,
+              "blocked_marks": 0,
+              "enforced_contacts": 0,
+              "enforced_marks": 0,
+              "samples_blocked": 0
+            },
+            "part_to_part_avoidance": 1.0,
+            "pillar_angle_deg": 45.0,
+            "raster_islands": 1,
+            "routing": {
+              "branched": 0,
+              "model_anchor": 0,
+              "vertical": 28
+            },
+            "small_model_pillars": 0,
+            "small_pillar": {
+              "diameter_mm": 0.0,
+              "enabled": false,
+              "lower_depth_mm": 0.0,
+              "max_length_mm": 0.0,
+              "mode": "middle",
+              "selection_basis": "middle centerline length",
+              "shape": "cone",
+              "upper_depth_mm": 0.0
+            },
+            "small_pillars": 0,
+            "spacing_mm": 3.0,
+            "suppressed_contacts": 0,
+            "tip_base_diameter_mm": 1.2,
+            "tip_length_mm": 2.0,
+            "tree": {
+              "clusters": 0,
+              "contacts_in_trees": 0,
+              "enabled": false,
+              "kept_independent": 0,
+              "trunks": 0
+            },
+            "uncovered_fraction": 0.0,
+            "uncovered_samples": 0,
+            "unroutable_positions": []
+          },
+          "transient_traps": {
+            "definition": "empty space enclosed by already-printed material except toward the growth direction",
+            "peak_layer": 0,
+            "peak_volume_mm3": 0.0
+          },
+          "union_raster_parity": {
+            "examples": [],
+            "mismatched_layers": 0,
+            "mismatched_pixels": 0,
+            "reference_open_rows": 0
+          }
+        },
+        "passed": false,
+        "schema_version": 1
+      },
+      "volume_note": "soup signed volume is not physical resin volume"
+    }
+  ],
+  "placement": {
+    "bounds": [
+      [
+        -10.0,
+        -10.0,
+        5.0
+      ],
+      [
+        10.0,
+        10.0,
+        25.0
+      ]
+    ],
+    "center_offset_mm": [
+      0.0,
+      0.0
+    ],
+    "matrix": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        -10.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        -10.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        5.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "mirror": [
+      false,
+      false,
+      false
+    ],
+    "model_lift_mm": 5.0,
+    "rotation_deg": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "search": {
+      "full_resolution_bounds": true,
+      "mode": "explicit",
+      "nominal_xy_support_reserve_mm": 2.6,
+      "requires_support_envelope_recheck": true,
+      "reserve_relaxed": false,
+      "xy_support_reserve_mm": 2.6
+    }
+  },
+  "schema_version": 1,
+  "settings": {
+    "assembly": {
+      "clip_to_build_volume": false,
+      "max_parity_examples": 16,
+      "require_raster_parity": true,
+      "union": "auto"
+    },
+    "hollow": {
+      "drain_diameter_mm": 2.0,
+      "enabled": false,
+      "infill": "none",
+      "infill_pitch_mm": 4.0,
+      "min_wall_thickness_mm": 1.0,
+      "mode": "inner",
+      "vent_diameter_mm": 2.0,
+      "voxel_size_mm": 0.0,
+      "wall_thickness_mm": 2.0
+    },
+    "peel": {
+      "area_threshold_mm2": 100.0,
+      "enabled": true,
+      "max_angle_deg": 10.0,
+      "reference_lift_speed": 0.05
+    },
+    "printer": {
+      "build_mm": [
+        153.36,
+        77.76,
+        165.0
+      ],
+      "edge_clearance_mm": 2.0,
+      "id": "mars5-ultra",
+      "image_mirror_verified": false,
+      "image_mirror_x": false,
+      "image_mirror_y": false,
+      "layer_height_range_mm": [
+        0.01,
+        0.2
+      ],
+      "motion": {
+        "bottom_lift_height": 0.05,
+        "bottom_lift_height2": 0.0,
+        "bottom_lift_speed": 0.05,
+        "bottom_lift_speed2": 0.0,
+        "bottom_light_pwm": 255,
+        "bottom_retract_height": 0.05,
+        "bottom_retract_height2": 0.0,
+        "bottom_retract_speed": 0.05,
+        "bottom_retract_speed2": 0.0,
+        "lift_height": 0.05,
+        "lift_height2": 0.0,
+        "lift_speed": 0.05,
+        "lift_speed2": 0.0,
+        "light_pwm": 255,
+        "retract_height": 0.05,
+        "retract_height2": 0.0,
+        "retract_speed": 0.05,
+        "retract_speed2": 0.0
+      },
+      "name": "Elegoo Mars 5 Ultra",
+      "output_formats": [
+        "goo"
+      ],
+      "pixel_pitch_mm": [
+        0.018,
+        0.018
+      ],
+      "pixels": [
+        8520,
+        4320
+      ]
+    },
+    "process": {
+      "antialias_levels": 1,
+      "antialias_supports": false,
+      "bottom_exposure_s": 35.0,
+      "bottom_layers": 4,
+      "bottom_rest_after_exposure_s": 1.0,
+      "bottom_settle_before_exposure_s": 0.5,
+      "bottom_tolerance_offset_mm": 0.0,
+      "bottom_wait_after_lift_s": 0.0,
+      "elephant_foot_compensation_mm": 0.0,
+      "elephant_foot_layers": 0,
+      "layer_height_mm": 0.05,
+      "normal_exposure_s": 3.5,
+      "normal_rest_after_exposure_s": 1.0,
+      "normal_settle_before_exposure_s": 0.5,
+      "normal_wait_after_lift_s": 0.0,
+      "shrink_percent_xy": 0.0,
+      "shrink_percent_z": 0.0,
+      "tolerance_offset_mm": 0.0,
+      "transition_layers": 5
+    },
+    "repair": {
+      "aggressiveness": "conservative",
+      "auto_drain_holes": false,
+      "max_deviation_mm": 0.05,
+      "min_orifice_area_mm2": 1.0,
+      "min_void_volume_mm3": 0.0,
+      "remove_tiny_features": false,
+      "seal_voids": true,
+      "smooth_iterations": 0,
+      "step_linear_deflection_mm": 0.1,
+      "support_void_policy": "fail",
+      "voxel_size_mm": 0.0,
+      "weld_tolerance_mm": 0.0
+    },
+    "resin": {
+      "cost_per_liter": 0.0,
+      "currency": "$",
+      "density_g_cm3": 0.0,
+      "id": "sunlu-abs-like-gray",
+      "name": "Sunlu ABS-like gray"
+    },
+    "schema_version": 1,
+    "support": {
+      "allow_part_to_part": false,
+      "auto_bracing": true,
+      "automatic": true,
+      "base_cell_size_mm": 6.0,
+      "base_edge_slope_deg": 0.0,
+      "base_rotation_deg": 0.0,
+      "base_skate_length_mm": 0.0,
+      "base_strut_width_mm": 0.0,
+      "base_thickness_mm": 0.0,
+      "base_touch_diameter_mm": 0.0,
+      "base_type": "grid",
+      "boundary_supports": false,
+      "brace_angle_deg": 45.0,
+      "brace_azimuth_deg": 0.0,
+      "brace_branches_per_node": 1,
+      "brace_destination": "both",
+      "brace_diameter_mm": 0.0,
+      "brace_max_distance_mm": 0.0,
+      "brace_max_length_mm": 30.0,
+      "brace_min_height_mm": 0.0,
+      "brace_pattern": "single",
+      "brace_spacing_mm": 15.0,
+      "break_point_diameter_mm": 0.8,
+      "contact_diameter_mm": 0.4,
+      "contour_supports": false,
+      "drop_attached_unroutable": true,
+      "max_contact_gap_mm": 0.0,
+      "max_contact_load_mm2": 0.0,
+      "max_island_passes": 5,
+      "max_slenderness": 40.0,
+      "max_span_mm": 3.0,
+      "min_overlap_pixels": 1,
+      "min_tip_length_mm": 0.3,
+      "model_anchor_diameter_mm": 0.4,
+      "model_anchor_length_mm": 2.0,
+      "model_anchor_penetration_mm": 0.15,
+      "model_anchor_shape": "cone",
+      "overhang_angle_deg": 45.0,
+      "part_to_part_avoidance": 1.0,
+      "penetration_mm": 0.15,
+      "pillar_angle_deg": 45.0,
+      "pillar_diameter_mm": 1.2,
+      "raft_expansion_mm": 2.0,
+      "raft_slope_deg": 30.0,
+      "raft_thickness_mm": 1.0,
+      "small_pillar_diameter_mm": 0.0,
+      "small_pillar_lower_depth_mm": 0.0,
+      "small_pillar_max_length_mm": 0.0,
+      "small_pillar_mode": "middle",
+      "small_pillar_shape": "cone",
+      "small_pillar_upper_depth_mm": 0.0,
+      "spacing_mm": 3.0,
+      "support_clearance_mm": 0.3,
+      "tip_base_diameter_mm": 0.0,
+      "tip_length_mm": 2.0,
+      "tip_shape": "cone",
+      "tree_cluster_mm": 0.0,
+      "tree_supports": false
+    }
+  },
+  "source": "degenerate.stl",
+  "stages": {
+    "assembly": {
+      "cavity_fill": {
+        "consequence": "enclosed voids are reported by the layer analysis rather than filled",
+        "reason": "the raster union path has no solid to decompose; seal_voids requires the exact path or repair.aggressiveness = \"aggressive\"",
+        "status": "not_run"
+      },
+      "does_not_establish": "the exported STL is not a certified valid closed solid; it is not boolean-resolved or repaired",
+      "establishes": "independent occupancy OR on the printer lattice; exported carrier requires raster parity",
+      "exact_union_attempted": true,
+      "exact_union_blocked_by": [
+        {
+          "code": "degenerate_triangles",
+          "details": {
+            "count": 3,
+            "findings": {
+              "degenerate_triangles": {
+                "count": 3,
+                "status": "fail"
+              },
+              "manifold": {
+                "status": "not_run"
+              },
+              "self_intersections": {
+                "reason": "skipped because degenerate triangles were found",
+                "status": "not_run"
+              },
+              "weld": {
+                "status": "not_run"
+              }
+            }
+          },
+          "message": "Input contains zero-area triangles; no triangles were silently removed"
+        }
+      ],
+      "groups": [
+        {
+          "name": "model",
+          "orientation": "untrusted",
+          "triangles": 7
+        },
+        {
+          "name": "supports_and_raft",
+          "orientation": "closed_positive",
+          "triangles": 28948
+        }
+      ],
+      "max_displacement_mm": 0.0,
+      "support_cavity_fill": null,
+      "union": "raster"
+    },
+    "build_volume": {
+      "build_mm": [
+        153.36,
+        77.76,
+        165.0
+      ],
+      "clip_to_build_volume": false,
+      "edge_clearance_mm": 2.0,
+      "fits": true,
+      "overflow_mm": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "cavity_fill": {
+      "consequence": "enclosed voids are reported by the layer analysis rather than filled",
+      "reason": "the raster union path has no solid to decompose; seal_voids requires the exact path or repair.aggressiveness = \"aggressive\"",
+      "status": "not_run"
+    },
+    "model": {
+      "genus": null,
+      "triangles": 7,
+      "volume_mm3": null
+    },
+    "repair": {
+      "max_displacement_mm": 0.0,
+      "operation": "none",
+      "volumetric_repair": "not_run"
+    },
+    "resin_usage": {
+      "cost": null,
+      "cost_per_liter": null,
+      "currency": "$",
+      "density_g_cm3": null,
+      "mass_g": null,
+      "source": "raster_volume_mm3",
+      "volume_ml": 1.9101412547999999,
+      "volume_mm3": 1910.1412547999998
+    },
+    "transform": {
+      "mirror": [
+        false,
+        false,
+        false
+      ],
+      "note": null,
+      "placed_size_mm": [
+        20.0,
+        20.0,
+        20.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "source_size_mm": [
+        20.0,
+        20.0,
+        20.0
+      ]
+    }
+  },
+  "support_graph": {
+    "diagnostics": [],
+    "edges": [
+      {
+        "end": "joint0",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot0"
+      },
+      {
+        "end": "contact0",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint0"
+      },
+      {
+        "end": "joint1",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot1"
+      },
+      {
+        "end": "contact1",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint1"
+      },
+      {
+        "end": "joint2",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot2"
+      },
+      {
+        "end": "contact2",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint2"
+      },
+      {
+        "end": "joint3",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot3"
+      },
+      {
+        "end": "contact3",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint3"
+      },
+      {
+        "end": "contact4",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint4"
+      },
+      {
+        "end": "joint5",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot5"
+      },
+      {
+        "end": "contact5",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint5"
+      },
+      {
+        "end": "joint6",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot6"
+      },
+      {
+        "end": "contact6",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint6"
+      },
+      {
+        "end": "joint7",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot7"
+      },
+      {
+        "end": "contact7",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint7"
+      },
+      {
+        "end": "joint8",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot8"
+      },
+      {
+        "end": "contact8",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint8"
+      },
+      {
+        "end": "joint9",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot9"
+      },
+      {
+        "end": "contact9",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint9"
+      },
+      {
+        "end": "joint10",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot10"
+      },
+      {
+        "end": "contact10",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint10"
+      },
+      {
+        "end": "joint11",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot11"
+      },
+      {
+        "end": "contact11",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint11"
+      },
+      {
+        "end": "joint12",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot12"
+      },
+      {
+        "end": "contact12",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint12"
+      },
+      {
+        "end": "joint13",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot13"
+      },
+      {
+        "end": "contact13",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint13"
+      },
+      {
+        "end": "joint14",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot14"
+      },
+      {
+        "end": "contact14",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint14"
+      },
+      {
+        "end": "joint15",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot15"
+      },
+      {
+        "end": "contact15",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint15"
+      },
+      {
+        "end": "joint16",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot16"
+      },
+      {
+        "end": "contact16",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint16"
+      },
+      {
+        "end": "joint17",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot17"
+      },
+      {
+        "end": "contact17",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint17"
+      },
+      {
+        "end": "joint18",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot18"
+      },
+      {
+        "end": "contact18",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint18"
+      },
+      {
+        "end": "joint19",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot19"
+      },
+      {
+        "end": "contact19",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint19"
+      },
+      {
+        "end": "joint20",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot20"
+      },
+      {
+        "end": "contact20",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint20"
+      },
+      {
+        "end": "joint21",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot21"
+      },
+      {
+        "end": "contact21",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint21"
+      },
+      {
+        "end": "joint22",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot22"
+      },
+      {
+        "end": "contact22",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint22"
+      },
+      {
+        "end": "joint23",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot23"
+      },
+      {
+        "end": "contact23",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint23"
+      },
+      {
+        "end": "joint24",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot24"
+      },
+      {
+        "end": "contact24",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint24"
+      },
+      {
+        "end": "joint25",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot25"
+      },
+      {
+        "end": "contact25",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint25"
+      },
+      {
+        "end": "joint26",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot26"
+      },
+      {
+        "end": "contact26",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint26"
+      },
+      {
+        "end": "joint27",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot27"
+      },
+      {
+        "end": "contact27",
+        "kind": "tip",
+        "radius_mm": 0.2,
+        "start": "joint27"
+      },
+      {
+        "end": "brace_landing0",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot0"
+      },
+      {
+        "end": "brace_landing0",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint27"
+      },
+      {
+        "end": "brace_landing1",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot1"
+      },
+      {
+        "end": "brace_landing1",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint26"
+      },
+      {
+        "end": "brace_landing2",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot2"
+      },
+      {
+        "end": "brace_landing2",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint21"
+      },
+      {
+        "end": "brace_landing3",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot3"
+      },
+      {
+        "end": "brace_landing3",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint19"
+      },
+      {
+        "end": "brace_landing4",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot4"
+      },
+      {
+        "end": "brace_landing4",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint17"
+      },
+      {
+        "end": "brace_landing5",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot5"
+      },
+      {
+        "end": "brace_landing5",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint12"
+      },
+      {
+        "end": "brace_joint96",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "foot4"
+      },
+      {
+        "end": "joint4",
+        "kind": "vertical",
+        "radius_mm": 0.6,
+        "start": "brace_joint96"
+      },
+      {
+        "end": "brace_joint96",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint0"
+      },
+      {
+        "end": "brace_landing7",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot7"
+      },
+      {
+        "end": "brace_landing7",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint25"
+      },
+      {
+        "end": "brace_landing8",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot8"
+      },
+      {
+        "end": "brace_landing8",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint24"
+      },
+      {
+        "end": "brace_landing9",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot9"
+      },
+      {
+        "end": "brace_landing9",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint16"
+      },
+      {
+        "end": "brace_landing10",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot10"
+      },
+      {
+        "end": "brace_landing10",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint11"
+      },
+      {
+        "end": "brace_landing11",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot11"
+      },
+      {
+        "end": "brace_landing11",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint23"
+      },
+      {
+        "end": "brace_landing12",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot12"
+      },
+      {
+        "end": "brace_landing12",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint10"
+      },
+      {
+        "end": "brace_landing13",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot13"
+      },
+      {
+        "end": "brace_landing13",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint22"
+      },
+      {
+        "end": "brace_landing14",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot14"
+      },
+      {
+        "end": "brace_landing14",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint15"
+      },
+      {
+        "end": "brace_landing15",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot15"
+      },
+      {
+        "end": "brace_landing15",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint5"
+      },
+      {
+        "end": "brace_landing16",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot16"
+      },
+      {
+        "end": "brace_landing16",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint20"
+      },
+      {
+        "end": "brace_landing17",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot17"
+      },
+      {
+        "end": "brace_landing17",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint9"
+      },
+      {
+        "end": "brace_landing18",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot18"
+      },
+      {
+        "end": "brace_landing18",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint18"
+      },
+      {
+        "end": "brace_landing19",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot19"
+      },
+      {
+        "end": "brace_landing19",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint14"
+      },
+      {
+        "end": "brace_landing20",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot20"
+      },
+      {
+        "end": "brace_landing20",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint8"
+      },
+      {
+        "end": "brace_landing21",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot21"
+      },
+      {
+        "end": "brace_landing21",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint13"
+      },
+      {
+        "end": "brace_landing22",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot22"
+      },
+      {
+        "end": "brace_landing22",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint7"
+      },
+      {
+        "end": "brace_landing23",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot23"
+      },
+      {
+        "end": "brace_landing23",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint6"
+      },
+      {
+        "end": "brace_landing24",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot24"
+      },
+      {
+        "end": "brace_landing24",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint3"
+      },
+      {
+        "end": "brace_landing25",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot25"
+      },
+      {
+        "end": "brace_landing25",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint2"
+      },
+      {
+        "end": "brace_landing26",
+        "kind": "brace_foot",
+        "radius_mm": 0.3,
+        "start": "brace_foot26"
+      },
+      {
+        "end": "brace_landing26",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint1"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "foot0",
+        "kind": "foot",
+        "position_mm": [
+          -8.575000000000001,
+          -4.075000000000001,
+          0.0
+        ]
+      },
+      {
+        "id": "joint0",
+        "kind": "junction",
+        "position_mm": [
+          -8.575000000000001,
+          -4.075000000000001,
+          3.0
+        ]
+      },
+      {
+        "id": "contact0",
+        "kind": "contact",
+        "position_mm": [
+          -8.575000000000001,
+          -4.075000000000001,
+          5.0
+        ]
+      },
+      {
+        "id": "foot1",
+        "kind": "foot",
+        "position_mm": [
+          1.4285714285714288,
+          -4.285714285714285,
+          0.0
+        ]
+      },
+      {
+        "id": "joint1",
+        "kind": "junction",
+        "position_mm": [
+          1.4285714285714288,
+          -4.285714285714285,
+          2.999999999999999
+        ]
+      },
+      {
+        "id": "contact1",
+        "kind": "contact",
+        "position_mm": [
+          1.4285714285714288,
+          -4.285714285714285,
+          4.999999999999999
+        ]
+      },
+      {
+        "id": "foot2",
+        "kind": "foot",
+        "position_mm": [
+          1.4285714285714288,
+          -7.142857142857142,
+          0.0
+        ]
+      },
+      {
+        "id": "joint2",
+        "kind": "junction",
+        "position_mm": [
+          1.4285714285714288,
+          -7.142857142857142,
+          2.999999999999999
+        ]
+      },
+      {
+        "id": "contact2",
+        "kind": "contact",
+        "position_mm": [
+          1.4285714285714288,
+          -7.142857142857142,
+          4.999999999999999
+        ]
+      },
+      {
+        "id": "foot3",
+        "kind": "foot",
+        "position_mm": [
+          -7.142857142857141,
+          1.4285714285714284,
+          0.0
+        ]
+      },
+      {
+        "id": "joint3",
+        "kind": "junction",
+        "position_mm": [
+          -7.142857142857141,
+          1.4285714285714284,
+          2.999999999999999
+        ]
+      },
+      {
+        "id": "contact3",
+        "kind": "contact",
+        "position_mm": [
+          -7.142857142857141,
+          1.4285714285714284,
+          4.999999999999999
+        ]
+      },
+      {
+        "id": "foot4",
+        "kind": "foot",
+        "position_mm": [
+          -7.142857142857141,
+          -4.285714285714285,
+          0.0
+        ]
+      },
+      {
+        "id": "joint4",
+        "kind": "junction",
+        "position_mm": [
+          -7.142857142857141,
+          -4.285714285714285,
+          2.999999999999999
+        ]
+      },
+      {
+        "id": "contact4",
+        "kind": "contact",
+        "position_mm": [
+          -7.142857142857141,
+          -4.285714285714285,
+          4.999999999999999
+        ]
+      },
+      {
+        "id": "foot5",
+        "kind": "foot",
+        "position_mm": [
+          -3.3333333333333335,
+          -3.3333333333333335,
+          0.0
+        ]
+      },
+      {
+        "id": "joint5",
+        "kind": "junction",
+        "position_mm": [
+          -3.3333333333333335,
+          -3.3333333333333335,
+          3.0
+        ]
+      },
+      {
+        "id": "contact5",
+        "kind": "contact",
+        "position_mm": [
+          -3.3333333333333335,
+          -3.3333333333333335,
+          5.0
+        ]
+      },
+      {
+        "id": "foot6",
+        "kind": "foot",
+        "position_mm": [
+          10.0,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "joint6",
+        "kind": "junction",
+        "position_mm": [
+          10.0,
+          -10.0,
+          3.0
+        ]
+      },
+      {
+        "id": "contact6",
+        "kind": "contact",
+        "position_mm": [
+          10.0,
+          -10.0,
+          5.0
+        ]
+      },
+      {
+        "id": "foot7",
+        "kind": "foot",
+        "position_mm": [
+          7.142857142857142,
+          -7.142857142857142,
+          0.0
+        ]
+      },
+      {
+        "id": "joint7",
+        "kind": "junction",
+        "position_mm": [
+          7.142857142857142,
+          -7.142857142857142,
+          3.0
+        ]
+      },
+      {
+        "id": "contact7",
+        "kind": "contact",
+        "position_mm": [
+          7.142857142857142,
+          -7.142857142857142,
+          5.0
+        ]
+      },
+      {
+        "id": "foot8",
+        "kind": "foot",
+        "position_mm": [
+          4.2857142857142865,
+          -4.2857142857142865,
+          0.0
+        ]
+      },
+      {
+        "id": "joint8",
+        "kind": "junction",
+        "position_mm": [
+          4.2857142857142865,
+          -4.2857142857142865,
+          3.0
+        ]
+      },
+      {
+        "id": "contact8",
+        "kind": "contact",
+        "position_mm": [
+          4.2857142857142865,
+          -4.2857142857142865,
+          5.0
+        ]
+      },
+      {
+        "id": "foot9",
+        "kind": "foot",
+        "position_mm": [
+          1.428571428571428,
+          -1.428571428571428,
+          0.0
+        ]
+      },
+      {
+        "id": "joint9",
+        "kind": "junction",
+        "position_mm": [
+          1.428571428571428,
+          -1.428571428571428,
+          3.0
+        ]
+      },
+      {
+        "id": "contact9",
+        "kind": "contact",
+        "position_mm": [
+          1.428571428571428,
+          -1.428571428571428,
+          5.0
+        ]
+      },
+      {
+        "id": "foot10",
+        "kind": "foot",
+        "position_mm": [
+          -4.2857142857142865,
+          4.2857142857142865,
+          0.0
+        ]
+      },
+      {
+        "id": "joint10",
+        "kind": "junction",
+        "position_mm": [
+          -4.2857142857142865,
+          4.2857142857142865,
+          3.0
+        ]
+      },
+      {
+        "id": "contact10",
+        "kind": "contact",
+        "position_mm": [
+          -4.2857142857142865,
+          4.2857142857142865,
+          5.0
+        ]
+      },
+      {
+        "id": "foot11",
+        "kind": "foot",
+        "position_mm": [
+          -7.142857142857142,
+          7.142857142857142,
+          0.0
+        ]
+      },
+      {
+        "id": "joint11",
+        "kind": "junction",
+        "position_mm": [
+          -7.142857142857142,
+          7.142857142857142,
+          3.0
+        ]
+      },
+      {
+        "id": "contact11",
+        "kind": "contact",
+        "position_mm": [
+          -7.142857142857142,
+          7.142857142857142,
+          5.0
+        ]
+      },
+      {
+        "id": "foot12",
+        "kind": "foot",
+        "position_mm": [
+          -10.0,
+          10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "joint12",
+        "kind": "junction",
+        "position_mm": [
+          -10.0,
+          10.0,
+          3.0
+        ]
+      },
+      {
+        "id": "contact12",
+        "kind": "contact",
+        "position_mm": [
+          -10.0,
+          10.0,
+          5.0
+        ]
+      },
+      {
+        "id": "foot13",
+        "kind": "foot",
+        "position_mm": [
+          7.142857142857142,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "joint13",
+        "kind": "junction",
+        "position_mm": [
+          7.142857142857142,
+          -10.0,
+          3.0
+        ]
+      },
+      {
+        "id": "contact13",
+        "kind": "contact",
+        "position_mm": [
+          7.142857142857142,
+          -10.0,
+          5.0
+        ]
+      },
+      {
+        "id": "foot14",
+        "kind": "foot",
+        "position_mm": [
+          4.2857142857142865,
+          -7.142857142857143,
+          0.0
+        ]
+      },
+      {
+        "id": "joint14",
+        "kind": "junction",
+        "position_mm": [
+          4.2857142857142865,
+          -7.142857142857143,
+          3.0
+        ]
+      },
+      {
+        "id": "contact14",
+        "kind": "contact",
+        "position_mm": [
+          4.2857142857142865,
+          -7.142857142857143,
+          5.0
+        ]
+      },
+      {
+        "id": "foot15",
+        "kind": "foot",
+        "position_mm": [
+          -4.285714285714286,
+          1.428571428571428,
+          0.0
+        ]
+      },
+      {
+        "id": "joint15",
+        "kind": "junction",
+        "position_mm": [
+          -4.285714285714286,
+          1.428571428571428,
+          3.0
+        ]
+      },
+      {
+        "id": "contact15",
+        "kind": "contact",
+        "position_mm": [
+          -4.285714285714286,
+          1.428571428571428,
+          5.0
+        ]
+      },
+      {
+        "id": "foot16",
+        "kind": "foot",
+        "position_mm": [
+          -7.142857142857142,
+          4.2857142857142865,
+          0.0
+        ]
+      },
+      {
+        "id": "joint16",
+        "kind": "junction",
+        "position_mm": [
+          -7.142857142857142,
+          4.2857142857142865,
+          3.0
+        ]
+      },
+      {
+        "id": "contact16",
+        "kind": "contact",
+        "position_mm": [
+          -7.142857142857142,
+          4.2857142857142865,
+          5.0
+        ]
+      },
+      {
+        "id": "foot17",
+        "kind": "foot",
+        "position_mm": [
+          -10.0,
+          7.142857142857142,
+          0.0
+        ]
+      },
+      {
+        "id": "joint17",
+        "kind": "junction",
+        "position_mm": [
+          -10.0,
+          7.142857142857142,
+          3.0
+        ]
+      },
+      {
+        "id": "contact17",
+        "kind": "contact",
+        "position_mm": [
+          -10.0,
+          7.142857142857142,
+          5.0
+        ]
+      },
+      {
+        "id": "foot18",
+        "kind": "foot",
+        "position_mm": [
+          4.2857142857142865,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "joint18",
+        "kind": "junction",
+        "position_mm": [
+          4.2857142857142865,
+          -10.0,
+          3.0
+        ]
+      },
+      {
+        "id": "contact18",
+        "kind": "contact",
+        "position_mm": [
+          4.2857142857142865,
+          -10.0,
+          5.0
+        ]
+      },
+      {
+        "id": "foot19",
+        "kind": "foot",
+        "position_mm": [
+          -10.0,
+          4.2857142857142865,
+          0.0
+        ]
+      },
+      {
+        "id": "joint19",
+        "kind": "junction",
+        "position_mm": [
+          -10.0,
+          4.2857142857142865,
+          3.0
+        ]
+      },
+      {
+        "id": "contact19",
+        "kind": "contact",
+        "position_mm": [
+          -10.0,
+          4.2857142857142865,
+          5.0
+        ]
+      },
+      {
+        "id": "foot20",
+        "kind": "foot",
+        "position_mm": [
+          1.428571428571428,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "joint20",
+        "kind": "junction",
+        "position_mm": [
+          1.428571428571428,
+          -10.0,
+          3.0
+        ]
+      },
+      {
+        "id": "contact20",
+        "kind": "contact",
+        "position_mm": [
+          1.428571428571428,
+          -10.0,
+          5.0
+        ]
+      },
+      {
+        "id": "foot21",
+        "kind": "foot",
+        "position_mm": [
+          -10.0,
+          1.428571428571428,
+          0.0
+        ]
+      },
+      {
+        "id": "joint21",
+        "kind": "junction",
+        "position_mm": [
+          -10.0,
+          1.428571428571428,
+          3.0
+        ]
+      },
+      {
+        "id": "contact21",
+        "kind": "contact",
+        "position_mm": [
+          -10.0,
+          1.428571428571428,
+          5.0
+        ]
+      },
+      {
+        "id": "foot22",
+        "kind": "foot",
+        "position_mm": [
+          -4.285714285714286,
+          -7.1428571428571415,
+          0.0
+        ]
+      },
+      {
+        "id": "joint22",
+        "kind": "junction",
+        "position_mm": [
+          -4.285714285714286,
+          -7.1428571428571415,
+          3.0
+        ]
+      },
+      {
+        "id": "contact22",
+        "kind": "contact",
+        "position_mm": [
+          -4.285714285714286,
+          -7.1428571428571415,
+          5.0
+        ]
+      },
+      {
+        "id": "foot23",
+        "kind": "foot",
+        "position_mm": [
+          -4.2857142857142865,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "joint23",
+        "kind": "junction",
+        "position_mm": [
+          -4.2857142857142865,
+          -10.0,
+          3.0
+        ]
+      },
+      {
+        "id": "contact23",
+        "kind": "contact",
+        "position_mm": [
+          -4.2857142857142865,
+          -10.0,
+          5.0
+        ]
+      },
+      {
+        "id": "foot24",
+        "kind": "foot",
+        "position_mm": [
+          -7.142857142857142,
+          -7.142857142857144,
+          0.0
+        ]
+      },
+      {
+        "id": "joint24",
+        "kind": "junction",
+        "position_mm": [
+          -7.142857142857142,
+          -7.142857142857144,
+          3.0
+        ]
+      },
+      {
+        "id": "contact24",
+        "kind": "contact",
+        "position_mm": [
+          -7.142857142857142,
+          -7.142857142857144,
+          5.0
+        ]
+      },
+      {
+        "id": "foot25",
+        "kind": "foot",
+        "position_mm": [
+          -7.142857142857142,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "joint25",
+        "kind": "junction",
+        "position_mm": [
+          -7.142857142857142,
+          -10.0,
+          3.0
+        ]
+      },
+      {
+        "id": "contact25",
+        "kind": "contact",
+        "position_mm": [
+          -7.142857142857142,
+          -10.0,
+          5.0
+        ]
+      },
+      {
+        "id": "foot26",
+        "kind": "foot",
+        "position_mm": [
+          -10.0,
+          -7.142857142857142,
+          0.0
+        ]
+      },
+      {
+        "id": "joint26",
+        "kind": "junction",
+        "position_mm": [
+          -10.0,
+          -7.142857142857142,
+          3.0
+        ]
+      },
+      {
+        "id": "contact26",
+        "kind": "contact",
+        "position_mm": [
+          -10.0,
+          -7.142857142857142,
+          5.0
+        ]
+      },
+      {
+        "id": "foot27",
+        "kind": "foot",
+        "position_mm": [
+          -10.0,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "joint27",
+        "kind": "junction",
+        "position_mm": [
+          -10.0,
+          -10.0,
+          3.0
+        ]
+      },
+      {
+        "id": "contact27",
+        "kind": "contact",
+        "position_mm": [
+          -10.0,
+          -10.0,
+          5.0
+        ]
+      },
+      {
+        "id": "brace_foot0",
+        "kind": "foot",
+        "position_mm": [
+          -7.299999999999999,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing0",
+        "kind": "brace_junction",
+        "position_mm": [
+          -7.299999999999999,
+          -10.0,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot1",
+        "kind": "foot",
+        "position_mm": [
+          -7.299999999999999,
+          -7.142857142857142,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing1",
+        "kind": "brace_junction",
+        "position_mm": [
+          -7.299999999999999,
+          -7.142857142857142,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot2",
+        "kind": "foot",
+        "position_mm": [
+          -7.299999999999999,
+          1.428571428571428,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing2",
+        "kind": "brace_junction",
+        "position_mm": [
+          -7.299999999999999,
+          1.428571428571428,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot3",
+        "kind": "foot",
+        "position_mm": [
+          -7.299999999999999,
+          4.2857142857142865,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing3",
+        "kind": "brace_junction",
+        "position_mm": [
+          -7.299999999999999,
+          4.2857142857142865,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot4",
+        "kind": "foot",
+        "position_mm": [
+          -7.299999999999999,
+          7.142857142857142,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing4",
+        "kind": "brace_junction",
+        "position_mm": [
+          -7.299999999999999,
+          7.142857142857142,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot5",
+        "kind": "foot",
+        "position_mm": [
+          -7.299999999999999,
+          10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing5",
+        "kind": "brace_junction",
+        "position_mm": [
+          -7.299999999999999,
+          10.0,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_joint96",
+        "kind": "brace_junction",
+        "position_mm": [
+          -7.142857142857141,
+          -4.285714285714285,
+          1.55243871512485
+        ]
+      },
+      {
+        "id": "brace_foot7",
+        "kind": "foot",
+        "position_mm": [
+          -4.442857142857141,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing7",
+        "kind": "brace_junction",
+        "position_mm": [
+          -4.442857142857141,
+          -10.0,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot8",
+        "kind": "foot",
+        "position_mm": [
+          -4.442857142857141,
+          -7.142857142857144,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing8",
+        "kind": "brace_junction",
+        "position_mm": [
+          -4.442857142857141,
+          -7.142857142857144,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot9",
+        "kind": "foot",
+        "position_mm": [
+          -4.442857142857141,
+          4.2857142857142865,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing9",
+        "kind": "brace_junction",
+        "position_mm": [
+          -4.442857142857141,
+          4.2857142857142865,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot10",
+        "kind": "foot",
+        "position_mm": [
+          -4.442857142857141,
+          7.142857142857142,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing10",
+        "kind": "brace_junction",
+        "position_mm": [
+          -4.442857142857141,
+          7.142857142857142,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot11",
+        "kind": "foot",
+        "position_mm": [
+          -1.5857142857142859,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing11",
+        "kind": "brace_junction",
+        "position_mm": [
+          -1.5857142857142859,
+          -10.0,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot12",
+        "kind": "foot",
+        "position_mm": [
+          -1.5857142857142859,
+          4.2857142857142865,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing12",
+        "kind": "brace_junction",
+        "position_mm": [
+          -1.5857142857142859,
+          4.2857142857142865,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot13",
+        "kind": "foot",
+        "position_mm": [
+          -1.585714285714285,
+          -7.1428571428571415,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing13",
+        "kind": "brace_junction",
+        "position_mm": [
+          -1.585714285714285,
+          -7.1428571428571415,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot14",
+        "kind": "foot",
+        "position_mm": [
+          -1.585714285714285,
+          1.428571428571428,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing14",
+        "kind": "brace_junction",
+        "position_mm": [
+          -1.585714285714285,
+          1.428571428571428,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot15",
+        "kind": "foot",
+        "position_mm": [
+          -0.6333333333333329,
+          -3.3333333333333335,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing15",
+        "kind": "brace_junction",
+        "position_mm": [
+          -0.6333333333333329,
+          -3.3333333333333335,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot16",
+        "kind": "foot",
+        "position_mm": [
+          4.128571428571428,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing16",
+        "kind": "brace_junction",
+        "position_mm": [
+          4.128571428571428,
+          -10.0,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot17",
+        "kind": "foot",
+        "position_mm": [
+          4.128571428571428,
+          -1.428571428571428,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing17",
+        "kind": "brace_junction",
+        "position_mm": [
+          4.128571428571428,
+          -1.428571428571428,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot18",
+        "kind": "foot",
+        "position_mm": [
+          6.9857142857142875,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing18",
+        "kind": "brace_junction",
+        "position_mm": [
+          6.9857142857142875,
+          -10.0,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot19",
+        "kind": "foot",
+        "position_mm": [
+          6.9857142857142875,
+          -7.142857142857143,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing19",
+        "kind": "brace_junction",
+        "position_mm": [
+          6.9857142857142875,
+          -7.142857142857143,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot20",
+        "kind": "foot",
+        "position_mm": [
+          6.9857142857142875,
+          -4.2857142857142865,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing20",
+        "kind": "brace_junction",
+        "position_mm": [
+          6.9857142857142875,
+          -4.2857142857142865,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot21",
+        "kind": "foot",
+        "position_mm": [
+          9.842857142857143,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing21",
+        "kind": "brace_junction",
+        "position_mm": [
+          9.842857142857143,
+          -10.0,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot22",
+        "kind": "foot",
+        "position_mm": [
+          9.842857142857143,
+          -7.142857142857142,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing22",
+        "kind": "brace_junction",
+        "position_mm": [
+          9.842857142857143,
+          -7.142857142857142,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot23",
+        "kind": "foot",
+        "position_mm": [
+          12.700000000000001,
+          -10.0,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing23",
+        "kind": "brace_junction",
+        "position_mm": [
+          12.700000000000001,
+          -10.0,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot24",
+        "kind": "foot",
+        "position_mm": [
+          -4.442857142857141,
+          1.4285714285714284,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing24",
+        "kind": "brace_junction",
+        "position_mm": [
+          -4.442857142857141,
+          1.4285714285714284,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot25",
+        "kind": "foot",
+        "position_mm": [
+          4.128571428571428,
+          -7.142857142857142,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing25",
+        "kind": "brace_junction",
+        "position_mm": [
+          4.128571428571428,
+          -7.142857142857142,
+          0.3
+        ]
+      },
+      {
+        "id": "brace_foot26",
+        "kind": "foot",
+        "position_mm": [
+          4.128571428571428,
+          -4.285714285714285,
+          0.0
+        ]
+      },
+      {
+        "id": "brace_landing26",
+        "kind": "brace_junction",
+        "position_mm": [
+          4.128571428571428,
+          -4.285714285714285,
+          0.3
+        ]
+      }
+    ],
+    "overrides": []
+  },
+  "validation": {
+    "checks": {
+      "closed_surface": "pass",
+      "drainage_bottlenecks": "pass",
+      "enclosed_voids": "pass",
+      "growth_span": "fail",
+      "overlap": "pass",
+      "peel_risk": "warn",
+      "plate_fit": "pass",
+      "raster_connectivity": "pass",
+      "support_anchor_load": "pass",
+      "support_coverage": "pass",
+      "support_routes": "pass",
+      "support_slenderness": "pass",
+      "transient_traps": "pass",
+      "union_raster_parity": "pass",
+      "unsupported_overhangs": "pass"
+    },
+    "diagnostics": [
+      {
+        "code": "growth_span",
+        "details": {
+          "decimation": 8,
+          "limit_mm": 3.0,
+          "pixels": 19
+        },
+        "layer": 100,
+        "message": "New material exceeds the configured distance to preceding material; this is a configured distance rule at printer pitch, not a strength proof",
+        "position_mm": null,
+        "severity": "error"
+      },
+      {
+        "code": "exact_union_unavailable",
+        "details": {
+          "cavity_fill": {
+            "consequence": "enclosed voids are reported by the layer analysis rather than filled",
+            "reason": "the raster union path has no solid to decompose; seal_voids requires the exact path or repair.aggressiveness = \"aggressive\"",
+            "status": "not_run"
+          },
+          "does_not_establish": "the exported STL is not a certified valid closed solid; it is not boolean-resolved or repaired",
+          "establishes": "independent occupancy OR on the printer lattice; exported carrier requires raster parity",
+          "exact_union_attempted": true,
+          "exact_union_blocked_by": [
+            {
+              "code": "degenerate_triangles",
+              "details": {
+                "count": 3,
+                "findings": {
+                  "degenerate_triangles": {
+                    "count": 3,
+                    "status": "fail"
+                  },
+                  "manifold": {
+                    "status": "not_run"
+                  },
+                  "self_intersections": {
+                    "reason": "skipped because degenerate triangles were found",
+                    "status": "not_run"
+                  },
+                  "weld": {
+                    "status": "not_run"
+                  }
+                }
+              },
+              "message": "Input contains zero-area triangles; no triangles were silently removed"
+            }
+          ],
+          "groups": [
+            {
+              "name": "model",
+              "orientation": "untrusted",
+              "triangles": 7
+            },
+            {
+              "name": "supports_and_raft",
+              "orientation": "closed_positive",
+              "triangles": 28948
+            }
+          ],
+          "max_displacement_mm": 0.0,
+          "support_cavity_fill": null,
+          "union": "raster"
+        },
+        "layer": null,
+        "message": "Raster union used; exported STL is a triangle soup, not a certified solid",
+        "position_mm": null,
+        "severity": "warning"
+      },
+      {
+        "code": "peel_risk",
+        "details": {
+          "basis": "oriented STL winding; exact shared-edge connectivity; native profile speed units; physical plate Z=0",
+          "bottom_layer_top_mm": 0.2,
+          "bottom_lift_speed": 0.05,
+          "build_z_mm": 165.0,
+          "candidate_triangle_count": 2114,
+          "heuristic": "uncalibrated geometry score; not a force or failure prediction",
+          "layer_height_mm": 0.05,
+          "limitations": [
+            "summed projected surface area is not instantaneous peel contact area",
+            "does not model resin, film, tilt release or actual suction pressure",
+            "open, duplicate and nonmanifold surfaces require independent validation"
+          ],
+          "max_angle_deg": 10.0,
+          "maximum_projected_area_mm2": 461.24231889733403,
+          "maximum_score": 4.612423188973341,
+          "normal_lift_speed": 0.05,
+          "reference_lift_speed": 0.05,
+          "region_count": 84,
+          "regions": [
+            {
+              "area_mm2": 461.24231889733403,
+              "bottom_layer_intersection": true,
+              "bounds": [
+                [
+                  -12.600000381469727,
+                  -12.600000381469727,
+                  0.0
+                ],
+                [
+                  15.300000190734863,
+                  12.600000381469727,
+                  0.0
+                ]
+              ],
+              "lift_speed": 0.05,
+              "mean_z_mm": 0.0,
+              "normal_layer_intersection": false,
+              "projected_area_mm2": 461.24231889733403,
+              "score": 4.612423188973341,
+              "threshold": true,
+              "triangle_count": 85,
+              "z_layer_span": [
+                0,
+                0
+              ]
+            },
+            {
+              "area_mm2": 200.0,
+              "bottom_layer_intersection": false,
+              "bounds": [
+                [
+                  -10.0,
+                  -10.0,
+                  5.0
+                ],
+                [
+                  10.0,
+                  10.0,
+                  5.0
+                ]
+              ],
+              "lift_speed": 0.05,
+              "mean_z_mm": 5.0,
+              "normal_layer_intersection": true,
+              "projected_area_mm2": 200.0,
+              "score": 2.0606060606060606,
+              "threshold": true,
+              "triangle_count": 1,
+              "z_layer_span": [
+                100,
+                100
+              ]
+            }
+          ],
+          "regions_truncated": false,
+          "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
+          "source_triangle_count": 28955,
+          "status": "complete",
+          "threshold_area_mm2": 100.0,
+          "threshold_region_count": 2,
+          "total_region_count": 84
+        },
+        "layer": null,
+        "message": "Large downward surface regions warrant review of orientation and release settings",
+        "position_mm": null,
+        "severity": "warning"
+      }
+    ],
+    "metrics": {
+      "diagnostic_examples_capped": 128,
+      "drainage": {
+        "analysis_grid": [
+          153,
+          138,
+          137
+        ],
+        "analysis_pitch_mm": 0.18806319451591877,
+        "area_definition": "circular-equivalent maximum inscribed path clearance on sampled grid",
+        "bottleneck_examples": [],
+        "bottleneck_volume_definition": "eroded chamber cores; excludes narrow neck and boundary shell",
+        "bottlenecked_components": 0,
+        "bottlenecked_volume_mm3": 0,
+        "clearance_radius_mm": 0.5641895835477563,
+        "enclosed_components": 0,
+        "enclosed_volume_mm3": 0.0,
+        "ignored_bottlenecked_components": 0,
+        "ignored_bottlenecked_volume_mm3": 0,
+        "min_orifice_area_mm2": 1.0,
+        "min_void_volume_mm3": 0.0,
+        "occupancy_closed": true,
+        "sampling": "XY cell centers and Z subsamples; sub-grid walls may be missed",
+        "status": "complete",
+        "unclosed_rows": 0,
+        "unclosed_slices": 0,
+        "void_components": 1,
+        "z_subsamples_per_cell": 1
+      },
+      "enclosed_voids": {
+        "count": 0,
+        "examples": [],
+        "min_void_volume_mm3": 0.0,
+        "negligible_count": 0,
+        "negligible_volume_mm3": 0.0,
+        "nodes": 580,
+        "peak_present_trapped_layer": 0,
+        "peak_present_trapped_volume_mm3": 0.0,
+        "volume_mm3": 0.0
+      },
+      "exposed_pixels": 117909954,
+      "growth_decimation": 8,
+      "growth_violation_pixels": 19,
+      "island_components": 0,
+      "island_components_on_crop_edge": 0,
+      "layer_count": 500,
+      "layer_height_mm": 0.05,
+      "nonempty_layers": 500,
+      "peel_risk": {
+        "basis": "oriented STL winding; exact shared-edge connectivity; native profile speed units; physical plate Z=0",
+        "bottom_layer_top_mm": 0.2,
+        "bottom_lift_speed": 0.05,
+        "build_z_mm": 165.0,
+        "candidate_triangle_count": 2114,
+        "heuristic": "uncalibrated geometry score; not a force or failure prediction",
+        "layer_height_mm": 0.05,
+        "limitations": [
+          "summed projected surface area is not instantaneous peel contact area",
+          "does not model resin, film, tilt release or actual suction pressure",
+          "open, duplicate and nonmanifold surfaces require independent validation"
+        ],
+        "max_angle_deg": 10.0,
+        "maximum_projected_area_mm2": 461.24231889733403,
+        "maximum_score": 4.612423188973341,
+        "normal_lift_speed": 0.05,
+        "reference_lift_speed": 0.05,
+        "region_count": 84,
+        "regions": [
+          {
+            "area_mm2": 461.24231889733403,
+            "bottom_layer_intersection": true,
+            "bounds": [
+              [
+                -12.600000381469727,
+                -12.600000381469727,
+                0.0
+              ],
+              [
+                15.300000190734863,
+                12.600000381469727,
+                0.0
+              ]
+            ],
+            "lift_speed": 0.05,
+            "mean_z_mm": 0.0,
+            "normal_layer_intersection": false,
+            "projected_area_mm2": 461.24231889733403,
+            "score": 4.612423188973341,
+            "threshold": true,
+            "triangle_count": 85,
+            "z_layer_span": [
+              0,
+              0
+            ]
+          },
+          {
+            "area_mm2": 200.0,
+            "bottom_layer_intersection": false,
+            "bounds": [
+              [
+                -10.0,
+                -10.0,
+                5.0
+              ],
+              [
+                10.0,
+                10.0,
+                5.0
+              ]
+            ],
+            "lift_speed": 0.05,
+            "mean_z_mm": 5.0,
+            "normal_layer_intersection": true,
+            "projected_area_mm2": 200.0,
+            "score": 2.0606060606060606,
+            "threshold": true,
+            "triangle_count": 1,
+            "z_layer_span": [
+              100,
+              100
+            ]
+          }
+        ],
+        "regions_truncated": false,
+        "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
+        "source_triangle_count": 28955,
+        "status": "complete",
+        "threshold_area_mm2": 100.0,
+        "threshold_region_count": 2,
+        "total_region_count": 84
+      },
+      "pixel_pitch_mm": [
+        0.018,
+        0.018
+      ],
+      "raster_volume_mm3": 1910.1412547999998,
+      "reopened": {
+        "bounds": [
+          [
+            -12.600000381469727,
+            -12.600000381469727,
+            0.0
+          ],
+          [
+            15.300000190734863,
+            12.600000381469727,
+            25.0
+          ]
+        ],
+        "crop_origin_px": [
+          3558,
+          1458
+        ],
+        "grid": [
+          1554,
+          1404
+        ],
+        "negative_winding_crossings": 0,
+        "open_layers": 0,
+        "open_rows": 0,
+        "path": "prepared.stl",
+        "sha256": "fc7af1e3bc9b8a689e55f33286e6ede65233d82a3381d486a0c2c8f6b1f75c01",
+        "triangles": 28955
+      },
+      "support_void_policy": "fail",
+      "supports": {
+        "allow_part_to_part": false,
+        "analysis": {
+          "analysis_pitch_mm": 0.15,
+          "columns": 19044,
+          "enclosed_void_volume_mm3": 0.0,
+          "layer_height_mm": 0.05,
+          "layers": 500,
+          "negative_winding_crossings": 11,
+          "open_contour_rows": 0,
+          "raster_islands": 1,
+          "runs": 8911,
+          "sealed_gaps": 0
+        },
+        "anchor_load": "pass",
+        "base": {
+          "cell_basis": "center-to-center spacing of adjacent cells",
+          "cell_size_mm": 6.0,
+          "connected_components": 1,
+          "contact_area_mm2": 461.24228435864103,
+          "convex_envelope_area_mm2": 466.68007456125184,
+          "does_not_establish": "plate adhesion, removal force, or print stability",
+          "establishes": "the shape and size of the base",
+          "export_simplification_basis": "one float32 coordinate step; redundant grid edges",
+          "export_simplification_mm": 9.5367431640625e-07,
+          "feet": 54,
+          "footprint_basis": "union of emitted polygon sections at the plate",
+          "grid_candidate_lines": 14,
+          "open_area_fraction": 0.011652072798957913,
+          "open_area_mm2": 5.437790202610813,
+          "pad_diameter_mm": 5.2,
+          "pad_thickness_mm": 1.0,
+          "perimeter_width_mm": 1.2,
+          "removal": "connected grid, perimeter rim and foot tree; vertical openings",
+          "rotation_deg": 0.0,
+          "skeleton_edges": 53,
+          "skeleton_length_mm": 106.25048944296479,
+          "solid": true,
+          "strut_width_mm": 1.2,
+          "tree_basis": "Euclidean minimum spanning tree; sorted ties",
+          "type": "grid",
+          "unique_feet": 54,
+          "volume_mm3": 461.2422843586411
+        },
+        "brace_angle_deg": 45.0,
+        "brace_azimuth_deg": 0.0,
+        "brace_branches_per_node": 1,
+        "brace_candidates_examined": 107,
+        "brace_destination": "both",
+        "brace_diameter_mm": 0.6,
+        "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
+        "brace_max_distance_mm": 4.5,
+        "brace_max_length_mm": 30.0,
+        "brace_min_height_mm": 0.0,
+        "brace_new_feet": 26,
+        "brace_origins_examined": 28,
+        "brace_pattern": "single",
+        "brace_rejections": {
+          "bounds_rejected": 30,
+          "collision_rejected": 0,
+          "duplicate_rejected": 0,
+          "foot_rejected": 0,
+          "length_rejected": 0,
+          "no_destination_rejected": 0,
+          "pattern_rejected": 0,
+          "spacing_rejected": 51,
+          "ungrounded_rejected": 0
+        },
+        "brace_spacing_mm": 15.0,
+        "braces": 27,
+        "braces_capped": false,
+        "braces_collision_rejected": 0,
+        "contact_load_limit_mm2": 36.0,
+        "contact_parameters": {
+          "authored": 0,
+          "matched": 0,
+          "unmatched": 0
+        },
+        "contacts_blocked_by_policy": 0,
+        "contacts_dropped_attached": 0,
+        "contacts_failed": 0,
+        "contacts_in_sealed_cavities": 0,
+        "contacts_requested": 28,
+        "contacts_routed": 28,
+        "contacts_skipped_density": 0,
+        "contacts_with_shortened_tip": 0,
+        "coverage": "pass",
+        "coverage_basis": "sampled downward faces; geometric reach, not strength",
+        "coverage_gap_limit_mm": 3.0,
+        "density_exempt_positions": [
+          [
+            -8.575000000000001,
+            -4.075000000000001,
+            5.0
+          ]
+        ],
+        "diagnostics_capped_at": 256,
+        "downward_face_area_mm2": 200.0,
+        "downward_samples": 37,
+        "manual_contacts": 0,
+        "max_contact_gap_mm": 2.8571428571428577,
+        "max_contact_load_mm2_actual": 27.027027027027025,
+        "max_pillar_length_mm": 3.0,
+        "mean_contact_gap_mm": 0.6493512553433893,
+        "mechanics": "configured heuristic limits; not a strength proof",
+        "min_tip_length_mm": 0.3,
+        "min_tip_used_mm": 2.0,
+        "model_anchor": {
+          "candidates_rejected": 0,
+          "clearance_basis": "column-grid footprint and central-column penetration; not exact surface clearance",
+          "diameter_basis": "configured endpoint diameter; 0 derives the chosen middle diameter",
+          "diameter_mm": 0.4,
+          "examples": [],
+          "examples_capped_at": 256,
+          "length_mm": 2.0,
+          "penetration_mm": 0.15,
+          "shape": "cone"
+        },
+        "object_groups": 0,
+        "object_override_contacts": 0,
+        "overhang_angle_deg": 45.0,
+        "overloaded_contacts": 0,
+        "paint": {
+          "automatic": false,
+          "block_wins_over_enforce": true,
+          "blocked_marks": 0,
+          "enforced_contacts": 0,
+          "enforced_marks": 0,
+          "samples_blocked": 0
+        },
+        "part_to_part_avoidance": 1.0,
+        "pillar_angle_deg": 45.0,
+        "raster_islands": 1,
+        "routing": {
+          "branched": 0,
+          "model_anchor": 0,
+          "vertical": 28
+        },
+        "small_model_pillars": 0,
+        "small_pillar": {
+          "diameter_mm": 0.0,
+          "enabled": false,
+          "lower_depth_mm": 0.0,
+          "max_length_mm": 0.0,
+          "mode": "middle",
+          "selection_basis": "middle centerline length",
+          "shape": "cone",
+          "upper_depth_mm": 0.0
+        },
+        "small_pillars": 0,
+        "spacing_mm": 3.0,
+        "suppressed_contacts": 0,
+        "tip_base_diameter_mm": 1.2,
+        "tip_length_mm": 2.0,
+        "tree": {
+          "clusters": 0,
+          "contacts_in_trees": 0,
+          "enabled": false,
+          "kept_independent": 0,
+          "trunks": 0
+        },
+        "uncovered_fraction": 0.0,
+        "uncovered_samples": 0,
+        "unroutable_positions": []
+      },
+      "transient_traps": {
+        "definition": "empty space enclosed by already-printed material except toward the growth direction",
+        "peak_layer": 0,
+        "peak_volume_mm3": 0.0
+      },
+      "union_raster_parity": {
+        "examples": [],
+        "mismatched_layers": 0,
+        "mismatched_pixels": 0,
+        "reference_open_rows": 0
+      },
+      "unsupported_overhangs": {
+        "basis": "downward-face samples at the configured overhang angle, matched to routed contacts by distance; plate-height samples are excluded",
+        "contact_count": 28,
+        "diagnostic_examples_capped": 128,
+        "does_not_establish": "that a covered sample is strong enough, or that an uncovered one fails",
+        "downward_area_mm2": 200.0,
+        "layer_height_mm": 0.05,
+        "max_gap_mm": 2.8571428571428577,
+        "on_plate_count": 0,
+        "overhang_angle_deg": 45.0,
+        "sample_count": 37,
+        "samples": [],
+        "samples_truncated": false,
+        "spacing_mm": 3.0,
+        "status": "complete",
+        "unsupported_count": 0,
+        "unsupported_fraction": 0.0
+      }
+    },
+    "passed": false,
+    "schema_version": 1
+  }
+}

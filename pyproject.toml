@@ -12,7 +12,7 @@ dependencies = ["numpy>=1.26,<3", "scipy>=1.10,<2", "manifold3d==3.3.2", "tomli=
 
 [project.optional-dependencies]
 gui = ["PySide6>=6.6,<7", "vtk>=9.3,<10"]
-test = ["pytest>=7,<9", "psutil>=5,<8"]
+test = ["pytest>=7,<9", "psutil>=5,<8", "jsonschema>=4,<5"]
 
 [project.scripts]
 voxelmill = "voxelmill.cli:main"

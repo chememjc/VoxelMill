@@ -95,7 +95,13 @@ conservative about the difference between *measured*, *computed* and
 .venv/bin/python -m pytest -q -m gui          # editor tests, offscreen Qt
 VOXELMILL_SAMPLES=1 .venv/bin/python -m pytest -q -ra    # full, with sample fixtures
 .venv/bin/python scripts/check.py             # tests plus the benchmark comparison
+.venv/bin/python scripts/equivalence.py --jobs 4        # reports vs reports/golden/
 ```
+
+`.github/workflows/ci.yml` runs the suite on every push and pull request, and
+runs the golden comparison as an advisory job. When a change alters reports on
+purpose, re-record with `scripts/equivalence.py --update-golden` and review the
+JSON diff in the same commit.
 
 There is no `conftest.py`. GUI test files set `QT_QPA_PLATFORM=offscreen`
 themselves at the top of the file, before importing PySide6; copy that pattern

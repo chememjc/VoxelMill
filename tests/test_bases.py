@@ -235,8 +235,10 @@ def test_honeycomb_cells_are_hexagons_of_the_configured_pitch_and_wall():
     sections = result['solid'].slice(.4).to_polygons()
     # A hexagonal opening whose flat-to-flat is pitch - width has this area.
     ideal = math.sqrt(3) / 2 * (pitch - width) ** 2
-    interior = [abs(float(np.abs(np.cross(np.asarray(p), np.roll(np.asarray(p), -1, 0)).sum()) / 2))
-                for p in sections]
+    def shoelace(polygon):
+        x, y = np.asarray(polygon, dtype=float).T
+        return abs(float((x * np.roll(y, -1) - y * np.roll(x, -1)).sum()) / 2)
+    interior = [shoelace(p) for p in sections]
     holes = [area for area in interior if abs(area - ideal) < ideal * 1e-6]
     assert len(holes) == 7, sorted(round(a, 3) for a in interior)
 
