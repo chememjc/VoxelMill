@@ -123,7 +123,7 @@ def test_write_and_verify_match_with_shrink_and_tolerance(tmp_path):
     assert 'layer count' in dim['shrink_percent_z']['reason']
     assert dim['layers_changed'] > 0
     assert dim['pixels_changed'] > 0
-    plain = slice_stl(source, tmp_path / 'plain.goo', small_settings())
+    slice_stl(source, tmp_path / 'plain.goo', small_settings())
     with GooReader(tmp_path / 'compensated.goo') as compensated, \
             GooReader(tmp_path / 'plain.goo') as reference:
         assert len(compensated.layers) == len(reference.layers)

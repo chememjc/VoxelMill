@@ -18,7 +18,7 @@ import tempfile
 import time
 import numpy as np
 from .contracts import (
-    MeshAsset, ResourceBudget, CancellationToken, Progress, no_progress, VoxelMillError, Diagnostic,
+    MeshAsset, ResourceBudget, CancellationToken, no_progress, VoxelMillError, Diagnostic,
 )
 
 STL_DTYPE = np.dtype([("normal", "<f4", (3,)), ("vertices", "<f4", (3, 3)), ("attribute", "<u2")])

@@ -56,11 +56,11 @@ class ColumnField:
     hi: np.ndarray
     islands: list = field(default_factory=list)
     metrics: dict = field(default_factory=dict)
-    first_material: np.ndarray = None
+    first_material: np.ndarray | None = None
     #: Per run, whether the empty space immediately ABOVE it ever reaches the
     #: exterior. A contact on the underside of run r sits in the gap above run
     #: r-1; runs with index 0 sit above the open plate side.
-    gap_exterior: np.ndarray = None
+    gap_exterior: np.ndarray | None = None
     #: Shaft capsules already emitted in this routing pass, as
     #: ``(start, end, radius)``. Later candidates that intersect one (except
     #: at an endpoint / planned brace joint) are skipped or rerouted.
@@ -772,10 +772,12 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         exclude = _exclude_spheres(
             (x, y, z), penetration, support['break_point_diameter_mm'], extra=extra)
 
+        # Called only within this iteration, so the late-bound loop variables
+        # below are the current contact's.
         def _usable_shaft(start, end, radius):
             if end[2] - start[2] <= 1e-9 and math.hypot(end[0] - start[0], end[1] - start[1]) <= 1e-9:
                 return True
-            if not _shaft_clear(field, start, end, radius, clearance_mm, cancel, exclude):
+            if not _shaft_clear(field, start, end, radius, clearance_mm, cancel, exclude):  # noqa: B023
                 return False
             return not _hits_occupied(field, start, end, radius)
 
@@ -1748,7 +1750,7 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
         if close_interval({owner}, z):
             evidence['spacing_rejected'] += 1
             continue
-        for slot in range(quota):
+        for _ in range(quota):
             if close_interval({owner}, z):
                 break
             strut_r = float(support['brace_diameter_mm']) / 2 or shaft_r * .5

@@ -1,7 +1,6 @@
 """First-layer (elephant-foot) compensation on the exported frames."""
 from __future__ import annotations
 
-from copy import deepcopy
 from pathlib import Path
 
 import numpy as np

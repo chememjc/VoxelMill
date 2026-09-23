@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 import manifold3d as m
-from voxelmill.contracts import CancellationToken, Canceled, VoxelMillError, ResourceBudget
+from voxelmill.contracts import CancellationToken, Canceled, VoxelMillError
 from voxelmill.geometry import (auto_placement, cylinder_between, envelope_fits,
     fill_enclosed_cavities, iter_transformed_triangles, manifold_triangles,
     mesh_to_manifold, placement_for_triangles, raft_from_feet, triangle_bounds)

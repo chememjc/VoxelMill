@@ -13,6 +13,7 @@ dependencies = ["numpy>=1.26,<3", "scipy>=1.10,<2", "manifold3d==3.3.2", "tomli=
 [project.optional-dependencies]
 gui = ["PySide6>=6.6,<7", "vtk>=9.3,<10"]
 test = ["pytest>=7,<9", "psutil>=5,<8", "jsonschema>=4,<5"]
+lint = ["ruff>=0.16,<0.17", "mypy>=1.15,<2"]
 
 [project.scripts]
 voxelmill = "voxelmill.cli:main"
@@ -26,3 +27,37 @@ build-dir = "build/{wheel_tag}"
 testpaths = ["tests"]
 markers = ["samples: full-resolution original fixture suite (opt in)",
            "gui: end-to-end editor tests; slower, need an offscreen Qt platform"]
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+# Syntax errors, pyflakes and bugbear. B905 (zip without strict=) is left off:
+# every call site zips arrays whose lengths an earlier line already ties.
+select = ["E9", "F", "B"]
+ignore = ["B905"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+
+# Modules with known type errors, checked but not enforced. Shrink this list;
+# never grow it. Most GUI entries are PySide6 stub gaps and reused widget
+# variables; presets waits on typed settings (ISSUES.md VM-040).
+[[tool.mypy.overrides]]
+module = [
+    "voxelmill.importers",
+    "voxelmill.presets",
+    "voxelmill.printer",
+    "voxelmill.gui.appprefs",
+    "voxelmill.gui.camera",
+    "voxelmill.gui.document",
+    "voxelmill.gui.gizmo",
+    "voxelmill.gui.jobs",
+    "voxelmill.gui.notifications",
+    "voxelmill.gui.objects",
+    "voxelmill.gui.settings_table",
+    "voxelmill.gui.viewport",
+    "voxelmill.gui.window",
+]
+ignore_errors = true

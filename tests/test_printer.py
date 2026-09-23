@@ -9,10 +9,7 @@ import pytest
 
 from voxelmill.printer import (
     create_loopback_adapter,
-    Discovery,
     LoopbackTransport,
-    PrinterDisconnected,
-    PrinterNotConnected,
     PrinterBusy,
     PrinterError,
     PrinterTimeout,
@@ -64,7 +61,6 @@ def simulator():
         request = json.loads(raw)
         data = request["Data"]
         cmd = data["Cmd"]
-        payload = data["Data"]
         response_data = {"Ack": 0}
         if cmd == 386:
             response_data["VideoUrl"] = "rtsp://127.0.0.1/offline"

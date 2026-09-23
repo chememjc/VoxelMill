@@ -68,7 +68,7 @@ def test_a_plate_coordinate_paint_table_is_refused_rather_than_reinterpreted():
 
 def test_paint_mode_widget_and_clear_buttons():
     from PySide6 import QtWidgets
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     window = MainWindow(resolve_settings(), None, headless=True)
     assert [window.paint_mode.itemText(i) for i in range(window.paint_mode.count())] == [
         'off', 'block', 'enforce']
@@ -80,7 +80,7 @@ def test_paint_mode_widget_and_clear_buttons():
 
 def test_clearing_paint_only_clears_the_selected_part(tmp_path):
     from PySide6 import QtWidgets
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     source = tmp_path / 'other.stl'
     source.write_bytes(b'fixture')
     window = MainWindow(resolve_settings(), None, headless=True)
@@ -98,7 +98,7 @@ def test_clearing_paint_only_clears_the_selected_part(tmp_path):
 
 def test_add_model_action_exists():
     from PySide6 import QtWidgets
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     window = MainWindow(resolve_settings(), None, headless=True)
     assert 'add_model' in window.actions_map
     window.close()

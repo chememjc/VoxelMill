@@ -65,6 +65,21 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: xvfb-run -a .venv/bin/python -m pytest -q -m "not samples" -p no:cacheprovider
 
+  lint:
+    name: lint and types
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+      - name: Tools
+        run: python -m pip install 'ruff>=0.16,<0.17' 'mypy>=1.15,<2' 'numpy>=1.26,<3'
+      - name: ruff
+        run: ruff check src tests scripts
+      - name: mypy
+        run: mypy src/voxelmill
+
   golden:
     # Report equality is exact. Float results may differ in the last bits on a
     # CPU with other SIMD paths than the machine that recorded the goldens, so

@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 
 import numpy as np
-import pytest
 
 from voxelmill.cli import main
 from voxelmill.config import resolve_settings

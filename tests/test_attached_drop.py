@@ -1,11 +1,9 @@
 """Unroutable already-attached contacts are dropped, true overhangs are not."""
 import numpy as np
-import pytest
 import manifold3d as m
 
 from voxelmill.config import resolve_settings
 from voxelmill.contracts import Diagnostic, SupportGraph, ValidationReport
-from voxelmill.geometry import manifold_triangles
 from voxelmill.supports import (SupportPlan, apply_attached_unroutable_drops,
                                apply_support_validation, attached_below,
                                plan_supports)

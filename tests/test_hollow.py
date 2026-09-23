@@ -11,8 +11,7 @@ from voxelmill.cli import main
 from voxelmill.config import resolve_settings
 from voxelmill.contracts import VoxelMillError
 from voxelmill.geometry import manifold_triangles, triangle_bounds
-from voxelmill.hollow import (_bottom_open, _infill_mask, analyze_wall_thickness, hollow_mesh,
-                              hollow_stl_triangles)
+from voxelmill.hollow import (_bottom_open, _infill_mask, analyze_wall_thickness, hollow_mesh)
 from voxelmill.mesh import write_stl
 from voxelmill.validation import analyze_drainage, drainage_check
 
@@ -175,6 +174,20 @@ def test_vectorized_voxel_loops_match_their_reference():
             got = _infill_mask(occupancy, 0.5, (0.0, 0.0, 0.0), 'hex', pitch_mm)
             period = max(1, int(round(pitch_mm / 0.5)))
             assert np.array_equal(got, _hex_reference(occupancy, period))
+
+
+def test_thickness_refinement_stays_inside_the_memory_ceiling(monkeypatch):
+    """A small threshold used to refine the pitch past the budget unchecked."""
+    import voxelmill.hollow as hollow_module
+    settings = small(wall_thickness_mm=3.0, voxel_size_mm=0.0)
+    budget_voxels = 40_000
+    fraction = budget_voxels / (settings['resources']['memory_gib'] * 1024**3)
+    monkeypatch.setattr(hollow_module, 'MAX_VOXEL_BYTES_FRACTION', fraction)
+    field = analyze_wall_thickness(solid_cube(20.0), settings, threshold_mm=0.2)
+    padded = np.prod(np.asarray(field['voxel_grid']) + 2)
+    assert padded <= budget_voxels
+    # Finer than the hollow pitch it started from, but no finer than affordable.
+    assert 0.05 < field['voxel_size_mm'] < 0.75
 
 
 def test_prepare_honours_hollow_enabled_false(tmp_path):

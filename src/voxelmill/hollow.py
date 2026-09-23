@@ -22,6 +22,31 @@ CROSS3 = ndi.generate_binary_structure(3, 1)
 MAX_VOXEL_BYTES_FRACTION = 0.35
 
 
+def _grid_bytes(bounds, pitch):
+    _, dims = _grid(bounds, pitch)
+    return dims, float(np.prod(dims + 2))
+
+
+def _finest_fitting_pitch(bounds, fine, coarse, ceiling):
+    """Smallest pitch in [fine, coarse] whose padded grid fits ``ceiling`` bytes.
+
+    ``coarse`` must already fit. Returns ``(pitch, dims, needed)``.
+    """
+    dims, needed = _grid_bytes(bounds, fine)
+    if needed <= ceiling:
+        return fine, dims, needed
+    best_dims, best_needed = _grid_bytes(bounds, coarse)
+    lo, hi = fine, coarse
+    for _ in range(48):
+        mid = (lo + hi) * 0.5
+        mid_dims, mid_needed = _grid_bytes(bounds, mid)
+        if mid_needed <= ceiling:
+            hi, best_dims, best_needed = mid, mid_dims, mid_needed
+        else:
+            lo = mid
+    return hi, best_dims, best_needed
+
+
 def choose_hollow_voxel_size(bounds, settings, budget):
     """Pitch that resolves the wall with several voxels, within the memory budget."""
     hollow = settings['hollow']
@@ -33,8 +58,7 @@ def choose_hollow_voxel_size(bounds, settings, budget):
         raise VoxelMillError('invalid_hollow', 'hollow.voxel_size_mm must be positive or 0 to derive',
                         {'voxel_size_mm': hollow.get('voxel_size_mm')})
     ceiling = budget.memory_gib * 1024**3 * MAX_VOXEL_BYTES_FRACTION
-    _, dims = _grid(bounds, size)
-    needed = float(np.prod(dims + 2))
+    dims, needed = _grid_bytes(bounds, size)
     if needed <= ceiling:
         return size, dims, needed
     fitting = size * (needed / ceiling) ** (1 / 3)
@@ -45,24 +69,12 @@ def choose_hollow_voxel_size(bounds, settings, budget):
             'remedy': 'raise hollow.voxel_size_mm or resources.memory_gib'})
     # Derived: coarsen, but keep at least one voxel across the wall when possible.
     max_pitch = max(wall / 2.0, derived)
-    _, dims_cap = _grid(bounds, max_pitch)
-    needed_cap = float(np.prod(dims_cap + 2))
+    _, needed_cap = _grid_bytes(bounds, max_pitch)
     if needed_cap > ceiling:
         raise VoxelMillError('hollow_budget', 'Hollow voxel grid exceeds the memory budget', {
             'voxel_size_mm': size, 'voxel_bytes': needed, 'budget_bytes': ceiling,
             'smallest_affordable_voxel_size_mm': fitting})
-    lo, hi = size, max_pitch
-    best_dims, best_needed = dims_cap, needed_cap
-    for _ in range(48):
-        mid = (lo + hi) * 0.5
-        _, mid_dims = _grid(bounds, mid)
-        mid_needed = float(np.prod(mid_dims + 2))
-        if mid_needed <= ceiling:
-            hi = mid
-            best_dims, best_needed = mid_dims, mid_needed
-        else:
-            lo = mid
-    return hi, best_dims, best_needed
+    return _finest_fitting_pitch(bounds, size, max_pitch, ceiling)
 
 
 def _voxelize(triangles, bounds, size, cancel, progress, budget):
@@ -100,7 +112,6 @@ def _occupancy_to_volume(occupancy, low, size):
 
 def _surface_solid(occupancy, low, size, cancel):
     """Well-composed boundary of an occupancy mask as a Manifold solid."""
-    from . import _native
     m = geometry._manifold()
     if not occupancy.any():
         raise VoxelMillError('hollow_empty', 'Hollow occupancy produced an empty volume')
@@ -224,12 +235,15 @@ def analyze_wall_thickness(triangles, settings, *, threshold_mm=None, budget=Non
     threshold = float(threshold_mm if threshold_mm is not None else hollow['min_wall_thickness_mm'])
     bounds = np.asarray(bounds if bounds is not None else geometry.triangle_bounds(triangles, cancel=cancel),
                         dtype=float)
-    size, dims, needed = choose_hollow_voxel_size(bounds, settings, budget)
-    # Thickness-only runs may use a finer derived pitch when wall_thickness is large.
+    size, _dims, _needed = choose_hollow_voxel_size(bounds, settings, budget)
+    # Thickness-only runs may use a finer derived pitch when wall_thickness is
+    # large, but only as fine as the same memory ceiling allows: the refined
+    # grid used to skip that check entirely.
     if float(hollow.get('voxel_size_mm') or 0.0) <= 0:
-        size = min(size, max(threshold / 4.0, 0.05))
-        _, dims = _grid(bounds, size)
-        needed = float(np.prod(dims + 2))
+        refined = max(threshold / 4.0, 0.05)
+        if refined < size:
+            ceiling = budget.memory_gib * 1024**3 * MAX_VOXEL_BYTES_FRACTION
+            size, _dims, _needed = _finest_fitting_pitch(bounds, refined, size, ceiling)
     occupancy, _volume, low, grid, odd_rows, filled = _voxelize(
         triangles, bounds, size, cancel, progress, budget)
     field = wall_thickness_field(occupancy, size)
@@ -505,7 +519,6 @@ def hollow_mesh(triangles, settings, *, budget=None, cancel=None, progress=no_pr
     holes_report = {'holes': [], 'enclosed_voids_before_holes': 0}
     if add_holes and hollow['mode'] == 'inner':
         # Cavity for hole placement: empty inside the shell before holes.
-        post = material
         # Approximate cavity as original occupancy minus current material,
         # restricted to the eroded core region (ignore exterior air).
         hole_cavity = cavity & ~infill_voxels

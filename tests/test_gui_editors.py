@@ -2,7 +2,6 @@
 import json
 import os
 import time
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -291,7 +290,7 @@ def test_support_tabs_are_grouped_and_free_of_qt_mnemonics(app):
     def keys_on(index):
         page = dialog.tabs.widget(index).widget()
         found = set()
-        for (section, key), field in dialog.fields.items():
+        for (_section, key), field in dialog.fields.items():
             if field.parentWidget() is page:
                 found.add(key)
         return found

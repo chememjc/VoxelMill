@@ -4,6 +4,7 @@ import pytest
 import manifold3d as m
 
 from voxelmill.config import resolve_settings
+from voxelmill.contracts import VoxelMillError
 from voxelmill.geometry import manifold_triangles
 from voxelmill.paint import apply_paint, brush_centroids, normalize_paint
 from voxelmill.supports import build_column_field, plan_supports, select_contacts
@@ -18,8 +19,9 @@ def box():
 def test_normalize_paint_deduplicates_and_rejects_unknown_fields():
     paint = normalize_paint({'blocked': [[1, 2, 3], [1.0000004, 2, 3]], 'enforced': [[4, 5, 6]]})
     assert paint['blocked'] == [[1.0, 2.0, 3.0]]
-    with pytest.raises(Exception):
+    with pytest.raises(VoxelMillError) as error:
         normalize_paint({'blocked': [], 'mystery': []})
+    assert error.value.code == 'invalid_paint'
 
 
 def test_blocked_faces_are_not_automatic_contacts_and_do_not_fail_coverage():

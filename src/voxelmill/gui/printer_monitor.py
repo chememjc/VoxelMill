@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import threading
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from ..printer import Discovery, SDCPPrinterAdapter, create_loopback_adapter, discover
 from ..contracts import CancellationToken

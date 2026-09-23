@@ -60,12 +60,13 @@ Sorted from easiest and most significant to hardest and least valuable.
 | B3 | Printer database beyond the Mars 5 Ultra | Feature | 4 | 4 | 16 | open |
 | VM-011 | Release builds ship without TBB (confirmed) | Perf | 4 | 4 | 16 | done |
 | VM-003 | Editor leaks a scratch directory on every reload | Bug | 5 | 3 | 15 | done |
+| VM-004 | Wall-thickness analysis could refine past the memory budget | Bug | 5 | 3 | 15 | done |
 | VM-010 | Vectorize `hollow._bottom_open` | Perf | 5 | 3 | 15 | done |
 | B5 | Print-time estimation: physical calibration | Feature | 3 | 5 | 15 | open (hardware) |
 | D4 | Raft adhesion / removal-force calibration | Feature | 4 | 3 | 12 | open (hardware) |
 | G2 | Fuzzy, mode-aware settings search | Feature | 4 | 3 | 12 | partial |
 | VM-012 | Stop re-sampling downward faces for the overhang check | Perf | 4 | 3 | 12 | open |
-| VM-061 | Lint and type-check configuration | Test/CI | 4 | 3 | 12 | open |
+| VM-061 | Lint and type-check configuration | Test/CI | 4 | 3 | 12 | done |
 | A7 | GUI profile manager: dirty-state save/discard | Feature | 3 | 4 | 12 | partial |
 | E7 | TSMC: define, validate and document all 18 motion fields | Feature | 3 | 4 | 12 | partial |
 | VM-013 | Spatial index for routed-capsule collision checks | Perf | 3 | 4 | 12 | open |
@@ -166,6 +167,16 @@ Ease 5 · Benefit 3 · Confidence: sure · Status: done
 **Fix.** Give `MainWindow` a single owned `TemporaryDirectory` per session, or delete the previous directory after the new placement lands and on `closeEvent`, with an `atexit` backstop. Log cleanup failures instead of dropping them.
 
 **Where.** `src/voxelmill/gui/services.py:66`, `src/voxelmill/gui/window.py:3167`, `src/voxelmill/gui/document.py:635-638`
+
+### VM-004 — Wall-thickness analysis could refine past the memory budget
+
+Ease 5 · Benefit 3 · Confidence: sure · Status: done
+
+**Problem.** Found while fixing the VM-061 lint warnings (an unused `needed`). `analyze_wall_thickness` refines the pitch toward `threshold / 4` after `choose_hollow_voxel_size` has fitted it to the budget, and never re-checks the refined grid. A 20 mm cube with a 0.2 mm threshold asked for 67 M voxels against a 40 k ceiling, before an 8-byte-per-voxel EDT on top.
+
+**Fix.** Refine only as far as the same ceiling allows, through a `_finest_fitting_pitch` bisection shared with `choose_hollow_voxel_size`. There is a regression test.
+
+**Where.** `src/voxelmill/hollow.py` (`analyze_wall_thickness`, `_finest_fitting_pitch`)
 
 ## Performance
 
@@ -475,7 +486,7 @@ Ease 4 · Benefit 5 · Confidence: sure · Status: done (goldens advisory until 
 
 ### VM-061 — Lint and type-check configuration
 
-Ease 4 · Benefit 3 · Confidence: sure · Status: open
+Ease 4 · Benefit 3 · Confidence: sure · Status: done
 
 **Problem.** No ruff, mypy or pre-commit config exists, so style and simple bugs (unused variables, dead code like the palette line removed in this audit) go unnoticed.
 

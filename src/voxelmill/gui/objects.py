@@ -40,7 +40,7 @@ typing a number is never interrupted by that number's own arrow keys.
 """
 from __future__ import annotations
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from ..geometry import wrap_rotation_deg
 from .appprefs import DEFAULT_SNAP_ANGLE_DEG, snap_angle
@@ -723,7 +723,7 @@ class AttachmentSettings(QtWidgets.QWidget):
                 if key in self._inherited}
 
     def _on_override(self, enabled):
-        for key, box in self.rows.items():
+        for box in self.rows.values():
             box.setEnabled(bool(enabled))
         if self._syncing:
             return

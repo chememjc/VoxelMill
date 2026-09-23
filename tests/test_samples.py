@@ -14,7 +14,6 @@ from voxelmill.geometry import auto_placement, envelope_fits
 from voxelmill.config import resolve_settings
 from voxelmill.contracts import VoxelMillError
 from voxelmill.ops import cap_open_cuts
-from voxelmill.raster import RasterGrid
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = json.loads((ROOT / 'fixtures/manifest.json').read_text())

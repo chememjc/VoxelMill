@@ -3,7 +3,6 @@ import pytest
 import manifold3d as m
 
 from voxelmill.config import resolve_settings
-from voxelmill.geometry import manifold_triangles
 from voxelmill.supports import plan_supports
 from test_supports import placed
 

@@ -6,7 +6,7 @@ import manifold3d as m
 
 from voxelmill.cli import main
 from voxelmill.config import resolve_settings
-from voxelmill.contracts import VoxelMillError, ResourceBudget
+from voxelmill.contracts import VoxelMillError
 from voxelmill.geometry import manifold_triangles
 from voxelmill.mesh import open_stl, write_stl
 from voxelmill.pipeline import prepare

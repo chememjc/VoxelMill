@@ -73,7 +73,7 @@ def test_prepare_records_timing_breakdown(tmp_path, sphere):
         expected.add('hollow')
     missing = expected - set(timing)
     assert not missing, (missing, timing)
-    for name, seconds in timing.items():
+    for seconds in timing.values():
         assert isinstance(seconds, float)
         assert seconds >= 0.0
     # Stages are not a perfect partition of wall time (glue + overlap slack).

@@ -2,7 +2,6 @@
 """Full originals, one fresh subprocess per mesh for meaningful peak RSS."""
 import argparse
 import json
-import os
 from pathlib import Path
 import resource
 import subprocess

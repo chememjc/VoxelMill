@@ -56,7 +56,7 @@ def _metrics_rows(report: dict[str, Any]) -> list[tuple[str, str]]:
 
 
 def _group_diagnostics(diagnostics: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
-    groups = {name: [] for name in SEVERITY_ORDER}
+    groups: dict[str, list[dict[str, Any]]] = {name: [] for name in SEVERITY_ORDER}
     groups['other'] = []
     for item in diagnostics:
         severity = str(item.get('severity') or 'other').lower()

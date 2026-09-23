@@ -36,7 +36,7 @@ def test_contact_parameters_persist_in_manifest_and_load(tmp_path):
 
 
 def test_contact_widget_batch_only_submits_touched_fields():
-    app = __import__('PySide6').QtWidgets.QApplication.instance() or __import__('PySide6').QtWidgets.QApplication([])
+    __import__('PySide6').QtWidgets.QApplication.instance() or __import__('PySide6').QtWidgets.QApplication([])
     window = MainWindow(resolve_settings(), None, headless=True)
     points = [[1., 2., 3.], [4., 5., 6.]]
     window._set_contact_list(points)
@@ -49,7 +49,7 @@ def test_contact_widget_batch_only_submits_touched_fields():
 
 def test_contact_widget_accepts_numpy_routing_contacts_and_loads_effective_values():
     from PySide6 import QtWidgets
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     window = MainWindow(resolve_settings(), None, headless=True)
     window._set_contact_list(np.asarray([[1., 2., 3.], [4., 5., 6.]]))
     window.contact_list.setCurrentRow(0)
@@ -60,7 +60,7 @@ def test_contact_widget_accepts_numpy_routing_contacts_and_loads_effective_value
 def test_contact_widget_exposes_every_personal_field():
     from voxelmill.contact_parameters import PERSONAL_FIELDS
     from PySide6 import QtWidgets
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     window = MainWindow(resolve_settings(), None, headless=True)
     assert set(window.contact_parameter_controls) == PERSONAL_FIELDS
     window.close()
@@ -69,7 +69,7 @@ def test_contact_widget_exposes_every_personal_field():
 def test_contact_widget_copy_paste_and_reset():
     from voxelmill.contact_parameters import contact_key, parameters_for_contact
     from PySide6 import QtWidgets
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     window = MainWindow(resolve_settings(), None, headless=True)
     first, second = [1., 2., 3.], [4., 5., 6.]
     window._set_contact_list([first, second])

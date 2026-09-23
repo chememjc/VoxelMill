@@ -62,6 +62,8 @@ Not redistributed and not bundled.
 | pytest | 8.4.2 (`>=7,<9`) | MIT |
 | psutil | 5.9.5 (`>=5,<8`) | BSD-3-Clause — [`third-party/psutil-LICENSE.txt`](third-party/psutil-LICENSE.txt) |
 | jsonschema | 4.26.0 (`>=4,<5`) | MIT |
+| ruff (`[lint]` extra) | 0.16.8 (`>=0.16,<0.17`) | MIT |
+| mypy (`[lint]` extra) | 1.15.0 (`>=1.15,<2`) | MIT |
 
 ## Build-time dependencies
 

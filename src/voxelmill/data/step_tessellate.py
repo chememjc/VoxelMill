@@ -9,7 +9,6 @@ Under ``-c``, ``__name__`` is the script basename — there is no
 import json
 import math
 import os
-import sys
 import traceback
 
 

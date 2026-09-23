@@ -14,7 +14,6 @@ import sys
 import numpy as np
 
 from voxelmill import _native
-from voxelmill.config import resolve_settings
 from voxelmill.goo import GooReader
 from voxelmill.mesh import open_stl
 
@@ -49,7 +48,6 @@ def main():
     parser.add_argument('--output', help='write the full result as JSON here as well')
     parser.add_argument('--verbose', action='store_true', help='slice progress on stderr')
     args = parser.parse_args()
-    settings = resolve_settings()
     results = []
     with GooReader(args.goo) as goo, open_stl(args.stl) as mesh:
         height, width = goo.shape

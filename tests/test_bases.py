@@ -1,5 +1,4 @@
 """Geometric, connectivity, and integration evidence for support base strategies."""
-import itertools
 import json
 import math
 
@@ -7,13 +6,13 @@ import numpy as np
 import pytest
 import manifold3d as m
 
-from voxelmill.bases import build_base, minimum_spanning_edges, MAX_GRID_LINES
+from voxelmill.bases import build_base, minimum_spanning_edges
 from voxelmill.config import BASE_TYPES, resolve_settings
 from voxelmill.contracts import VoxelMillError, CancellationToken, Canceled
 from voxelmill.geometry import _reserve, manifold_triangles, raft_from_feet
 from voxelmill.supports import plan_supports
 from voxelmill.cli import main, build_parser
-from test_supports import placed, assemble
+from test_supports import placed
 
 FEET = np.array([[-10, -10], [-10, 10], [10, -10], [10, 10]], dtype=float)
 

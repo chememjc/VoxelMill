@@ -1,7 +1,6 @@
 """H2: optional post-slice hooks record success and failure without deleting output."""
 from __future__ import annotations
 
-from pathlib import Path
 
 from voxelmill.hooks import run_post_slice_hook
 

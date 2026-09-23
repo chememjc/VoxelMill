@@ -1,5 +1,4 @@
 """Multiple models share a support field; only solid intersections are collisions."""
-import numpy as np
 import pytest
 import manifold3d as m
 

@@ -2,7 +2,6 @@
 from copy import deepcopy
 
 import numpy as np
-import pytest
 import manifold3d as m
 
 from voxelmill.config import resolve_settings

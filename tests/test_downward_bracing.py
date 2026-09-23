@@ -1,5 +1,4 @@
 """Downward bracing geometry and support-only grounding regressions."""
-import math
 import numpy as np
 import pytest
 import manifold3d as m

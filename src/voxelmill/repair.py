@@ -18,7 +18,6 @@ import time
 import numpy as np
 
 from .contracts import CancellationToken, VoxelMillError, ResourceBudget, no_progress
-from .raster import RasterGrid
 
 MAX_VOXEL_BYTES_FRACTION = 0.35
 

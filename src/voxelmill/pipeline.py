@@ -11,26 +11,24 @@ evidence and any export are built from.
 from __future__ import annotations
 
 from dataclasses import asdict
-import json
 import math
 import os
 from pathlib import Path
-import shutil
 import sys
 import tempfile
 import time
 
 try:
     import resource as _resource
-except ImportError:
-    _resource = None
+except ImportError:  # Windows
+    _resource = None  # type: ignore[assignment]
 
 import numpy as np
 
 from .config import resin_usage
 from . import geometry
 from .contracts import (CancellationToken, VoxelMillError, Diagnostic, ResourceBudget,
-                        ValidationReport, no_progress)
+                        no_progress)
 from .mesh import open_stl, write_stl
 from .raster import MeshLayerStream
 from .assembly import prepare_model, assemble, RasterParity
@@ -433,7 +431,6 @@ def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=
         if object_paint is not None:
             paint = to_plate(object_paint, [np.asarray(placement.matrix, dtype=float)] + [
                 np.asarray(part['placement']['matrix'], dtype=float) for part in extra_parts])
-        bounds = np.asarray(placement.bounds, dtype=float)
         signed_volume = _signed_volume(placed, cancel)
         with timer.stage('repair'):
             model = prepare_model(placed, settings, budget=budget, cancel=cancel,

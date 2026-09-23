@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys
 import time
 from contextlib import contextmanager
-from typing import Iterator, TextIO
+from typing import Any, Iterator, TextIO
 
 
 class StageTimer:
@@ -21,7 +21,7 @@ class StageTimer:
 
     @contextmanager
     def stage(self, name: str) -> Iterator['StageTimer']:
-        frame = {'name': str(name), 'start': time.monotonic(), 'child': 0.0}
+        frame: dict[str, Any] = {'name': str(name), 'start': time.monotonic(), 'child': 0.0}
         self._stack.append(frame)
         try:
             yield self

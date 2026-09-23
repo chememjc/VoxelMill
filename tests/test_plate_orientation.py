@@ -34,6 +34,7 @@ def test_build_volume_has_colored_oriented_edges():
     red = [a for a in scene._plate if a.GetProperty().GetColor() == (1.0, 0.0, 0.0)]
     green = [a for a in scene._plate if a.GetProperty().GetColor() == (0.0, 1.0, 0.0)]
     assert len(green) == 1
+    assert len(red) == 11  # every other edge of the box
     for actor in scene._plate:
         assert actor.GetProperty().GetLineWidth() > 1.0
 

@@ -6,7 +6,7 @@ from PySide6 import QtCore, QtWidgets
 from ..acceleration import cuda_status, resolve_backend
 from ..config import validate_settings
 from ..contracts import VoxelMillError
-from .appprefs import (DEFAULT_TRANSLATE_STEP_MM, MAX_TOOLTIP_DELAY_MS,
+from .appprefs import (MAX_TOOLTIP_DELAY_MS,
                        SNAP_ANGLE_CHOICES, install_hover_delay, load_preferences,
                        save_preferences)
 

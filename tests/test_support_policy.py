@@ -1,6 +1,5 @@
 """Routing choices and brace geometry must respond to the exposed policy."""
 import json
-import numpy as np
 import pytest
 import manifold3d as m
 

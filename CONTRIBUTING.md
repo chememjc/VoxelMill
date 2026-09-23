@@ -96,6 +96,8 @@ conservative about the difference between *measured*, *computed* and
 VOXELMILL_SAMPLES=1 .venv/bin/python -m pytest -q -ra    # full, with sample fixtures
 .venv/bin/python scripts/check.py             # tests plus the benchmark comparison
 .venv/bin/python scripts/equivalence.py --jobs 4        # reports vs reports/golden/
+.venv/bin/ruff check src tests scripts         # lint (pip install '.[lint]')
+.venv/bin/mypy src/voxelmill                  # types; see [tool.mypy] overrides
 ```
 
 `.github/workflows/ci.yml` runs the suite on every push and pull request, and

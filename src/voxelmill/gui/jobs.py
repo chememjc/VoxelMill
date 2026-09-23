@@ -8,7 +8,7 @@ cooperative through the same :class:`CancellationToken` the CLI uses.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import traceback
 from typing import Any, Callable
 

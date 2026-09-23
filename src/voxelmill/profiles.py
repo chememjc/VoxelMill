@@ -21,6 +21,7 @@ from __future__ import annotations
 from copy import deepcopy
 import os
 from pathlib import Path
+from typing import NoReturn
 
 from .config import DEFAULTS, _read, resolve_settings
 from .contracts import VoxelMillError
@@ -36,7 +37,7 @@ PATH_VARIABLE = 'VOXELMILL_PROFILE_PATH'
 LAYERS = ('default', 'printer', 'resin', 'override')
 
 
-def _fail(message):
+def _fail(message) -> NoReturn:
     raise VoxelMillError('invalid_profile', message)
 
 
@@ -113,7 +114,7 @@ def discover(kind: str | None = None) -> list[dict]:
                          'path': str(path), 'layer': layer, 'error': error}
                 found.setdefault((one, identifier), []).append(entry)
     listing = []
-    for (one, identifier), entries in sorted(found.items()):
+    for _key, entries in sorted(found.items()):
         winner = dict(entries[0])
         winner['shadows'] = [e['path'] for e in entries[1:]]
         listing.append(winner)

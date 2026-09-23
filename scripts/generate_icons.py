@@ -67,7 +67,7 @@ def generate() -> None:
 
     app = QApplication.instance() or QApplication([])
     del app
-    for name, svg, destination in _expected_paths():
+    for _name, svg, destination in _expected_paths():
         if destination.suffix == ".svg":
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(svg, destination)
@@ -153,7 +153,7 @@ def _write_ico(destination: Path) -> None:
 
 def check() -> int:
     failures = []
-    for name, svg, destination in _expected_paths():
+    for _name, svg, destination in _expected_paths():
         if destination.suffix == ".svg":
             if not destination.is_file() or destination.read_bytes() != svg.read_bytes():
                 failures.append(f"SVG differs: {destination}")

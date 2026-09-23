@@ -549,10 +549,12 @@ class SDCPPrinterAdapter:
             if len(self._pending) >= MAX_PENDING_REQUESTS:
                 raise PrinterError("Too many outstanding printer requests", "overloaded")
             self._pending[request_id] = (event, result)
+        target = self.target
+        assert target is not None  # _require_connected: connecting sets it
         envelope = {
-            "Id": self.target.brand_id if self.target else "",
+            "Id": target.brand_id,
             "Data": {"Cmd": cmd, "Data": dict(payload), "RequestID": request_id,
-                     "MainboardID": self.target.mainboard_id, "TimeStamp": int(time.time()), "From": 0},
+                     "MainboardID": target.mainboard_id, "TimeStamp": int(time.time()), "From": 0},
             "Topic": self._topic("request"),
         }
         try:
@@ -1020,8 +1022,9 @@ class SDCPPrinterAdapter:
                 # started command ambiguous.
                 try:
                     self._command(0, {}, timeout=min(self.request_timeout, max(0.01, deadline - self._clock())))
-                except (PrinterTimeout, PrinterNotConnected, PrinterDisconnected):
-                    raise PrinterTimeout("Start was acknowledged but could not be reconciled", remote_id=remote_id, uncertain=True)
+                except (PrinterTimeout, PrinterNotConnected, PrinterDisconnected) as error:
+                    raise PrinterTimeout("Start was acknowledged but could not be reconciled", remote_id=remote_id,
+                                         uncertain=True) from error
                 if not (self._status is not None and self._start_matches(remote_id, previous_info, self._status)):
                     raise PrinterTimeout("Start was acknowledged but printing did not begin", remote_id=remote_id, uncertain=True)
                 self._uncertain_start = None

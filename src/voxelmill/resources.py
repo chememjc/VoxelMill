@@ -16,8 +16,8 @@ import os
 import sys
 try:
     import resource
-except ImportError:
-    resource=None
+except ImportError:  # Windows
+    resource=None  # type: ignore[assignment]
 from .contracts import VoxelMillError
 from .topology import select_cpus
 
@@ -56,7 +56,8 @@ def execution_limits(budget, *, hard_memory=True):
     except MemoryError as exc:
         raise VoxelMillError('memory_budget','Operation exhausted the configured address-space memory ceiling') from exc
     finally:
-        native_limit=None
+        # Dropping the last reference ends the native worker ceiling.
+        del native_limit
         if old_limit is not None:
             resource.setrlimit(rlimit_as,old_limit)
         for tid,cpus in affinity.items():

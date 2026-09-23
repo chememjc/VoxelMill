@@ -499,7 +499,7 @@ def main(argv):
             rle = f.read(ld['DataLength'])
             trail = f.read(2)
             print("--- layer %d @ +%d ---" % (li, off))
-            for foff, fsize, kind, name in LAYER_FIELDS:
+            for foff, _fsize, kind, name in LAYER_FIELDS:
                 v = ld[name]
                 if kind == 'raw':
                     v = v.hex(' ')

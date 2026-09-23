@@ -21,7 +21,7 @@ def test_destination_policy(mode, feet, joins):
     evidence = {}
     assert _brace([], settings, [], graph=graph, evidence=evidence) == joins
     assert evidence['new_feet'] == feet
-    for a, b, _ in branches(graph):
+    for _a, b, _ in branches(graph):
         assert (b[2] < 1) == (mode == 'base')
 
 

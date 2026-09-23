@@ -208,7 +208,7 @@ def _directed_boundary_edges(faces):
         for u, v in ((a, b), (b, c), (c, a)):
             occurrences[(u, v) if u < v else (v, u)].append((u, v))
     directed = []
-    for key, uses in occurrences.items():
+    for uses in occurrences.values():
         if len(uses) == 1:
             directed.append(uses[0])
         elif len(uses) == 2 and uses[0] == uses[1]:
@@ -230,7 +230,7 @@ def _boundary_loops(directed_edges):
             return [], list(directed_edges)
         succ[a] = b
         indeg[b] += 1
-    for vertex, outs in succ.items():
+    for vertex in succ:
         if indeg[vertex] != 1:
             return [], list(directed_edges)
     seen = set()

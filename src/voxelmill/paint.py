@@ -4,7 +4,6 @@ Nothing here is automatic: a face is blocked or enforced only when the user
 paints it. Island births still receive contacts even on a blocked region,
 because an unsupported island will not print.
 """
-from copy import deepcopy
 
 import numpy as np
 

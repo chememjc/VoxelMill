@@ -254,7 +254,7 @@ def run_freecad_helper(argv: list[str], *, cancel: CancellationToken | None = No
                         {'engine': str(freecad)}) from exc
 
     deadline = None if timeout_s is None else time.monotonic() + timeout_s
-    buckets = {'out': [], 'err': []}
+    buckets: dict[str, list[Any]] = {'out': [], 'err': []}
 
     def _pump(stream, key):
         try:
