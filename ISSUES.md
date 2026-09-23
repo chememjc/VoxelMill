@@ -58,7 +58,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | N12 | Resolve GOO mirroring against both references | Feature | 4 | 5 | 20 | open (hardware) |
 | VM-060 | CI workflow that runs the tests | Test/CI | 4 | 5 | 20 | open |
 | B3 | Printer database beyond the Mars 5 Ultra | Feature | 4 | 4 | 16 | open |
-| VM-011 | Release builds likely ship without TBB | Perf | 4 | 4 | 16 | open |
+| VM-011 | Release builds ship without TBB (confirmed) | Perf | 4 | 4 | 16 | done |
 | VM-003 | Editor leaks a scratch directory on every reload | Bug | 5 | 3 | 15 | done |
 | VM-010 | Vectorize `hollow._bottom_open` | Perf | 5 | 3 | 15 | done |
 | B5 | Print-time estimation: physical calibration | Feature | 3 | 5 | 15 | open (hardware) |
@@ -179,9 +179,9 @@ Ease 5 · Benefit 3 · Confidence: sure · Status: done
 
 **Where.** `src/voxelmill/hollow.py:270-286`
 
-### VM-011 — Release builds likely ship without TBB
+### VM-011 — Release builds ship without TBB (confirmed)
 
-Ease 4 · Benefit 4 · Confidence: likely · Status: open
+Ease 4 · Benefit 4 · Confidence: likely · Status: done
 
 **Problem.** The release workflow installs no TBB, and `find_package(TBB QUIET)` fails silently. Released binaries then run the native 3D EDT (drainage) single-threaded and lack `_native.WorkerLimit`. Local development builds do have TBB, so benchmarks overstate what users get.
 

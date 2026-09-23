@@ -45,6 +45,7 @@ VoxelMill is a Linux single-part resin 3D-print preparation tool that transforms
 | `native/distance.cpp` | Adaptive triangle covering and nearest-surface distance verification |
 | `native/goo.cpp` | GOO v3 layer blob encoding and decoding with checksum |
 | `native/module.cpp` | pybind11 module entry point; registers all bindings |
+| `native/parallel.hpp` | `parallel_n` index loops (oneTBB when found, `std::thread` otherwise) and the `WorkerLimit` ceiling |
 
 ## Data Flow
 
@@ -326,7 +327,8 @@ All functions are bound via pybind11 in `native/module.cpp` and called from Pyth
 | `goo_encode_layer(image)` | uint8 (height,width) image | `bytes` | GOO v3 layer blob with magic and checksum |
 | `goo_decode_layer(blob, width, height)` | GOO v3 blob bytes, width, height integers | uint8 (height,width) image | Decode layer; raises on checksum or framing error |
 | `extract_runs(mask, want=1, cap=RUN_TABLE_CAP)` | uint8 occupancy panel, want 0/1, optional cap | `(starts, ends, row_offsets)` | Row-RLE of a binary panel; raises when the run table would exceed the cap. Dense fallback is the caller's decision |
-| `WorkerLimit(n)` | Worker count (1–32) | Instance | TBB global parallelism limit (if compiled with VOXELMILL_TBB) |
+| `WorkerLimit(n)` | Worker count (1–32) | Instance | Ceiling on native parallel loops while the object lives: `tbb::global_control` with TBB, the `std::thread` fallback's limit without |
+| `HAS_TBB` | — | `bool` | Whether this build links oneTBB (otherwise `native/parallel.hpp` uses `std::thread`) |
 
 ## Where to Change What
 

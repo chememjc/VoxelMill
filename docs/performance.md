@@ -155,11 +155,14 @@ shape that actually retries or hollows before spending effort on them.
 - The hot kernels are already C++ (native/raster.cpp, mesh.cpp, voxel.cpp,
   goo.cpp, ctb.cpp, distance.cpp, intersections.cpp). Rewriting them in C gains
   nothing; the win is architectural.
-- `native/module.cpp:29-35` binds `tbb::global_control` as a worker *ceiling*,
-  which creates no work of its own. Only `native/edt.cpp` calls
-  `tbb::parallel_for`; the other nine files in `native/` are still serial.
-  (Corrected 2026-09-22: this entry previously said nothing anywhere was
-  parallel, which `edt.cpp` contradicts.)
+- `_native.WorkerLimit` is a worker *ceiling* and creates no work of its own.
+  Only `native/edt.cpp` runs a parallel loop (`parallel_n` in
+  `native/parallel.hpp`); the other native files are still serial.
+- Release builds did not find TBB, so until 2026-09-23 the shipped EDT ran on one
+  core. `parallel.hpp` now falls back to `std::thread`. On a 160×300×300
+  volume without TBB, that took the EDT from 0.81 s at one worker to 0.18 s at
+  eight, with output bit-identical to scipy at every worker count.
+  `_native.HAS_TBB` says which build is loaded.
 
 ## Retired ideas (measured, do not redo)
 

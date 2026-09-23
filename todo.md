@@ -14,13 +14,17 @@ here. Keep this file under a screen.
 
 ## In flight
 
-- (none) — the 2026-09-23 audit wrote ISSUES.md and retired `plan.md`,
-  `plan2.md`, `nextsteps.md`, and `platforms.md`. The previous 439-line ledger was
-  folded into ISSUES.md and `docs/performance.md`.
+- VM-060 CI test workflow, then VM-061 lint config, then VM-011 TBB in CI.
 
-## Next up (from ISSUES.md "Recommended sequencing")
+## Done this session (2026-09-23), newest first
 
-1. VM-001 hex infill crash, VM-002 editor job pool, VM-003 scratch leak
-2. VM-010 vectorize `_bottom_open`
-3. VM-060 CI workflow, VM-061 lint config, VM-011 TBB in release builds
-4. Cut a release for VM-080
+- `1394be1` VM-002 editor job pool, VM-003 scratch leak
+- `aab35cc` VM-001 hex infill crash, VM-010 `_bottom_open` vectorized
+- `e45b359` audit → ISSUES.md; trackers retired
+
+## Next up (ISSUES.md "Recommended sequencing")
+
+1. VM-060, VM-061, VM-011, then a release for VM-080 (needs the user: tagging publishes)
+2. VM-014 fixtures, VM-019 16K scale check, then VM-012/013/015/018 by profile
+3. VM-040 → VM-041 → VM-044/045 → VM-043/042 → G3, then VM-049
+4. Hardware-bound items (N12, B5, E7, C5, D4, D6, H4, I3) cannot close here

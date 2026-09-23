@@ -1,8 +1,6 @@
 #include <pybind11/pybind11.h>
-#ifdef VOXELMILL_TBB
-#include <tbb/global_control.h>
-#endif
 #include <memory>
+#include "parallel.hpp"
 namespace py = pybind11;
 void bind_mesh(py::module_&);
 void bind_raster(py::module_&);
@@ -30,11 +28,13 @@ PYBIND11_MODULE(_native, m) {
 #ifdef VOXELMILL_CUDA
  bind_cuda(m);
 #endif
+// A worker ceiling for native parallel loops, held for the lifetime of the
+// Python object. It exists with or without TBB (see parallel.hpp).
+ py::class_<voxelmill::WorkerLimit>(m,"WorkerLimit")
+ .def(py::init<size_t>(), py::arg("workers"));
 #ifdef VOXELMILL_TBB
- py::class_<tbb::global_control>(m,"WorkerLimit")
- .def(py::init([](size_t n) {
-   if(n < 1 || n > 32) throw std::invalid_argument("workers must be 1..32");
-   return std::make_unique<tbb::global_control>(tbb::global_control::max_allowed_parallelism,n);
- }));
+ m.attr("HAS_TBB") = true;
+#else
+ m.attr("HAS_TBB") = false;
 #endif
 }

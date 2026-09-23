@@ -16,23 +16,11 @@
 #include <cstring>
 #include <stdexcept>
 #include <vector>
-#ifdef VOXELMILL_TBB
-#include <tbb/parallel_for.h>
-#include <tbb/blocked_range.h>
-#endif
+#include "parallel.hpp"
 namespace py = pybind11;
 namespace {
 
-template<class F>
-void parallel_n(int n, F &&fn) {
-#ifdef VOXELMILL_TBB
- tbb::parallel_for(tbb::blocked_range<int>(0, n), [&](const tbb::blocked_range<int> &r) {
-  for (int i = r.begin(); i < r.end(); ++i) fn(i);
- });
-#else
- for (int i = 0; i < n; ++i) fn(i);
-#endif
-}
+using voxelmill::parallel_n;
 
 struct Feat { int32_t c[3]; };
 
