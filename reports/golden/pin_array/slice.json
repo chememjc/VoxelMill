@@ -47,7 +47,7 @@
     ]
   },
   "format": "goo",
-  "layer_blob_sha256": "da78f7b08cba00f938234b90b2e6afc97ab5e2aa0051c0cecaefafc854ba8bdc",
+  "layer_blob_sha256": "bc79342cbbc4d2ce62ebb070383bdcc82a1e34194a0090469cbeefb68bd5bdaa",
   "layers": 420,
   "output": "out.goo",
   "print_time_s": 3145,
@@ -58,8 +58,8 @@
     "density_g_cm3": null,
     "mass_g": null,
     "source": "raster_volume_mm3",
-    "volume_ml": 3.959427679199999,
-    "volume_mm3": 3959.427679199999
+    "volume_ml": 4.285130282999998,
+    "volume_mm3": 4285.130282999999
   },
   "schema_version": 1,
   "shape_px": [
@@ -69,7 +69,7 @@
   "source": {
     "bounds": [
       [
-        -17.600000381469727,
+        -20.299999237060547,
         -17.600000381469727,
         0.0
       ],
@@ -80,8 +80,8 @@
       ]
     ],
     "path": "prepared.stl",
-    "sha256": "bc52303a73e0221333d36120536a0f30e19fee2e48caa986d42a3d1bf8697dd9",
-    "triangles": 113892
+    "sha256": "9e897eaff01ef34a260798dfe3fd92cbd31f33a279bafa70906962334168d2ac",
+    "triangles": 159604
   },
   "validation": {
     "checks": {
@@ -90,164 +90,20 @@
       "enclosed_voids": "pass",
       "growth_span": "pass",
       "image_orientation": "warn",
-      "overlap": "fail",
+      "overlap": "pass",
       "peel_risk": "warn",
-      "raster_connectivity": "fail",
+      "raster_connectivity": "pass",
       "transient_traps": "warn"
     },
     "diagnostics": [
       {
-        "code": "raster_island",
-        "details": {
-          "overlap_pixels": 0,
-          "pixels": 21764,
-          "touches_crop_edge": false
-        },
-        "layer": 300,
-        "message": "Component has insufficient face overlap with preceding layer",
-        "position_mm": [
-          -9.189000000000014,
-          -10.485000000000003,
-          15.025
-        ],
-        "severity": "error"
-      },
-      {
-        "code": "raster_island",
-        "details": {
-          "overlap_pixels": 0,
-          "pixels": 21764,
-          "touches_crop_edge": false
-        },
-        "layer": 300,
-        "message": "Component has insufficient face overlap with preceding layer",
-        "position_mm": [
-          -0.18900000000001427,
-          -10.485000000000003,
-          15.025
-        ],
-        "severity": "error"
-      },
-      {
-        "code": "raster_island",
-        "details": {
-          "overlap_pixels": 0,
-          "pixels": 21764,
-          "touches_crop_edge": false
-        },
-        "layer": 300,
-        "message": "Component has insufficient face overlap with preceding layer",
-        "position_mm": [
-          8.810999999999982,
-          -10.485000000000003,
-          15.025
-        ],
-        "severity": "error"
-      },
-      {
-        "code": "raster_island",
-        "details": {
-          "overlap_pixels": 0,
-          "pixels": 21764,
-          "touches_crop_edge": false
-        },
-        "layer": 300,
-        "message": "Component has insufficient face overlap with preceding layer",
-        "position_mm": [
-          -9.189000000000014,
-          -1.485000000000003,
-          15.025
-        ],
-        "severity": "error"
-      },
-      {
-        "code": "raster_island",
-        "details": {
-          "overlap_pixels": 0,
-          "pixels": 21764,
-          "touches_crop_edge": false
-        },
-        "layer": 300,
-        "message": "Component has insufficient face overlap with preceding layer",
-        "position_mm": [
-          -0.18900000000001427,
-          -1.485000000000003,
-          15.025
-        ],
-        "severity": "error"
-      },
-      {
-        "code": "raster_island",
-        "details": {
-          "overlap_pixels": 0,
-          "pixels": 21764,
-          "touches_crop_edge": false
-        },
-        "layer": 300,
-        "message": "Component has insufficient face overlap with preceding layer",
-        "position_mm": [
-          8.810999999999982,
-          -1.485000000000003,
-          15.025
-        ],
-        "severity": "error"
-      },
-      {
-        "code": "raster_island",
-        "details": {
-          "overlap_pixels": 0,
-          "pixels": 21764,
-          "touches_crop_edge": false
-        },
-        "layer": 300,
-        "message": "Component has insufficient face overlap with preceding layer",
-        "position_mm": [
-          -9.189000000000014,
-          7.5149999999999935,
-          15.025
-        ],
-        "severity": "error"
-      },
-      {
-        "code": "raster_island",
-        "details": {
-          "overlap_pixels": 0,
-          "pixels": 21764,
-          "touches_crop_edge": false
-        },
-        "layer": 300,
-        "message": "Component has insufficient face overlap with preceding layer",
-        "position_mm": [
-          -0.18900000000001427,
-          7.5149999999999935,
-          15.025
-        ],
-        "severity": "error"
-      },
-      {
-        "code": "raster_island",
-        "details": {
-          "overlap_pixels": 0,
-          "pixels": 21764,
-          "touches_crop_edge": false
-        },
-        "layer": 300,
-        "message": "Component has insufficient face overlap with preceding layer",
-        "position_mm": [
-          8.810999999999982,
-          7.5149999999999935,
-          15.025
-        ],
-        "severity": "error"
-      },
-      {
         "code": "transient_trap",
         "details": {
           "definition": "empty space enclosed by already-printed material except toward the growth direction",
-          "peak_layer": 35,
-          "peak_volume_mm3": 4.859999999999999e-05
+          "peak_layer": 33,
+          "peak_volume_mm3": 0.0005832000000000094
         },
-        "layer": 35,
+        "layer": 33,
         "message": "Empty space is enclosed by already-printed material during part of the build",
         "position_mm": null,
         "severity": "warning"
@@ -284,7 +140,7 @@
           "bottom_layer_top_mm": 0.2,
           "bottom_lift_speed": 0.05,
           "build_z_mm": 165.0,
-          "candidate_triangle_count": 17858,
+          "candidate_triangle_count": 10946,
           "heuristic": "uncalibrated geometry score; not a force or failure prediction",
           "layer_height_mm": 0.05,
           "limitations": [
@@ -293,18 +149,18 @@
             "open, duplicate and nonmanifold surfaces require independent validation"
           ],
           "max_angle_deg": 10.0,
-          "maximum_projected_area_mm2": 1328.1409809219058,
-          "maximum_score": 13.281409809219058,
+          "maximum_projected_area_mm2": 1397.6615994143824,
+          "maximum_score": 13.976615994143824,
           "normal_lift_speed": 0.05,
           "reference_lift_speed": 0.05,
-          "region_count": 2699,
+          "region_count": 4259,
           "regions": [
             {
-              "area_mm2": 1328.1409809219058,
+              "area_mm2": 1397.6615994143824,
               "bottom_layer_intersection": true,
               "bounds": [
                 [
-                  -17.600000381469727,
+                  -20.299999237060547,
                   -17.600000381469727,
                   0.0
                 ],
@@ -317,17 +173,17 @@
               "lift_speed": 0.05,
               "mean_z_mm": 0.0,
               "normal_layer_intersection": false,
-              "projected_area_mm2": 1328.1409809219058,
-              "score": 13.281409809219058,
+              "projected_area_mm2": 1397.6615994143824,
+              "score": 13.976615994143824,
               "threshold": true,
-              "triangle_count": 10422,
+              "triangle_count": 151,
               "z_layer_span": [
                 0,
                 0
               ]
             },
             {
-              "area_mm2": 872.7086084155676,
+              "area_mm2": 864.0259601296813,
               "bottom_layer_intersection": false,
               "bounds": [
                 [
@@ -342,12 +198,12 @@
                 ]
               ],
               "lift_speed": 0.05,
-              "mean_z_mm": 5.000000000000013,
+              "mean_z_mm": 4.999999999999988,
               "normal_layer_intersection": true,
-              "projected_area_mm2": 872.7086084155676,
-              "score": 8.991543238220999,
+              "projected_area_mm2": 864.0259601296813,
+              "score": 8.902085649820958,
               "threshold": true,
-              "triangle_count": 4190,
+              "triangle_count": 5524,
               "z_layer_span": [
                 100,
                 100
@@ -356,11 +212,11 @@
           ],
           "regions_truncated": false,
           "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-          "source_triangle_count": 113892,
+          "source_triangle_count": 159604,
           "status": "complete",
           "threshold_area_mm2": 100.0,
           "threshold_region_count": 2,
-          "total_region_count": 2699
+          "total_region_count": 4259
         },
         "layer": null,
         "message": "Large downward surface regions warrant review of orientation and release settings",
@@ -372,13 +228,13 @@
       "antialias_levels": 1,
       "antialias_supports": false,
       "crop_origin_px": [
-        3281,
+        3131,
         1181
       ],
       "diagnostic_examples_capped": 128,
       "drainage": {
         "analysis_grid": [
-          206,
+          220,
           192,
           116
         ],
@@ -409,30 +265,30 @@
         "min_void_volume_mm3": 0.0,
         "negligible_count": 0,
         "negligible_volume_mm3": 0.0,
-        "nodes": 427,
-        "peak_present_trapped_layer": 35,
-        "peak_present_trapped_volume_mm3": 4.859999999999999e-05,
+        "nodes": 826,
+        "peak_present_trapped_layer": 33,
+        "peak_present_trapped_volume_mm3": 0.0005832000000000094,
         "volume_mm3": 0.0
       },
-      "exposed_pixels": 244409116,
+      "exposed_pixels": 264514215,
       "grid": [
-        2108,
+        2258,
         1958
       ],
       "growth_decimation": 8,
       "growth_violation_pixels": 0,
-      "island_components": 9,
+      "island_components": 0,
       "island_components_on_crop_edge": 0,
       "layer_count": 420,
       "layer_height_mm": 0.05,
-      "nonempty_layers": 260,
+      "nonempty_layers": 420,
       "open_rows": 0,
       "peel_risk": {
         "basis": "oriented STL winding; exact shared-edge connectivity; native profile speed units; physical plate Z=0",
         "bottom_layer_top_mm": 0.2,
         "bottom_lift_speed": 0.05,
         "build_z_mm": 165.0,
-        "candidate_triangle_count": 17858,
+        "candidate_triangle_count": 10946,
         "heuristic": "uncalibrated geometry score; not a force or failure prediction",
         "layer_height_mm": 0.05,
         "limitations": [
@@ -441,18 +297,18 @@
           "open, duplicate and nonmanifold surfaces require independent validation"
         ],
         "max_angle_deg": 10.0,
-        "maximum_projected_area_mm2": 1328.1409809219058,
-        "maximum_score": 13.281409809219058,
+        "maximum_projected_area_mm2": 1397.6615994143824,
+        "maximum_score": 13.976615994143824,
         "normal_lift_speed": 0.05,
         "reference_lift_speed": 0.05,
-        "region_count": 2699,
+        "region_count": 4259,
         "regions": [
           {
-            "area_mm2": 1328.1409809219058,
+            "area_mm2": 1397.6615994143824,
             "bottom_layer_intersection": true,
             "bounds": [
               [
-                -17.600000381469727,
+                -20.299999237060547,
                 -17.600000381469727,
                 0.0
               ],
@@ -465,17 +321,17 @@
             "lift_speed": 0.05,
             "mean_z_mm": 0.0,
             "normal_layer_intersection": false,
-            "projected_area_mm2": 1328.1409809219058,
-            "score": 13.281409809219058,
+            "projected_area_mm2": 1397.6615994143824,
+            "score": 13.976615994143824,
             "threshold": true,
-            "triangle_count": 10422,
+            "triangle_count": 151,
             "z_layer_span": [
               0,
               0
             ]
           },
           {
-            "area_mm2": 872.7086084155676,
+            "area_mm2": 864.0259601296813,
             "bottom_layer_intersection": false,
             "bounds": [
               [
@@ -490,12 +346,12 @@
               ]
             ],
             "lift_speed": 0.05,
-            "mean_z_mm": 5.000000000000013,
+            "mean_z_mm": 4.999999999999988,
             "normal_layer_intersection": true,
-            "projected_area_mm2": 872.7086084155676,
-            "score": 8.991543238220999,
+            "projected_area_mm2": 864.0259601296813,
+            "score": 8.902085649820958,
             "threshold": true,
-            "triangle_count": 4190,
+            "triangle_count": 5524,
             "z_layer_span": [
               100,
               100
@@ -504,24 +360,24 @@
         ],
         "regions_truncated": false,
         "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-        "source_triangle_count": 113892,
+        "source_triangle_count": 159604,
         "status": "complete",
         "threshold_area_mm2": 100.0,
         "threshold_region_count": 2,
-        "total_region_count": 2699
+        "total_region_count": 4259
       },
       "pixel_pitch_mm": [
         0.018,
         0.018
       ],
-      "raster_volume_mm3": 3959.427679199999,
+      "raster_volume_mm3": 4285.130282999999,
       "transient_traps": {
         "definition": "empty space enclosed by already-printed material except toward the growth direction",
-        "peak_layer": 35,
-        "peak_volume_mm3": 4.859999999999999e-05
+        "peak_layer": 33,
+        "peak_volume_mm3": 0.0005832000000000094
       }
     },
-    "passed": false,
+    "passed": true,
     "schema_version": 1
   },
   "verification": {
@@ -536,6 +392,6 @@
     "pixel_comparison": "exact",
     "standalone_check": "voxelmill verify <file.goo>"
   },
-  "warned": true,
+  "warned": false,
   "written": true
 }

@@ -34,10 +34,10 @@
       "raft": false,
       "raster_volume_mm3": 0.0,
       "supports": {
-        "allow_part_to_part": false,
+        "allow_part_to_part": true,
         "analysis": {
           "analysis_pitch_mm": 0.15,
-          "columns": 31878,
+          "columns": 74290,
           "enclosed_void_volume_mm3": 0.0,
           "layer_height_mm": 0.05,
           "layers": 780,
@@ -81,6 +81,7 @@
           "no_destination_rejected": 0,
           "pattern_rejected": 0,
           "spacing_rejected": 0,
+          "support_collision_rejected": 0,
           "ungrounded_rejected": 0
         },
         "brace_spacing_mm": 15.0,
@@ -346,10 +347,10 @@
             "triangles": 3
           },
           "supports": {
-            "allow_part_to_part": false,
+            "allow_part_to_part": true,
             "analysis": {
               "analysis_pitch_mm": 0.15,
-              "columns": 31878,
+              "columns": 74290,
               "enclosed_void_volume_mm3": 0.0,
               "layer_height_mm": 0.05,
               "layers": 780,
@@ -393,6 +394,7 @@
               "no_destination_rejected": 0,
               "pattern_rejected": 0,
               "spacing_rejected": 0,
+              "support_collision_rejected": 0,
               "ungrounded_rejected": 0
             },
             "brace_spacing_mm": 15.0,
@@ -670,7 +672,7 @@
       "seal_voids": true,
       "smooth_iterations": 0,
       "step_linear_deflection_mm": 0.1,
-      "support_void_policy": "fail",
+      "support_void_policy": "ignore",
       "voxel_size_mm": 0.0,
       "weld_tolerance_mm": 0.0
     },
@@ -683,7 +685,7 @@
     },
     "schema_version": 1,
     "support": {
-      "allow_part_to_part": false,
+      "allow_part_to_part": true,
       "auto_bracing": true,
       "automatic": true,
       "base_cell_size_mm": 6.0,
@@ -874,6 +876,7 @@
       "plate_fit": "pass",
       "raster_connectivity": "pass",
       "support_anchor_load": "not_applicable",
+      "support_collisions": "pass",
       "support_coverage": "not_applicable",
       "support_routes": "pass",
       "support_slenderness": "pass",
@@ -1054,12 +1057,24 @@
         "sha256": "5f98ab303227cdf13b3374b504c0afff5cfb46f55909166cc032ad9c3ba64996",
         "triangles": 3
       },
-      "support_void_policy": "fail",
+      "support_collisions": {
+        "allowance_mm": 2.75,
+        "basis": "exact boolean of support solids against each part; graph capsules for support pairs; tip and anchor pieces are expected",
+        "expected_pieces": 0,
+        "intrusion_volume_mm3": 0.0,
+        "intrusions": 0,
+        "parts": [],
+        "support_overlap_examples": [],
+        "support_overlaps": 0,
+        "unchecked_parts": 0,
+        "worst": null
+      },
+      "support_void_policy": "ignore",
       "supports": {
-        "allow_part_to_part": false,
+        "allow_part_to_part": true,
         "analysis": {
           "analysis_pitch_mm": 0.15,
-          "columns": 31878,
+          "columns": 74290,
           "enclosed_void_volume_mm3": 0.0,
           "layer_height_mm": 0.05,
           "layers": 780,
@@ -1103,6 +1118,7 @@
           "no_destination_rejected": 0,
           "pattern_rejected": 0,
           "spacing_rejected": 0,
+          "support_collision_rejected": 0,
           "ungrounded_rejected": 0
         },
         "brace_spacing_mm": 15.0,
