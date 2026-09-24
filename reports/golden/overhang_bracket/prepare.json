@@ -21,18 +21,18 @@
   "diagnostics": [],
   "export": {
     "path": "prepared.stl",
-    "triangles": 205990,
+    "triangles": 206992,
     "warned": false,
     "written": true
   },
   "passes": [
     {
-      "exported_triangles": 205990,
+      "exported_triangles": 206992,
       "kind": "full_reslice",
       "pass": 1,
       "plate_fit": true,
       "raft": true,
-      "raster_volume_mm3": 18101.151615599996,
+      "raster_volume_mm3": 18104.4983574,
       "supports": {
         "allow_part_to_part": true,
         "analysis": {
@@ -80,7 +80,7 @@
         "brace_angle_deg": 45.0,
         "brace_azimuth_deg": 0.0,
         "brace_branches_per_node": 1,
-        "brace_candidates_examined": 1342,
+        "brace_candidates_examined": 1351,
         "brace_destination": "supports",
         "brace_diameter_mm": 0.6,
         "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
@@ -88,22 +88,22 @@
         "brace_max_length_mm": 30.0,
         "brace_min_height_mm": 3.0,
         "brace_new_feet": 0,
-        "brace_origins_examined": 561,
+        "brace_origins_examined": 570,
         "brace_pattern": "alternating",
         "brace_rejections": {
           "bounds_rejected": 88,
           "collision_rejected": 0,
-          "duplicate_rejected": 0,
+          "duplicate_rejected": 2,
           "foot_rejected": 0,
           "length_rejected": 0,
           "no_destination_rejected": 195,
           "pattern_rejected": 626,
-          "spacing_rejected": 525,
+          "spacing_rejected": 527,
           "support_collision_rejected": 11,
           "ungrounded_rejected": 17
         },
         "brace_spacing_mm": 5.0,
-        "braces": 229,
+        "braces": 236,
         "braces_capped": false,
         "braces_collision_rejected": 0,
         "contact_load_limit_mm2": 36.0,
@@ -316,7 +316,7 @@
           "trunks": 0
         },
         "unbraced": {
-          "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are never braced",
+          "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are braced only when support.brace_model_pillars is enabled",
           "model": {
             "braced_pillars": 0,
             "max_mm": 22.55,
@@ -326,8 +326,8 @@
           },
           "plate": {
             "braced_pillars": 87,
-            "max_mm": 25.894,
-            "max_slenderness": 28.77,
+            "max_mm": 10.0,
+            "max_slenderness": 11.11,
             "median_mm": 3.0,
             "pillars": 165
           }
@@ -348,8 +348,8 @@
           45.0
         ]
       ],
-      "union_triangles": 205990,
-      "union_volume_mm3": 18093.554899301704,
+      "union_triangles": 206992,
+      "union_volume_mm3": 18096.900438072185,
       "validation": {
         "checks": {
           "closed_surface": "pass",
@@ -409,7 +409,7 @@
               "bottom_layer_top_mm": 0.2,
               "bottom_lift_speed": 0.05,
               "build_z_mm": 165.0,
-              "candidate_triangle_count": 19815,
+              "candidate_triangle_count": 19814,
               "heuristic": "uncalibrated geometry score; not a force or failure prediction",
               "layer_height_mm": 0.05,
               "limitations": [
@@ -422,7 +422,7 @@
               "maximum_score": 11.786805768845243,
               "normal_lift_speed": 0.05,
               "reference_lift_speed": 0.05,
-              "region_count": 4308,
+              "region_count": 4309,
               "regions": [
                 {
                   "area_mm2": 1178.6805768845243,
@@ -508,11 +508,11 @@
               ],
               "regions_truncated": false,
               "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-              "source_triangle_count": 205990,
+              "source_triangle_count": 206992,
               "status": "complete",
               "threshold_area_mm2": 100.0,
               "threshold_region_count": 3,
-              "total_region_count": 4308
+              "total_region_count": 4309
             },
             "layer": null,
             "message": "Large downward surface regions warrant review of orientation and release settings",
@@ -603,7 +603,7 @@
             "peak_present_trapped_volume_mm3": 0.00014580000000000064,
             "volume_mm3": 1.6199999999999997e-05
           },
-          "exposed_pixels": 1117355038,
+          "exposed_pixels": 1117561627,
           "growth_decimation": 8,
           "growth_violation_pixels": 0,
           "island_components": 0,
@@ -616,7 +616,7 @@
             "bottom_layer_top_mm": 0.2,
             "bottom_lift_speed": 0.05,
             "build_z_mm": 165.0,
-            "candidate_triangle_count": 19815,
+            "candidate_triangle_count": 19814,
             "heuristic": "uncalibrated geometry score; not a force or failure prediction",
             "layer_height_mm": 0.05,
             "limitations": [
@@ -629,7 +629,7 @@
             "maximum_score": 11.786805768845243,
             "normal_lift_speed": 0.05,
             "reference_lift_speed": 0.05,
-            "region_count": 4308,
+            "region_count": 4309,
             "regions": [
               {
                 "area_mm2": 1178.6805768845243,
@@ -715,17 +715,17 @@
             ],
             "regions_truncated": false,
             "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-            "source_triangle_count": 205990,
+            "source_triangle_count": 206992,
             "status": "complete",
             "threshold_area_mm2": 100.0,
             "threshold_region_count": 3,
-            "total_region_count": 4308
+            "total_region_count": 4309
           },
           "pixel_pitch_mm": [
             0.018,
             0.018
           ],
-          "raster_volume_mm3": 18101.151615599996,
+          "raster_volume_mm3": 18104.4983574,
           "reopened": {
             "bounds": [
               [
@@ -751,8 +751,8 @@
             "open_layers": 0,
             "open_rows": 0,
             "path": "prepared.stl",
-            "sha256": "0fc773ab848d8e57ecde5bcf21ac2b80b850eaa7a4fbe523a8c218b3634c659c",
-            "triangles": 205990
+            "sha256": "8a8a08abb591764ce9487dca117f61864b69eb3e452ea4fa07611a397ef031d7",
+            "triangles": 206992
           },
           "supports": {
             "allow_part_to_part": true,
@@ -801,7 +801,7 @@
             "brace_angle_deg": 45.0,
             "brace_azimuth_deg": 0.0,
             "brace_branches_per_node": 1,
-            "brace_candidates_examined": 1342,
+            "brace_candidates_examined": 1351,
             "brace_destination": "supports",
             "brace_diameter_mm": 0.6,
             "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
@@ -809,22 +809,22 @@
             "brace_max_length_mm": 30.0,
             "brace_min_height_mm": 3.0,
             "brace_new_feet": 0,
-            "brace_origins_examined": 561,
+            "brace_origins_examined": 570,
             "brace_pattern": "alternating",
             "brace_rejections": {
               "bounds_rejected": 88,
               "collision_rejected": 0,
-              "duplicate_rejected": 0,
+              "duplicate_rejected": 2,
               "foot_rejected": 0,
               "length_rejected": 0,
               "no_destination_rejected": 195,
               "pattern_rejected": 626,
-              "spacing_rejected": 525,
+              "spacing_rejected": 527,
               "support_collision_rejected": 11,
               "ungrounded_rejected": 17
             },
             "brace_spacing_mm": 5.0,
-            "braces": 229,
+            "braces": 236,
             "braces_capped": false,
             "braces_collision_rejected": 0,
             "contact_load_limit_mm2": 36.0,
@@ -1037,7 +1037,7 @@
               "trunks": 0
             },
             "unbraced": {
-              "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are never braced",
+              "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are braced only when support.brace_model_pillars is enabled",
               "model": {
                 "braced_pillars": 0,
                 "max_mm": 22.55,
@@ -1047,8 +1047,8 @@
               },
               "plate": {
                 "braced_pillars": 87,
-                "max_mm": 25.894,
-                "max_slenderness": 28.77,
+                "max_mm": 10.0,
+                "max_slenderness": 11.11,
                 "median_mm": 3.0,
                 "pillars": 165
               }
@@ -1274,6 +1274,7 @@
       "brace_max_distance_mm": 0.0,
       "brace_max_length_mm": 30.0,
       "brace_min_height_mm": 3.0,
+      "brace_model_pillars": false,
       "brace_pattern": "alternating",
       "brace_spacing_mm": 5.0,
       "break_point_diameter_mm": 0.8,
@@ -1338,7 +1339,7 @@
         {
           "name": "supports_and_raft",
           "orientation": "closed_positive",
-          "triangles": 217066
+          "triangles": 217710
         }
       ],
       "max_displacement_mm": 0.0,
@@ -1404,8 +1405,8 @@
       "density_g_cm3": null,
       "mass_g": null,
       "source": "raster_volume_mm3",
-      "volume_ml": 18.101151615599996,
-      "volume_mm3": 18101.151615599996
+      "volume_ml": 18.1044983574,
+      "volume_mm3": 18104.4983574
     },
     "transform": {
       "mirror": [
@@ -4560,12 +4561,6 @@
         "start": "brace_joint708"
       },
       {
-        "end": "brace_joint648",
-        "kind": "branched",
-        "radius_mm": 0.45,
-        "start": "brace_joint709"
-      },
-      {
         "end": "brace_joint709",
         "kind": "brace",
         "radius_mm": 0.3,
@@ -5112,12 +5107,6 @@
         "start": "brace_joint768"
       },
       {
-        "end": "brace_joint709",
-        "kind": "branched",
-        "radius_mm": 0.45,
-        "start": "brace_joint770"
-      },
-      {
         "end": "brace_joint708",
         "kind": "branched",
         "radius_mm": 0.45,
@@ -5656,12 +5645,6 @@
         "kind": "branched",
         "radius_mm": 0.45,
         "start": "brace_joint830"
-      },
-      {
-        "end": "brace_joint770",
-        "kind": "branched",
-        "radius_mm": 0.45,
-        "start": "brace_joint831"
       },
       {
         "end": "brace_joint831",
@@ -6228,12 +6211,6 @@
         "start": "brace_joint890"
       },
       {
-        "end": "brace_joint831",
-        "kind": "branched",
-        "radius_mm": 0.45,
-        "start": "brace_joint892"
-      },
-      {
         "end": "brace_joint830",
         "kind": "branched",
         "radius_mm": 0.45,
@@ -6606,12 +6583,6 @@
         "start": "brace_joint924"
       },
       {
-        "end": "brace_joint862",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "brace_joint925"
-      },
-      {
         "end": "brace_joint925",
         "kind": "brace",
         "radius_mm": 0.3,
@@ -6670,12 +6641,6 @@
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "brace_joint930"
-      },
-      {
-        "end": "brace_joint870",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "brace_joint931"
       },
       {
         "end": "brace_joint931",
@@ -7218,12 +7183,6 @@
         "start": "foot147"
       },
       {
-        "end": "brace_joint892",
-        "kind": "branched",
-        "radius_mm": 0.45,
-        "start": "brace_joint964"
-      },
-      {
         "end": "brace_joint964",
         "kind": "brace",
         "radius_mm": 0.3,
@@ -7300,12 +7259,6 @@
         "kind": "branched",
         "radius_mm": 0.45,
         "start": "foot156"
-      },
-      {
-        "end": "brace_joint608",
-        "kind": "branched",
-        "radius_mm": 0.45,
-        "start": "brace_joint969"
       },
       {
         "end": "brace_joint970",
@@ -7740,12 +7693,6 @@
         "start": "foot193"
       },
       {
-        "end": "brace_joint863",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "brace_joint997"
-      },
-      {
         "end": "brace_joint997",
         "kind": "brace",
         "radius_mm": 0.3,
@@ -7770,16 +7717,196 @@
         "start": "foot197"
       },
       {
-        "end": "brace_joint871",
+        "end": "brace_joint999",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "brace_joint998"
+      },
+      {
+        "end": "brace_joint608",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint1000"
+      },
+      {
+        "end": "brace_joint1001",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint709"
+      },
+      {
+        "end": "brace_joint648",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint1001"
+      },
+      {
+        "end": "brace_joint1001",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "brace_joint1000"
+      },
+      {
+        "end": "brace_joint1000",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint1002"
+      },
+      {
+        "end": "brace_joint1003",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint770"
+      },
+      {
+        "end": "brace_joint709",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint1003"
+      },
+      {
+        "end": "brace_joint1003",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "brace_joint1002"
+      },
+      {
+        "end": "brace_joint1002",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint1004"
+      },
+      {
+        "end": "brace_joint1005",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint831"
+      },
+      {
+        "end": "brace_joint770",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint1005"
+      },
+      {
+        "end": "brace_joint1005",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "brace_joint1004"
+      },
+      {
+        "end": "brace_joint1004",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint1006"
+      },
+      {
+        "end": "brace_joint1007",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint892"
+      },
+      {
+        "end": "brace_joint831",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint1007"
+      },
+      {
+        "end": "brace_joint1007",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "brace_joint1006"
+      },
+      {
+        "end": "brace_joint1008",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint969"
+      },
+      {
+        "end": "brace_joint1006",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint1008"
+      },
+      {
+        "end": "brace_joint1009",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint964"
+      },
+      {
+        "end": "brace_joint892",
+        "kind": "branched",
+        "radius_mm": 0.45,
+        "start": "brace_joint1009"
+      },
+      {
+        "end": "brace_joint1009",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "brace_joint1008"
+      },
+      {
+        "end": "brace_joint1010",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint997"
+      },
+      {
+        "end": "brace_joint863",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint1010"
+      },
+      {
+        "end": "brace_joint1011",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint925"
+      },
+      {
+        "end": "brace_joint862",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint1011"
+      },
+      {
+        "end": "brace_joint1011",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "brace_joint1010"
+      },
+      {
+        "end": "brace_joint1012",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "brace_joint999"
       },
       {
-        "end": "brace_joint999",
+        "end": "brace_joint871",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint1012"
+      },
+      {
+        "end": "brace_joint1013",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint931"
+      },
+      {
+        "end": "brace_joint870",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint1013"
+      },
+      {
+        "end": "brace_joint1013",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "brace_joint998"
+        "start": "brace_joint1012"
       }
     ],
     "nodes": [
@@ -16782,6 +16909,132 @@
           10.0,
           0.76284045886307
         ]
+      },
+      {
+        "id": "brace_joint1000",
+        "kind": "brace_junction",
+        "position_mm": [
+          7.3749999999999964,
+          10.774999999999999,
+          28.0
+        ]
+      },
+      {
+        "id": "brace_joint1001",
+        "kind": "brace_junction",
+        "position_mm": [
+          5.274999999999995,
+          11.075,
+          25.878679656440355
+        ]
+      },
+      {
+        "id": "brace_joint1002",
+        "kind": "brace_junction",
+        "position_mm": [
+          7.3749999999999964,
+          10.774999999999999,
+          23.0
+        ]
+      },
+      {
+        "id": "brace_joint1003",
+        "kind": "brace_junction",
+        "position_mm": [
+          5.274999999999995,
+          11.075,
+          20.878679656440355
+        ]
+      },
+      {
+        "id": "brace_joint1004",
+        "kind": "brace_junction",
+        "position_mm": [
+          7.3749999999999964,
+          10.774999999999999,
+          18.0
+        ]
+      },
+      {
+        "id": "brace_joint1005",
+        "kind": "brace_junction",
+        "position_mm": [
+          5.274999999999995,
+          11.075,
+          15.878679656440356
+        ]
+      },
+      {
+        "id": "brace_joint1006",
+        "kind": "brace_junction",
+        "position_mm": [
+          7.3749999999999964,
+          10.774999999999999,
+          13.0
+        ]
+      },
+      {
+        "id": "brace_joint1007",
+        "kind": "brace_junction",
+        "position_mm": [
+          5.274999999999995,
+          11.075,
+          10.878679656440356
+        ]
+      },
+      {
+        "id": "brace_joint1008",
+        "kind": "brace_junction",
+        "position_mm": [
+          7.3749999999999964,
+          10.774999999999999,
+          8.0
+        ]
+      },
+      {
+        "id": "brace_joint1009",
+        "kind": "brace_junction",
+        "position_mm": [
+          5.274999999999995,
+          11.075,
+          5.8786796564403545
+        ]
+      },
+      {
+        "id": "brace_joint1010",
+        "kind": "brace_junction",
+        "position_mm": [
+          20.0,
+          -10.0,
+          8.0
+        ]
+      },
+      {
+        "id": "brace_joint1011",
+        "kind": "brace_junction",
+        "position_mm": [
+          18.125,
+          -10.0,
+          6.125
+        ]
+      },
+      {
+        "id": "brace_joint1012",
+        "kind": "brace_junction",
+        "position_mm": [
+          20.0,
+          10.0,
+          8.0
+        ]
+      },
+      {
+        "id": "brace_joint1013",
+        "kind": "brace_junction",
+        "position_mm": [
+          18.125,
+          10.0,
+          6.125
+        ]
       }
     ],
     "overrides": []
@@ -16824,7 +17077,7 @@
           "bottom_layer_top_mm": 0.2,
           "bottom_lift_speed": 0.05,
           "build_z_mm": 165.0,
-          "candidate_triangle_count": 19815,
+          "candidate_triangle_count": 19814,
           "heuristic": "uncalibrated geometry score; not a force or failure prediction",
           "layer_height_mm": 0.05,
           "limitations": [
@@ -16837,7 +17090,7 @@
           "maximum_score": 11.786805768845243,
           "normal_lift_speed": 0.05,
           "reference_lift_speed": 0.05,
-          "region_count": 4308,
+          "region_count": 4309,
           "regions": [
             {
               "area_mm2": 1178.6805768845243,
@@ -16923,11 +17176,11 @@
           ],
           "regions_truncated": false,
           "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-          "source_triangle_count": 205990,
+          "source_triangle_count": 206992,
           "status": "complete",
           "threshold_area_mm2": 100.0,
           "threshold_region_count": 3,
-          "total_region_count": 4308
+          "total_region_count": 4309
         },
         "layer": null,
         "message": "Large downward surface regions warrant review of orientation and release settings",
@@ -17528,7 +17781,7 @@
         "support_volume_mm3": 1.6199999999999997e-05,
         "volume_mm3": 1.6199999999999997e-05
       },
-      "exposed_pixels": 1117355038,
+      "exposed_pixels": 1117561627,
       "growth_decimation": 8,
       "growth_violation_pixels": 0,
       "ignored_support_bottlenecks": {
@@ -17552,7 +17805,7 @@
         "bottom_layer_top_mm": 0.2,
         "bottom_lift_speed": 0.05,
         "build_z_mm": 165.0,
-        "candidate_triangle_count": 19815,
+        "candidate_triangle_count": 19814,
         "heuristic": "uncalibrated geometry score; not a force or failure prediction",
         "layer_height_mm": 0.05,
         "limitations": [
@@ -17565,7 +17818,7 @@
         "maximum_score": 11.786805768845243,
         "normal_lift_speed": 0.05,
         "reference_lift_speed": 0.05,
-        "region_count": 4308,
+        "region_count": 4309,
         "regions": [
           {
             "area_mm2": 1178.6805768845243,
@@ -17651,17 +17904,17 @@
         ],
         "regions_truncated": false,
         "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-        "source_triangle_count": 205990,
+        "source_triangle_count": 206992,
         "status": "complete",
         "threshold_area_mm2": 100.0,
         "threshold_region_count": 3,
-        "total_region_count": 4308
+        "total_region_count": 4309
       },
       "pixel_pitch_mm": [
         0.018,
         0.018
       ],
-      "raster_volume_mm3": 18101.151615599996,
+      "raster_volume_mm3": 18104.4983574,
       "reopened": {
         "bounds": [
           [
@@ -17687,8 +17940,8 @@
         "open_layers": 0,
         "open_rows": 0,
         "path": "prepared.stl",
-        "sha256": "0fc773ab848d8e57ecde5bcf21ac2b80b850eaa7a4fbe523a8c218b3634c659c",
-        "triangles": 205990
+        "sha256": "8a8a08abb591764ce9487dca117f61864b69eb3e452ea4fa07611a397ef031d7",
+        "triangles": 206992
       },
       "support_collisions": {
         "allowance_mm": 2.6500000000000004,
@@ -17758,7 +18011,7 @@
         "brace_angle_deg": 45.0,
         "brace_azimuth_deg": 0.0,
         "brace_branches_per_node": 1,
-        "brace_candidates_examined": 1342,
+        "brace_candidates_examined": 1351,
         "brace_destination": "supports",
         "brace_diameter_mm": 0.6,
         "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
@@ -17766,22 +18019,22 @@
         "brace_max_length_mm": 30.0,
         "brace_min_height_mm": 3.0,
         "brace_new_feet": 0,
-        "brace_origins_examined": 561,
+        "brace_origins_examined": 570,
         "brace_pattern": "alternating",
         "brace_rejections": {
           "bounds_rejected": 88,
           "collision_rejected": 0,
-          "duplicate_rejected": 0,
+          "duplicate_rejected": 2,
           "foot_rejected": 0,
           "length_rejected": 0,
           "no_destination_rejected": 195,
           "pattern_rejected": 626,
-          "spacing_rejected": 525,
+          "spacing_rejected": 527,
           "support_collision_rejected": 11,
           "ungrounded_rejected": 17
         },
         "brace_spacing_mm": 5.0,
-        "braces": 229,
+        "braces": 236,
         "braces_capped": false,
         "braces_collision_rejected": 0,
         "contact_load_limit_mm2": 36.0,
@@ -17994,7 +18247,7 @@
           "trunks": 0
         },
         "unbraced": {
-          "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are never braced",
+          "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are braced only when support.brace_model_pillars is enabled",
           "model": {
             "braced_pillars": 0,
             "max_mm": 22.55,
@@ -18004,8 +18257,8 @@
           },
           "plate": {
             "braced_pillars": 87,
-            "max_mm": 25.894,
-            "max_slenderness": 28.77,
+            "max_mm": 10.0,
+            "max_slenderness": 11.11,
             "median_mm": 3.0,
             "pillars": 165
           }

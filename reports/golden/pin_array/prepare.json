@@ -410,7 +410,7 @@
           "trunks": 0
         },
         "unbraced": {
-          "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are never braced",
+          "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are braced only when support.brace_model_pillars is enabled",
           "model": {
             "braced_pillars": 0,
             "max_mm": 6.0,
@@ -1089,7 +1089,7 @@
               "trunks": 0
             },
             "unbraced": {
-              "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are never braced",
+              "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are braced only when support.brace_model_pillars is enabled",
               "model": {
                 "braced_pillars": 0,
                 "max_mm": 6.0,
@@ -1326,6 +1326,7 @@
       "brace_max_distance_mm": 0.0,
       "brace_max_length_mm": 30.0,
       "brace_min_height_mm": 3.0,
+      "brace_model_pillars": false,
       "brace_pattern": "alternating",
       "brace_spacing_mm": 5.0,
       "break_point_diameter_mm": 0.8,
@@ -9275,7 +9276,7 @@
           "trunks": 0
         },
         "unbraced": {
-          "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are never braced",
+          "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are braced only when support.brace_model_pillars is enabled",
           "model": {
             "braced_pillars": 0,
             "max_mm": 6.0,

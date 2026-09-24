@@ -47,7 +47,7 @@
     ]
   },
   "format": "goo",
-  "layer_blob_sha256": "8eca78660c5d6e9ea1ae3a0cc3a094637551c984dbe628c8f8a5e3373a4799f3",
+  "layer_blob_sha256": "22df9fce3e6991d0508c82967f2de4d4c6db54d42a486e9159caa573e1137549",
   "layers": 900,
   "output": "out.goo",
   "print_time_s": 6505,
@@ -58,8 +58,8 @@
     "density_g_cm3": null,
     "mass_g": null,
     "source": "raster_volume_mm3",
-    "volume_ml": 18.101151615599996,
-    "volume_mm3": 18101.151615599996
+    "volume_ml": 18.1044983574,
+    "volume_mm3": 18104.4983574
   },
   "schema_version": 1,
   "shape_px": [
@@ -80,8 +80,8 @@
       ]
     ],
     "path": "prepared.stl",
-    "sha256": "0fc773ab848d8e57ecde5bcf21ac2b80b850eaa7a4fbe523a8c218b3634c659c",
-    "triangles": 205990
+    "sha256": "8a8a08abb591764ce9487dca117f61864b69eb3e452ea4fa07611a397ef031d7",
+    "triangles": 206992
   },
   "validation": {
     "checks": {
@@ -164,7 +164,7 @@
           "bottom_layer_top_mm": 0.2,
           "bottom_lift_speed": 0.05,
           "build_z_mm": 165.0,
-          "candidate_triangle_count": 19815,
+          "candidate_triangle_count": 19814,
           "heuristic": "uncalibrated geometry score; not a force or failure prediction",
           "layer_height_mm": 0.05,
           "limitations": [
@@ -177,7 +177,7 @@
           "maximum_score": 11.786805768845243,
           "normal_lift_speed": 0.05,
           "reference_lift_speed": 0.05,
-          "region_count": 4308,
+          "region_count": 4309,
           "regions": [
             {
               "area_mm2": 1178.6805768845243,
@@ -263,11 +263,11 @@
           ],
           "regions_truncated": false,
           "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-          "source_triangle_count": 205990,
+          "source_triangle_count": 206992,
           "status": "complete",
           "threshold_area_mm2": 100.0,
           "threshold_region_count": 3,
-          "total_region_count": 4308
+          "total_region_count": 4309
         },
         "layer": null,
         "message": "Large downward surface regions warrant review of orientation and release settings",
@@ -1067,7 +1067,7 @@
         "peak_present_trapped_volume_mm3": 0.00014580000000000064,
         "volume_mm3": 1.6199999999999997e-05
       },
-      "exposed_pixels": 1117355038,
+      "exposed_pixels": 1117561627,
       "grid": [
         2498,
         1550
@@ -1085,7 +1085,7 @@
         "bottom_layer_top_mm": 0.2,
         "bottom_lift_speed": 0.05,
         "build_z_mm": 165.0,
-        "candidate_triangle_count": 19815,
+        "candidate_triangle_count": 19814,
         "heuristic": "uncalibrated geometry score; not a force or failure prediction",
         "layer_height_mm": 0.05,
         "limitations": [
@@ -1098,7 +1098,7 @@
         "maximum_score": 11.786805768845243,
         "normal_lift_speed": 0.05,
         "reference_lift_speed": 0.05,
-        "region_count": 4308,
+        "region_count": 4309,
         "regions": [
           {
             "area_mm2": 1178.6805768845243,
@@ -1184,17 +1184,17 @@
         ],
         "regions_truncated": false,
         "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-        "source_triangle_count": 205990,
+        "source_triangle_count": 206992,
         "status": "complete",
         "threshold_area_mm2": 100.0,
         "threshold_region_count": 3,
-        "total_region_count": 4308
+        "total_region_count": 4309
       },
       "pixel_pitch_mm": [
         0.018,
         0.018
       ],
-      "raster_volume_mm3": 18101.151615599996,
+      "raster_volume_mm3": 18104.4983574,
       "transient_traps": {
         "definition": "empty space enclosed by already-printed material except toward the growth direction",
         "peak_layer": 525,
