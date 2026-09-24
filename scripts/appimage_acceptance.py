@@ -112,10 +112,11 @@ def _reset_output(output: Path):
 
 def _assert_release_settings(report, expected_version):
     support = report["settings"]["support"]
-    assert support["brace_spacing_mm"] == 15.0, support["brace_spacing_mm"]
+    assert support["brace_spacing_mm"] == 5.0, support["brace_spacing_mm"]
     assert support["brace_max_length_mm"] == 30.0, support["brace_max_length_mm"]
     assert "brace_start_height_mm" not in support
-    assert support["allow_part_to_part"] is False
+    assert support["allow_part_to_part"] is True
+    assert support["brace_model_pillars"] is False
     return {
         "version": expected_version,
         "brace_spacing_mm": support["brace_spacing_mm"],
@@ -304,10 +305,10 @@ def run_inside(args):
         "process": {"layer_height_mm": 0.2},
         "resources": {"workers": 2},
     })
-    assert settings["support"]["brace_spacing_mm"] == 15.0
+    assert settings["support"]["brace_spacing_mm"] == 5.0
     assert settings["support"]["brace_max_length_mm"] == 30.0
     assert "brace_start_height_mm" not in settings["support"]
-    assert settings["support"]["allow_part_to_part"] is False
+    assert settings["support"]["allow_part_to_part"] is True
 
     output = Path(args.output_dir)
     output.mkdir(parents=True, exist_ok=True)
@@ -356,7 +357,7 @@ def run_inside(args):
         window.document.save(project)
         restored = Document.load(project)
         assert restored.settings["support"]["spacing_mm"] == edited["support"]["spacing_mm"]
-        assert restored.settings["support"]["brace_spacing_mm"] == 15.0
+        assert restored.settings["support"]["brace_spacing_mm"] == 5.0
         assert restored.settings["support"]["brace_max_length_mm"] == 30.0
         window.close()
 

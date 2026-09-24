@@ -29,18 +29,19 @@ def test_checksum_streams_the_artifact(tmp_path, acceptance):
 
 def test_release_defaults_and_removed_setting_are_required(acceptance):
     report = {"settings": {"support": {
-        "brace_spacing_mm": 15.0,
+        "brace_spacing_mm": 5.0,
         "brace_max_length_mm": 30.0,
-        "allow_part_to_part": False,
+        "allow_part_to_part": True,
+        "brace_model_pillars": False,
     }}}
-    evidence = acceptance._assert_release_settings(report, "0.5.3")
+    evidence = acceptance._assert_release_settings(report, "0.6.0")
     assert evidence == {
-        "version": "0.5.3", "brace_spacing_mm": 15.0,
-        "brace_max_length_mm": 30.0, "allow_part_to_part": False,
+        "version": "0.6.0", "brace_spacing_mm": 5.0,
+        "brace_max_length_mm": 30.0, "allow_part_to_part": True,
     }
     report["settings"]["support"]["brace_start_height_mm"] = 0.0
     with pytest.raises(AssertionError):
-        acceptance._assert_release_settings(report, "0.5.3")
+        acceptance._assert_release_settings(report, "0.6.0")
 
 
 def test_runtime_environment_is_isolated_from_the_development_venv(tmp_path, acceptance):
