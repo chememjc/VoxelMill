@@ -133,7 +133,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-042 | Split `gui/window.py` (3,874 lines) into controllers | Arch | 1 | 4 | 4 | open |
 | A9 | Import CHITUBOX / Lychee profiles | Feature | 3 | 1 | 3 | open |
 | C11 | Text / serial embossing | Feature | 3 | 1 | 3 | open |
-| VM-028 | Minor: CUDA morphology allocation, MST, lock polling, undo copies | Perf | 3 | 1 | 3 | open |
+| VM-028 | Minor: CUDA morphology allocation, MST, lock polling, undo copies | Perf | 3 | 1 | 3 | won't fix (measured) |
 | VM-072 | The historical `part-to-part` support example routes nothing | Docs | 3 | 1 | 3 | open |
 | D1 | Joint support type | Feature | 1 | 3 | 3 | partial |
 | D6 | Support mechanics calibration; promote anchor-load warn→fail | Feature | 1 | 3 | 3 | open (hardware) |
@@ -415,13 +415,15 @@ Ease 2 · Benefit 2 · Confidence: measure · Status: open
 
 ### VM-028 — Minor: CUDA morphology allocation, MST, lock polling, undo copies
 
-Ease 3 · Benefit 1 · Confidence: sure · Status: open
+Ease 3 · Benefit 1 · Confidence: sure · Status: won't fix (measured)
 
 **Problem.** The CUDA morphology does `cudaMalloc`/`cudaMemcpy`/`cudaFree` on every call. `minimum_spanning_edges` is O(n²) (capped at 8192 feet). `LayerSlicer` polls its lock every 50 ms. Undo deep-copies the whole settings dict on every edit.
 
 **Fix.** Handle each when a profile shows it matters: persistent device buffers; `scipy.sparse.csgraph.minimum_spanning_tree` over a k-NN graph; a condition variable; diff-based undo records.
 
 **Where.** `native/cuda_morphology.cu:9-13`, `src/voxelmill/bases.py:22-52`, `src/voxelmill/gui/services.py:301-343`, `src/voxelmill/gui/document.py:161-194`
+
+**Measured (2026-09-23).** `minimum_spanning_edges` takes 0.05 s at a realistic 1,500 feet and 0.55 s at its hard cap of 8,192. The `LayerSlicer` poll is deliberate: a waiting scrub must still honour cancellation while another job holds the lock, and a blocking `acquire()` cannot. Undo copies a settings dict of a few KB. The CUDA path is not built on the audit machine, so it was not measured; reopen it if a CUDA build profiles slow. None of these justified a change.
 
 ## Architecture and extensibility
 
