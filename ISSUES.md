@@ -116,7 +116,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-082 | macOS signing and notarization | Release | 2 | 3 | 6 | open |
 | VM-026 | Link-time optimization for `_native` | Perf | 5 | 1 | 5 | open |
 | VM-046 | One structured error helper | Arch | 5 | 1 | 5 | open |
-| VM-047 | Deduplicate voxel-size bisection | Arch | 5 | 1 | 5 | open |
+| VM-047 | Deduplicate voxel-size bisection | Arch | 5 | 1 | 5 | done |
 | VM-048 | Consistent dtype contract at the pybind boundary | Arch | 5 | 1 | 5 | done |
 | VM-062 | Shared `tests/conftest.py` | Test/CI | 5 | 1 | 5 | open |
 | VM-070 | Docstrings for the largest undocumented functions | Docs | 5 | 1 | 5 | open |
@@ -448,7 +448,7 @@ Ease 5 · Benefit 1 · Confidence: sure · Status: open
 
 ### VM-047 — Deduplicate voxel-size bisection
 
-Ease 5 · Benefit 1 · Confidence: sure · Status: open
+Ease 5 · Benefit 1 · Confidence: sure · Status: done
 
 **Problem.** `repair.choose_voxel_size` and `hollow.choose_hollow_voxel_size` share a near-identical 48-step bisection with the same budget math.
 

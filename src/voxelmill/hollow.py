@@ -16,35 +16,10 @@ from scipy import ndimage as ndi
 from . import geometry
 from .assembly import PreparedModel, prepare_model
 from .contracts import CancellationToken, VoxelMillError, ResourceBudget, no_progress
-from .repair import _grid
+from .repair import _finest_fitting_pitch, _grid, _grid_bytes
 
 CROSS3 = ndi.generate_binary_structure(3, 1)
 MAX_VOXEL_BYTES_FRACTION = 0.35
-
-
-def _grid_bytes(bounds, pitch):
-    _, dims = _grid(bounds, pitch)
-    return dims, float(np.prod(dims + 2))
-
-
-def _finest_fitting_pitch(bounds, fine, coarse, ceiling):
-    """Smallest pitch in [fine, coarse] whose padded grid fits ``ceiling`` bytes.
-
-    ``coarse`` must already fit. Returns ``(pitch, dims, needed)``.
-    """
-    dims, needed = _grid_bytes(bounds, fine)
-    if needed <= ceiling:
-        return fine, dims, needed
-    best_dims, best_needed = _grid_bytes(bounds, coarse)
-    lo, hi = fine, coarse
-    for _ in range(48):
-        mid = (lo + hi) * 0.5
-        mid_dims, mid_needed = _grid_bytes(bounds, mid)
-        if mid_needed <= ceiling:
-            hi, best_dims, best_needed = mid, mid_dims, mid_needed
-        else:
-            lo = mid
-    return hi, best_dims, best_needed
 
 
 def choose_hollow_voxel_size(bounds, settings, budget):

@@ -29,6 +29,31 @@ def _grid(bounds, voxel_mm, margin=2):
     return low, dims
 
 
+def _grid_bytes(bounds, pitch):
+    _, dims = _grid(bounds, pitch)
+    return dims, float(np.prod(dims + 2))
+
+
+def _finest_fitting_pitch(bounds, fine, coarse, ceiling):
+    """Smallest pitch in [fine, coarse] whose padded grid fits ``ceiling`` bytes.
+
+    ``coarse`` must already fit. Returns ``(pitch, dims, needed)``.
+    """
+    dims, needed = _grid_bytes(bounds, fine)
+    if needed <= ceiling:
+        return fine, dims, needed
+    best_dims, best_needed = _grid_bytes(bounds, coarse)
+    lo, hi = fine, coarse
+    for _ in range(48):
+        mid = (lo + hi) * 0.5
+        mid_dims, mid_needed = _grid_bytes(bounds, mid)
+        if mid_needed <= ceiling:
+            hi, best_dims, best_needed = mid, mid_dims, mid_needed
+        else:
+            lo = mid
+    return hi, best_dims, best_needed
+
+
 def choose_voxel_size(bounds, settings, budget):
     """Largest size within budget whose half-diagonal meets max_deviation_mm."""
     repair = settings['repair']
@@ -47,8 +72,7 @@ def choose_voxel_size(bounds, settings, budget):
                         'Voxel repair needs a positive repair.voxel_size_mm or repair.max_deviation_mm',
                         {'voxel_size_mm': repair.get('voxel_size_mm'),
                          'max_deviation_mm': repair['max_deviation_mm']})
-    _, dims = _grid(bounds, size)
-    needed = float(np.prod(dims + 2))
+    dims, needed = _grid_bytes(bounds, size)
     if needed <= ceiling:
         return size, dims, needed
     fitting = size * (needed / ceiling) ** (1 / 3)
@@ -59,27 +83,15 @@ def choose_voxel_size(bounds, settings, budget):
             'implied_max_deviation_mm': fitting * math.sqrt(3.0) / 2.0,
             'remedy': 'raise repair.max_deviation_mm, set repair.voxel_size_mm, or raise resources.memory_gib'})
     # Derived pitch: coarsen just enough to fit, capped at the deviation ceiling.
-    _, dims_cap = _grid(bounds, deviation_ceiling)
-    needed_cap = float(np.prod(dims_cap + 2))
+    _, needed_cap = _grid_bytes(bounds, deviation_ceiling)
     if needed_cap > ceiling:
         raise VoxelMillError('repair_budget', 'Voxel repair grid exceeds the memory budget', {
             'voxel_size_mm': size, 'voxel_bytes': needed, 'budget_bytes': ceiling,
             'smallest_affordable_voxel_size_mm': fitting,
             'implied_max_deviation_mm': fitting * math.sqrt(3.0) / 2.0,
             'remedy': 'raise repair.max_deviation_mm, set repair.voxel_size_mm, or raise resources.memory_gib'})
-    # Binary search the finest pitch in (derived, deviation_ceiling] that fits.
-    lo, hi = size, deviation_ceiling
-    best_dims, best_needed = dims_cap, needed_cap
-    for _ in range(48):
-        mid = (lo + hi) * 0.5
-        _, mid_dims = _grid(bounds, mid)
-        mid_needed = float(np.prod(mid_dims + 2))
-        if mid_needed <= ceiling:
-            hi = mid
-            best_dims, best_needed = mid_dims, mid_needed
-        else:
-            lo = mid
-    return hi, best_dims, best_needed
+    # The finest pitch in (derived, deviation_ceiling] that fits.
+    return _finest_fitting_pitch(bounds, size, deviation_ceiling, ceiling)
 
 
 def _taubin(vertices, faces, iterations, lam, mu, max_displacement):
