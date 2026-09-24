@@ -384,7 +384,8 @@ class VoidForest:
         volumes = self.volume[indices] if len(indices) else np.empty(0)
         significant = indices[volumes > min_volume_mm3]
         negligible = indices[volumes <= min_volume_mm3]
-        order = significant[np.argsort(-self.volume[significant])] if len(significant) else significant
+        order = (significant[np.argsort(-self.volume[significant], kind='stable')]
+                 if len(significant) else significant)
         peak = float(max(self.history, default=0.0))
         return {
             'count': int(len(significant)),

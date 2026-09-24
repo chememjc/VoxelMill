@@ -366,3 +366,22 @@ def test_capsule_index_finds_every_overlap_a_full_scan_finds():
         assert _hits_occupied(indexed, start, end, radius) == expected
         hits += expected
     assert 0 < hits < 600
+
+
+def test_downward_samples_use_build_independent_arithmetic():
+    """Samples are rounded to spacing cells, so they must be bit-identical on
+    every NumPy/BLAS build: centroids and lattice points are explicit
+    elementwise sums, never mean() or matmul, whose rounding varies."""
+    from voxelmill.supports import downward_contacts
+    face = np.array([[[0.1, 0.2, 5.0], [9.7, 0.3, 5.0], [0.4, 8.9, 5.0]]])
+    face = face[:, ::-1]      # downward facing
+    settings = resolve_settings(overrides={'support': {'spacing_mm': 1.3}})
+    samples, _ = downward_contacts(face, settings)
+    a, b, c = face[0]
+    assert np.array_equal(samples[0], (a + b + c) / 3.0)
+    steps = int(min(64, max(1, np.ceil(np.sqrt(2 * 0.5 * np.linalg.norm(
+        np.cross(b - a, c - a))) / 1.3))))
+    lattice = np.array([(i, j, steps - i - j) for i in range(steps + 1)
+                        for j in range(steps - i + 1)], dtype=np.float64) / steps
+    expected = lattice[:, :1] * a + lattice[:, 1:2] * b + lattice[:, 2:3] * c
+    assert np.array_equal(samples[1:1 + len(expected)], expected)

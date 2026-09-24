@@ -252,7 +252,10 @@ def downward_contacts(triangles, settings, *, cancel=None, progress=no_progress,
             continue
         faces = chunk[selected]
         areas += float(norm[selected].sum() / 2)
-        points.append(faces.mean(axis=1))
+        # Explicit elementwise sums, not mean() or matmul: those round
+        # differently across NumPy/BLAS builds and CPUs, and thinning rounds
+        # samples to spacing cells, so a one-ulp change moved contacts.
+        points.append((faces[:, 0] + faces[:, 1] + faces[:, 2]) / 3.0)
         # A face wider than the spacing needs a lattice of contacts, not a
         # centroid: a single flat underside is often one pair of triangles, and
         # sampling it once leaves its whole perimeter unsupported.
@@ -263,7 +266,9 @@ def downward_contacts(triangles, settings, *, cancel=None, progress=no_progress,
             steps = int(min(64, max(1, math.ceil(math.sqrt(2 * areas_selected[index]) / spacing))))
             lattice = np.array([(i, j, steps - i - j) for i in range(steps + 1)
                                 for j in range(steps - i + 1)], dtype=np.float64) / steps
-            points.append(lattice @ faces[index])
+            face = faces[index]
+            points.append(lattice[:, :1] * face[0] + lattice[:, 1:2] * face[1]
+                          + lattice[:, 2:3] * face[2])
         if support.get('contour_supports'):
             contour = _perimeter_samples(faces, spacing)
             if len(contour):
@@ -756,7 +761,9 @@ def _plate_route(field, column, contact_index, point, base_z, spec, spacing, cle
             usable = (lateral > 1e-9) & (lateral <= 2 * spacing) & (drop < base_z)
             tested = 0
             limit = max(int(branch_attempts) * 8, 256)
-            for pick in np.argsort(np.where(usable, lateral, np.inf)):
+            # Stable: equal distances (symmetric cells) must resolve the same way
+            # on every NumPy build, or the same part routes differently.
+            for pick in np.argsort(np.where(usable, lateral, np.inf), kind='stable'):
                 if not usable[pick] or tested >= limit:
                     break
                 nx, ny, distance = float(px[pick]), float(py[pick]), float(lateral[pick])

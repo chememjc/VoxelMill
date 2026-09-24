@@ -183,7 +183,7 @@ def regions_below_threshold(thickness_volume, occupancy, pitch_mm, threshold_mm,
     sizes = np.bincount(labels.ravel())
     boxes = ndi.find_objects(labels)
     regions = []
-    order = np.argsort(-sizes[1:count + 1]) + 1 if count else []
+    order = np.argsort(-sizes[1:count + 1], kind='stable') + 1 if count else []
     for label in order[:limit]:
         box = boxes[label - 1]
         local = np.argwhere(labels[box] == label)
