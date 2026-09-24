@@ -777,6 +777,16 @@ with a one-pixel black gutter, so a solid region reads as a grid of separate
 exposed pixels rather than one white field; the zoom readout appends `grid`
 once this is active.
 
+Hovering the view reads out the printer pixel under the cursor, below the
+canvas: its column/row, its position in millimeters when the source has a
+pixel pitch to convert with (a decoded GOO/CTB frame does; an assembly slice's
+raster grid does too), its raw value (occupancy or greyscale, whichever the
+source stores), and the code of any diagnostic marker within a pixel of the
+cursor. It clears when the cursor leaves the view or drags to pan. The mapping
+from screen point to printer pixel is the same crop/zoom math the paint itself
+uses (`pixel_under_cursor`), so the pixel reported is exactly the one drawn
+there, not an approximation of it.
+
 The Layers tab gains a **Source** selector next to the slider: **Current
 assembly** slices the in-memory union at the configured layer height, and an
 opened GOO shows the decoded pixels the printer will actually expose. Opening a
@@ -873,6 +883,17 @@ shadowed file, and offers **Apply to editor**, **Diff against editor**,
 **Provenance**, **Save printer profile…**, **Bind resin to printer…**, and
 **Refresh**. Full detail on every button and on the search path, provenance,
 and resin-bind semantics behind them is in [profiles.md](profiles.md).
+
+The dialog tracks the document's dirty state independently of the main
+window: a label appears (and the dialog's own title gains its `*`) once the
+editor has unsaved edits. **Apply to editor** then asks first, mirroring the
+main window's Save/Discard/Cancel close prompt — Save goes through the parent
+window's own save when the dialog was opened from it; opened without a parent
+that can save (as the standalone dialog is in tests, or would be if embedded
+anywhere else with no save path), the choice narrows to Apply-and-discard or
+Cancel, since there is nothing here to save *to*. **Save printer profile…**
+and **Bind resin to printer…** separately ask before overwriting a profile
+file that already exists on disk.
 
 ## Testing the editor
 

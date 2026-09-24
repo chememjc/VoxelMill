@@ -8,6 +8,7 @@ with ``--printer`` cannot resolve to different settings.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from PySide6 import QtCore, QtWidgets
 
@@ -25,13 +26,25 @@ class ProfileLibraryDialog(QtWidgets.QDialog):
         super().__init__(parent)
         self.document = document
         self.applied = None
-        self.setWindowTitle('Profile library')
+        self.setWindowTitle('Profile library[*]')
         self.resize(900, 700)
         layout = QtWidgets.QVBoxLayout(self)
 
         self.search_path = QtWidgets.QLabel()
         self.search_path.setWordWrap(True)
         layout.addWidget(self.search_path)
+
+        # Hidden on a clean document; set by ``_refresh_dirty_indicator``.
+        # Applying, saving or binding from here can throw away editor edits
+        # that never touched a file, so the dialog needs its own reminder --
+        # it does not share the main window's title bar.
+        self.dirty_label = QtWidgets.QLabel()
+        self.dirty_label.setStyleSheet('color: #b35c00;')
+        self.dirty_label.setToolTip(
+            'The editor has unsaved changes. Apply, Save printer profile and '
+            'Bind resin all ask before they could lose them.')
+        self.dirty_label.setVisible(False)
+        layout.addWidget(self.dirty_label)
 
         selectors = QtWidgets.QFormLayout()
         self.printer = QtWidgets.QComboBox()
@@ -69,8 +82,24 @@ class ProfileLibraryDialog(QtWidgets.QDialog):
         close.rejected.connect(self.reject)
         layout.addWidget(close)
         self.reload()
+        self._refresh_dirty_indicator()
 
     # ---- state ---------------------------------------------------------
+    def _refresh_dirty_indicator(self):
+        """Show an asterisk / label while the document has unsaved edits.
+
+        The dialog has no autosave timer of its own, so this only reflects
+        the flag as it stood the last time an action here touched it; that is
+        every point that matters, since nothing else in the dialog changes
+        the document.
+        """
+        dirty = bool(self.document.dirty)
+        self.setWindowModified(dirty)
+        self.dirty_label.setHidden(not dirty)
+        if dirty:
+            self.dirty_label.setText(
+                'The editor has unsaved changes -- Apply, Save and Bind resin will ask first.')
+
     def reload(self):
         report = library.library_report()
         self.search_path.setText('Search path (highest first): ' + '  |  '.join(
@@ -116,13 +145,76 @@ class ProfileLibraryDialog(QtWidgets.QDialog):
     def _fail(self, error):
         self._show({'error': error.to_dict() if isinstance(error, VoxelMillError) else str(error)})
 
+    # ---- dirty-state prompts --------------------------------------------
+    def _confirm_discard_or_save(self):
+        """Ask before Apply overwrites unsaved editor edits.
+
+        Mirrors ``MainWindow._confirm_discard_or_save``: Save / Discard /
+        Cancel when the document is dirty, nothing asked otherwise. Unlike
+        the main window, this dialog has no project file of its own -- it
+        can only save through whatever opened it. When the parent (normally
+        the ``MainWindow``) exposes a ``save_project`` callable, Save goes
+        through that; when it does not (a dialog built without a parent, as
+        the tests do, or embedded somewhere with no save path), Save is
+        replaced with an Apply-and-discard choice instead, since there is
+        nothing here to save *to*.
+
+        A single method, patchable on the class exactly like the window's,
+        so tests never let a real modal open.
+        """
+        if not self.document.dirty:
+            return True
+        saver = getattr(self.parent(), 'save_project', None)
+        box = QtWidgets.QMessageBox(self)
+        box.setWindowTitle('Unsaved changes')
+        if callable(saver):
+            box.setText('The editor has unsaved changes. Applying this profile will '
+                        'replace them with the resolved profile settings.')
+            box.setStandardButtons(QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.Discard
+                                    | QtWidgets.QMessageBox.Cancel)
+            box.setDefaultButton(QtWidgets.QMessageBox.Save)
+            result = box.exec()
+            if result == QtWidgets.QMessageBox.Cancel:
+                return False
+            if result == QtWidgets.QMessageBox.Save:
+                return bool(saver())
+            return True
+        box.setText('The editor has unsaved changes that Apply will discard. This dialog has '
+                    'no project to save them to -- save the project first if you want to keep '
+                    'them, then reopen the library.')
+        box.setStandardButtons(QtWidgets.QMessageBox.Apply | QtWidgets.QMessageBox.Cancel)
+        box.setDefaultButton(QtWidgets.QMessageBox.Cancel)
+        return box.exec() == QtWidgets.QMessageBox.Apply
+
+    def _confirm_overwrite(self, path):
+        """Ask before ``save_printer``/``bind_resin`` overwrite an existing file.
+
+        Only for a path handed in by a caller: a target picked in the file
+        dialog was already confirmed there.
+        """
+        if not path or not Path(path).exists():
+            return True
+        result = QtWidgets.QMessageBox.question(
+            self, 'Overwrite profile',
+            f'{Path(path).name} already exists. Overwrite it?',
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No)
+        return result == QtWidgets.QMessageBox.Yes
+
     # ---- actions -------------------------------------------------------
     def resolved_selection(self):
         printer, resin = self.selected_paths()
         return resolve_settings(printer, resin, None)
 
     def apply_selection(self):
-        """Resolve the chosen pair and hand it to the document as one undoable edit."""
+        """Resolve the chosen pair and hand it to the document as one undoable edit.
+
+        Refuses (returns ``None``) if the document was dirty and the user
+        cancelled the save/discard prompt; the current selection is left
+        untouched so Cancel really means nothing happened.
+        """
+        if not self._confirm_discard_or_save():
+            return None
         try:
             settings = self.resolved_selection()
         except VoxelMillError as error:
@@ -133,6 +225,7 @@ class ProfileLibraryDialog(QtWidgets.QDialog):
         self._show({'applied': True, 'printer': printer, 'resin': resin,
                     'printer_name': settings['printer']['name'],
                     'resin_name': settings['resin']['name']})
+        self._refresh_dirty_indicator()
         return settings
 
     def show_diff(self):
@@ -157,10 +250,15 @@ class ProfileLibraryDialog(QtWidgets.QDialog):
 
     def save_printer(self, path=None):
         """Write the editor's current settings as a self-contained ``.ptr``."""
+        # The file dialog confirms an overwrite itself; only a path handed in
+        # from elsewhere needs asking here.
+        picked = not path
         if not path:
             path, _ = QtWidgets.QFileDialog.getSaveFileName(
                 self, 'Save printer profile', '', 'Printer profile (*.ptr)')
         if not path:
+            return None
+        if not picked and not self._confirm_overwrite(path):
             return None
         try:
             payload = library.save_printer_profile(path, self.document.settings)
@@ -197,10 +295,13 @@ class ProfileLibraryDialog(QtWidgets.QDialog):
                 text=self.document.settings['printer']['id'])
             if not accepted:
                 return None
+        picked = not output
         if not output:
             output, _ = QtWidgets.QFileDialog.getSaveFileName(
                 self, 'Save bound resin profile', '', 'Resin profile (*.res)')
         if not output:
+            return None
+        if not picked and not self._confirm_overwrite(output):
             return None
         try:
             payload = library.bind_resin_process(reference, output,

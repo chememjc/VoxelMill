@@ -12,8 +12,10 @@ from PySide6 import QtCore, QtGui  # noqa: E402
 
 from voxelmill.gui.layerview import (  # noqa: E402
     GRID_VALUE, OCCUPIED_VALUE, PIXEL_GRID_MIN_SCALE, ZOOM_STEPS, LayerCanvas,
-    LayerView, fit_zoom, render_layer_image, visible_crop, zoom_step,
+    LayerView, fit_zoom, pixel_under_cursor, render_layer_image, visible_crop,
+    zoom_step,
 )
+from voxelmill.raster import RasterGrid  # noqa: E402
 
 
 def _solid(height, width):
@@ -231,3 +233,145 @@ def test_a_new_frame_size_drops_a_pan_expressed_in_the_old_pixels(application):
     canvas._center = (10.0, 10.0)
     canvas.set_layer(_solid(4320, 8520))
     assert canvas.fitted and canvas._center is None
+
+
+# ---- G12: pixel inspection ------------------------------------------------
+
+def _move_event(x, y):
+    """A real ``QMouseEvent`` -- ``mouseMoveEvent`` forwards it to ``super()``,
+    which needs an actual event, not a duck-typed stand-in."""
+    point = QtCore.QPointF(x, y)
+    return QtGui.QMouseEvent(QtCore.QEvent.MouseMove, point, point,
+                             QtCore.Qt.NoButton, QtCore.Qt.NoButton, QtCore.Qt.NoModifier)
+
+
+def test_pixel_under_cursor_inverts_the_exact_math_that_places_a_marker():
+    """render_layer_image places a marker at this screen point for a given
+    printer pixel; pixel_under_cursor must recover that pixel from the point."""
+    mask_shape = (64, 64)
+    height, _width = mask_shape
+    zoom, center, size = 3, (20.0, 40.0), (140, 130)
+    col0, row0, _cols, _rows, ox, oy = visible_crop(mask_shape, zoom, center, size)
+    column, row = 17, 25
+    x = int(round((column - col0) * zoom)) - ox
+    y = int(round((height - 1 - row - row0) * zoom)) - oy
+    assert pixel_under_cursor(mask_shape, zoom, center, size, x, y) == (column, row)
+
+
+def test_pixel_under_cursor_maps_a_decimated_screen_pixel_to_its_block_origin():
+    """Below 1:1 several printer pixels share one screen pixel (whole-block
+    decimation), so the inverse cannot recover an arbitrary original pixel --
+    only the block's own origin, by the same ``x * decimation + col0`` a
+    forward decimated crop uses (``ox``/``oy`` are always 0 below 1:1)."""
+    mask_shape = (256, 256)
+    height = mask_shape[0]
+    zoom, center, size = 1 / 4, (128.0, 128.0), (100, 100)
+    col0, row0, _cols, _rows, ox, oy = visible_crop(mask_shape, zoom, center, size)
+    assert ox == 0 and oy == 0
+    decimation = round(1 / zoom)
+    x, y = 30, 20
+    expected = (x * decimation + col0, height - 1 - (y * decimation + row0))
+    assert pixel_under_cursor(mask_shape, zoom, center, size, x, y) == expected
+
+
+def test_pixel_under_cursor_is_none_outside_the_frame():
+    assert pixel_under_cursor((64, 64), 1, (32.0, 32.0), (200, 200), -50, -50) is None
+    assert pixel_under_cursor((64, 64), 1, (32.0, 32.0), (200, 200), 199, 199) is None
+
+
+def test_hover_pixel_reports_value_mm_position_and_a_nearby_diagnostic(application):
+    mask = np.zeros((10, 10), dtype=np.uint8)
+    mask[3, 4] = 200  # a greyscale-style value, not just occupancy
+    grid = RasterGrid(10, 10, x0=0.0, y0=0.0, dx=0.05, dy=0.05)
+    diagnostics = [{'code': 'peel_risk', 'position_mm': grid.xy(3, 4)}]
+    canvas = LayerCanvas()
+    canvas.resize(100, 100)
+    canvas.set_layer(mask, grid, diagnostics)
+    canvas.set_zoom(1)
+
+    zoom, center = canvas.zoom, canvas._effective_center()
+    size = (canvas.width(), canvas.height())
+    col0, row0, _cols, _rows, ox, oy = visible_crop(mask.shape, zoom, center, size)
+    height = mask.shape[0]
+    x = int(round((4 - col0) * zoom)) - ox
+    y = int(round((height - 1 - 3 - row0) * zoom)) - oy
+
+    reading = canvas.hover_pixel(QtCore.QPointF(x, y))
+    assert reading == {
+        'column': 4, 'row': 3, 'value': 200,
+        'x_mm': pytest.approx(grid.xy(3, 4)[0]),
+        'y_mm': pytest.approx(grid.xy(3, 4)[1]),
+        'codes': ('peel_risk',),
+    }
+
+
+def test_hover_pixel_shows_pixels_only_with_no_grid(application):
+    """No grid (an assembly slice with no printer metadata) still reports the
+    pixel and its value -- just no millimeter position."""
+    mask = np.zeros((10, 10), dtype=np.uint8)
+    mask[2, 2] = 1
+    canvas = LayerCanvas()
+    canvas.resize(100, 100)
+    canvas.set_layer(mask)
+    canvas.set_zoom(1)
+    reading = canvas.hover_pixel(QtCore.QPointF(canvas.width() / 2, canvas.height() / 2))
+    assert reading is not None
+    assert reading['x_mm'] is None and reading['y_mm'] is None
+    assert reading['codes'] == ()
+
+
+def test_hover_pixel_is_none_with_no_layer_or_outside_the_frame(application):
+    canvas = LayerCanvas()
+    canvas.resize(100, 100)
+    assert canvas.hover_pixel(QtCore.QPointF(10, 10)) is None
+    canvas.set_layer(_solid(10, 10))
+    canvas.set_zoom(1)
+    assert canvas.hover_pixel(QtCore.QPointF(-5, -5)) is None
+
+
+def test_mouse_move_emits_a_reading_and_leaving_the_canvas_clears_it(application):
+    canvas = LayerCanvas()
+    canvas.resize(100, 100)
+    canvas.set_layer(_solid(20, 20))
+    canvas.set_zoom(2)
+    readings = []
+    canvas.pixel_hovered.connect(readings.append)
+
+    canvas.mouseMoveEvent(_move_event(canvas.width() / 2, canvas.height() / 2))
+    assert len(readings) == 1
+    assert readings[-1] is not None
+    assert readings[-1]['value'] == 1
+
+    canvas.leaveEvent(QtCore.QEvent(QtCore.QEvent.Leave))
+    assert readings[-1] is None
+
+
+def test_dragging_does_not_emit_a_pixel_reading(application):
+    """A drag repositions the pan; it must not also spam the readout."""
+    canvas = LayerCanvas()
+    canvas.resize(100, 100)
+    canvas.set_layer(_solid(20, 20))
+    canvas._drag_origin = QtCore.QPointF(10, 10)
+    canvas._drag_center = canvas._effective_center()
+    readings = []
+    canvas.pixel_hovered.connect(readings.append)
+    canvas.mouseMoveEvent(_move_event(20, 20))
+    assert readings == []
+
+
+def test_the_layer_view_readout_label_tracks_the_canvas_hover(application):
+    view = LayerView()
+    view.canvas.resize(100, 100)
+    view.canvas.set_layer(_solid(20, 20))
+    view.canvas.set_zoom(2)
+    forwarded = []
+    view.pixel_hovered.connect(forwarded.append)
+
+    view.canvas.mouseMoveEvent(_move_event(view.canvas.width() / 2, view.canvas.height() / 2))
+    assert 'pixel (' in view.pixel_readout.text()
+    assert 'no pixel pitch known' in view.pixel_readout.text()
+    assert len(forwarded) == 1 and forwarded[0] is not None
+
+    view.canvas.leaveEvent(QtCore.QEvent(QtCore.QEvent.Leave))
+    assert view.pixel_readout.text() == ''
+    assert forwarded[-1] is None

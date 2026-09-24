@@ -1,4 +1,5 @@
 """The editor's profile library reaches the same code the CLI does."""
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -140,4 +141,138 @@ def test_binding_a_multi_printer_resin_asks_which_process_to_copy(app, isolated,
     assert asked['items'] == ['mars5-ultra', 'saturn4-ultra']
     assert payload['source_printer'] == 'saturn4-ultra'
     assert payload['bound_printers'] == ['mars5-clone', 'mars5-ultra', 'saturn4-ultra']
+    dialog.close()
+
+
+# ---- A7: dirty-state save/discard -----------------------------------------
+
+def _dirtied(document=None):
+    """A document with one undoable edit, so ``.dirty`` is true."""
+    document = document or Document()
+    document.set_settings(resolve_settings(PRINTER, RESIN, {'support': {'spacing_mm': 4.5}}))
+    return document
+
+
+def test_a_clean_document_shows_no_dirty_indicator_and_never_builds_a_prompt(app, isolated,
+                                                                            monkeypatch):
+    class Refuse:
+        def __init__(self, *args, **kwargs):
+            raise AssertionError('a clean document must not build a confirm modal')
+
+    dialog = ProfileLibraryDialog(Document())
+    assert not dialog.isWindowModified()
+    assert dialog.dirty_label.isHidden()
+    monkeypatch.setattr(QtWidgets, 'QMessageBox', Refuse)
+    dialog.printer.setCurrentIndex(dialog.printer.findData(str(
+        library.resolve_profile_path('mars5-ultra', 'printer'))))
+    applied = dialog.apply_selection()
+    assert applied is not None
+    dialog.close()
+
+
+def test_dialog_shows_a_dirty_indicator_once_the_document_has_unsaved_edits(app, isolated):
+    dialog = ProfileLibraryDialog(_dirtied())
+    assert dialog.isWindowModified()
+    assert not dialog.dirty_label.isHidden()
+    dialog.close()
+
+
+def test_apply_on_a_dirty_document_with_no_save_path_offers_apply_or_cancel(app, isolated,
+                                                                            monkeypatch):
+    """The dialog has no ``parent`` here, so it has no ``save_project`` to call.
+
+    Save/Discard/Cancel would be misleading with nothing to save to, so the
+    prompt narrows to Apply (discard the edits) / Cancel instead.
+    """
+    document = _dirtied()
+    before = deepcopy(document.settings)
+    dialog = ProfileLibraryDialog(document)
+    dialog.printer.setCurrentIndex(dialog.printer.findData(str(
+        library.resolve_profile_path('mars5-ultra', 'printer'))))
+
+    seen = {}
+
+    def fake_exec(self):
+        seen['buttons'] = self.standardButtons()
+        return QtWidgets.QMessageBox.Cancel
+
+    monkeypatch.setattr(QtWidgets.QMessageBox, 'exec', fake_exec)
+    assert dialog.apply_selection() is None
+    assert document.settings == before
+    assert dialog.applied is None
+    assert not (seen['buttons'] & QtWidgets.QMessageBox.Save)
+
+    monkeypatch.setattr(QtWidgets.QMessageBox, 'exec', lambda self: QtWidgets.QMessageBox.Apply)
+    applied = dialog.apply_selection()
+    assert applied is not None
+    assert document.settings == applied
+    dialog.close()
+
+
+def test_apply_on_a_dirty_document_with_a_save_path_offers_save_discard_cancel(app, isolated,
+                                                                              monkeypatch):
+    class FakeMainWindow(QtWidgets.QWidget):
+        def __init__(self):
+            super().__init__()
+            self.save_calls = 0
+
+        def save_project(self):
+            self.save_calls += 1
+            return True
+
+    parent = FakeMainWindow()
+    document = _dirtied()
+    before = deepcopy(document.settings)
+    dialog = ProfileLibraryDialog(document, parent)
+    dialog.printer.setCurrentIndex(dialog.printer.findData(str(
+        library.resolve_profile_path('mars5-ultra', 'printer'))))
+
+    # Cancel: nothing saved, nothing applied.
+    monkeypatch.setattr(QtWidgets.QMessageBox, 'exec', lambda self: QtWidgets.QMessageBox.Cancel)
+    assert dialog.apply_selection() is None
+    assert parent.save_calls == 0
+    assert document.settings == before
+
+    # Save: goes through the parent's save_project before applying.
+    monkeypatch.setattr(QtWidgets.QMessageBox, 'exec', lambda self: QtWidgets.QMessageBox.Save)
+    applied = dialog.apply_selection()
+    assert parent.save_calls == 1
+    assert applied is not None
+    assert document.settings == applied
+    dialog.close()
+    parent.deleteLater()
+
+
+def test_save_printer_and_bind_resin_ask_before_overwriting_an_existing_file(app, isolated,
+                                                                            tmp_path, monkeypatch):
+    document = Document()
+    document.set_settings(resolve_settings(PRINTER, RESIN, None))
+    dialog = ProfileLibraryDialog(document)
+
+    existing = tmp_path / 'existing.ptr'
+    existing.write_text('not a profile yet')
+    monkeypatch.setattr(QtWidgets.QMessageBox, 'question',
+                        staticmethod(lambda *a, **k: QtWidgets.QMessageBox.No))
+    assert dialog.save_printer(str(existing)) is None
+    assert existing.read_text() == 'not a profile yet'
+
+    monkeypatch.setattr(QtWidgets.QMessageBox, 'question',
+                        staticmethod(lambda *a, **k: QtWidgets.QMessageBox.Yes))
+    saved = dialog.save_printer(str(existing))
+    assert saved['round_trip'] == 'identical'
+    assert existing.read_text() != 'not a profile yet'
+
+    dialog.resin.setCurrentIndex(dialog.resin.findData(str(
+        library.resolve_profile_path('sunlu-abs-like-gray', 'resin'))))
+    bound_output = tmp_path / 'bound.res'
+    bound_output.write_text('placeholder')
+    monkeypatch.setattr(QtWidgets.QMessageBox, 'question',
+                        staticmethod(lambda *a, **k: QtWidgets.QMessageBox.No))
+    assert dialog.bind_resin(output=str(bound_output), target='saturn4-ultra') is None
+    assert bound_output.read_text() == 'placeholder'
+
+    monkeypatch.setattr(QtWidgets.QMessageBox, 'question',
+                        staticmethod(lambda *a, **k: QtWidgets.QMessageBox.Yes))
+    bound = dialog.bind_resin(output=str(bound_output), target='saturn4-ultra')
+    assert bound['bound_printers'] == ['mars5-ultra', 'saturn4-ultra']
     dialog.close()

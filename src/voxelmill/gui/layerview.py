@@ -129,6 +129,33 @@ def visible_crop(mask_shape, zoom, center, size):
     return col0, row0, cols, rows, ox, oy
 
 
+def pixel_under_cursor(mask_shape, zoom, center, size, x, y):
+    """Printer-pixel (column, row) under screen point ``(x, y)``, or ``None``.
+
+    Uses the exact inverse of the crop/zoom math :func:`render_layer_image`
+    and its marker placement use, so the pixel reported here is the one a
+    paint actually drew under the cursor rather than an approximation of it:
+    ``visible_crop`` gives the same origin and sub-cell offset a paint would,
+    and the row conversion undoes the same bottom-up flip the marker code
+    applies going the other way. ``row`` is returned in the mask's own
+    bottom-up convention (row 0 at the plate), matching
+    :meth:`voxelmill.raster.RasterGrid.xy`. Returns ``None`` when the point
+    falls outside the rasterized frame, including an empty/absent frame.
+    """
+    height, width = mask_shape
+    if height <= 0 or width <= 0 or zoom <= 0:
+        return None
+    view_width, view_height = max(1, int(size[0])), max(1, int(size[1]))
+    col0, row0, _cols, _rows, ox, oy = visible_crop(mask_shape, zoom, center, (view_width, view_height))
+    image_col = (x + ox) / zoom + col0
+    image_row = (y + oy) / zoom + row0
+    column = int(math.floor(image_col))
+    row = height - 1 - int(math.floor(image_row))
+    if not (0 <= column < width and 0 <= row < height):
+        return None
+    return column, row
+
+
 def _crop_occupancy(occupied, col0, row0, cols, rows):
     """Occupancy for an image-space rectangle, zero-padded outside the frame."""
     height, width = occupied.shape
@@ -261,6 +288,9 @@ class LayerCanvas(QtWidgets.QWidget):
     """
     layer_delta = QtCore.Signal(int)
     zoom_changed = QtCore.Signal(float)
+    #: A pixel reading dict (see :meth:`hover_pixel`) while the cursor is over
+    #: a rasterized frame, or ``None`` once it leaves the frame or the widget.
+    pixel_hovered = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -268,6 +298,7 @@ class LayerCanvas(QtWidgets.QWidget):
         self.setAutoFillBackground(True)
         self.setFocusPolicy(QtCore.Qt.WheelFocus)
         self.setCursor(QtCore.Qt.OpenHandCursor)
+        self.setMouseTracking(True)
         self._mask = None
         self._grid = None
         self._diagnostics = ()
@@ -369,6 +400,7 @@ class LayerCanvas(QtWidgets.QWidget):
 
     def mouseMoveEvent(self, event):
         if self._drag_origin is None:
+            self.pixel_hovered.emit(self.hover_pixel(event.position()))
             return super().mouseMoveEvent(event)
         zoom = self._effective_zoom()
         dx = (event.position().x() - self._drag_origin.x()) / zoom
@@ -385,6 +417,70 @@ class LayerCanvas(QtWidgets.QWidget):
             event.accept()
             return
         super().mouseReleaseEvent(event)
+
+    def leaveEvent(self, event):
+        """Clear the readout rather than leave it pointing at a pixel the cursor left."""
+        self.pixel_hovered.emit(None)
+        super().leaveEvent(event)
+
+    # ---- pixel inspection -------------------------------------------------
+    def hover_pixel(self, pos):
+        """Everything the readout needs for the printer pixel under ``pos``.
+
+        ``pos`` is in this widget's own coordinates, as
+        ``QMouseEvent.position()`` gives it. Returns ``None`` with no layer
+        loaded or outside the rasterized frame. The mapping itself is
+        :func:`pixel_under_cursor`, kept a pure function so it is testable
+        without a live widget; this method only adds the value lookup, the
+        millimeter position (when the grid -- and so the pixel pitch -- is
+        known) and nearby diagnostic codes.
+        """
+        if self._mask is None:
+            return None
+        zoom = self._effective_zoom()
+        center = self._effective_center()
+        size = (max(1, self.width()), max(1, self.height()))
+        found = pixel_under_cursor(self._mask.shape, zoom, center, size,
+                                   pos.x(), pos.y())
+        if found is None:
+            return None
+        column, row = found
+        reading = {
+            'column': column, 'row': row,
+            'value': int(self._mask[row, column]),
+            'x_mm': None, 'y_mm': None,
+            'codes': (),
+        }
+        if self._grid is not None:
+            reading['x_mm'] = self._grid.x0 + (column + 0.5) * self._grid.dx
+            reading['y_mm'] = self._grid.y0 + (row + 0.5) * self._grid.dy
+            reading['codes'] = self._diagnostics_near(column, row)
+        return reading
+
+    def _diagnostics_near(self, column, row, radius=1.0):
+        """Codes of diagnostics whose marker cell is within ``radius`` pixels.
+
+        A marker is drawn several screen pixels wide regardless of zoom
+        (``render_layer_image``'s ``marker`` argument), so at high zoom it
+        covers more than the one printer pixel its position resolves to; a
+        one-pixel radius keeps a hover directly over that square finding it
+        without matching markers several cells away.
+        """
+        if self._grid is None or not self._diagnostics:
+            return ()
+        codes = set()
+        for diagnostic in self._diagnostics:
+            position = (diagnostic.get('position_mm') if isinstance(diagnostic, dict)
+                        else getattr(diagnostic, 'position_mm', None))
+            if not position:
+                continue
+            d_column = (position[0] - self._grid.x0) / self._grid.dx - 0.5
+            d_row = (position[1] - self._grid.y0) / self._grid.dy - 0.5
+            if abs(d_column - column) <= radius and abs(d_row - row) <= radius:
+                code = diagnostic_code(diagnostic)
+                if code:
+                    codes.add(code)
+        return tuple(sorted(codes))
 
     # ---- painting -------------------------------------------------------
     def rendered_image(self):
@@ -466,6 +562,10 @@ class LayerView(QtWidgets.QWidget):
     source_changed = QtCore.Signal(str)
     issue_visibility_changed = QtCore.Signal(str, bool)
     issue_layer_requested = QtCore.Signal(int)
+    #: Forwards :attr:`LayerCanvas.pixel_hovered`, so a host that wants the
+    #: reading somewhere other than :attr:`pixel_readout` (a status bar, say)
+    #: does not have to reach past this widget into the canvas for it.
+    pixel_hovered = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -528,6 +628,12 @@ class LayerView(QtWidgets.QWidget):
         self.next_issue_button = QtWidgets.QPushButton('Next issue')
         self.next_issue_button.setObjectName('layer_next_issue')
         self.next_issue_button.setToolTip('Jump to the nearest layer above with a visible issue.')
+        self.pixel_readout = QtWidgets.QLabel('')
+        self.pixel_readout.setObjectName('layer_pixel_readout')
+        self.pixel_readout.setToolTip(
+            'The printer pixel under the cursor: column/row, position in millimeters '
+            '(when the profile\'s pixel pitch is known), the raster value, and the code '
+            'of any nearby diagnostic marker.')
 
         source_row = QtWidgets.QHBoxLayout()
         source_row.addWidget(QtWidgets.QLabel('Source:'))
@@ -549,6 +655,7 @@ class LayerView(QtWidgets.QWidget):
         row.addWidget(self.next_issue_button)
         layout.addLayout(source_row)
         layout.addLayout(body, 1)
+        layout.addWidget(self.pixel_readout)
         layout.addWidget(self.legend)
         layout.addLayout(zoom_row)
         layout.addLayout(row)
@@ -560,6 +667,7 @@ class LayerView(QtWidgets.QWidget):
             lambda _: self.source_changed.emit(self.selected_source))
         self.canvas.layer_delta.connect(self.step_layer)
         self.canvas.zoom_changed.connect(self._on_canvas_zoom)
+        self.canvas.pixel_hovered.connect(self._on_pixel_hovered)
         self.zoom_slider.valueChanged.connect(self._on_zoom_slider)
         self.fit_button.clicked.connect(self.fit)
         self.prev_issue_button.clicked.connect(
@@ -601,6 +709,22 @@ class LayerView(QtWidgets.QWidget):
         text = f'{zoom:g}x' if zoom >= 1 else f'1:{int(round(1 / zoom))}'
         grid = '  grid' if zoom >= PIXEL_GRID_MIN_SCALE else ''
         self.zoom_label.setText(f'{text}{grid}')
+
+    # ---- pixel inspection -------------------------------------------------
+    def _on_pixel_hovered(self, reading):
+        """Update the readout label and re-emit for anyone else watching."""
+        self.pixel_hovered.emit(reading)
+        if reading is None:
+            self.pixel_readout.setText('')
+            return
+        if reading['x_mm'] is not None:
+            position = f"x={reading['x_mm']:.3f} mm  y={reading['y_mm']:.3f} mm"
+        else:
+            position = 'no pixel pitch known'
+        text = f"pixel ({reading['column']}, {reading['row']})  {position}  value={reading['value']}"
+        if reading['codes']:
+            text += f"  [{', '.join(reading['codes'])}]"
+        self.pixel_readout.setText(text)
 
     # ---- source selection ----------------------------------------------
     @property
