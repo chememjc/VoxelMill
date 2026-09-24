@@ -10,7 +10,7 @@ evidence and any export are built from.
 """
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, field
 import math
 import os
 from pathlib import Path
@@ -307,6 +307,51 @@ def inspect_stl(source, settings, *, budget=None, cancel=None, progress=no_progr
         return inspect_mesh(mesh, budget, cancel, progress, self_intersections=self_intersections)
 
 
+@dataclass
+class PrepareRun:
+    """State shared by the stages of one :func:`prepare` run.
+
+    Stages read what earlier stages produced and add their own results;
+    ``report`` is filled as they go, in the order the evidence is gathered.
+    """
+    source: Path
+    settings: dict
+    budget: ResourceBudget
+    cancel: CancellationToken
+    progress: object
+    timer: StageTimer
+    report: dict
+    scratch: object
+    started: float
+    # Options resolved by _resolve_options
+    max_passes: int = 5
+    candidate_count: int = 5
+    selected_rank: int = 1
+    contact_parameters: object = ()
+    extra_models: object = ()
+    paint: object = None
+    object_paint: object = None
+    # Produced by the stages
+    asset: dict | None = None
+    placement: object = None
+    placed: object = None
+    load_diagnostics: list = field(default_factory=list)
+    transform_note: str | None = None
+    part_meshes: object = None
+    extra_parts: list = field(default_factory=list)
+    model: object = None
+    model_triangles: object = None
+    plan: object = None
+    raft: object = None
+    union: object = None
+    guard: dict | None = None
+    search_passes: list = field(default_factory=list)
+    target: Path | None = None
+    validation: object = None
+    union_bounds: object = None
+    fits: bool = True
+
+
 def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=5.0,
             output=None, components=False, budget=None, cancel=None, progress=no_progress,
             allow_unresolved=False, max_passes=None, drainage=True, track_voids=True,
@@ -314,14 +359,48 @@ def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=
             scale=(1.0, 1.0, 1.0), mirror=(False, False, False),
             candidates=None, candidate_rank=None, contact_parameters=(),
             paint=None, extra_models=()):
-    """Prepare one part and return a JSON-serializable evidence report."""
-    budget = budget or ResourceBudget(**settings['resources'])
-    cancel = cancel or CancellationToken()
-    started = time.monotonic()
-    timer = StageTimer()
+    """Prepare one part and return a JSON-serializable evidence report.
+
+    The stages run in order: place the primary part, build the model (added
+    parts, repair, hollowing), route supports (with the island search when
+    automatic), write and reslice the accepted assembly, record the passes,
+    run the advisory checks, publish, and optionally save a project. Only the
+    reslice of the written file is evidence; everything before it is search.
+    """
     source = Path(source)
     if output and source.resolve() == Path(output).resolve():
         raise VoxelMillError('source_overwrite', 'Output must differ from the original source')
+    run = PrepareRun(
+        source=source, settings=settings,
+        budget=budget or ResourceBudget(**settings['resources']),
+        cancel=cancel or CancellationToken(), progress=progress, timer=StageTimer(),
+        report={}, scratch=None, started=time.monotonic())
+    _resolve_options(run, max_passes, rotate, candidates, candidate_rank, contact_parameters,
+                     extra_models, paint)
+    run.report.update({'schema_version': 1, 'source': str(source), 'settings': settings,
+                       'stages': {}, 'diagnostics': [], 'passes': []})
+    run.scratch = tempfile.TemporaryDirectory(prefix='voxelmill-prepare-',
+                                              dir=settings['resources']['scratch_dir'])
+    try:
+        _place_primary(run, rotate, center_offset, lift_mm, scale, mirror, candidates, candidate_rank)
+        _build_model(run)
+        _route_supports(run, manual_contacts, removed_contacts)
+        _write_and_reslice(run, track_voids)
+        _record_passes(run)
+        _advisory_checks(run, overhang_check, drainage, track_voids)
+        _publish(run, output, allow_unresolved, components)
+        if project:
+            _save_project(run, project, rotate, center_offset, lift_mm, candidates, candidate_rank,
+                          manual_contacts, removed_contacts, contact_parameters)
+        return _finish_report(run)
+    finally:
+        _cleanup_scratch(run.scratch)
+
+
+def _resolve_options(run, max_passes, rotate, candidates, candidate_rank, contact_parameters,
+                     extra_models, paint):
+    """Check the options that do not need the mesh, before any work starts."""
+    settings = run.settings
     if max_passes is None:
         # No caller-supplied cap: the CLI and the editor must agree on how many
         # correction passes are allowed, so both fall back to the same
@@ -336,367 +415,413 @@ def prepare(source, settings, *, rotate=None, center_offset=(0.0, 0.0), lift_mm=
     if (type(candidate_count) is not int or not 1 <= candidate_count <= 32 or
             type(selected_rank) is not int or not 1 <= selected_rank <= candidate_count):
         raise VoxelMillError('invalid_candidate', 'Candidate count must be 1 to 32 and rank must lie within that count')
-    contact_parameters = normalize_contact_parameters(contact_parameters, settings)
-    extra_models = [normalize_extra_model(spec) for spec in extra_models] if extra_models else ()
+    run.max_passes, run.candidate_count, run.selected_rank = max_passes, candidate_count, selected_rank
+    run.contact_parameters = normalize_contact_parameters(contact_parameters, settings)
+    run.extra_models = [normalize_extra_model(spec) for spec in extra_models] if extra_models else ()
     # Two shapes reach here. ``--paint`` supplies one plate-coordinate table,
     # which is what routing consumes. A project supplies one local-frame record
     # per object, which cannot be resolved until the placements exist, so it is
-    # held back and converted below.
-    from .paint import empty_paint, normalize_object_paint, normalize_paint, to_plate
-    object_paint = None
+    # held back and converted in _build_model.
+    from .paint import empty_paint, normalize_object_paint, normalize_paint
     if isinstance(paint, (list, tuple)):
-        object_paint = normalize_object_paint(paint, len(extra_models) + 1)
-        paint = empty_paint()
+        run.object_paint = normalize_object_paint(paint, len(run.extra_models) + 1)
+        run.paint = empty_paint()
     else:
-        paint = normalize_paint(paint)
-    report = {'schema_version': 1, 'source': str(source), 'settings': settings,
-              'stages': {}, 'diagnostics': [], 'passes': []}
-    scratch = tempfile.TemporaryDirectory(prefix='voxelmill-prepare-', dir=settings['resources']['scratch_dir'])
-    try:
-        # open_stl loads in its constructor, so the load stage wraps construction
-        # and place runs while the mesh handle is still held open.
-        with timer.stage('load'):
-            opened = open_stl(source, budget, cancel, progress)
-        with opened as mesh:
-            asset = asdict(mesh.asset)
-            asset['path'] = str(asset['path'])
-            report['asset'] = asset
-            load_diagnostics = list(mesh.diagnostics)
-            report['diagnostics'].extend(asdict(item) for item in load_diagnostics)
-            cancel.check()
-            clipping = bool(settings['assembly'].get('clip_to_build_volume', False))
-            transform_note = None
-            with timer.stage('place'):
-                if rotate == 'auto':
-                    if not np.allclose(scale, 1.0) or any(mirror):
-                        raise VoxelMillError(
-                            'invalid_placement',
-                            'Automatic orientation search does not yet consider scale or mirror; '
-                            'give explicit rotation angles when resizing or mirroring a part')
-                    try:
-                        placement = geometry.auto_placement(mesh.triangles, settings, center_offset,
-                                                            lift_mm, cancel, finalists=candidate_count,
-                                                            candidate_rank=selected_rank)
-                    except VoxelMillError as error:
-                        # A search that found nothing feasible has not proved that
-                        # nothing fits, so with clipping requested the part is still
-                        # placed unrotated and the shortfall is measured.
-                        if error.code != 'no_feasible_placement' or not clipping:
-                            raise
-                        placement, _fits, _overflow = geometry.placement_or_overflow(
-                            mesh.triangles, settings, (0.0, 0.0, 0.0), center_offset, lift_mm, cancel,
-                            scale, mirror)
-                        placement.search = {**(placement.search or {}), 'mode': 'auto_search_exhausted',
-                                            'reason': 'no orientation fitted; unrotated pose kept for clipping'}
-                elif clipping:
+        run.paint = normalize_paint(paint)
+
+
+def _place_primary(run, rotate, center_offset, lift_mm, scale, mirror, candidates, candidate_rank):
+    """Load the source, choose its pose, and write the placed triangles to scratch."""
+    settings, report, timer, cancel = run.settings, run.report, run.timer, run.cancel
+    # open_stl loads in its constructor, so the load stage wraps construction
+    # and place runs while the mesh handle is still held open.
+    with timer.stage('load'):
+        opened = open_stl(run.source, run.budget, cancel, run.progress)
+    with opened as mesh:
+        asset = asdict(mesh.asset)
+        asset['path'] = str(asset['path'])
+        report['asset'] = run.asset = asset
+        run.load_diagnostics = list(mesh.diagnostics)
+        report['diagnostics'].extend(asdict(item) for item in run.load_diagnostics)
+        cancel.check()
+        clipping = bool(settings['assembly'].get('clip_to_build_volume', False))
+        with timer.stage('place'):
+            if rotate == 'auto':
+                if not np.allclose(scale, 1.0) or any(mirror):
+                    raise VoxelMillError(
+                        'invalid_placement',
+                        'Automatic orientation search does not yet consider scale or mirror; '
+                        'give explicit rotation angles when resizing or mirroring a part')
+                try:
+                    placement = geometry.auto_placement(mesh.triangles, settings, center_offset,
+                                                        lift_mm, cancel, finalists=run.candidate_count,
+                                                        candidate_rank=run.selected_rank)
+                except VoxelMillError as error:
+                    # A search that found nothing feasible has not proved that
+                    # nothing fits, so with clipping requested the part is still
+                    # placed unrotated and the shortfall is measured.
+                    if error.code != 'no_feasible_placement' or not clipping:
+                        raise
                     placement, _fits, _overflow = geometry.placement_or_overflow(
-                        mesh.triangles, settings, rotate or (0.0, 0.0, 0.0), center_offset, lift_mm,
-                        cancel, scale, mirror)
-                else:
-                    placement = geometry.placement_for_triangles(
-                        mesh.triangles, settings, rotate or (0.0, 0.0, 0.0), center_offset, lift_mm,
-                        cancel, scale, mirror)
-                report['placement'] = asdict(placement)
-                if rotate == 'auto':
-                    report['stages']['orientation_selection'] = {
-                        'requested_candidates': candidate_count,
-                        'available_candidates': len(placement.search.get('ranked_candidates', [])),
-                        'selected_rank': placement.search.get('selected_rank'),
-                        'persist_as_explicit_pose': candidates is not None or candidate_rank is not None,
-                    }
-                # A resized or mirrored part is a different part.  Say so in the
-                # report and as a warning diagnostic that survives into the archive,
-                # rather than leaving it to be inferred from a matrix.
-                note = geometry.scale_note(placement.scale, placement.mirror)
-                report['stages']['transform'] = {
-                    'scale': list(placement.scale), 'mirror': list(placement.mirror),
-                    'note': note,
-                    'source_size_mm': (np.asarray(mesh.asset.bounds, dtype=float)[1]
-                                       - np.asarray(mesh.asset.bounds, dtype=float)[0]).tolist(),
-                    'placed_size_mm': (np.asarray(placement.bounds, dtype=float)[1]
-                                       - np.asarray(placement.bounds, dtype=float)[0]).tolist(),
-                }
-                if note is not None:
-                    transform_note = note
-                report['stages']['build_volume'] = {
-                    'clip_to_build_volume': clipping,
-                    'fits': bool(geometry.envelope_fits(np.asarray(placement.bounds, dtype=float), settings)),
-                    'overflow_mm': geometry.envelope_overflow_mm(
-                        np.asarray(placement.bounds, dtype=float), settings),
-                    'build_mm': list(settings['printer']['build_mm']),
-                    'edge_clearance_mm': settings['printer']['edge_clearance_mm'],
-                }
-                placed_path, placed = _materialize(mesh.triangles, np.asarray(placement.matrix),
-                                                   scratch.name, cancel, progress)
-        part_meshes = None
-        extra_parts = []
-        if extra_models:
-            placed, extra_report = _append_extra_models(
-                placed, extra_models, settings, scratch.name, budget, cancel, progress)
-            part_meshes = extra_report.pop('placed_parts', None)
-            extra_parts = extra_report.get('parts') or []
-            report['stages']['extra_models'] = extra_report
-        if object_paint is not None:
-            paint = to_plate(object_paint, [np.asarray(placement.matrix, dtype=float)] + [
-                np.asarray(part['placement']['matrix'], dtype=float) for part in extra_parts])
-        signed_volume = _signed_volume(placed, cancel)
-        with timer.stage('repair'):
-            model = prepare_model(placed, settings, budget=budget, cancel=cancel,
-                                  progress=progress, source_volume=signed_volume)
-            report['stages']['repair'] = model.repair
-        if settings['hollow']['enabled']:
-            from .hollow import apply_hollow
-            with timer.stage('hollow'):
-                model, hollow_report = apply_hollow(model, settings, budget=budget, cancel=cancel,
-                                                    progress=progress)
-                report['stages']['hollow'] = hollow_report
-        if model.cavity_fill is not None:
-            report['stages']['cavity_fill'] = model.cavity_fill
-        model_triangles = model.triangles
-        report['stages']['model'] = {'triangles': int(len(model_triangles)),
-                                     'volume_mm3': float(model.solid.volume()) if model.solid is not None else None,
-                                     'genus': int(model.solid.genus()) if model.solid is not None else None}
-        model_bounds = geometry.triangle_bounds(model_triangles, cancel=cancel)
-        with timer.stage('supports'):
-            field = build_column_field(model_triangles, model_bounds, settings, budget=budget,
-                                       cancel=cancel, progress=progress)
-            def replan(extra_contacts):
-                return plan_supports(model_triangles, model_bounds, settings, field=field,
-                                     budget=budget, cancel=cancel, progress=progress,
-                                     extra_contacts=extra_contacts, removed_contacts=removed_contacts,
-                                     contact_parameters=contact_parameters, paint=paint,
-                                     object_groups=support_object_groups(
-                                         settings, extra_models, part_meshes))
-            if not settings['support']['automatic']:
-                # Manual routing: plan once here. Automatic mode plans inside
-                # island_guard via the same replan callable.
-                plan, raft = replan(list(manual_contacts))
-        search_passes = []
-        if settings['support']['automatic']:
-            # The search for a contact set that leaves no island runs on the
-            # in-memory assembly and never writes anything; only the accepted
-            # result below gets written, reread and rechecked.
-            with timer.stage('island_guard'):
-                guard = route_without_islands(model, settings, replan=replan, budget=budget,
-                                              cancel=cancel, progress=progress, max_passes=max_passes,
-                                              extra_contacts=manual_contacts)
-                plan, raft, union = guard['plan'], guard['raft'], guard['union']
-            # A guard that settled on its first, whole-build scan finding
-            # nothing to fix ran no real correction. The full reslice below
-            # reports that identical clean state with actual validation
-            # attached, so keeping this scan too would be noise, not evidence.
-            if not (len(guard['passes']) == 1 and not guard['passes'][0]['islands']):
-                search_passes = guard['passes']
-        else:
-            # automatic=False means the plate is routed by hand; the loop must
-            # not go add contacts of its own even if the one pass it is given
-            # leaves islands behind.
-            guard = None
-            with timer.stage('assemble'):
-                union = assemble(model, plan.solids, raft, budget=budget, cancel=cancel)
-        report['stages']['assembly'] = union.report
-        union_bounds = np.asarray(union.bounding_box()).reshape(2, 3)
-        fits = geometry.envelope_fits(union_bounds, settings)
-        triangles = union.triangle_arrays
-        target = Path(scratch.name) / 'prepared.stl'
-        target.parent.mkdir(parents=True, exist_ok=True)
-        with timer.stage('write'):
-            write_stl(target, triangles, cancel, progress)
-        # The accepted contact set always gets the full treatment: written,
-        # reread and rechecked by the same rasterizer the printer path uses.
-        # Nothing before this line is evidence that a check actually ran.
-        with timer.stage('reslice'):
-            validation = _reslice(target, settings, budget, cancel, progress,
-                                  track_voids=track_voids, assembly=union)
-        apply_support_validation(validation, plan, settings)
-        validation.checks['plate_fit'] = 'pass' if fits else 'fail'
-        if not fits:
-            validation.diagnostics.append(Diagnostic(
-                'no_feasible_placement', 'no feasible placement found for the supported assembly',
-                details={'bounds': union_bounds.tolist()}))
-        if guard is not None and not guard['resolved']:
-            # The guard gave up with islands still on the plate; the full
-            # reslice above will already fail its own connectivity check on the
-            # same evidence, but this says why the search stopped rather than
-            # leaving that to be inferred from a pass count.
-            validation.diagnostics.append(Diagnostic(
-                'correction_incomplete',
-                f"Island correction stopped with {guard['islands_remaining']} island(s) still "
-                f"unsupported after {len(guard['passes'])} pass(es)",
-                severity='warning', details={'islands_remaining': guard['islands_remaining'],
-                                             'stopped': (guard['passes'][-1].get('stopped')
-                                                        if guard['passes'] else None)}))
-        for search in search_passes:
-            # A search pass only ever answers "does an island remain"; say so
-            # explicitly rather than leaving the shape of a full pass record
-            # with keys that were never actually measured for it.
-            report['passes'].append({
-                **search, 'kind': 'search',
-                'validation': 'not_run: this pass rasterized the assembly directly and did not '
-                              'write or reslice an STL, so peel, raster parity, drainage and '
-                              'support-routing checks were never evaluated for it'})
-        report['passes'].append({
-            'pass': len(search_passes) + 1, 'kind': 'full_reslice',
-            'supports': plan.metrics, 'raft': raft is not None,
-            'union_triangles': int(union.num_tri()), 'union_volume_mm3': union.volume(),
-            'union_bounds': union_bounds.tolist(), 'plate_fit': bool(fits),
-            'exported_triangles': union.num_tri(),
-            'raster_volume_mm3': validation.metrics.get('raster_volume_mm3'),
-            'volume_note': None if union.solid is not None else 'soup signed volume is not physical resin volume',
-            'validation': validation.to_dict()})
-        if union.report.get('support_cavity_fill') is not None:
-            report['stages']['support_cavity_fill'] = union.report['support_cavity_fill']
-        policy = settings['repair'].get('support_void_policy', 'fail')
-        model_group = next((g for g in union.groups if g.name == 'model'), None)
-        support_group = next((g for g in union.groups if g.name == 'supports_and_raft'), None)
-        if overhang_check:
-            # Advice about orientation and support density, not a gate: a gap
-            # here means the router itself left a downward sample uncovered,
-            # never that the print is proven to fail.
-            contacts = np.asarray([node.position_mm for node in plan.graph.nodes
-                                   if node.kind == 'contact'], dtype=float).reshape(-1, 3)
-            apply_overhang_check(validation, model_triangles, settings, contacts,
-                                 budget=budget, cancel=cancel, progress=progress)
-        else:
-            validation.checks['unsupported_overhangs'] = 'not_run'
-        if drainage:
-            try:
-                with timer.stage('drainage'):
-                    drain = analyze_drainage(union.soup_triangles(budget),
-                                             np.asarray(union.bounding_box()).reshape(2, 3),
-                                             settings, budget=budget, cancel=cancel, progress=progress)
-                    if policy != 'fail' and support_group is not None and model_group is not None:
-                        model_bounds = geometry.triangle_bounds(model_group.triangles, cancel=cancel)
-                        model_drain = analyze_drainage(model_group.triangles, model_bounds, settings,
-                                                       budget=budget, cancel=cancel, progress=progress)
-                        drain = attribute_drainage_by_model(drain, model_drain)
-                    validation.checks['drainage_bottlenecks'] = drainage_check(drain)
-                    validation.metrics['drainage'] = drain
-                    if drain.get('bottlenecked_components'):
-                        validation.diagnostics.append(Diagnostic(
-                            'drainage_bottleneck',
-                            'Void connects to the exterior only through an orifice below the configured area',
-                            details=drain))
-            except VoxelMillError as error:
-                if error.code == 'canceled':
-                    raise
-                validation.checks['drainage_bottlenecks'] = 'not_run'
-                validation.diagnostics.append(Diagnostic(
-                    'drainage_not_run', str(error), severity='warning', details=error.details))
-        else:
-            validation.checks['drainage_bottlenecks'] = 'not_run'
-        if (policy != 'fail' and support_group is not None and model_group is not None
-                and track_voids and validation.metrics.get('enclosed_voids') is not None):
-            model_bounds = geometry.triangle_bounds(model_group.triangles, cancel=cancel)
-            model_stream = MeshLayerStream(model_group.triangles, model_bounds, settings,
-                                           budget=budget, cancel=cancel, progress=progress)
-            model_layers = analyze_layers(model_stream, model_stream.grid, settings, cancel=cancel,
-                                          budget=budget, progress=progress, track_voids=True)
-            attribute_enclosed_voids_by_model(validation.metrics['enclosed_voids'],
-                                              model_layers.metrics.get('enclosed_voids'))
-        if policy == 'fill' and union.solid is None:
-            fill = union.report.get('support_cavity_fill') or {
-                'status': 'not_run',
-                'operation': 'fill_enclosed_shells',
-                'reason': 'support_void_policy=fill needs an exact union solid to decompose',
-                'consequence': 'enclosed voids remain; drainage necks are never filled by this policy',
-            }
-            report['stages']['support_cavity_fill'] = fill
-            validation.metrics['support_cavity_fill'] = fill
-        apply_support_void_policy(validation, settings)
-        if load_diagnostics:
-            validation.diagnostics.extend(load_diagnostics)
-        if transform_note is not None:
-            # A warning, not an error: the user asked for this and it must not
-            # block their export.  It does have to be impossible to miss.
-            validation.diagnostics.append(Diagnostic(
-                'model_transformed', f'The model was {transform_note}', severity='warning',
-                details=report['stages']['transform']))
-        report['validation'] = validation.to_dict()
-        report['support_graph'] = asdict(plan.graph)
-        if output and not validation.passed and not allow_unresolved:
-            # The evidence is the product; only the geometry file is withheld.
-            report['export'] = {
-                'written': False, 'path': str(output),
-                'reason': 'validation did not pass; rerun with --allow-unresolved to keep a warned export',
-                'failed_checks': [name for name, state in validation.checks.items()
-                                  if state not in ('pass', 'warn')]}
-        elif output:
-            atomic_copy(target, output, cancel)
-            validation.metrics['reopened']['path'] = str(output)
-            report['validation'] = validation.to_dict()
-            written = {'written': True, 'path': str(output), 'warned': not validation.passed,
-                       'triangles': int(union.num_tri())}
-            if components:
-                written['components'] = _write_components(Path(output), model, plan, raft, cancel, progress)
-            report['export'] = written
-        if project:
-            from copy import deepcopy
-            from .project import SCHEMA_VERSION as PROJECT_SCHEMA_VERSION, save_project
-            report['project'] = str(project)
-            # Projects store paint per object, in that object's own frame. A
-            # project supplied it that way already. A --paint table is plate
-            # coordinates with no part attribution, so it is recorded against
-            # the primary: that is exact for a single part, and with added
-            # parts present the assumption is stated in the report rather than
-            # made silently.
-            if object_paint is not None:
-                saved_paint = object_paint
+                        mesh.triangles, settings, (0.0, 0.0, 0.0), center_offset, lift_mm, cancel,
+                        scale, mirror)
+                    placement.search = {**(placement.search or {}), 'mode': 'auto_search_exhausted',
+                                        'reason': 'no orientation fitted; unrotated pose kept for clipping'}
+            elif clipping:
+                placement, _fits, _overflow = geometry.placement_or_overflow(
+                    mesh.triangles, settings, rotate or (0.0, 0.0, 0.0), center_offset, lift_mm,
+                    cancel, scale, mirror)
             else:
-                from .paint import to_local
-                primary = empty_paint()
-                for kind in ('blocked', 'enforced'):
-                    marks = paint.get(kind) or []
-                    if marks:
-                        primary[kind] = [[float(v) for v in point]
-                                         for point in to_local(marks, np.asarray(placement.matrix, dtype=float))]
-                saved_paint = [primary] + [empty_paint() for _ in extra_parts]
-                if extra_parts and (primary['blocked'] or primary['enforced']):
-                    report['stages'].setdefault('paint', {})['attribution'] = (
-                        'plate-coordinate --paint marks were recorded against the primary part')
-            save_project(project, {'schema_version': PROJECT_SCHEMA_VERSION, 'settings': settings,
-                                   'placement': asdict(placement), 'source': {'sha256': asset['sha256']},
-                                   # A chosen finalist is an authored pose. Reopening
-                                   # must not rerun a default search and pick rank 1.
-                                   'rotation_deg': (list(placement.rotation_deg)
-                                                    if candidates is not None or candidate_rank is not None
-                                                    else rotate or [0.0, 0.0, 0.0]),
-                                   'center_offset_mm': list(center_offset), 'model_lift_mm': lift_mm,
-                                   # The same top-level keys Document.manifest
-                                   # writes.  placement.scale is history of the
-                                   # matrix; these are the authored decision the
-                                   # reload restores, and omitting them silently
-                                   # reset a scaled project to 1.0 on reopen.
-                                   'scale_factors': list(placement.scale),
-                                   'mirror_axes': [bool(v) for v in placement.mirror],
-                                   'edits': {'manual_contacts': list(manual_contacts),
-                                             'removed_contacts': list(removed_contacts),
-                                             'contact_parameters': list(contact_parameters),
-                                             'paint': saved_paint,
-                                             # save_project embeds each of these as
-                                             # source/models/N.stl, so the archive stays
-                                             # portable after the originals move.
-                                             'extra_models': [deepcopy(spec) for spec in extra_models]},
-                                   'support_graph': asdict(plan.graph),
-                                   'validation': validation.to_dict(),
-                                   'stages': report['stages']}, source)
-        # Cured resin from the raster measurement, which already counts the
-        # supports and any base.  A soup's signed volume is not physical
-        # volume, so the raster figure is the only honest source here.
-        report['stages']['resin_usage'] = resin_usage(
-            settings, validation.metrics.get('raster_volume_mm3'))
-        report['seconds'] = time.monotonic() - started
-        report['timing'] = timer.as_dict()
-        if _resource is not None:
-            rss = _resource.getrusage(_resource.RUSAGE_SELF).ru_maxrss
-            # Linux reports kilobytes; macOS reports bytes.
-            report['peak_rss_bytes'] = int(rss) if sys.platform == 'darwin' else int(rss) * 1024
-        else:
-            report['peak_rss_bytes'] = None
-        report['scratch_bytes'] = sum(p.stat().st_size for p in Path(scratch.name).rglob('*') if p.is_file())
-        return report
-    finally:
-        _cleanup_scratch(scratch)
+                placement = geometry.placement_for_triangles(
+                    mesh.triangles, settings, rotate or (0.0, 0.0, 0.0), center_offset, lift_mm,
+                    cancel, scale, mirror)
+            report['placement'] = asdict(placement)
+            if rotate == 'auto':
+                report['stages']['orientation_selection'] = {
+                    'requested_candidates': run.candidate_count,
+                    'available_candidates': len(placement.search.get('ranked_candidates', [])),
+                    'selected_rank': placement.search.get('selected_rank'),
+                    'persist_as_explicit_pose': candidates is not None or candidate_rank is not None,
+                }
+            # A resized or mirrored part is a different part.  Say so in the
+            # report and as a warning diagnostic that survives into the archive,
+            # rather than leaving it to be inferred from a matrix.
+            note = geometry.scale_note(placement.scale, placement.mirror)
+            report['stages']['transform'] = {
+                'scale': list(placement.scale), 'mirror': list(placement.mirror),
+                'note': note,
+                'source_size_mm': (np.asarray(mesh.asset.bounds, dtype=float)[1]
+                                   - np.asarray(mesh.asset.bounds, dtype=float)[0]).tolist(),
+                'placed_size_mm': (np.asarray(placement.bounds, dtype=float)[1]
+                                   - np.asarray(placement.bounds, dtype=float)[0]).tolist(),
+            }
+            if note is not None:
+                run.transform_note = note
+            report['stages']['build_volume'] = {
+                'clip_to_build_volume': clipping,
+                'fits': bool(geometry.envelope_fits(np.asarray(placement.bounds, dtype=float), settings)),
+                'overflow_mm': geometry.envelope_overflow_mm(
+                    np.asarray(placement.bounds, dtype=float), settings),
+                'build_mm': list(settings['printer']['build_mm']),
+                'edge_clearance_mm': settings['printer']['edge_clearance_mm'],
+            }
+            _placed_path, run.placed = _materialize(mesh.triangles, np.asarray(placement.matrix),
+                                                    run.scratch.name, cancel, run.progress)
+    run.placement = placement
+
+
+def _build_model(run):
+    """Add the other parts, resolve paint to the plate, repair, and hollow."""
+    settings, report, cancel = run.settings, run.report, run.cancel
+    if run.extra_models:
+        run.placed, extra_report = _append_extra_models(
+            run.placed, run.extra_models, settings, run.scratch.name, run.budget, cancel, run.progress)
+        run.part_meshes = extra_report.pop('placed_parts', None)
+        run.extra_parts = extra_report.get('parts') or []
+        report['stages']['extra_models'] = extra_report
+    if run.object_paint is not None:
+        from .paint import to_plate
+        run.paint = to_plate(run.object_paint, [np.asarray(run.placement.matrix, dtype=float)] + [
+            np.asarray(part['placement']['matrix'], dtype=float) for part in run.extra_parts])
+    signed_volume = _signed_volume(run.placed, cancel)
+    with run.timer.stage('repair'):
+        model = prepare_model(run.placed, settings, budget=run.budget, cancel=cancel,
+                              progress=run.progress, source_volume=signed_volume)
+        report['stages']['repair'] = model.repair
+    if settings['hollow']['enabled']:
+        from .hollow import apply_hollow
+        with run.timer.stage('hollow'):
+            model, hollow_report = apply_hollow(model, settings, budget=run.budget, cancel=cancel,
+                                                progress=run.progress)
+            report['stages']['hollow'] = hollow_report
+    if model.cavity_fill is not None:
+        report['stages']['cavity_fill'] = model.cavity_fill
+    run.model, run.model_triangles = model, model.triangles
+    report['stages']['model'] = {'triangles': int(len(model.triangles)),
+                                 'volume_mm3': float(model.solid.volume()) if model.solid is not None else None,
+                                 'genus': int(model.solid.genus()) if model.solid is not None else None}
+
+
+def _route_supports(run, manual_contacts, removed_contacts):
+    """Plan supports once (manual) or search for a contact set with no island (automatic)."""
+    settings, cancel, budget, progress = run.settings, run.cancel, run.budget, run.progress
+    model, model_triangles = run.model, run.model_triangles
+    model_bounds = geometry.triangle_bounds(model_triangles, cancel=cancel)
+    with run.timer.stage('supports'):
+        column_field = build_column_field(model_triangles, model_bounds, settings, budget=budget,
+                                          cancel=cancel, progress=progress)
+
+        def replan(extra_contacts):
+            return plan_supports(model_triangles, model_bounds, settings, field=column_field,
+                                 budget=budget, cancel=cancel, progress=progress,
+                                 extra_contacts=extra_contacts, removed_contacts=removed_contacts,
+                                 contact_parameters=run.contact_parameters, paint=run.paint,
+                                 object_groups=support_object_groups(
+                                     settings, run.extra_models, run.part_meshes))
+        if not settings['support']['automatic']:
+            # Manual routing: plan once here. Automatic mode plans inside
+            # island_guard via the same replan callable.
+            run.plan, run.raft = replan(list(manual_contacts))
+    if settings['support']['automatic']:
+        # The search for a contact set that leaves no island runs on the
+        # in-memory assembly and never writes anything; only the accepted
+        # result gets written, reread and rechecked.
+        with run.timer.stage('island_guard'):
+            guard = route_without_islands(model, settings, replan=replan, budget=budget,
+                                          cancel=cancel, progress=progress, max_passes=run.max_passes,
+                                          extra_contacts=manual_contacts)
+            run.plan, run.raft, run.union = guard['plan'], guard['raft'], guard['union']
+        run.guard = guard
+        # A guard that settled on its first, whole-build scan finding
+        # nothing to fix ran no real correction. The full reslice reports
+        # that identical clean state with actual validation attached, so
+        # keeping this scan too would be noise, not evidence.
+        if not (len(guard['passes']) == 1 and not guard['passes'][0]['islands']):
+            run.search_passes = guard['passes']
+    else:
+        # automatic=False means the plate is routed by hand; the loop must
+        # not go add contacts of its own even if the one pass it is given
+        # leaves islands behind.
+        with run.timer.stage('assemble'):
+            run.union = assemble(model, run.plan.solids, run.raft, budget=budget, cancel=cancel)
+    run.report['stages']['assembly'] = run.union.report
+
+
+def _write_and_reslice(run, track_voids):
+    """Write the accepted assembly to scratch and validate the written file."""
+    settings, union = run.settings, run.union
+    run.union_bounds = np.asarray(union.bounding_box()).reshape(2, 3)
+    run.fits = geometry.envelope_fits(run.union_bounds, settings)
+    triangles = union.triangle_arrays
+    target = Path(run.scratch.name) / 'prepared.stl'
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with run.timer.stage('write'):
+        write_stl(target, triangles, run.cancel, run.progress)
+    run.target = target
+    # The accepted contact set always gets the full treatment: written,
+    # reread and rechecked by the same rasterizer the printer path uses.
+    # Nothing before this is evidence that a check actually ran.
+    with run.timer.stage('reslice'):
+        validation = _reslice(target, settings, run.budget, run.cancel, run.progress,
+                              track_voids=track_voids, assembly=union)
+    apply_support_validation(validation, run.plan, settings)
+    validation.checks['plate_fit'] = 'pass' if run.fits else 'fail'
+    if not run.fits:
+        validation.diagnostics.append(Diagnostic(
+            'no_feasible_placement', 'no feasible placement found for the supported assembly',
+            details={'bounds': run.union_bounds.tolist()}))
+    guard = run.guard
+    if guard is not None and not guard['resolved']:
+        # The guard gave up with islands still on the plate; the full reslice
+        # will already fail its own connectivity check on the same evidence,
+        # but this says why the search stopped rather than leaving that to be
+        # inferred from a pass count.
+        validation.diagnostics.append(Diagnostic(
+            'correction_incomplete',
+            f"Island correction stopped with {guard['islands_remaining']} island(s) still "
+            f"unsupported after {len(guard['passes'])} pass(es)",
+            severity='warning', details={'islands_remaining': guard['islands_remaining'],
+                                         'stopped': (guard['passes'][-1].get('stopped')
+                                                    if guard['passes'] else None)}))
+    run.validation = validation
+
+
+def _record_passes(run):
+    """Search passes, then the one full reslice pass that carries validation."""
+    union, validation = run.union, run.validation
+    for search in run.search_passes:
+        # A search pass only ever answers "does an island remain"; say so
+        # explicitly rather than leaving the shape of a full pass record with
+        # keys that were never actually measured for it.
+        run.report['passes'].append({
+            **search, 'kind': 'search',
+            'validation': 'not_run: this pass rasterized the assembly directly and did not '
+                          'write or reslice an STL, so peel, raster parity, drainage and '
+                          'support-routing checks were never evaluated for it'})
+    run.report['passes'].append({
+        'pass': len(run.search_passes) + 1, 'kind': 'full_reslice',
+        'supports': run.plan.metrics, 'raft': run.raft is not None,
+        'union_triangles': int(union.num_tri()), 'union_volume_mm3': union.volume(),
+        'union_bounds': run.union_bounds.tolist(), 'plate_fit': bool(run.fits),
+        'exported_triangles': union.num_tri(),
+        'raster_volume_mm3': validation.metrics.get('raster_volume_mm3'),
+        'volume_note': None if union.solid is not None else 'soup signed volume is not physical resin volume',
+        'validation': validation.to_dict()})
+    if union.report.get('support_cavity_fill') is not None:
+        run.report['stages']['support_cavity_fill'] = union.report['support_cavity_fill']
+
+
+def _advisory_checks(run, overhang_check, drainage, track_voids):
+    """Overhang coverage, drainage, support-void attribution and the diagnostics
+    that travel with the report."""
+    settings, union, validation = run.settings, run.union, run.validation
+    cancel, budget, progress = run.cancel, run.budget, run.progress
+    policy = settings['repair'].get('support_void_policy', 'fail')
+    model_group = next((g for g in union.groups if g.name == 'model'), None)
+    support_group = next((g for g in union.groups if g.name == 'supports_and_raft'), None)
+    if overhang_check:
+        # Advice about orientation and support density, not a gate: a gap here
+        # means the router itself left a downward sample uncovered, never that
+        # the print is proven to fail.
+        contacts = np.asarray([node.position_mm for node in run.plan.graph.nodes
+                               if node.kind == 'contact'], dtype=float).reshape(-1, 3)
+        apply_overhang_check(validation, run.model_triangles, settings, contacts,
+                             budget=budget, cancel=cancel, progress=progress)
+    else:
+        validation.checks['unsupported_overhangs'] = 'not_run'
+    if drainage:
+        try:
+            with run.timer.stage('drainage'):
+                drain = analyze_drainage(union.soup_triangles(budget),
+                                         np.asarray(union.bounding_box()).reshape(2, 3),
+                                         settings, budget=budget, cancel=cancel, progress=progress)
+                if policy != 'fail' and support_group is not None and model_group is not None:
+                    model_bounds = geometry.triangle_bounds(model_group.triangles, cancel=cancel)
+                    model_drain = analyze_drainage(model_group.triangles, model_bounds, settings,
+                                                   budget=budget, cancel=cancel, progress=progress)
+                    drain = attribute_drainage_by_model(drain, model_drain)
+                validation.checks['drainage_bottlenecks'] = drainage_check(drain)
+                validation.metrics['drainage'] = drain
+                if drain.get('bottlenecked_components'):
+                    validation.diagnostics.append(Diagnostic(
+                        'drainage_bottleneck',
+                        'Void connects to the exterior only through an orifice below the configured area',
+                        details=drain))
+        except VoxelMillError as error:
+            if error.code == 'canceled':
+                raise
+            validation.checks['drainage_bottlenecks'] = 'not_run'
+            validation.diagnostics.append(Diagnostic(
+                'drainage_not_run', str(error), severity='warning', details=error.details))
+    else:
+        validation.checks['drainage_bottlenecks'] = 'not_run'
+    if (policy != 'fail' and support_group is not None and model_group is not None
+            and track_voids and validation.metrics.get('enclosed_voids') is not None):
+        model_bounds = geometry.triangle_bounds(model_group.triangles, cancel=cancel)
+        model_stream = MeshLayerStream(model_group.triangles, model_bounds, settings,
+                                       budget=budget, cancel=cancel, progress=progress)
+        model_layers = analyze_layers(model_stream, model_stream.grid, settings, cancel=cancel,
+                                      budget=budget, progress=progress, track_voids=True)
+        attribute_enclosed_voids_by_model(validation.metrics['enclosed_voids'],
+                                          model_layers.metrics.get('enclosed_voids'))
+    if policy == 'fill' and union.solid is None:
+        fill = union.report.get('support_cavity_fill') or {
+            'status': 'not_run',
+            'operation': 'fill_enclosed_shells',
+            'reason': 'support_void_policy=fill needs an exact union solid to decompose',
+            'consequence': 'enclosed voids remain; drainage necks are never filled by this policy',
+        }
+        run.report['stages']['support_cavity_fill'] = fill
+        validation.metrics['support_cavity_fill'] = fill
+    apply_support_void_policy(validation, settings)
+    if run.load_diagnostics:
+        validation.diagnostics.extend(run.load_diagnostics)
+    if run.transform_note is not None:
+        # A warning, not an error: the user asked for this and it must not
+        # block their export.  It does have to be impossible to miss.
+        validation.diagnostics.append(Diagnostic(
+            'model_transformed', f'The model was {run.transform_note}', severity='warning',
+            details=run.report['stages']['transform']))
+    run.report['validation'] = validation.to_dict()
+    run.report['support_graph'] = asdict(run.plan.graph)
+
+
+def _publish(run, output, allow_unresolved, components):
+    """Copy the staged file to ``output`` only when validation allows it."""
+    validation, report = run.validation, run.report
+    if output and not validation.passed and not allow_unresolved:
+        # The evidence is the product; only the geometry file is withheld.
+        report['export'] = {
+            'written': False, 'path': str(output),
+            'reason': 'validation did not pass; rerun with --allow-unresolved to keep a warned export',
+            'failed_checks': [name for name, state in validation.checks.items()
+                              if state not in ('pass', 'warn')]}
+    elif output:
+        atomic_copy(run.target, output, run.cancel)
+        validation.metrics['reopened']['path'] = str(output)
+        report['validation'] = validation.to_dict()
+        written = {'written': True, 'path': str(output), 'warned': not validation.passed,
+                   'triangles': int(run.union.num_tri())}
+        if components:
+            written['components'] = _write_components(Path(output), run.model, run.plan, run.raft,
+                                                      run.cancel, run.progress)
+        report['export'] = written
+
+
+def _save_project(run, project, rotate, center_offset, lift_mm, candidates, candidate_rank,
+                  manual_contacts, removed_contacts, contact_parameters):
+    """Archive the source and every authored decision so the plate reopens as it was."""
+    from copy import deepcopy
+    from .paint import empty_paint
+    from .project import SCHEMA_VERSION as PROJECT_SCHEMA_VERSION, save_project
+    report, placement = run.report, run.placement
+    report['project'] = str(project)
+    # Projects store paint per object, in that object's own frame. A project
+    # supplied it that way already. A --paint table is plate coordinates with
+    # no part attribution, so it is recorded against the primary: that is exact
+    # for a single part, and with added parts present the assumption is stated
+    # in the report rather than made silently.
+    if run.object_paint is not None:
+        saved_paint = run.object_paint
+    else:
+        from .paint import to_local
+        primary = empty_paint()
+        for kind in ('blocked', 'enforced'):
+            marks = run.paint.get(kind) or []
+            if marks:
+                primary[kind] = [[float(v) for v in point]
+                                 for point in to_local(marks, np.asarray(placement.matrix, dtype=float))]
+        saved_paint = [primary] + [empty_paint() for _ in run.extra_parts]
+        if run.extra_parts and (primary['blocked'] or primary['enforced']):
+            report['stages'].setdefault('paint', {})['attribution'] = (
+                'plate-coordinate --paint marks were recorded against the primary part')
+    save_project(project, {'schema_version': PROJECT_SCHEMA_VERSION, 'settings': run.settings,
+                           'placement': asdict(placement), 'source': {'sha256': run.asset['sha256']},
+                           # A chosen finalist is an authored pose. Reopening
+                           # must not rerun a default search and pick rank 1.
+                           'rotation_deg': (list(placement.rotation_deg)
+                                            if candidates is not None or candidate_rank is not None
+                                            else rotate or [0.0, 0.0, 0.0]),
+                           'center_offset_mm': list(center_offset), 'model_lift_mm': lift_mm,
+                           # The same top-level keys Document.manifest writes.
+                           # placement.scale is history of the matrix; these are
+                           # the authored decision the reload restores, and
+                           # omitting them silently reset a scaled project to
+                           # 1.0 on reopen.
+                           'scale_factors': list(placement.scale),
+                           'mirror_axes': [bool(v) for v in placement.mirror],
+                           'edits': {'manual_contacts': list(manual_contacts),
+                                     'removed_contacts': list(removed_contacts),
+                                     'contact_parameters': list(contact_parameters),
+                                     'paint': saved_paint,
+                                     # save_project embeds each of these as
+                                     # source/models/N.stl, so the archive stays
+                                     # portable after the originals move.
+                                     'extra_models': [deepcopy(spec) for spec in run.extra_models]},
+                           'support_graph': asdict(run.plan.graph),
+                           'validation': run.validation.to_dict(),
+                           'stages': report['stages']}, run.source)
+
+
+def _finish_report(run):
+    """Resin usage, timings and resource figures; returns the finished report."""
+    report = run.report
+    # Cured resin from the raster measurement, which already counts the
+    # supports and any base.  A soup's signed volume is not physical volume,
+    # so the raster figure is the only honest source here.
+    report['stages']['resin_usage'] = resin_usage(
+        run.settings, run.validation.metrics.get('raster_volume_mm3'))
+    report['seconds'] = time.monotonic() - run.started
+    report['timing'] = run.timer.as_dict()
+    if _resource is not None:
+        rss = _resource.getrusage(_resource.RUSAGE_SELF).ru_maxrss
+        # Linux reports kilobytes; macOS reports bytes.
+        report['peak_rss_bytes'] = int(rss) if sys.platform == 'darwin' else int(rss) * 1024
+    else:
+        report['peak_rss_bytes'] = None
+    report['scratch_bytes'] = sum(p.stat().st_size for p in Path(run.scratch.name).rglob('*')
+                                  if p.is_file())
+    return report
 
 
 def _cleanup_scratch(scratch):
