@@ -86,7 +86,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | I1 | Persist and replay analysis artifacts | Feature | 3 | 3 | 9 | open |
 | VM-013 | Spatial index for routed-capsule collision checks | Perf | 3 | 3 | 9 | done |
 | VM-016 | Keep VTK actors and update their input | Perf | 3 | 3 | 9 | done |
-| VM-017 | Optional single-raster fast path for `slice` | Perf | 3 | 3 | 9 | open |
+| VM-017 | Optional single-raster fast path for `slice` | Perf | 3 | 3 | 9 | won't fix (measured) |
 | VM-018 | Persist the rasterizer Z-interval structure across passes (F3) | Perf | 3 | 3 | 9 | won't fix (measured) |
 | VM-019 | Scale check at 12K–16K panels | Perf | 3 | 3 | 9 | done |
 | VM-029 | Island scan grows faster than the geometry braces add | Perf | 3 | 3 | 9 | explained (not a defect) |
@@ -102,7 +102,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | E2 | Per-Z-band / per-object slice overrides | Feature | 3 | 2 | 6 | open |
 | E3 | Cross-sectional-area-driven exposure | Feature | 3 | 2 | 6 | open |
 | E6 | LED uniformity mask compensation | Feature | 3 | 2 | 6 | open |
-| F5 | SIMD in the rasterizer inner loop | Feature | 3 | 2 | 6 | open |
+| F5 | SIMD in the rasterizer inner loop | Feature | 3 | 2 | 6 | won't fix (measured) |
 | VM-021 | Vectorize contour/boundary sampling | Perf | 3 | 2 | 6 | done |
 | VM-024 | Only one of the three `analyze_layers` calls in `prepare` can be shared | Perf | 3 | 2 | 6 | deferred (decision) |
 | VM-025 | Fold `UnionLayerStream` per-group slices into one native call | Perf | 3 | 2 | 6 | done (earlier) |
@@ -127,7 +127,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-071 | Section-aware help for repeated field names | Docs | 4 | 1 | 4 | open |
 | VM-084 | Windows topology on real hybrid hardware | Release | 4 | 1 | 4 | open |
 | F7 | GPU orientation search (CPU fallback mandatory) | Feature | 2 | 2 | 4 | open |
-| VM-027 | x86-64-v3 kernels with runtime dispatch | Perf | 2 | 2 | 4 | open |
+| VM-027 | x86-64-v3 kernels with runtime dispatch | Perf | 2 | 2 | 4 | won't fix (measured) |
 | B1 | Encrypted CTB writer | Feature | 1 | 4 | 4 | deferred (decision) |
 | VM-015 | Incremental island-guard passes | Perf | 1 | 4 | 4 | partial |
 | VM-042 | Split `gui/window.py` (3,874 lines) into controllers | Arch | 1 | 4 | 4 | open |
@@ -288,13 +288,15 @@ Ease 3 · Benefit 3 · Confidence: likely · Status: done
 
 ### VM-017 — Optional single-raster fast path for `slice`
 
-Ease 3 · Benefit 3 · Confidence: sure · Status: open
+Ease 3 · Benefit 3 · Confidence: sure · Status: won't fix (measured)
 
 **Problem.** `slice_stl` rasterizes the source three times: once to validate, once to write, and once to verify decoded pixels. The independence is deliberate, but at 12K–16K panels slicing is the dominant cost.
 
 **Fix.** Keep the default. Add `--verify=independent|reuse` (in config: `slice.verification`), where `reuse` writes from the validation raster and still decodes and verifies the written file. The report must record the mode.
 
 **Where.** `src/voxelmill/goo.py:1193` (`slice_stl`)
+
+**Decision (2026-09-23).** After VM-030, rasterizing is 8.6 s of a 52 s single-threaded 16K plate-filling slice, so a reuse mode saves at most a sixth of it. That is not worth weakening the independent-verification guarantee, which is a product promise.
 
 **Update (2026-09-23).** VM-030 removed the full-frame work, which was most of the cost. Slicing the small sphere now takes 1.3 s, so the value of skipping the independent raster passes is much lower. Re-measure at 16K (VM-019) before building this.
 
@@ -411,13 +413,15 @@ Ease 5 · Benefit 1 · Confidence: measure · Status: won't fix (measured)
 
 ### VM-027 — x86-64-v3 kernels with runtime dispatch
 
-Ease 2 · Benefit 2 · Confidence: measure · Status: open
+Ease 2 · Benefit 2 · Confidence: measure · Status: won't fix (measured)
 
 **Problem.** Portable wheels compile for baseline x86-64. The RLE, GOO/CTB encode and EDT loops might gain from AVX2, but the regime is memory-bound, and the ledger deprioritized SIMD (F5).
 
 **Fix.** Use `target_clones` or a small manual dispatch for two or three kernels, only if a profile shows them compute-bound. Never ship `-march=native`.
 
 **Where.** `native/runs.cpp`, `native/goo.cpp`, `native/edt.cpp`
+
+**Measured (2026-09-23).** A dedicated native box-average kernel ran 4.9 ms against NumPy's 4.7 ms per 15.8 Mpx layer, and the ledger already shows the layer passes are bound by memory bandwidth. Wider SIMD does not move memory-bound loops; F5 closes with it.
 
 ### VM-028 — Minor: CUDA morphology allocation, MST, lock polling, undo copies
 
@@ -726,7 +730,7 @@ the code on 2026-09-23. Items marked `open (hardware)` cannot close without phys
 | E2 | Per-Z-band / per-object slice overrides | Diff 34 · Imp 44 | open | Needs A10. |
 | E3 | Cross-sectional-area-driven exposure | Diff 30 · Imp 30 | open | Build the mechanism with the policy off by default. |
 | E6 | LED uniformity mask compensation | Diff 34 · Imp 34 | open | Needs a measured uniformity map. |
-| F5 | SIMD in the rasterizer inner loop | Diff 26 · Imp 32 | open | Deprioritized, because the rasterizer is memory-bound. See VM-027. |
+| F5 | SIMD in the rasterizer inner loop | Diff 26 · Imp 32 | won't fix (measured) | Deprioritized, because the rasterizer is memory-bound. See VM-027. |
 | A10 | Per-Z-band overrides (per-object support overrides shipped) | Diff 42 · Imp 50 | partial | Depends on E2. |
 | C5 | Suction-cup / peel force calibration | Diff 44 · Imp 58 | open (hardware) | The advisory shipped. Force and tilt calibration need prints. |
 | F4 | Incremental re-slice after a local edit | Diff 40 · Imp 54 | open | Pairs with VM-015 and I1. |
