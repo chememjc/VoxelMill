@@ -94,9 +94,9 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-081 | Test the Apple Silicon build | Release | 3 | 3 | 9 | open |
 | G8 | Keyboard shortcut editor (theme shipped) | Feature | 4 | 2 | 8 | partial |
 | I3 | Print-time auto-calibration from measured prints | Feature | 4 | 2 | 8 | open (hardware) |
-| VM-020 | Cache the support KD-tree across island passes | Perf | 4 | 2 | 8 | open |
+| VM-020 | Cache the support KD-tree across island passes | Perf | 4 | 2 | 8 | won't fix (measured) |
 | VM-022 | Cheaper per-override setting validation | Perf | 4 | 2 | 8 | done |
-| VM-065 | Platform-honest affinity tests | Test/CI | 4 | 2 | 8 | open |
+| VM-065 | Platform-honest affinity tests | Test/CI | 4 | 2 | 8 | done |
 | C8 | Cap non-planar open cuts | Feature | 2 | 4 | 8 | open |
 | G3 | Typed settings pages replace the raw JSON box | Feature | 2 | 4 | 8 | partial |
 | E2 | Per-Z-band / per-object slice overrides | Feature | 3 | 2 | 6 | open |
@@ -327,13 +327,15 @@ These came from drainage bisections sharing their labelings, the capsule index (
 
 ### VM-020 — Cache the support KD-tree across island passes
 
-Ease 4 · Benefit 2 · Confidence: measure · Status: open
+Ease 4 · Benefit 2 · Confidence: measure · Status: won't fix (measured)
 
 **Problem.** Each replan rebuilds spatial structures over unchanged model geometry.
 
 **Fix.** Build them once per `ColumnField` and pass them through `replan`.
 
 **Where.** `src/voxelmill/supports.py`, `src/voxelmill/island_guard.py`
+
+**Measured (2026-09-23).** KD-tree construction and queries total under 10 ms in both the pin_array retry profile and the 16K plate-filling slab profile. The trees are built over the contact set, which changes every pass, so there is nothing stable to cache anyway.
 
 ### VM-021 — Vectorize contour/boundary sampling
 
@@ -577,13 +579,15 @@ Ease 5 · Benefit 2 · Confidence: sure · Status: done
 
 ### VM-065 — Platform-honest affinity tests
 
-Ease 4 · Benefit 2 · Confidence: sure · Status: open
+Ease 4 · Benefit 2 · Confidence: sure · Status: done
 
 **Problem.** Affinity tests assume Linux `sched_setaffinity`. On macOS/Windows they need a skip or a test double rather than passing vacuously.
 
 **Fix.** Mark them per platform and add a Windows `EfficiencyClass` double.
 
 **Where.** `tests/test_topology.py`, `docs/platforms.md`
+
+**Done (2026-09-23).** The Linux-only affinity test already skipped elsewhere. The macOS and Windows detectors now have tests with doubles, and writing the Windows one found a real bug. The record parser read `GroupCount` and the affinity mask from inside `PROCESSOR_RELATIONSHIP.Reserved[20]` (offsets 12 and 16 instead of 30 and 32), so every mask read as zero and Windows always fell back to a uniform topology. The signed `c_byte` buffer would also have made `bytes()` raise on any byte above 127. The offsets now follow the SDK layout, in a pure `_windows_topology` parser tested against records built to that layout.
 
 ## Documentation
 
@@ -668,6 +672,8 @@ Ease 4 · Benefit 1 · Confidence: sure · Status: open
 **Fix.** On one, run `python -c "from voxelmill import topology; print(topology.detect())"` and record the P/E split it reports.
 
 **Where.** `src/voxelmill/topology.py`
+
+**Update (2026-09-23).** The parser was wrong until VM-065 (it always fell back). A real hybrid Windows machine should now report `source='win32-efficiency-class'` with P-cores in `perf_cpus`. If it reports `fallback`, the layout assumption in `topology._windows_topology` is what to check.
 
 ### VM-085 — PyPI wheels / Flatpak (H5)
 

@@ -171,3 +171,40 @@ def test_worker_policy_is_a_dropdown_in_the_generated_settings_table():
     from voxelmill.gui.settings_table import build_descriptors
     descriptor = next(d for d in build_descriptors() if d.path == 'resources.worker_policy')
     assert descriptor.choices == ('performance', 'efficiency', 'all')
+
+
+def _windows_core(efficiency, mask, *, groups=1):
+    """One RelationProcessorCore record in the documented x64 layout (48 bytes)."""
+    import struct
+    record = bytearray(48)
+    struct.pack_into('<II', record, 0, 0, len(record))   # Relationship, Size
+    record[9] = efficiency                               # EfficiencyClass
+    struct.pack_into('<H', record, 30, groups)           # GroupCount
+    struct.pack_into('<QH', record, 32, mask, 0)         # GroupMask[0]: Mask, Group
+    return bytes(record)
+
+
+def test_windows_records_give_hybrid_cores_and_smt_siblings():
+    # Two SMT performance cores (class 1) and two efficiency cores (class 0).
+    records = (_windows_core(1, 0b0011) + _windows_core(1, 0b1100)
+               + _windows_core(0, 0b1_0000) + _windows_core(0, 0b10_0000))
+    topology = t._windows_topology(records)
+    assert topology.cores == ((0, 1), (2, 3), (4,), (5,))
+    assert topology.perf_cpus == (0, 1, 2, 3) and topology.eff_cpus == (4, 5)
+    assert topology.source == 'win32-efficiency-class'
+
+
+def test_windows_records_refuse_what_they_cannot_apply():
+    with pytest.raises(OSError, match='processor groups'):
+        t._windows_topology(_windows_core(0, 1, groups=2))
+    with pytest.raises(OSError, match='no processor cores'):
+        t._windows_topology(_windows_core(0, 0))
+
+
+def test_macos_perflevels_put_performance_cores_first(monkeypatch):
+    values = {'hw.logicalcpu': 10, 'hw.perflevel0.logicalcpu': 8,
+              'hw.perflevel1.logicalcpu': 2, 'hw.physicalcpu': 10}
+    monkeypatch.setattr(t, '_sysctl', values.get)
+    topology = t._detect_macos()
+    assert topology.perf_cpus == tuple(range(8)) and topology.eff_cpus == (8, 9)
+    assert all(len(core) == 1 for core in topology.cores)

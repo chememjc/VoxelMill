@@ -193,7 +193,7 @@ def _detect_macos():
 
 
 def _detect_windows():
-    """GetLogicalProcessorInformationEx; EfficiencyClass 0 is the slowest class.
+    """GetLogicalProcessorInformationEx; EfficiencyClass 0 is the most efficient (slowest) class.
 
     Processor groups above 64 threads are not handled: bail to the fallback
     rather than report a mask that cannot be applied.
@@ -209,15 +209,35 @@ def _detect_windows():
     if not kernel32.GetLogicalProcessorInformationEx(RelationProcessorCore, buf,
                                                      ctypes.byref(size)):
         raise OSError(ctypes.get_last_error(), 'GetLogicalProcessorInformationEx')
+    # c_byte is signed; read the raw memory rather than a list of signed ints.
+    return _windows_topology(ctypes.string_at(ctypes.addressof(buf), size.value))
+
+
+# SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, RelationProcessorCore, x64 layout:
+#   0 Relationship (DWORD)   4 Size (DWORD)
+#   8 PROCESSOR_RELATIONSHIP: 8 Flags, 9 EfficiencyClass, 10..29 Reserved[20],
+#     30 GroupCount (WORD), 32 GroupMask[] of GROUP_AFFINITY (8-byte aligned):
+#     +0 Mask (KAFFINITY, 8 bytes), +8 Group (WORD), +10 Reserved[3].
+_EFFICIENCY_CLASS = 9
+_GROUP_COUNT = 30
+_GROUP_MASK = 32
+
+
+def _windows_topology(records):
+    """Topology from raw GetLogicalProcessorInformationEx core records.
+
+    A higher EfficiencyClass is a faster, less efficient core.
+    """
     cores, classes, offset = [], {}, 0
-    while offset < size.value:
-        base = offset
-        length = int.from_bytes(bytes(buf[base + 4:base + 8]), 'little')
-        efficiency = buf[base + 9] & 0xFF
-        group_count = int.from_bytes(bytes(buf[base + 12:base + 14]), 'little')
+    while offset + _GROUP_MASK + 8 <= len(records):
+        length = int.from_bytes(records[offset + 4:offset + 8], 'little')
+        if length <= 0:
+            raise OSError('malformed processor record')
+        efficiency = records[offset + _EFFICIENCY_CLASS]
+        group_count = int.from_bytes(records[offset + _GROUP_COUNT:offset + _GROUP_COUNT + 2], 'little')
         if group_count > 1:
             raise OSError('multiple processor groups')
-        mask = int.from_bytes(bytes(buf[base + 16:base + 24]), 'little')
+        mask = int.from_bytes(records[offset + _GROUP_MASK:offset + _GROUP_MASK + 8], 'little')
         siblings = tuple(i for i in range(64) if mask >> i & 1)
         if siblings:
             cores.append(siblings)
