@@ -1130,7 +1130,7 @@ def drainage_clearance(empty, clearance, pitch, radius, cancel=None, min_volume_
     sizes = np.bincount(void_labels.ravel(), minlength=void_count + 1)
     core_sizes = np.bincount(core_labels.ravel(), minlength=core_count + 1)
     boxes = ndi.find_objects(core_labels)
-    pockets = []
+    searches = []
     for component in pocket_ids:
         cancel.check()
         box = boxes[component - 1]
@@ -1139,21 +1139,31 @@ def drainage_clearance(empty, clearance, pitch, radius, cancel=None, min_volume_
         # Fully enclosed chambers are handled by the separate enclosure check.
         if int(void_labels[seed]) not in outside_voids:
             continue
-        low, high = 0.0, radius
-        for _ in range(8):
+        searches.append({'component': int(component), 'seed': seed, 'low': 0.0, 'high': radius})
+    # Eight bisections per pocket, run in lockstep. Every pocket starts from
+    # the same radius, so thresholds are shared dyadic fractions of it: each
+    # distinct threshold in a step is labeled once and answers every pocket
+    # that asks for it. The result is what a per-pocket search computes.
+    for _ in range(8):
+        wanted = {}
+        for search in searches:
+            wanted.setdefault((search['low'] + search['high']) / 2, []).append(search)
+        for threshold, group in wanted.items():
             cancel.check()
-            threshold = (low + high) / 2
             labels, _ = ndi.label(empty & (clearance >= threshold - 1e-9), CROSS3)
-            identity = int(labels[seed])
-            if identity and identity in _border_ids(labels):
-                low = threshold
-            else:
-                high = threshold
-        pockets.append({'component': int(component),
-                        'core_volume_mm3': float(core_sizes[component] * pitch**3),
-                        'bottleneck_area_mm2': math.pi * low**2,
-                        'bottleneck_area_upper_mm2': math.pi * high**2,
-                        'seed_zyx': list(seed)})
+            border = set(_border_ids(labels))
+            for search in group:
+                identity = int(labels[search['seed']])
+                if identity and identity in border:
+                    search['low'] = threshold
+                else:
+                    search['high'] = threshold
+    pockets = [{'component': search['component'],
+                'core_volume_mm3': float(core_sizes[search['component']] * pitch**3),
+                'bottleneck_area_mm2': math.pi * search['low']**2,
+                'bottleneck_area_upper_mm2': math.pi * search['high']**2,
+                'seed_zyx': list(search['seed'])}
+               for search in searches]
     enclosed = [label for label in range(1, void_count + 1) if label not in outside_voids]
     floor = float(min_volume_mm3)
     reported = [p for p in pockets if p['core_volume_mm3'] >= floor] if floor > 0 else pockets

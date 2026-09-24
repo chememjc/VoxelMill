@@ -694,3 +694,53 @@ def test_island_extent_matches_argwhere_and_bincount_on_a_random_label_field():
         row, col, pixels = _island_extent(labels, component)
         assert [row, col] == list(np.argwhere(labels == component)[0])
         assert pixels == int(counts[component])
+
+
+def _per_pocket_bottlenecks(empty, clearance, radius):
+    """The original search: eight full labelings per pocket."""
+    import math
+    import scipy.ndimage as ndi
+    from voxelmill.validation import CROSS3, _border_ids
+    core, count = ndi.label(empty & (clearance >= radius - 1e-9), CROSS3)
+    outside = _border_ids(core)
+    voids, _ = ndi.label(empty, CROSS3)
+    open_voids = set(_border_ids(voids)) - {0}
+    boxes = ndi.find_objects(core)
+    found = []
+    for component in np.setdiff1d(np.arange(1, count + 1), outside):
+        box = boxes[component - 1]
+        local = np.argwhere(core[box] == component)[0]
+        seed = tuple(int(local[a] + box[a].start) for a in range(3))
+        if int(voids[seed]) not in open_voids:
+            continue
+        low, high = 0.0, radius
+        for _ in range(8):
+            threshold = (low + high) / 2
+            labels, _ = ndi.label(empty & (clearance >= threshold - 1e-9), CROSS3)
+            identity = int(labels[seed])
+            if identity and identity in _border_ids(labels):
+                low = threshold
+            else:
+                high = threshold
+        found.append((int(component), math.pi * low**2, math.pi * high**2, list(seed)))
+    return found
+
+
+def test_lockstep_bottleneck_search_matches_the_per_pocket_search():
+    import scipy.ndimage as ndi
+    from voxelmill.validation import drainage_clearance
+    # Chambers behind necks of different widths, all opening to the same air.
+    empty = np.zeros((14, 40, 60), dtype=bool)
+    empty[:, :, :4] = True                                # the outside, at the grid border
+    for index, neck in enumerate((1, 2, 3, 5)):
+        y0 = 2 + index * 9
+        empty[3:11, y0:y0 + 7, 12:22] = True              # a chamber
+        empty[6:6 + neck, y0 + 3:y0 + 3 + neck, 4:12] = True   # its neck to the outside
+    clearance = ndi.distance_transform_edt(empty, sampling=0.5)
+    radius = 1.6
+    got = drainage_clearance(empty, clearance, 0.5, radius)
+    expected = _per_pocket_bottlenecks(empty, clearance, radius)
+    # Several pockets whose searches diverge, or lockstep proves nothing.
+    assert len({area for _, area, _, _ in expected}) >= 2
+    assert sorted((p['component'], p['bottleneck_area_mm2'], p['bottleneck_area_upper_mm2'],
+                   p['seed_zyx']) for p in got['bottleneck_examples']) == sorted(expected)
