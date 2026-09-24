@@ -16,7 +16,7 @@ here. Keep this file under a screen.
 
 - VM-043 partial: next is route_contacts per-contact geometry emission + metrics block, then `_brace` (425 lines). Verify every routing change with the scratch harness idea: record plan_supports graph/metrics/solid-hash for 4 shapes x 8 support scenarios before, compare after (identical required); plus `scripts/equivalence.py --jobs 4` (18/18) and the full suite.
 - Then VM-042 (split gui/window.py into controllers), VM-015 (incremental routing), VM-014 CI perf A/B, VM-083, VM-085, feature backlog.
-- Needs the user: VM-080 (tagging publishes a release) and pushing `master` (CI has never run on GitHub).
+- v0.5.5 alpha is published and verified (Linux, Windows guest, Intel iMac); CI is green on `master`.
 - Commit rule from the user: messages describe only the diff since the last commit, with no tool or session references and no attribution trailers.
 - Verification habits: byte-identical output checks before/after every perf or refactor change; mark ISSUES.md status in both table and detail (`Status:` line), re-sort table by ease×benefit.
 

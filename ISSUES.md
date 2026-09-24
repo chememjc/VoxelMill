@@ -54,9 +54,9 @@ Sorted from easiest and most significant to hardest and least valuable.
 | --- | --- | --- | ---: | ---: | ---: | --- |
 | VM-001 | `hollow.infill = "hex"` crashes | Bug | 5 | 4 | 20 | done |
 | VM-002 | Editor job pool runs one job at a time by default | Bug | 5 | 4 | 20 | done |
-| VM-080 | Release the line-actor fix | Release | 5 | 4 | 20 | open |
+| VM-080 | Release the line-actor fix | Release | 5 | 4 | 20 | done |
 | N12 | Resolve GOO mirroring against both references | Feature | 4 | 5 | 20 | open (hardware) |
-| VM-060 | CI workflow that runs the tests | Test/CI | 4 | 5 | 20 | done (goldens advisory until green on GitHub) |
+| VM-060 | CI workflow that runs the tests | Test/CI | 4 | 5 | 20 | done |
 | B3 | Printer database beyond the Mars 5 Ultra | Feature | 4 | 4 | 16 | open |
 | VM-011 | Release builds ship without TBB (confirmed) | Perf | 4 | 4 | 16 | done |
 | VM-003 | Editor leaks a scratch directory on every reload | Bug | 5 | 3 | 15 | done |
@@ -555,7 +555,7 @@ Ease 3 · Benefit 4 · Confidence: sure · Status: partial
 
 ### VM-060 — CI workflow that runs the tests
 
-Ease 4 · Benefit 5 · Confidence: sure · Status: done (goldens advisory until green on GitHub)
+Ease 4 · Benefit 5 · Confidence: sure · Status: done
 
 **Problem.** The only workflow is `release.yml` (manual or tag). It never runs pytest. The ~800-test suite and the golden equivalence check only run when someone remembers.
 
@@ -653,13 +653,15 @@ Ease 3 · Benefit 1 · Confidence: sure · Status: done
 
 ### VM-080 — Release the line-actor fix
 
-Ease 5 · Benefit 4 · Confidence: sure · Status: open
+Ease 5 · Benefit 4 · Confidence: sure · Status: done
 
 **Problem.** The build-volume and navigation-cube outline fix (one two-point actor per line) is verified on `master` and in the workflow's Windows build, but the published v0.5.4 assets predate it.
 
 **Fix.** Cut v0.5.5 after VM-001–VM-003 land.
 
 **Where.** `gotchas.md`, `reports/releases/v0.5.4.md`
+
+**Done (2026-09-24).** Released in v0.5.5 and verified in the Windows 11 guest against the published zip; see `reports/releases/v0.5.5.md`.
 
 ### VM-081 — Test the Apple Silicon build
 
