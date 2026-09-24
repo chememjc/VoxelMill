@@ -106,7 +106,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-021 | Vectorize contour/boundary sampling | Perf | 3 | 2 | 6 | done |
 | VM-024 | Only one of the three `analyze_layers` calls in `prepare` can be shared | Perf | 3 | 2 | 6 | deferred (decision) |
 | VM-025 | Fold `UnionLayerStream` per-group slices into one native call | Perf | 3 | 2 | 6 | done (earlier) |
-| VM-063 | Direct tests for `gui/services.py` and camera math | Test/CI | 3 | 2 | 6 | open |
+| VM-063 | Direct tests for `gui/services.py` and camera math | Test/CI | 3 | 2 | 6 | done |
 | VM-083 | Memory ceiling on macOS and Windows | Release | 3 | 2 | 6 | open |
 | VM-085 | PyPI wheels / Flatpak (H5) | Release | 3 | 2 | 6 | open |
 | A10 | Per-Z-band overrides (per-object support overrides shipped) | Feature | 2 | 3 | 6 | partial |
@@ -573,7 +573,7 @@ Ease 5 · Benefit 1 · Confidence: sure · Status: done
 
 ### VM-063 — Direct tests for `gui/services.py` and camera math
 
-Ease 3 · Benefit 2 · Confidence: likely · Status: open
+Ease 3 · Benefit 2 · Confidence: likely · Status: done
 
 **Problem.** `route_attachments`, `export_and_validate` and `run_print_checks` are only exercised through window wiring tests, and `camera.py` transitions have no direct tests.
 
