@@ -1,5 +1,6 @@
 """Portable per-contact support parameters in final plate coordinates."""
 from copy import deepcopy
+import json
 
 import numpy as np
 
@@ -39,7 +40,7 @@ class ContactParameters(list):
 def normalize_contact_parameters(records, settings):
     if not isinstance(records, (list, tuple)):
         raise VoxelMillError('invalid_contact_parameters', 'Contact parameters must be an array')
-    result, seen = [], set()
+    result, seen, validated = [], set(), set()
     for record in records:
         if not isinstance(record, dict) or set(record) != {'position_mm', 'parameters'}:
             raise VoxelMillError('invalid_contact_parameters', 'Each override needs position_mm and parameters')
@@ -51,9 +52,15 @@ def normalize_contact_parameters(records, settings):
         if not isinstance(parameters, dict) or set(parameters) - PERSONAL_FIELDS:
             raise VoxelMillError('invalid_contact_parameters', 'Only individual support geometry parameters may be overridden',
                             {'allowed_fields': sorted(PERSONAL_FIELDS)})
-        merged = deepcopy(settings)
-        merged.setdefault('support', {}).update(deepcopy(parameters))
-        resolve_settings(overrides=merged)  # Includes cross-field geometry constraints.
+        # Validation depends only on the settings and these values, and object
+        # overrides repeat one parameter set across many contacts: check each
+        # distinct set once.
+        signature = json.dumps(parameters, sort_keys=True, default=repr)
+        if signature not in validated:
+            merged = deepcopy(settings)
+            merged.setdefault('support', {}).update(deepcopy(parameters))
+            resolve_settings(overrides=merged)  # Includes cross-field geometry constraints.
+            validated.add(signature)
         result.append({'position_mm': [float(v) for v in record['position_mm']],
                        'parameters': deepcopy(parameters)})
     return ContactParameters(result)

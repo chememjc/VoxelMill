@@ -95,7 +95,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | G8 | Keyboard shortcut editor (theme shipped) | Feature | 4 | 2 | 8 | partial |
 | I3 | Print-time auto-calibration from measured prints | Feature | 4 | 2 | 8 | open (hardware) |
 | VM-020 | Cache the support KD-tree across island passes | Perf | 4 | 2 | 8 | open |
-| VM-022 | Cheaper per-override setting validation | Perf | 4 | 2 | 8 | open |
+| VM-022 | Cheaper per-override setting validation | Perf | 4 | 2 | 8 | done |
 | VM-065 | Platform-honest affinity tests | Test/CI | 4 | 2 | 8 | open |
 | C8 | Cap non-planar open cuts | Feature | 2 | 4 | 8 | open |
 | G3 | Typed settings pages replace the raw JSON box | Feature | 2 | 4 | 8 | partial |
@@ -349,7 +349,7 @@ Ease 3 · Benefit 2 · Confidence: likely · Status: done
 
 ### VM-022 — Cheaper per-override setting validation
 
-Ease 4 · Benefit 2 · Confidence: likely · Status: open
+Ease 4 · Benefit 2 · Confidence: likely · Status: done
 
 **Problem.** `normalize_contact_parameters` runs a full `resolve_settings` (deepcopy of DEFAULTS plus the 249-line validator) for every per-contact override record, on every island pass.
 
