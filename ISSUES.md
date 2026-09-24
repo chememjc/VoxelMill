@@ -26,7 +26,8 @@ Related, and **not** trackers:
   *measure* means decide only after a benchmark (see `docs/performance.md`: benchmark the candidate,
   not the theory).
 - **Status**: `open`, `partial`, `open (hardware)` (needs a physical printer or prints),
-  `deferred (decision)` (rejected for now by an explicit scope decision).
+  `deferred (decision)` (rejected for now by an explicit scope decision), `deferred (post-beta)` (open,
+  but explicitly out of scope until after the first beta).
 - The schema, CLI and file formats may change freely until 1.0 (see VM-049). Prefer clean redesigns
   over compatibility shims.
 - License rule: VoxelMill source is MIT. New dependencies must be permissive (MIT/BSD/Apache).
@@ -52,6 +53,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 
 | ID | Item | Area | Ease | Benefit | Score | Status |
 | --- | --- | --- | ---: | ---: | ---: | --- |
+| VM-095 | Default settings fail validation on simple shapes | Bug | 4 | 5 | 20 | open |
 | VM-001 | `hollow.infill = "hex"` crashes | Bug | 5 | 4 | 20 | done |
 | VM-002 | Editor job pool runs one job at a time by default | Bug | 5 | 4 | 20 | done |
 | VM-080 | Release the line-actor fix | Release | 5 | 4 | 20 | done |
@@ -64,6 +66,9 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-010 | Vectorize `hollow._bottom_open` | Perf | 5 | 3 | 15 | done |
 | B5 | Print-time estimation: physical calibration | Feature | 3 | 5 | 15 | open (hardware) |
 | VM-030 | Slicing cost scaled with the LCD panel, not the part | Perf | 3 | 5 | 15 | done |
+| VM-090 | Multi-part support collision audit | Feature | 3 | 5 | 15 | open |
+| VM-091 | Default supports that look like CHITUBOX Light | Feature | 3 | 5 | 15 | open |
+| VM-093 | `release.yml` platform selector | Release | 5 | 3 | 15 | open |
 | D4 | Raft adhesion / removal-force calibration | Feature | 4 | 3 | 12 | open (hardware) |
 | G2 | Fuzzy, mode-aware settings search | Feature | 4 | 3 | 12 | partial |
 | VM-061 | Lint and type-check configuration | Test/CI | 4 | 3 | 12 | done |
@@ -71,14 +76,16 @@ Sorted from easiest and most significant to hardest and least valuable.
 | E7 | TSMC: define, validate and document all 18 motion fields | Feature | 3 | 4 | 12 | partial |
 | VM-014 | Retry/hollow benchmark fixture and CI perf gate | Perf | 3 | 4 | 12 | partial |
 | VM-049 | Public-contract freeze checklist for 1.0 | Arch | 3 | 4 | 12 | partial |
+| VM-094 | Edge-case test matrix | Test/CI | 3 | 4 | 12 | open |
 | A8 | Presets embedded in profiles | Feature | 5 | 2 | 10 | partial |
 | VM-023 | Cheap boolean pre-checks for added models | Perf | 5 | 2 | 10 | done |
 | VM-064 | Goldens for the invalid-mesh fixtures | Test/CI | 5 | 2 | 10 | done |
 | VM-041 | One versioned envelope and migration registry for every file format | Arch | 2 | 5 | 10 | partial |
-| A4 | Profile inheritance with delta storage | Feature | 3 | 3 | 9 | open |
-| A5 | Profile compatibility conditions | Feature | 3 | 3 | 9 | open |
+| VM-092 | CHITUBOX-style cross bracing | Feature | 2 | 5 | 10 | open |
+| A4 | Profile inheritance with delta storage | Feature | 3 | 3 | 9 | deferred (post-beta) |
+| A5 | Profile compatibility conditions | Feature | 3 | 3 | 9 | deferred (post-beta) |
 | B2 | CTB v4/v5 reader | Feature | 3 | 3 | 9 | deferred (decision) |
-| B8 | 3MF / OBJ / PLY import | Feature | 3 | 3 | 9 | open |
+| B8 | 3MF / OBJ / PLY import | Feature | 3 | 3 | 9 | deferred (post-beta) |
 | C10 | Orientation weight calibration + real per-candidate support volume | Feature | 3 | 3 | 9 | partial |
 | F6 | Disk-backed tiled layer records | Feature | 3 | 3 | 9 | won't fix (measured) |
 | G12 | Layer viewer: pixel inspection, A/B layer diff | Feature | 3 | 3 | 9 | partial |
@@ -99,23 +106,23 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-065 | Platform-honest affinity tests | Test/CI | 4 | 2 | 8 | done |
 | C8 | Cap non-planar open cuts | Feature | 2 | 4 | 8 | open |
 | G3 | Typed settings pages replace the raw JSON box | Feature | 2 | 4 | 8 | partial |
-| E2 | Per-Z-band / per-object slice overrides | Feature | 3 | 2 | 6 | open |
+| E2 | Per-Z-band / per-object slice overrides | Feature | 3 | 2 | 6 | deferred (post-beta) |
 | E3 | Cross-sectional-area-driven exposure | Feature | 3 | 2 | 6 | open |
-| E6 | LED uniformity mask compensation | Feature | 3 | 2 | 6 | open |
+| E6 | LED uniformity mask compensation | Feature | 3 | 2 | 6 | deferred (post-beta) |
 | F5 | SIMD in the rasterizer inner loop | Feature | 3 | 2 | 6 | won't fix (measured) |
 | VM-021 | Vectorize contour/boundary sampling | Perf | 3 | 2 | 6 | done |
 | VM-024 | Only one of the three `analyze_layers` calls in `prepare` can be shared | Perf | 3 | 2 | 6 | deferred (decision) |
 | VM-025 | Fold `UnionLayerStream` per-group slices into one native call | Perf | 3 | 2 | 6 | done (earlier) |
 | VM-063 | Direct tests for `gui/services.py` and camera math | Test/CI | 3 | 2 | 6 | done |
 | VM-083 | Memory ceiling on macOS and Windows | Release | 3 | 2 | 6 | open |
-| VM-085 | PyPI wheels / Flatpak (H5) | Release | 3 | 2 | 6 | open |
-| A10 | Per-Z-band overrides (per-object support overrides shipped) | Feature | 2 | 3 | 6 | partial |
+| VM-085 | PyPI wheels / Flatpak (H5) | Release | 3 | 2 | 6 | deferred (post-beta) |
+| A10 | Per-Z-band overrides (per-object support overrides shipped) | Feature | 2 | 3 | 6 | deferred (post-beta) |
 | C5 | Suction-cup / peel force calibration | Feature | 2 | 3 | 6 | open (hardware) |
 | F4 | Incremental re-slice after a local edit | Feature | 2 | 3 | 6 | open |
 | G13 | Direct-manipulation gizmos for supports, holes and cut planes | Feature | 2 | 3 | 6 | partial |
 | VM-043 | Break up the god functions in routing and orchestration | Arch | 2 | 3 | 6 | partial |
 | VM-045 | Strategy registry for bases, tips and anchors | Arch | 2 | 3 | 6 | done |
-| VM-082 | macOS signing and notarization | Release | 2 | 3 | 6 | open |
+| VM-082 | macOS signing and notarization | Release | 2 | 3 | 6 | deferred (post-beta) |
 | VM-026 | Link-time optimization for `_native` | Perf | 5 | 1 | 5 | won't fix (measured) |
 | VM-046 | One structured error helper | Arch | 5 | 1 | 5 | won't fix (typed instead) |
 | VM-047 | Deduplicate voxel-size bisection | Arch | 5 | 1 | 5 | done |
@@ -126,13 +133,13 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-012 | Stop re-sampling downward faces for the overhang check | Perf | 4 | 1 | 4 | won't fix (measured) |
 | VM-071 | Section-aware help for repeated field names | Docs | 4 | 1 | 4 | done |
 | VM-084 | Windows topology on real hybrid hardware | Release | 4 | 1 | 4 | open |
-| F7 | GPU orientation search (CPU fallback mandatory) | Feature | 2 | 2 | 4 | open |
+| F7 | GPU orientation search (CPU fallback mandatory) | Feature | 2 | 2 | 4 | deferred (post-beta) |
 | VM-027 | x86-64-v3 kernels with runtime dispatch | Perf | 2 | 2 | 4 | won't fix (measured) |
 | B1 | Encrypted CTB writer | Feature | 1 | 4 | 4 | deferred (decision) |
 | VM-015 | Incremental island-guard passes | Perf | 1 | 4 | 4 | partial |
 | VM-042 | Split `gui/window.py` (3,874 lines) into controllers | Arch | 1 | 4 | 4 | open |
-| A9 | Import CHITUBOX / Lychee profiles | Feature | 3 | 1 | 3 | open |
-| C11 | Text / serial embossing | Feature | 3 | 1 | 3 | open |
+| A9 | Import CHITUBOX / Lychee profiles | Feature | 3 | 1 | 3 | deferred (post-beta) |
+| C11 | Text / serial embossing | Feature | 3 | 1 | 3 | deferred (post-beta) |
 | VM-028 | Minor: CUDA morphology allocation, MST, lock polling, undo copies | Perf | 3 | 1 | 3 | won't fix (measured) |
 | VM-072 | The historical `part-to-part` support example routes nothing | Docs | 3 | 1 | 3 | done |
 | D1 | Joint support type | Feature | 1 | 3 | 3 | partial |
@@ -675,7 +682,7 @@ Ease 3 · Benefit 3 · Confidence: sure · Status: open
 
 ### VM-082 — macOS signing and notarization
 
-Ease 2 · Benefit 3 · Confidence: sure · Status: open
+Ease 2 · Benefit 3 · Confidence: sure · Status: deferred (post-beta)
 
 **Problem.** The DMGs are unsigned, so users must bypass Gatekeeper by hand.
 
@@ -707,13 +714,115 @@ Ease 4 · Benefit 1 · Confidence: sure · Status: open
 
 ### VM-085 — PyPI wheels / Flatpak (H5)
 
-Ease 3 · Benefit 2 · Confidence: sure · Status: open
+Ease 3 · Benefit 2 · Confidence: sure · Status: deferred (post-beta)
 
 **Problem.** Distribution is the AppImage, DMGs and zip only. There are no `pip install voxelmill` wheels.
 
 **Fix.** cibuildwheel for Linux, macOS and Windows (with TBB via VM-011). Flatpak is optional.
 
 **Where.** `pyproject.toml`, `docs/packaging.md`
+
+## Beta readiness
+
+Items opened for the v0.5.6 beta push: closing the multi-part collision gap, matching CHITUBOX Light's
+support look and bracing, and the release/test hardening needed before tagging.
+
+### VM-090 — Multi-part support collision audit
+
+Ease 3 · Benefit 5 · Confidence: sure · Status: open
+
+**Problem.** There is no explicit measure proving supports do not intrude into any part beyond the
+tip/anchor penetration, or overlap each other except at graph junctions. Multi-part plates are merged
+into one mesh before routing, so nothing checks per-part intrusion after the fact.
+
+**Fix.** Add `validation.support_model_intrusion(support_solid, part_solids, contact_allowance)`: the
+exact Manifold intersection of the support union against each part, minus the allowed tip/anchor
+penetration spheres. Report it per part under `support.collisions` (volume, count, worst location), and
+count support-to-support capsule overlaps that are not graph junctions. Reuse `CapsuleIndex` /
+`_hits_occupied` and the `_append_extra_models` boolean pattern. This is also the troubleshooting tool.
+Tests land in `tests/test_multipart_plates.py`.
+
+**Where.** `src/voxelmill/validation.py`, `src/voxelmill/supports.py`, `src/voxelmill/pipeline.py`
+(`_append_extra_models`), `tests/test_multipart_plates.py`
+
+### VM-091 — Default supports that look like CHITUBOX Light
+
+Ease 3 · Benefit 5 · Confidence: sure · Status: open
+
+**Problem.** Our current support defaults are our own engineered values, not matched against any
+reference look. The reference is CHITUBOX Light (0.3/0.8 mm tip, 0.8 mm pillar, skate base), already
+transcribed as the `chitubox-mars5` preset.
+
+**Fix.** Move `config.DEFAULTS["support"]` toward the Light look while keeping our own engineered
+values: thinner tips (~0.3–0.35 mm contact, 0.8 mm tip base), about 0.8–1.0 mm pillars, a skate or thin
+base with a slope. Keep `medium`/`heavy`/`light` presets coherent. Update `settings_schema.FIELDS` help,
+`docs/support-presets.md` and `docs/configuration.md`.
+
+**Where.** `src/voxelmill/config.py` (`DEFAULTS["support"]`), `src/voxelmill/presets.py`,
+`docs/support-presets.md`, `docs/configuration.md`
+
+### VM-092 — CHITUBOX-style cross bracing
+
+Ease 2 · Benefit 5 · Confidence: likely · Status: open
+
+**Problem.** The user is unsure pillars are braced enough. CHITUBOX Light's cross-bracing parameters
+are enabled, diameter 0.8 mm, width 4.0, min Z spacing 2.0 mm, max XY spacing 30 mm, start height
+3.0 mm, not bidirectional; our `_brace` semantics have never been mapped against that reference.
+
+**Fix.** Map CHITUBOX's cross semantics onto `_brace`: `brace_min_height_mm=3.0`, brace diameter 0.8,
+Z spacing (≥2.0), XY reach ≤30, and the cross "width". Add a `brace_pattern` such as `cross` if its
+zig-zag layout differs from `single`/`alternating`/`x`. Add a report metric for the longest unbraced
+pillar length and its slenderness, so the user can judge bracing.
+
+**Where.** `src/voxelmill/supports.py` (`_brace`, ~1642)
+
+### VM-093 — `release.yml` platform selector
+
+Ease 5 · Benefit 3 · Confidence: sure · Status: open
+
+**Problem.** A `release.yml` re-run always rebuilds every platform, so debugging a single failing
+mac or Windows job means rebuilding Linux too.
+
+**Fix.** Add a `platforms` (`all|linux|mac|windows|mac+windows`) `workflow_dispatch` input that filters
+the build matrix, so mac/win reruns don't rebuild Linux.
+
+**Where.** `.github/workflows/release.yml`
+
+### VM-094 — Edge-case test matrix
+
+Ease 3 · Benefit 4 · Confidence: sure · Status: open
+
+**Problem.** Multi-part plates, branching supports between adjacent parts, the settings-schema bounds,
+degenerate meshes, determinism and output-format round trips have no dedicated coverage, so regressions
+in those areas would only surface once a beta user hits them.
+
+**Fix.** Add a test module covering: two/three adjacent parts with branching/tree supports crossing
+part boundaries; overhang-onto-lower-part anchoring; touching/overlapping parts (must be refused);
+per-part support overrides; mixed hollowed/solid parts; rotated and edge-of-plate parts; a part partly
+out of the build volume; no-overhang and all-overhang extremes; a model taller than Z max; degenerate or
+invalid meshes; a generated walk of `settings_schema.FIELDS` min/max per support field requiring a clean
+prepare or a structured error, never a traceback; determinism (same plate twice gives the same hash, and
+part order doesn't change the support graph beyond relabeling); mirrored/AA slice and CTB round trips.
+
+**Where.** `tests/test_multipart_plates.py`, `scripts/make_test_shapes.py`
+
+### VM-095 — Default settings fail validation on simple shapes
+
+Ease 4 · Benefit 5 · Confidence: sure · Status: open
+
+**Problem.** With default settings, 14 of the 18 golden fixtures fail validation, which withholds the
+export. A new user's first print would be blocked. The failures come in four kinds:
+`growth_span` (cone, cylinder, tetrahedron, hollow_cup, bracket: the span limit and the contact spacing
+disagree), `enclosed_voids` (sphere, torus: single-pixel pockets at the tip/model interface, 1.6e-5 mm³
+each), `drainage_bottlenecks` (sphere, torus: small chambers between tips under a solid part), and
+`support_coverage` or unresolved `raster_island`s (bracket, pin_array).
+
+**Fix.** Find the root cause of each kind. Fix the geometry where it is wrong. Where a default
+threshold is stricter than anything printable, make it consistent with the other defaults and document
+why. Done when a default `prepare` of every valid fixture passes, and a test keeps it that way.
+
+**Where.** `src/voxelmill/config.py`, `src/voxelmill/validation.py`, `src/voxelmill/supports.py`,
+`reports/golden/`
 
 ## Feature backlog
 
@@ -730,10 +839,10 @@ the code on 2026-09-23. Items marked `open (hardware)` cannot close without phys
 | A7 | GUI profile manager: dirty-state save/discard | Diff 30 · Imp 62 | partial | `ProfileLibraryDialog` exists. Confirm the remaining scope (dirty tracking, discard prompts). |
 | E7 | TSMC: define, validate and document all 18 motion fields | Diff 30 · Imp 66 | partial | The retract-sum validation shipped. Units and semantics are still unverified on hardware. |
 | A8 | Presets embedded in profiles | Diff 14 · Imp 44 | partial | Support and process presets shipped as standalone files. |
-| A4 | Profile inheritance with delta storage | Diff 30 · Imp 55 | open | Not started. Design it inside VM-041. |
-| A5 | Profile compatibility conditions | Diff 26 · Imp 48 | open | Not started. |
+| A4 | Profile inheritance with delta storage | Diff 30 · Imp 55 | deferred (post-beta) | Not started. Design it inside VM-041. |
+| A5 | Profile compatibility conditions | Diff 26 · Imp 48 | deferred (post-beta) | Not started. |
 | B2 | CTB v4/v5 reader | Diff 34 · Imp 55 | deferred (decision) | v3 shipped. v4/v5 are rejected by current decision. |
-| B8 | 3MF / OBJ / PLY import | Diff 30 · Imp 46 | open | Use the `importers.py` interface. Needs an MIT-compatible parser (stdlib zip+xml for 3MF). |
+| B8 | 3MF / OBJ / PLY import | Diff 30 · Imp 46 | deferred (post-beta) | Use the `importers.py` interface. Needs an MIT-compatible parser (stdlib zip+xml for 3MF). |
 | C10 | Orientation weight calibration + real per-candidate support volume | Diff 34 · Imp 58 | partial | The ranking UI shipped (2026-09-08). The weights are uncalibrated guesses. |
 | F6 | Disk-backed tiled layer records | Diff 30 · Imp 46 | won't fix (measured) | Only if VM-019 shows memory pressure. |
 | G12 | Layer viewer: pixel inspection, A/B layer diff | Diff 26 · Imp 48 | partial | The issue strip and overlays shipped. Confirm the remainder. |
@@ -743,18 +852,18 @@ the code on 2026-09-23. Items marked `open (hardware)` cannot close without phys
 | I3 | Print-time auto-calibration from measured prints | Diff 22 · Imp 36 | open (hardware) | Needs B5 data. |
 | C8 | Cap non-planar open cuts | Diff 40 · Imp 72 | open | `voxelmill cap` handles near-planar loops only and refuses the rest. |
 | G3 | Typed settings pages replace the raw JSON box | Diff 40 · Imp 70 | partial | The descriptor table and tooltips (G4) shipped, but `settings_json` is still the catch-all editor. Generate the remaining pages from VM-040. |
-| E2 | Per-Z-band / per-object slice overrides | Diff 34 · Imp 44 | open | Needs A10. |
+| E2 | Per-Z-band / per-object slice overrides | Diff 34 · Imp 44 | deferred (post-beta) | Needs A10. |
 | E3 | Cross-sectional-area-driven exposure | Diff 30 · Imp 30 | open | Build the mechanism with the policy off by default. |
-| E6 | LED uniformity mask compensation | Diff 34 · Imp 34 | open | Needs a measured uniformity map. |
+| E6 | LED uniformity mask compensation | Diff 34 · Imp 34 | deferred (post-beta) | Needs a measured uniformity map. |
 | F5 | SIMD in the rasterizer inner loop | Diff 26 · Imp 32 | won't fix (measured) | Deprioritized, because the rasterizer is memory-bound. See VM-027. |
-| A10 | Per-Z-band overrides (per-object support overrides shipped) | Diff 42 · Imp 50 | partial | Depends on E2. |
+| A10 | Per-Z-band overrides (per-object support overrides shipped) | Diff 42 · Imp 50 | deferred (post-beta) | Depends on E2. |
 | C5 | Suction-cup / peel force calibration | Diff 44 · Imp 58 | open (hardware) | The advisory shipped. Force and tilt calibration need prints. |
 | F4 | Incremental re-slice after a local edit | Diff 40 · Imp 54 | open | Pairs with VM-015 and I1. |
 | G13 | Direct-manipulation gizmos for supports, holes and cut planes | Diff 40 · Imp 54 | partial | The part transform gizmo shipped. Supports, holes and cut planes remain. |
-| F7 | GPU orientation search (CPU fallback mandatory) | Diff 44 · Imp 34 | open | The one GPU workload the research supports. |
+| F7 | GPU orientation search (CPU fallback mandatory) | Diff 44 · Imp 34 | deferred (post-beta) | The one GPU workload the research supports. |
 | B1 | Encrypted CTB writer | Diff 62 · Imp 70 | deferred (decision) | Unencrypted v3 shipped. Encrypted variants are rejected by current decision. |
-| A9 | Import CHITUBOX / Lychee profiles | Diff 34 · Imp 20 | open | Deliberately low priority. |
-| C11 | Text / serial embossing | Diff 30 · Imp 26 | open |  |
+| A9 | Import CHITUBOX / Lychee profiles | Diff 34 · Imp 20 | deferred (post-beta) | Deliberately low priority. |
+| C11 | Text / serial embossing | Diff 30 · Imp 26 | deferred (post-beta) |  |
 | D1 | Joint support type | Diff 52 · Imp 55 | partial | Branch, tree, contour, face and boundary are implemented. Joint is not. |
 | D6 | Support mechanics calibration; promote anchor-load warn→fail | Diff 55 · Imp 58 | open (hardware) | Deferred to the hardware campaign. |
 

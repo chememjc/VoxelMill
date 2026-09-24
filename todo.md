@@ -12,34 +12,61 @@ Rules: name the ISSUES.md IDs being worked, the exact next command or step, and
 any uncommitted state. When an item finishes, update ISSUES.md and delete it
 here. Keep this file under a screen.
 
-## In flight
-
-- VM-043 partial: next is route_contacts per-contact geometry emission + metrics block, then `_brace` (425 lines). Verify every routing change with the scratch harness idea: record plan_supports graph/metrics/solid-hash for 4 shapes x 8 support scenarios before, compare after (identical required); plus `scripts/equivalence.py --jobs 4` (18/18) and the full suite.
-- Then VM-042 (split gui/window.py into controllers), VM-015 (incremental routing), VM-014 CI perf A/B, VM-083, VM-085, feature backlog.
-- v0.5.5 alpha is published and verified (Linux, Windows guest, Intel iMac); CI is green on `master`.
-- Commit rule from the user: messages describe only the diff since the last commit, with no tool or session references and no attribution trailers.
+- Commit rule: messages describe only the diff since the last commit, with no tool or session references and no attribution trailers.
 - Verification habits: byte-identical output checks before/after every perf or refactor change; mark ISSUES.md status in both table and detail (`Status:` line), re-sort table by ease×benefit.
 
-## Done this session (2026-09-23), newest first
+## In flight
 
-- `3600ab8` VM-043 partial (route_contacts split, small_pillar.mode metric bug); `482993b` prepare split into stages
-- `22d69c9`, `f8a6274` VM-040 partial: settings_schema.FIELDS (fixed 3 bad GUI enums + 57 out-of-range controls), VM-071; `b97a527` VM-049 partial (stability.md, exit 64, CLI snapshot)
-- `a863263` VM-041 partial (versioning.py); `18753cd` VM-045 base registry; `03af9ef` VM-044 format registry
-- `4fabfd3`…`26e1a83` VM-022, VM-020/028/018/017/027/F5 closed by measurement, VM-065 (Windows offsets bug), VM-016, VM-072, VM-063, VM-024/025 decided
-- `a08ded7`…`38ea010` VM-019 16K check (slab prepare 96→36 s, slice 46→34 s), VM-013 capsule index, drainage lockstep, growth tiles, VM-015 partial (one exact union per search), VM-029 explained
-- `bb28f88` VM-030 slicing from the crop (24.6 → 1.3 s), VM-014 partial; `ff15229` VM-029 opened (bisected bracing drift); `197a2dd` VM-026 closed
-- `d3514d5` VM-070; `f507eca` VM-062
-- `3a44595`…`8951c9a` VM-021, VM-023, VM-048, VM-047, VM-046 (won't fix, typed), VM-062; VM-012 retired by measurement
-- `4ad96f1` VM-061 ruff+mypy in CI; VM-004 thickness budget bug (found by lint)
-- `6932254` VM-060 CI workflow, VM-064 goldens re-recorded at HEAD
-- `8ea38c4` VM-011 std::thread fallback (release build confirmed TBB-less)
-- `1394be1` VM-002 editor job pool, VM-003 scratch leak
-- `aab35cc` VM-001 hex infill crash, VM-010 `_bottom_open` vectorized
-- `e45b359` audit → ISSUES.md; trackers retired
+- Phase 0 ledger rewrite (this change); next: Phase 1 VM-090 collision audit + VM-094 tests.
 
-## Next up (ISSUES.md "Recommended sequencing")
+## Beta work list
 
-1. VM-060, VM-061, VM-011, then a release for VM-080 (needs the user: tagging publishes)
-2. VM-014 fixtures, VM-019 16K scale check, then VM-012/013/015/018 by profile
-3. VM-040 → VM-041 → VM-044/045 → VM-043/042 → G3, then VM-049
-4. Hardware-bound items (N12, B5, E7, C5, D4, D6, H4, I3) cannot close here
+Phase 1 — bugs and the safety net:
+- VM-090 — prove supports never intrude into another part or overlap except at graph junctions — done when: `validation.support_model_intrusion` reports zero unintended intrusion/overlap on the multi-part fixtures — next: implement `support_model_intrusion` in `validation.py`, report under `support.collisions`.
+- VM-094 — cover multi-part branching, schema-bound settings, degenerate meshes, determinism, format round trips — done when: `tests/test_multipart_plates.py` (+ edge-case module) is green locally and in CI — next: draft the fixtures with `scripts/make_test_shapes.py`-style generators.
+
+Phase 2 — supports like CHITUBOX Light:
+- VM-091 — defaults look like CHITUBOX Light with our own engineered values — done when: `config.DEFAULTS["support"]` matches the Light proportions, presets stay coherent, docs updated — next: export/screenshot the CHITUBOX Light reference, then adjust `DEFAULTS["support"]`.
+- VM-092 — cross bracing matches CHITUBOX's cross structure — done when: `_brace` mirrors Light's diameter/width/Z-spacing/XY-reach/start-height, unbraced-length/slenderness metric reported — next: map the params onto `supports._brace` (~1642).
+
+Phase 3 — stability and release tooling:
+- VM-093 — `release.yml` reruns build only the needed platforms — done when: a `platforms` workflow_dispatch input filters the matrix — next: add the input to `.github/workflows/release.yml`.
+- VM-081 — verify the arm64 DMG actually runs — done when: a `macos-14` smoke job passes `--version` and a cube `prepare` — next: add the smoke job.
+- VM-083 — memory ceiling works on macOS/Windows — done when: a Windows Job-object commit limit is wired and the macOS budget is marked advisory in the report — next: implement in `resources.py`.
+- VM-014 — CI perf gate beyond local fixtures — done when: an opt-in job does a base-vs-head A/B on the same runner and fails on a >15% regression — next: add the workflow job.
+- B3 — printer database beyond the Mars 5 Ultra — done when: new printers are added with verified specs — next: extract specs from the installed CHITUBOX machine configs and the vendor spec.
+- E3 — area-driven exposure mechanism — done when: the mechanism exists with the policy off by default — next: implement and wire the setting.
+
+Phase 4 — speed:
+- VM-015 — island-guard passes route only new contacts — done when: routing reuses the existing `ColumnField`/occupied capsules across passes with byte-identical graphs — next: implement incremental routing in `island_guard.py`.
+- VM-043 — finish breaking up the god functions — done when: `route_contacts` geometry emission + metrics block are split, and `_brace` (425 lines) is split — next: continue the `supports.py` split.
+- I1 — persist and replay analysis artifacts — done when: threshold-only edits skip the re-slice — next: implement artifact persistence.
+- F4 — incremental re-slice after a local edit — done when: only the edited Z band re-slices — next: implement, pairing with VM-015/I1.
+
+Phase 5 — GUI and features (VM-042 first to avoid conflicts):
+- VM-042 — split `gui/window.py` into controllers — done when: setup_page/menus/pose_controller/pipeline_controller/layers_controller/export_controller are extracted and GUI tests stay green — next: extract `setup_page.py` first.
+- G3 — typed settings pages replace the raw JSON box — done when: remaining pages are generated from `settings_schema.FIELDS` — next: generate the next page.
+- G2 — fuzzy, mode-aware settings search — done when: search is no longer a plain substring filter — next: implement ranking.
+- A7 — dirty-state save/discard in the profile manager — done when: dirty tracking and discard prompts are confirmed complete — next: finish `ProfileLibraryDialog` dirty tracking.
+- A8 — presets embedded in profiles — done when: support/process presets can be embedded, not only standalone files — next: wire embedding into `profiles.py`.
+- G12 — layer viewer pixel inspection + A/B diff — done when: the remaining scope beyond the issue strip/overlays ships — next: implement pixel inspection.
+- G8 — keyboard shortcut editor — done when: the editor UI ships (theme already shipped) — next: build the editor.
+- G13 — gizmos for supports, holes, cut planes — done when: direct-manipulation gizmos ship for all three (transform gizmo already shipped) — next: implement the support gizmo.
+- C10 — real per-candidate support volume — done when: orientation weights are calibrated against measured volume, not guesses — next: implement the volume calculation.
+- D1 — joint support type — done when: joint joins branch/tree/contour/face/boundary as implemented — next: implement in `supports.py`.
+- C8 — cap non-planar open cuts — done when: `voxelmill cap` handles non-planar loops (constrained triangulation or best-fit patch) and refuses self-intersecting ones — next: implement in `ops.cap_open_cuts`.
+
+Phase 6 — v0.5.6 alpha release:
+1. Local: `pytest -m "not samples"`, `scripts/equivalence.py --jobs 4`, ruff, mypy, the AppImage build, `scripts/appimage_acceptance.py --support-options`.
+2. Push; wait for Linux CI green.
+3. `gh workflow run release --field platforms=mac+windows`, debug until green.
+4. Verify the DMG on the Intel iMac and the zip in the Win11 guest with the `reports/releases/v0.5.5.md` battery plus a two-part branching-plate collision report of zero.
+5. Bump `pyproject.toml`/`__init__.py` to 0.5.6, update `packaging/release-notes.md`, write `reports/releases/v0.5.6.md`.
+6. Ask the user before pushing the tag — tagging publishes.
+
+VM-041 and VM-049 stay `partial`; their remaining scope is reserved for the 1.0 tag, not this beta.
+
+## Deferred past beta
+
+- `deferred (post-beta)` in ISSUES.md: B8, VM-082, VM-085, F7, C11, A9, E6, E2, A10, A4, A5.
+- Hardware-bound (`open (hardware)`, no printer available here): N12, B5, E7, C5, D4, D6, H4, I3, VM-084.
