@@ -84,7 +84,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | G12 | Layer viewer: pixel inspection, A/B layer diff | Feature | 3 | 3 | 9 | partial |
 | H4 | SDCP upload and print-control acceptance | Feature | 3 | 3 | 9 | open (hardware) |
 | I1 | Persist and replay analysis artifacts | Feature | 3 | 3 | 9 | open |
-| VM-013 | Spatial index for routed-capsule collision checks | Perf | 3 | 3 | 9 | open |
+| VM-013 | Spatial index for routed-capsule collision checks | Perf | 3 | 3 | 9 | done |
 | VM-016 | Keep VTK actors and update their input | Perf | 3 | 3 | 9 | open |
 | VM-017 | Optional single-raster fast path for `slice` | Perf | 3 | 3 | 9 | open |
 | VM-018 | Persist the rasterizer Z-interval structure across passes (F3) | Perf | 3 | 3 | 9 | open |
@@ -216,7 +216,7 @@ Ease 4 · Benefit 1 · Confidence: sure · Status: won't fix (measured)
 
 ### VM-013 — Spatial index for routed-capsule collision checks
 
-Ease 3 · Benefit 3 · Confidence: sure · Status: open
+Ease 3 · Benefit 3 · Confidence: sure · Status: done
 
 **Problem.** `_hits_occupied` scans every previously routed capsule for each candidate route, so `route_contacts` is O(k²) in contacts, and the island guard repeats it for each pass. Plates with thousands of contacts will be dominated by this.
 
@@ -225,6 +225,8 @@ Ease 3 · Benefit 3 · Confidence: sure · Status: open
 **Where.** `src/voxelmill/supports.py:423-455`
 
 **Measured (2026-09-23).** On pin_array (about 440 support parts, 4 passes), `_hits_occupied` is 0.32 s of about 7 s single-threaded. The union (2.5 s) and bracing (2.0 s) dominate. It grows with contacts squared, so build this when a plate with thousands of contacts is benchmarked, not before.
+
+**Done (2026-09-23).** A plate-filling slab at 16K needs about 1,500 contacts, and there `_hits_occupied` cost 9.5 s. `CapsuleIndex` buckets capsules by XY cell. The pruning is provably conservative, output is byte-identical on four fixtures, and a randomized test checks it against a full scan. The slab's island guard went from 41.8 to 28.6 s.
 
 ### VM-014 — Retry/hollow benchmark fixture and CI perf gate
 

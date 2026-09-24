@@ -338,3 +338,31 @@ def test_dense_tilted_overhang_keeps_spacing_but_an_island_still_lands():
     if len(auto) > 1:
         from scipy.spatial.distance import pdist
         assert pdist(auto).min() > 3.0
+
+
+def test_capsule_index_finds_every_overlap_a_full_scan_finds():
+    from types import SimpleNamespace
+    from voxelmill.supports import CapsuleIndex, _hits_occupied
+    rng = np.random.default_rng(9)
+    index, plain = CapsuleIndex(cell_mm=3.0), []
+    for _ in range(300):
+        start = rng.uniform([-30, -30, 0], [30, 30, 20])
+        end = start + rng.normal(0, 6, 3) * (rng.random() < 0.7)   # some zero-length
+        radius = float(rng.uniform(0.2, 1.5))
+        index.add(start, end, radius)
+        plain.append((start, end, radius))
+
+    class ListIndex(list):
+        def near(self, points, radius):
+            return list(self)
+
+    indexed, scanned = SimpleNamespace(occupied_capsules=index), SimpleNamespace(occupied_capsules=ListIndex(plain))
+    hits = 0
+    for _ in range(600):
+        start = rng.uniform([-35, -35, 0], [35, 35, 20])
+        end = start + rng.normal(0, 8, 3)
+        radius = float(rng.uniform(0.2, 1.5))
+        expected = _hits_occupied(scanned, start, end, radius)
+        assert _hits_occupied(indexed, start, end, radius) == expected
+        hits += expected
+    assert 0 < hits < 600

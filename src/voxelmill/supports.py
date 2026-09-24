@@ -61,10 +61,10 @@ class ColumnField:
     #: exterior. A contact on the underside of run r sits in the gap above run
     #: r-1; runs with index 0 sit above the open plate side.
     gap_exterior: np.ndarray | None = None
-    #: Shaft capsules already emitted in this routing pass, as
-    #: ``(start, end, radius)``. Later candidates that intersect one (except
+    #: Shaft capsules already emitted in this routing pass (a
+    #: :class:`CapsuleIndex`). Later candidates that intersect one (except
     #: at an endpoint / planned brace joint) are skipped or rerouted.
-    occupied_capsules: list = field(default_factory=list)
+    occupied_capsules: 'CapsuleIndex' = field(default_factory=lambda: CapsuleIndex())
 
     def __post_init__(self):
         # Layer index of the lowest material in each column, or ``layers`` when
@@ -423,6 +423,56 @@ def _shaft_clear(field, start, end, radius, clearance_mm, cancel=None, exclude=N
     return _brace_clear(field, start, end, radius, clearance_mm, cancel=cancel, exclude=exclude)
 
 
+class CapsuleIndex:
+    """Routed shaft capsules, bucketed by XY cell for overlap queries.
+
+    Each capsule is filed under every cell its XY bounding box, grown by its
+    radius, touches. Two capsules can only come within ``r1 + r2`` in 3-D if
+    their XY boxes, each grown by its own radius, overlap, so a query that
+    reads the cells under the candidate's grown box sees every capsule that
+    could possibly hit it. Routing used to scan every capsule for every
+    candidate, which is quadratic in the number of contacts.
+    """
+
+    def __init__(self, cell_mm=3.0):
+        self.cell = max(float(cell_mm), 1e-3)
+        self.capsules = []
+        self._buckets = {}
+
+    def __len__(self):
+        return len(self.capsules)
+
+    def __iter__(self):
+        return iter(self.capsules)
+
+    def _cells(self, low, high):
+        i0, j0 = (int(math.floor(v / self.cell)) for v in low)
+        i1, j1 = (int(math.floor(v / self.cell)) for v in high)
+        for i in range(i0, i1 + 1):
+            for j in range(j0, j1 + 1):
+                yield i, j
+
+    def add(self, start, end, radius):
+        start, end = np.asarray(start, dtype=float), np.asarray(end, dtype=float)
+        radius = float(radius)
+        index = len(self.capsules)
+        self.capsules.append((start, end, radius))
+        low = np.minimum(start[:2], end[:2]) - radius
+        high = np.maximum(start[:2], end[:2]) + radius
+        for cell in self._cells(low, high):
+            self._buckets.setdefault(cell, []).append(index)
+
+    def near(self, points, radius):
+        """Capsules, in insertion order, that could lie within reach of ``points``."""
+        points = np.asarray(points, dtype=float).reshape(-1, 3)
+        low = points[:, :2].min(axis=0) - float(radius)
+        high = points[:, :2].max(axis=0) + float(radius)
+        found = set()
+        for cell in self._cells(low, high):
+            found.update(self._buckets.get(cell, ()))
+        return [self.capsules[index] for index in sorted(found)]
+
+
 def _hits_occupied(field, start, end, radius):
     """True when this capsule overlaps an already-routed shaft along its length.
 
@@ -433,14 +483,14 @@ def _hits_occupied(field, start, end, radius):
     axis = end - start
     if float(axis @ axis) < 1e-20:
         return False
-    for other_start, other_end, other_r in field.occupied_capsules:
+    samples = [start + axis * (step / 8) for step in (2, 3, 4, 5, 6)]
+    for other_start, other_end, other_r in field.occupied_capsules.near(samples, radius):
         other_start = np.asarray(other_start, dtype=float)
         other_end = np.asarray(other_end, dtype=float)
         other_axis = other_end - other_start
         other_len2 = float(other_axis @ other_axis)
         limit2 = (float(radius) + float(other_r)) ** 2
-        for step in (2, 3, 4, 5, 6):
-            point = start + axis * (step / 8)
+        for point in samples:
             if other_len2 < 1e-20:
                 delta = point - other_start
             else:
@@ -452,8 +502,7 @@ def _hits_occupied(field, start, end, radius):
 
 
 def _mark_occupied(field, start, end, radius):
-    field.occupied_capsules.append((np.asarray(start, dtype=float),
-                                    np.asarray(end, dtype=float), float(radius)))
+    field.occupied_capsules.add(start, end, radius)
 
 
 def _fit_anchor_tips(gap, tip, anchor_length, min_tip, pillar_r):
@@ -669,7 +718,7 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
     normalized_parameters = normalize_contact_parameters(contact_parameters, settings)
     support = global_support
     started = time.monotonic()
-    field.occupied_capsules = []
+    field.occupied_capsules = CapsuleIndex(settings['support']['spacing_mm'])
     exempt_keys = {contact_key(point) for point in density_exempt}
     spacing = float(support['spacing_mm'])
     pillar_r = float(support['pillar_diameter_mm']) / 2
