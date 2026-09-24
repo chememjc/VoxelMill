@@ -21,6 +21,8 @@ def load_builder():
 
 @pytest.fixture
 def appdir(tmp_path):
+    if sys.version_info[:2] != (3, 10):
+        pytest.skip('the AppImage bundles CPython 3.10 and is built from it')
     dest = tmp_path / 'VoxelMill.AppDir'
     subprocess.run(
         [sys.executable, str(BUILDER), '--appdir', str(dest), '--cli-only', '--stage-only'],

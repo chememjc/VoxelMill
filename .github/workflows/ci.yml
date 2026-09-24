@@ -85,9 +85,10 @@ jobs:
         run: mypy src/voxelmill
 
   golden:
-    # Report equality is exact. Float results may differ in the last bits on a
-    # CPU with other SIMD paths than the machine that recorded the goldens, so
-    # this job is advisory until it has run green here (ISSUES.md VM-060).
+    # Report equality is exact. Build-dependent rounding in support sampling
+    # was removed (NumPy 1.26 and 2.2 now agree 18/18), but a runner CPU with
+    # other SIMD paths (AVX-512 SVML transcendentals) can still move a result
+    # by an ulp at a threshold, so this job stays advisory (see gotchas.md).
     name: golden reports
     runs-on: ubuntu-22.04
     continue-on-error: true

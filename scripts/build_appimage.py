@@ -296,6 +296,12 @@ def pack_appdir(appdir: Path, output: Path, tool: Path):
 
 
 def main(argv=None):
+    # AppRun and the staged layout pin CPython 3.10 (usr/bin/python3.10,
+    # usr/lib/python3.10). Another interpreter would stage a tree AppRun
+    # cannot start, so refuse instead of building it.
+    if sys.version_info[:2] != (3, 10):
+        raise SystemExit(f'build_appimage.py must run under CPython 3.10; '
+                         f'this is {sys.version_info.major}.{sys.version_info.minor}')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--appdir', default=str(ROOT / 'output' / 'appimage' / 'VoxelMill.AppDir'))
     parser.add_argument('--output', default=str(ROOT / 'output' / 'appimage' / 'VoxelMill-x86_64.AppImage'))
