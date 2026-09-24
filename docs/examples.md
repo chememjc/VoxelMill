@@ -81,7 +81,7 @@ decoded-pixel against a freshly sliced source before the final rename. Confirm
 the result independently:
 
 ```sh
-.venv/bin/voxelmill goo-info output/part.goo --verify --report output/goo.json
+.venv/bin/voxelmill info output/part.goo --verify --report output/goo.json
 ```
 
 `--verify` decodes every layer and checks framing and checksums:

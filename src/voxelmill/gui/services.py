@@ -357,106 +357,23 @@ def slice_layer(union, settings, index, budget, token):
 
 
 def open_goo(path):
-    """Header, layer table and previews for a finished GOO or CTB v3 file."""
-    path = Path(path)
-    if path.suffix.lower() == '.ctb':
-        from ..ctb import CtbReader
-        with CtbReader(path) as reader:
-            return {
-                'path': str(path),
-                'format': 'ctb',
-                'header': dict(reader.header),
-                'layer_count': len(reader.layers),
-                'shape_px': list(reader.shape),
-                'z_mm': [float(layer.z_mm) for layer in reader.layers],
-                'small_preview': None,
-                'big_preview': None,
-            }
-    from ..goo import GooReader
-    with GooReader(path) as reader:
-        return {
-            'path': str(path),
-            'format': 'goo',
-            'header': dict(reader.header),
-            'layer_count': len(reader.layers),
-            'shape_px': list(reader.shape),
-            'z_mm': [float(layer.values['position_z']) for layer in reader.layers],
-            'small_preview': np.array(reader.small_preview, copy=True),
-            'big_preview': np.array(reader.big_preview, copy=True),
-        }
+    """Header, layer table and previews for a finished printer file (GOO or CTB v3)."""
+    from ..formats import for_path
+    return for_path(path).summary(Path(path))
 
 
 def goo_layer(path, index, *, cancel=None):
-    """One decoded, unmirrored GOO or CTB layer in the payload ``LayerView`` expects.
-
-    Unmirroring matters for the same reason it does in ``verify_goo``: the
-    scrubber draws the frame beside diagnostics whose ``position_mm`` is in
-    plate coordinates, and a mirrored frame puts them on opposite sides.
-    """
-    from ..contracts import VoxelMillError
-    path = Path(path)
-    if path.suffix.lower() == '.ctb':
-        from ..ctb import CtbReader
-        with CtbReader(path) as reader:
-            count = len(reader.layers)
-            if index < 0 or index >= count:
-                raise VoxelMillError('invalid_layer', f'Layer {index} is outside a {count} layer file',
-                                {'index': int(index), 'layer_count': count})
-            printer = {
-                'pixels': [reader.header['resolution_x'], reader.header['resolution_y']],
-                'build_mm': [reader.header['display_width'], reader.header['display_height'],
-                             reader.header['machine_z']],
-                'pixel_pitch_mm': [reader.header['display_width'] / reader.header['resolution_x'],
-                                   reader.header['display_height'] / reader.header['resolution_y']],
-                'image_mirror_x': bool(reader.header['projector_type']),
-                'image_mirror_y': False,
-            }
-            grid = RasterGrid(
-                printer['pixels'][0], printer['pixels'][1],
-                -printer['build_mm'][0] / 2, -printer['build_mm'][1] / 2,
-                printer['pixel_pitch_mm'][0], printer['pixel_pitch_mm'][1])
-            frame = reader.decode(index)
-            if printer['image_mirror_x']:
-                frame = frame[:, ::-1]
-            frame = np.ascontiguousarray(frame)
-            return {'grid': grid, 'index': int(index),
-                    'z_mm': float(reader.layers[index].z_mm),
-                    'mask': frame, 'open_rows': 0,
-                    'filled_pixels': int(np.count_nonzero(frame)),
-                    # The Layers tab's file source is still named 'goo'; format
-                    # distinguishes CTB in the status line.
-                    'source': 'goo', 'format': 'ctb', 'source_path': str(path)}
-    from ..goo import GooLayerStream, GooReader
-    with GooReader(path) as reader:
-        count = len(reader.layers)
-        if index < 0 or index >= count:
-            raise VoxelMillError('invalid_layer', f'Layer {index} is outside a {count} layer file',
-                            {'index': int(index), 'layer_count': count})
-        stream = GooLayerStream(reader, cancel=cancel)
-        frame = reader.decode(index)
-        if stream.mirror_x:
-            frame = frame[:, ::-1]
-        if stream.mirror_y:
-            frame = frame[::-1, :]
-        frame = np.ascontiguousarray(frame)
-        return {'grid': stream.grid, 'index': int(index),
-                'z_mm': float(reader.layers[index].values['position_z']),
-                'mask': frame, 'open_rows': 0,
-                'filled_pixels': int(np.count_nonzero(frame)),
-                'source': 'goo', 'format': 'goo', 'source_path': str(path)}
+    """One decoded, unmirrored layer of a printer file, in the payload ``LayerView`` expects."""
+    from ..formats import for_path
+    return for_path(path).display_layer(Path(path), index, cancel=cancel)
 
 
 def verify_goo_file(path, settings, *, cancel=None, progress=None, track_voids=True):
     """The exact check ``voxelmill verify`` runs, for the editor's menu item."""
     from ..contracts import no_progress
-    path = Path(path)
-    if path.suffix.lower() == '.ctb':
-        from ..ctb import verify_ctb
-        return verify_ctb(path, settings, cancel=cancel, progress=progress or no_progress,
-                          track_voids=track_voids)
-    from ..goo import verify_goo
-    return verify_goo(path, settings, cancel=cancel, progress=progress or no_progress,
-                      track_voids=track_voids)
+    from ..formats import for_path
+    return for_path(path).verify(Path(path), settings, cancel=cancel,
+                                 progress=progress or no_progress, track_voids=track_voids)
 
 
 # ---- whole-file checks the CLI also offers --------------------------------

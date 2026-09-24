@@ -19,7 +19,7 @@ unanswered.
 
 ## Settings options
 
-These are accepted by every command except `goo-info`.
+These are accepted by every command except `info`.
 
 | Option | Effect |
 | --- | --- |
@@ -314,20 +314,18 @@ always `applied: false` when nonzero (Z would change the layer count),
 Set them with `--set process.shrink_percent_xy=1.5` (and siblings). See
 [algorithms.md](algorithms.md#xy-shrinkage-and-tolerance-compensation).
 
-## `goo-info`
+## `info` (aliases `goo-info`, `ctb-info`)
 
-    voxelmill goo-info output/left.goo --verify --report output/goo.json
+    voxelmill info output/left.goo --verify --report output/goo.json
+    voxelmill info output/left.ctb --verify
 
-Reads GOO metadata. `--verify` decodes every layer and checks framing and
-checksums, which costs a full pass over the file.
-
-## `ctb-info`
-
-    voxelmill ctb-info output/left.ctb --verify --report output/ctb.json
-
-Reads classic unencrypted CTB v3 metadata. Encrypted payloads and CTB v4/v5
-are rejected at open time. `--verify` decodes every layer and checks the RLE
-framing. This is not the topology analysis; use `verify` for islands and voids.
+Reads the header and layer count of a GOO or classic unencrypted CTB v3 file;
+the format comes from the suffix, and the report names it in `format`.
+Encrypted CTB payloads and CTB v4/v5 are rejected at open time. `--verify`
+decodes every layer and checks framing and checksums, which costs a full pass
+over the file. This is not the topology analysis; use `verify` for islands
+and voids. The old `goo-info` and `ctb-info` names still work, for either
+format.
 
 ## `convert`
 
@@ -370,7 +368,7 @@ file/profile mismatches. `analysis_options.track_voids` records whether void
 tracking ran, so a recorded void threshold does not imply that check ran.
 
 `verify` takes `parents=[common]`, so every option in the settings table above
-applies, unlike `goo-info`. `--no-void-analysis` skips enclosed-void and
+applies, unlike `info`. `--no-void-analysis` skips enclosed-void and
 transient-trap tracking; both then report `not_run`.
 
 By default the analysis runs on the window of the panel the file actually
@@ -411,7 +409,7 @@ is available. Exit codes match `validate` and `slice`: `0` on a passing report,
 
 Runs one `OPERATION` over many `INPUT` files, one after another in this
 process. `OPERATION` is one of `prepare`, `slice`, `validate`, `islands`,
-`measure`, `inspect`, `verify` — the keys of `BATCH_OUTPUTS`. `goo-info`,
+`measure`, `inspect`, `verify` — the keys of `BATCH_OUTPUTS`. `info`,
 `profile`, `resin`, `preset`, `completion`, `manpage`, `gui` and `batch`
 itself cannot be batched. Each item is parsed by `build_parser()` — the same
 subparser a direct `voxelmill OPERATION ...` call would use — and dispatched

@@ -329,15 +329,15 @@ def convert_slices(source, output, settings, *, cancel=None, progress=no_progres
     Pixel dimensions and physical panel dimensions must match the target profile;
     this function never resamples exposure images.
     """
-    from .goo import GooReader, GooWriter
+    from .formats import FORMATS
     source, output = Path(source), Path(output)
     if source.resolve() == output.resolve(): raise VoxelMillError('source_overwrite', 'Input and output must be different files')
     src, dst = source.suffix.lower(), output.suffix.lower()
     if (src, dst) not in (('.goo', '.ctb'), ('.ctb', '.goo')):
         raise VoxelMillError('convert_format', 'Conversion supports .goo to .ctb and .ctb to .goo')
     cancel = cancel or CancellationToken()
-    Reader, Writer = (GooReader, CtbWriter) if src == '.goo' else (CtbReader, GooWriter)
-    with Reader(source) as reader:
+    Writer = FORMATS[dst].writer_class()
+    with FORMATS[src].reader(source) as reader:
         expected = tuple(reversed(settings['printer']['pixels']))
         if reader.shape != expected:
             raise VoxelMillError('convert_dimensions', 'Source pixels differ from the target printer; resampling is not implemented',

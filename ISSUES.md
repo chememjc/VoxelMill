@@ -90,7 +90,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-018 | Persist the rasterizer Z-interval structure across passes (F3) | Perf | 3 | 3 | 9 | won't fix (measured) |
 | VM-019 | Scale check at 12K–16K panels | Perf | 3 | 3 | 9 | done |
 | VM-029 | Island scan grows faster than the geometry braces add | Perf | 3 | 3 | 9 | explained (not a defect) |
-| VM-044 | Output-format registry | Arch | 3 | 3 | 9 | open |
+| VM-044 | Output-format registry | Arch | 3 | 3 | 9 | done |
 | VM-081 | Test the Apple Silicon build | Release | 3 | 3 | 9 | open |
 | G8 | Keyboard shortcut editor (theme shipped) | Feature | 4 | 2 | 8 | partial |
 | I3 | Print-time auto-calibration from measured prints | Feature | 4 | 2 | 8 | open (hardware) |
@@ -479,13 +479,15 @@ Ease 2 · Benefit 3 · Confidence: sure · Status: open
 
 ### VM-044 — Output-format registry
 
-Ease 3 · Benefit 3 · Confidence: sure · Status: open
+Ease 3 · Benefit 3 · Confidence: sure · Status: done
 
 **Problem.** GOO and CTB are wired separately through `slice`, `*-info`, `convert`, `verify` and the GUI layer viewer. A third format means editing every one of those.
 
 **Fix.** A `PrinterFormat` protocol (`suffixes`, `encode_layer`, `decode_layer`, `read_header`, `write`, `verify`) and a `FORMATS` registry keyed by `printer.output_formats`. Collapse `goo-info`/`ctb-info` into `info`. The CLI can break freely before stable.
 
 **Where.** `src/voxelmill/cli.py:482-500`, `src/voxelmill/goo.py`, `src/voxelmill/ctb.py`
+
+**Done (2026-09-23).** `voxelmill/formats.py` holds one `SliceFormat` per format (reader, writer, per-layer Z, unmirrored display frame, verify), found through `for_path()`. The CLI's `info` (with `goo-info` and `ctb-info` as aliases), `verify`, `convert` and the editor's open, scrub and verify all dispatch through it instead of testing suffixes. `slice` still writes GOO first and converts for `.ctb`, which keeps a single verified encode path.
 
 ### VM-045 — Strategy registry for bases, tips and anchors
 

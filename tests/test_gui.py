@@ -747,7 +747,7 @@ def test_every_cli_subcommand_has_a_place_in_the_editor():
     # and also reaches the library through the same dialog resin uses.
     editor_actions = {
         'inspect': 'inspect_stl', 'validate': 'validate_stl', 'prepare': 'export',
-        'slice': 'export_goo', 'goo-info': 'open_goo', 'verify': 'verify_goo',
+        'slice': 'export_goo', 'info': 'open_goo', 'goo-info': 'open_goo', 'verify': 'verify_goo',
         'ctb-info': 'open_goo', 'convert': 'operation_dialog',
         'preset': 'apply_support_preset', 'resin': 'profile_library_dialog',
         'profile': 'profile_library_dialog', 'islands': 'check_islands',

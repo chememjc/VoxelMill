@@ -9,7 +9,7 @@ VoxelMill is a Linux single-part resin 3D-print preparation tool that transforms
 | Path | Purpose |
 |------|---------|
 | `src/voxelmill/__init__.py` | Package entry point; exposes public API |
-| `src/voxelmill/cli.py` | Command-line interface: `voxelmill prepare`, `inspect`, `validate`, `slice`, `goo-info`, `profile`, `resin`, `gui`, `batch`, `completion`, `manpage` |
+| `src/voxelmill/cli.py` | Command-line interface: `voxelmill prepare`, `inspect`, `validate`, `slice`, `info`, `profile`, `resin`, `gui`, `batch`, `completion`, `manpage` |
 | `src/voxelmill/shellhelp.py` | Shell completion (bash, zsh, fish) and man page text, generated from the live `build_parser()`; nothing here is checked in |
 | `src/voxelmill/config.py` | Profile loading and settings resolution; built-in defaults, printer/resin profiles, process overrides |
 | `src/voxelmill/profiles.py` | Profile library: layered search-path discovery, path-vs-identifier resolution for `--printer`/`--resin`, provenance, settings diff, and the TOML writer behind `profile save`/`resin bind`. See [profiles.md](profiles.md) |
@@ -28,6 +28,7 @@ VoxelMill is a Linux single-part resin 3D-print preparation tool that transforms
 | `src/voxelmill/pipeline.py` | End-to-end orchestration: placement → ingestion/repair → exact or raster union → export → reslice → validation |
 | `src/voxelmill/project.py` | Project file I/O and metadata persistence |
 | `src/voxelmill/printer.py` | Printer discovery, connection, status/attributes telemetry, print history and time-lapse downloads, camera URL access, upload and printer state machine |
+| `src/voxelmill/formats.py` | Printer file format registry: `for_path(path)` returns the `SliceFormat` (GOO, CTB v3) that reads, summarizes, displays and verifies that file; add a format by adding one subclass to `FORMATS` |
 | `src/voxelmill/goo.py` | GOO format layer encoding/decoding and file operations |
 | `src/voxelmill/arrange.py` | Deterministic bottom-left shelf packer: `arrange_footprints(footprints, envelope, *, clearance_mm=0.0, fixed=())` returns one plate-center offset per footprint, refusing rather than returning an overlapping layout when something does not fit. Pure XY geometry; no mesh handling |
 | `src/voxelmill/gui/` | Optional GUI: window, viewport, layer view, document state, job queue |
@@ -74,7 +75,7 @@ Command-line argument parsing and entry points. One function per subcommand.
 | `cmd_inspect(args)` | `args` | Exit code | Full-resolution mesh topology and self-intersection inspection |
 | `cmd_validate(args)` | `args` | Exit code | Reslice and validate a prepared STL without re-exporting |
 | `cmd_slice(args)` | `args` | Exit code | Reslice and emit layer masks as PNG or GOO |
-| `cmd_goo_info(args)` | `args` | Exit code | Decode and summarize a GOO file |
+| `cmd_info(args)` | `args` | Exit code | Summarize a GOO or CTB file through `formats.for_path` (`goo-info`/`ctb-info` are aliases) |
 | `cmd_profile(args)` | `args` | Exit code | Show resolved printer and resin profiles |
 | `cmd_gui(args)` | `args` | Exit code | Launch the PySide6 viewport GUI |
 | `cmd_batch(args)` | `args` | Exit code | Run one operation over many inputs (`BATCH_OUTPUTS`), one report and geometry output per item plus a manifest |

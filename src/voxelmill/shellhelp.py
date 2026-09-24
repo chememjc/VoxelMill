@@ -196,9 +196,15 @@ def manpage(parser, program='voxelmill', version='', section=1, released=None, s
              '.B \\-\\-allow\\-unresolved',
              'is given.',
              '.SH COMMANDS']
+    # argparse aliases share their command's parser and carry no help of their own.
+    primary = {id(commands[name]): name for name in commands if name in summaries}
     for name in sorted(commands):
         command = commands[name]
         lines.append(f'.SS {_roff(name)}')
+        owner = primary.get(id(command))
+        if name not in summaries and owner is not None and owner != name:
+            lines.append(_roff(f'Alias of {owner}.'))
+            continue
         lines.append(_roff(summaries.get(name) or command.description or '') or 'No description.')
         for flag, action in _options(command):
             if flag in ('-h', '--help'):

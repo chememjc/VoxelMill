@@ -127,5 +127,5 @@ def test_cli_exposes_ctb_commands_and_acceleration_flags():
     parser = build_parser()
     args = parser.parse_args(['verify', 'part.ctb', '--acceleration', 'cuda', '--cuda-device', '2'])
     assert _overrides(args)['resources'] == {'acceleration': 'cuda', 'cuda_device': 2}
-    assert parser.parse_args(['ctb-info', 'part.ctb']).func.__name__ == 'cmd_ctb_info'
+    assert parser.parse_args(['ctb-info', 'part.ctb']).func.__name__ == 'cmd_info'
     assert parser.parse_args(['convert', 'a.goo', 'b.ctb']).func.__name__ == 'cmd_convert'

@@ -479,27 +479,10 @@ def cmd_report_html(args):
     return 0
 
 
-def cmd_goo_info(args):
-    from .goo import GooReader
-    with GooReader(args.input) as reader:
-        payload = {'header': reader.header, 'layers': len(reader.layers)}
-        if args.verify:
-            for index in range(len(reader.layers)):
-                reader.decode(index)
-            payload['decoded_layers'] = len(reader.layers)
-    _emit(payload, args.report)
-    return 0
-
-
-def cmd_ctb_info(args):
-    from .ctb import CtbReader
-    with CtbReader(args.input) as reader:
-        payload = {'format': 'ctb', 'supported_version': 3,
-                   'header': reader.header, 'layers': len(reader.layers)}
-        if args.verify:
-            for index in range(len(reader.layers)):
-                reader.decode(index)
-            payload['decoded_layers'] = len(reader.layers)
+def cmd_info(args):
+    """Header and layer count of a GOO or classic CTB v3 file (``goo-info``/``ctb-info``)."""
+    from .formats import for_path
+    payload = for_path(args.input).info(args.input, decode_all=args.verify)
     _emit(payload, args.report)
     return 0
 
@@ -515,18 +498,13 @@ def cmd_convert(args):
 
 def cmd_verify(args):
     """Deep-check a finished GOO or classic CTB v3 with no source mesh."""
+    from .formats import for_path
     settings = _settings(args)
-    if Path(args.input).suffix.lower() == '.ctb':
-        from .ctb import verify_ctb
-        payload = verify_ctb(args.input, settings, budget=_budget(settings),
-                             cancel=CancellationToken(), progress=_progress(args.progress),
-                             track_voids=not args.no_void_analysis)
-    else:
-        from .goo import verify_goo
-        payload = verify_goo(args.input, settings, budget=_budget(settings),
-                             cancel=CancellationToken(), progress=_progress(args.progress),
-                             track_voids=not args.no_void_analysis,
-                             full_panel=args.full_panel)
+    payload = for_path(args.input).verify(args.input, settings, budget=_budget(settings),
+                                          cancel=CancellationToken(),
+                                          progress=_progress(args.progress),
+                                          track_voids=not args.no_void_analysis,
+                                          full_panel=args.full_panel)
     _emit(payload, args.report)
     if payload['settings_mismatches']:
         print('WARNING: the GOO describes a different machine or process than the selected '
@@ -1159,19 +1137,14 @@ def build_parser():
                         help='do not set an address-space ceiling for this run')
     sliced.set_defaults(func=cmd_slice)
 
-    info = sub.add_parser('goo-info', help='read GOO metadata, optionally decode every layer')
+    info = sub.add_parser('info', aliases=['goo-info', 'ctb-info'],
+                          help='read GOO or classic CTB v3 metadata, optionally decode every layer')
     info.add_argument('input')
     info.add_argument('--verify', action='store_true',
                       help='decode every layer to confirm framing and checksums; for topology '
                            'use the verify command instead')
     info.add_argument('--report', help='write the JSON report here instead of stdout')
-    info.set_defaults(func=cmd_goo_info)
-
-    ctb_info = sub.add_parser('ctb-info', help='read classic CTB v3 metadata, optionally decode every layer')
-    ctb_info.add_argument('input')
-    ctb_info.add_argument('--verify', action='store_true', help='decode every layer and validate RLE framing')
-    ctb_info.add_argument('--report', help='write the JSON report here instead of stdout')
-    ctb_info.set_defaults(func=cmd_ctb_info)
+    info.set_defaults(func=cmd_info)
 
     convert = sub.add_parser('convert', parents=[common],
                              help='convert GOO v3 and unencrypted CTB v3 without resampling')

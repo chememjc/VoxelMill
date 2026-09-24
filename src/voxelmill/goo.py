@@ -1178,7 +1178,7 @@ def verify_goo(path, settings, *, cancel=None, budget=None, progress=no_progress
     resolved settings and are recorded separately in the returned payload.
 
     Framing, the layer chain and the checksums are proved by opening it; this
-    adds what ``goo-info --verify`` throws away, running every decoded frame
+    adds what ``info --verify`` throws away, running every decoded frame
     through the same :func:`~voxelmill.validation.analyze_layers` the STL path
     uses.  Islands, growth spans, enclosed voids and transient traps are
     therefore found in the pixels the printer will expose, not in the mesh

@@ -611,7 +611,9 @@ class LayerView(QtWidgets.QWidget):
         """Offer an opened file as a layer source and select it."""
         self.source.blockSignals(True)
         index = self.source.findData('goo')
-        kind = 'CTB' if Path(path).suffix.lower() == '.ctb' else 'GOO'
+        from ..formats import FORMATS
+        fmt = FORMATS.get(Path(path).suffix.lower())
+        kind = fmt.label if fmt is not None else 'GOO'
         title = f'{kind}: {Path(path).name} ({layer_count} layers)'
         if index < 0:
             self.source.addItem(title, 'goo')
