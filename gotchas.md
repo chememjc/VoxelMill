@@ -1580,3 +1580,14 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   `help_for('section.field')`, never by direct subscript: four field names
   (`id`, `name`, `enabled`, `voxel_size_mm`) repeat across sections and are
   keyed by path, and a bare-key subscript silently skips those.
+
+- **The same input routed differently on another NumPy build.** Downward-face
+  samples came from `mean()` and `lattice @ face`, whose rounding depends on
+  the NumPy/BLAS build and the CPU. Thinning rounds samples to spacing cells,
+  and a regular lattice puts samples exactly on cell boundaries, so a one-ulp
+  change moved a contact and everything downstream. On the first CI run 13 of
+  18 goldens differed. Explicit elementwise sums (`(a + b + c) / 3`,
+  `w0*a + w1*b + w2*c`) and stable sorts for tied keys brought NumPy 1.26 and
+  2.2 to 18/18 locally and the runner to 16/18. The rest is transcendental math
+  on a different CPU path; do not promise bit-identical reports across
+  machines, and avoid `mean`/`@` where the result is rounded to a lattice.
