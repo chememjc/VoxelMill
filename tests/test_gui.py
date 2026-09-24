@@ -17,7 +17,6 @@ from pathlib import Path
 import pytest
 import manifold3d as m
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 pytest.importorskip('PySide6')
 pytest.importorskip('vtkmodules')
@@ -35,11 +34,6 @@ from voxelmill.gui.window import MainWindow, with_suffix_if_missing  # noqa: E40
 from voxelmill.mesh import write_stl  # noqa: E402
 from voxelmill.raster import RasterGrid  # noqa: E402
 from voxelmill.contracts import Diagnostic  # noqa: E402
-
-
-@pytest.fixture(scope='session')
-def application():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 @pytest.fixture

@@ -16,24 +16,17 @@ import sys
 import numpy as np
 import pytest
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 pytestmark = pytest.mark.gui
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 import manifold3d as m  # noqa: E402
-from PySide6 import QtWidgets  # noqa: E402
 
 from voxelmill.geometry import manifold_triangles, rotation_matrix, wrap_rotation_deg  # noqa: E402
 from voxelmill.gui.objects import AxisRow  # noqa: E402
 from voxelmill.gui.window import MainWindow  # noqa: E402
 from test_gui import drain, small_settings, write_stl  # noqa: E402
-
-
-@pytest.fixture(scope='module')
-def application():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 @pytest.fixture

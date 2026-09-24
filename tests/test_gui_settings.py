@@ -1,9 +1,7 @@
 """Headless coverage for settings descriptors, tiers, history, theme and docks."""
-import os
 
 import pytest
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 pytest.importorskip('PySide6')
 pytest.importorskip('vtkmodules')
@@ -14,11 +12,6 @@ from voxelmill.config import DEFAULTS
 from voxelmill.gui.settings_table import SETTINGS_DESCRIPTORS, build_descriptors
 from voxelmill.gui.window import MainWindow
 from voxelmill.config import resolve_settings
-
-
-@pytest.fixture(scope='session')
-def application():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 def small_settings():

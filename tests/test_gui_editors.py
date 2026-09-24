@@ -6,7 +6,6 @@ import time
 import numpy as np
 import pytest
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 pytest.importorskip('PySide6')
 pytest.importorskip('vtkmodules')
 from PySide6 import QtWidgets

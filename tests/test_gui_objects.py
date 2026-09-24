@@ -1,11 +1,9 @@
 """The plate object list, its placement controls, and the snap increment."""
 from __future__ import annotations
 
-import os
 
 import pytest
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 pytestmark = pytest.mark.gui
 
@@ -15,11 +13,6 @@ from voxelmill.gui.appprefs import (  # noqa: E402
     DEFAULT_SNAP_ANGLE_DEG, DEFAULTS, load_preferences, save_preferences, snap_angle,
 )
 from voxelmill.gui.objects import AxisRow, ObjectPanel  # noqa: E402
-
-
-@pytest.fixture(scope='module')
-def application():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 @pytest.fixture

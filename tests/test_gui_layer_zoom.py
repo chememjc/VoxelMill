@@ -1,26 +1,19 @@
 """Layer-view zoom, panning, the pixel grid, and wheel behavior."""
 from __future__ import annotations
 
-import os
 
 import numpy as np
 import pytest
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 pytestmark = pytest.mark.gui
 
-from PySide6 import QtCore, QtGui, QtWidgets  # noqa: E402
+from PySide6 import QtCore, QtGui  # noqa: E402
 
 from voxelmill.gui.layerview import (  # noqa: E402
     GRID_VALUE, OCCUPIED_VALUE, PIXEL_GRID_MIN_SCALE, ZOOM_STEPS, LayerCanvas,
     LayerView, fit_zoom, render_layer_image, visible_crop, zoom_step,
 )
-
-
-@pytest.fixture(scope='module')
-def application():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 def _solid(height, width):

@@ -7,9 +7,7 @@ display, and so does the check that facet outlines carry no diagonals.
 """
 from __future__ import annotations
 
-import os
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 import numpy as np
 import pytest

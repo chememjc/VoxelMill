@@ -1,10 +1,8 @@
 import json
-import os
 import time
 
 import pytest
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 pytest.importorskip('PySide6')
 pytest.importorskip('vtkmodules')
 from PySide6 import QtCore, QtWidgets

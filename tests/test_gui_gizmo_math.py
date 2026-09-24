@@ -8,9 +8,7 @@ the rotation axis) are cheap to check exhaustively.
 """
 from __future__ import annotations
 
-import os
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 import numpy as np
 import pytest

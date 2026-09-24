@@ -1,16 +1,14 @@
 """Per-issue-type color, visibility filtering, and jump-to-issue navigation."""
 from __future__ import annotations
 
-import os
 
 import numpy as np
 import pytest
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 pytestmark = pytest.mark.gui
 
-from PySide6 import QtGui, QtWidgets  # noqa: E402
+from PySide6 import QtGui  # noqa: E402
 
 from voxelmill.contracts import Diagnostic  # noqa: E402
 from voxelmill.raster import RasterGrid  # noqa: E402
@@ -18,11 +16,6 @@ from voxelmill.gui.layerview import (  # noqa: E402
     DEFAULT_ISSUE_COLOR, ISSUE_COLORS, LayerView, issue_color, mask_to_image,
     render_layer_image,
 )
-
-
-@pytest.fixture(scope='module')
-def application():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 def _grid(height, width):

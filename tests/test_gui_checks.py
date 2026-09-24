@@ -15,7 +15,6 @@ import sys
 
 import pytest
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 pytestmark = pytest.mark.gui
 
@@ -30,11 +29,6 @@ from voxelmill.gui import services  # noqa: E402
 from voxelmill.gui.appprefs import load_preferences  # noqa: E402
 from voxelmill.gui.window import MainWindow, PRINT_CHECK_LABELS  # noqa: E402
 from test_gui import drain, small_settings, write_stl  # noqa: E402
-
-
-@pytest.fixture(scope='module')
-def application():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 @pytest.fixture

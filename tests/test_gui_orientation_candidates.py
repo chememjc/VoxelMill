@@ -1,23 +1,16 @@
 """Headless checks for the automatic orientation candidate controls."""
-import os
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 import pytest
 import manifold3d as m
 
 pytest.importorskip('PySide6')
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore
 
 from voxelmill.config import resolve_settings
 from voxelmill.gui.window import MainWindow
 from voxelmill.geometry import manifold_triangles
 from voxelmill.mesh import write_stl
-
-
-@pytest.fixture(scope='session')
-def application():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 def candidate(rank, angle):

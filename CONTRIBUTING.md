@@ -105,9 +105,9 @@ runs the golden comparison as an advisory job. When a change alters reports on
 purpose, re-record with `scripts/equivalence.py --update-golden` and review the
 JSON diff in the same commit.
 
-There is no `conftest.py`. GUI test files set `QT_QPA_PLATFORM=offscreen`
-themselves at the top of the file, before importing PySide6; copy that pattern
-in a new one. A test that needs a real window runs in a child process under
+`tests/conftest.py` sets `QT_QPA_PLATFORM=offscreen` before any test module
+imports PySide6 and provides the session `application` fixture; a new GUI
+test file needs neither line of its own. A test that needs a real window runs in a child process under
 `xvfb-run` with `QT_QPA_PLATFORM=xcb`, because VTK opens a genuine X window
 and the offscreen platform hands it a window id the server rejects, which
 kills the whole session rather than one test. `tests/test_gui.py` has the

@@ -1,15 +1,13 @@
 """Headless Faults tab: overlay colors, scene clip/glyphs, and MainWindow wiring."""
-import os
 
 import numpy as np
 import pytest
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 pytest.importorskip('PySide6')
 pytest.importorskip('vtkmodules')
 
-from PySide6 import QtCore, QtWidgets  # noqa: E402
+from PySide6 import QtCore  # noqa: E402
 
 from voxelmill.config import resolve_settings  # noqa: E402
 from voxelmill.contracts import Diagnostic, ValidationReport  # noqa: E402
@@ -17,11 +15,6 @@ from voxelmill.gui.faults import (DEFAULT_FAULT_COLOR, FAULT_COLORS,  # noqa: E4
                                  FaultView, fault_color, fault_overlay)
 from voxelmill.gui.viewport import Scene  # noqa: E402
 from voxelmill.gui.window import MainWindow  # noqa: E402
-
-
-@pytest.fixture(scope='session')
-def application():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 def small_settings():

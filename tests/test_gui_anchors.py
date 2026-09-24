@@ -1,8 +1,6 @@
 """GUI parity for the independent model-anchor support controls."""
-import os
 import time
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 import pytest
 pytest.importorskip('PySide6')

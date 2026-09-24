@@ -1,11 +1,9 @@
 """Autosave recovery and first-run wizard headless coverage."""
-import os
 from pathlib import Path
 
 import manifold3d as m
 import pytest
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 pytest.importorskip('PySide6')
 pytest.importorskip('vtkmodules')
@@ -18,11 +16,6 @@ from voxelmill.gui.document import Document
 from voxelmill.gui.window import MainWindow, autosave_path
 from voxelmill.gui.wizard import FirstRunWizard, mark_wizard_done, wizard_done_path, wizard_should_run
 from voxelmill.mesh import write_stl
-
-
-@pytest.fixture(scope='session')
-def application():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 def small_settings():

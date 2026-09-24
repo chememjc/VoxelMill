@@ -1,21 +1,14 @@
 """Offline checks for the standalone printer monitor."""
-import os
 import time
 import threading
 
 import pytest
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PySide6")
 
 from PySide6 import QtWidgets
 from voxelmill.contracts import CancellationToken
 from voxelmill.gui.printer_monitor import PrinterMonitorDialog
-
-
-@pytest.fixture(scope="session")
-def application():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 def wait_until(application, predicate, timeout=2):

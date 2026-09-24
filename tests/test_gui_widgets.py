@@ -8,7 +8,6 @@ from dataclasses import asdict
 
 import pytest
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 pytestmark = pytest.mark.gui
 
@@ -25,11 +24,6 @@ from voxelmill.gui.widgets import (  # noqa: E402
 )
 from voxelmill.gui.window import MainWindow  # noqa: E402
 from test_gui import small_settings  # noqa: E402
-
-
-@pytest.fixture(scope='module')
-def application():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 def _wheel(widget, delta=120):

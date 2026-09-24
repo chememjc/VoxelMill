@@ -118,7 +118,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-046 | One structured error helper | Arch | 5 | 1 | 5 | won't fix (typed instead) |
 | VM-047 | Deduplicate voxel-size bisection | Arch | 5 | 1 | 5 | done |
 | VM-048 | Consistent dtype contract at the pybind boundary | Arch | 5 | 1 | 5 | done |
-| VM-062 | Shared `tests/conftest.py` | Test/CI | 5 | 1 | 5 | open |
+| VM-062 | Shared `tests/conftest.py` | Test/CI | 5 | 1 | 5 | done |
 | VM-070 | Docstrings for the largest undocumented functions | Docs | 5 | 1 | 5 | open |
 | VM-040 | Typed settings model as the single source of truth | Arch | 1 | 5 | 5 | open |
 | VM-012 | Stop re-sampling downward faces for the overhang check | Perf | 4 | 1 | 4 | won't fix (measured) |
@@ -502,7 +502,7 @@ Ease 4 · Benefit 3 · Confidence: sure · Status: done
 
 ### VM-062 — Shared `tests/conftest.py`
 
-Ease 5 · Benefit 1 · Confidence: sure · Status: open
+Ease 5 · Benefit 1 · Confidence: sure · Status: done
 
 **Problem.** Every GUI test module sets `QT_QPA_PLATFORM` itself, and the fixture paths are rebuilt per file.
 

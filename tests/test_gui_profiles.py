@@ -1,10 +1,8 @@
 """The editor's profile library reaches the same code the CLI does."""
-import os
 from pathlib import Path
 
 import pytest
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 pytest.importorskip('PySide6')
 from PySide6 import QtWidgets
 

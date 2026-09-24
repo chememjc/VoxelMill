@@ -1,21 +1,14 @@
 """Focused headless tests for the GUI job request lifecycle."""
-import os
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 import pytest
 
 pytest.importorskip('PySide6')
 pytest.importorskip('vtkmodules')
 
-from PySide6 import QtCore, QtWidgets  # noqa: E402
+from PySide6 import QtCore  # noqa: E402
 
 from voxelmill.gui.jobs import MAX_EDITOR_JOBS, JobRunner, editor_job_threads  # noqa: E402
-
-
-@pytest.fixture(scope='session')
-def application():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 def process_until(application, runner, predicate, timeout=10000, join=False):

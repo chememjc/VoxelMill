@@ -1,8 +1,6 @@
 """GUI parity and headless previews for the selectable support bases."""
-import os
 import time
 
-os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 import pytest
 pytest.importorskip('PySide6')
