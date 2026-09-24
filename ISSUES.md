@@ -87,7 +87,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-013 | Spatial index for routed-capsule collision checks | Perf | 3 | 3 | 9 | done |
 | VM-016 | Keep VTK actors and update their input | Perf | 3 | 3 | 9 | done |
 | VM-017 | Optional single-raster fast path for `slice` | Perf | 3 | 3 | 9 | open |
-| VM-018 | Persist the rasterizer Z-interval structure across passes (F3) | Perf | 3 | 3 | 9 | open |
+| VM-018 | Persist the rasterizer Z-interval structure across passes (F3) | Perf | 3 | 3 | 9 | won't fix (measured) |
 | VM-019 | Scale check at 12K–16K panels | Perf | 3 | 3 | 9 | done |
 | VM-029 | Island scan grows faster than the geometry braces add | Perf | 3 | 3 | 9 | explained (not a defect) |
 | VM-044 | Output-format registry | Arch | 3 | 3 | 9 | open |
@@ -104,8 +104,8 @@ Sorted from easiest and most significant to hardest and least valuable.
 | E6 | LED uniformity mask compensation | Feature | 3 | 2 | 6 | open |
 | F5 | SIMD in the rasterizer inner loop | Feature | 3 | 2 | 6 | open |
 | VM-021 | Vectorize contour/boundary sampling | Perf | 3 | 2 | 6 | done |
-| VM-024 | Only one of the three `analyze_layers` calls in `prepare` can be shared | Perf | 3 | 2 | 6 | open |
-| VM-025 | Fold `UnionLayerStream` per-group slices into one native call | Perf | 3 | 2 | 6 | open |
+| VM-024 | Only one of the three `analyze_layers` calls in `prepare` can be shared | Perf | 3 | 2 | 6 | deferred (decision) |
+| VM-025 | Fold `UnionLayerStream` per-group slices into one native call | Perf | 3 | 2 | 6 | done (earlier) |
 | VM-063 | Direct tests for `gui/services.py` and camera math | Test/CI | 3 | 2 | 6 | open |
 | VM-083 | Memory ceiling on macOS and Windows | Release | 3 | 2 | 6 | open |
 | VM-085 | PyPI wheels / Flatpak (H5) | Release | 3 | 2 | 6 | open |
@@ -300,13 +300,15 @@ Ease 3 · Benefit 3 · Confidence: sure · Status: open
 
 ### VM-018 — Persist the rasterizer Z-interval structure across passes (F3)
 
-Ease 3 · Benefit 3 · Confidence: measure · Status: open
+Ease 3 · Benefit 3 · Confidence: measure · Status: won't fix (measured)
 
 **Problem.** The rasterizer rebuilds its per-triangle Z ordering each time it is constructed. The island guard and the reslice build several of them for mostly identical geometry.
 
 **Fix.** Cache the sorted Z-interval index on the `Rasterizer` and reuse it per mesh identity. Consider an interval tree so each layer tests only its active set. Measure on a retrying fixture (VM-014) first.
 
 **Where.** `native/raster.cpp:53-66`
+
+**Measured (2026-09-23).** Building a `Rasterizer` takes 0.9 ms for 5k triangles and 28 ms for 245k, and a run builds a few. A 9 Mpx slice of the 245k mesh takes 1.6 ms, so the per-layer active set is already cheap. Persisting it would save milliseconds.
 
 ### VM-019 — Scale check at 12K–16K panels
 
@@ -373,7 +375,7 @@ Ease 5 · Benefit 2 · Confidence: sure · Status: done
 
 ### VM-024 — Only one of the three `analyze_layers` calls in `prepare` can be shared
 
-Ease 3 · Benefit 2 · Confidence: likely · Status: open
+Ease 3 · Benefit 2 · Confidence: likely · Status: deferred (decision)
 
 **Problem.** Measured: the island-guard scan and the reslice analyze different data and must stay separate (see `docs/performance.md`). The third call, which runs when `repair.support_void_policy != "fail"`, analyzes the same pre-export group as the island guard.
 
@@ -381,15 +383,19 @@ Ease 3 · Benefit 2 · Confidence: likely · Status: open
 
 **Where.** `src/voxelmill/pipeline.py:556-559`
 
+**Decision (2026-09-23).** Sharing would need the island scan to track voids and check growth, both of which it skips deliberately to stay fast. That would put a cost on the default path to speed up a non-default policy (`support_void_policy != 'fail'`). Revisit only if that policy becomes the default.
+
 ### VM-025 — Fold `UnionLayerStream` per-group slices into one native call
 
-Ease 3 · Benefit 2 · Confidence: measure · Status: open
+Ease 3 · Benefit 2 · Confidence: measure · Status: done (earlier)
 
 **Problem.** Each layer slices every group separately and ORs them in Python.
 
 **Fix.** Add a native multi-rasterizer OR (`slice_into` already exists), and measure against VM-014.
 
 **Where.** `src/voxelmill/assembly.py:239-270`
+
+**Status (2026-09-23).** `UnionLayerStream` already ORs every binary group into one buffer through native `slice_into` (shipped with the 2.84 s headline row). What remains per layer is a `count_nonzero` for `filled_pixels`, which is noise at 9K.
 
 ### VM-026 — Link-time optimization for `_native`
 
