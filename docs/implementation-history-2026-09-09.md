@@ -212,9 +212,8 @@ Remaining reference and physical acceptance (not implementation claims):
       its dimensions a reproduction of the known-good print.
 - [ ] Calibrate adhesion, removal and support mechanics on printed parts;
       finish the Tier 0 passing-print and physical mirroring gates below.
-- [ ] Update the externally published roadmap Artifact for this checkpoint.
-      The local roadmap is current; this session has no callable tool for
-      editing that Claude-hosted Artifact, so its update is not claimed.
+- [ ] Update the externally published roadmap for this checkpoint. The local
+      roadmap is current; the external copy was not updated here.
 
 Next code work is Tier 2.2. Named process presets/profile embedding remain
 Tier 1 backlog and are separate from this support-geometry completion.
@@ -637,8 +636,8 @@ Next restart work:
       unresolved; validation gates were not relaxed. Continue the routing/
       mechanical and support-pocket investigations below.
 - [ ] Tier 1 profile discovery/management and named process presets remain open.
-- [ ] Update the external Claude roadmap Artifact separately; local plan2,
-      nextsteps and documentation are current. No external Artifact was edited.
+- [ ] Update the external roadmap separately; local plan2, nextsteps and
+      documentation are current. The external copy was not edited.
 
 No background jobs remain from this implementation session. Restart an existing
 GUI process to load the rebuilt native extension. One lesser subagent was used
@@ -815,8 +814,7 @@ Remaining, in restart order:
       reflection-sensitive descriptor (complex-moment phase, or matching under
       the covariance eigenframe) is the shape of that test. No printer traffic
       is needed for it.
-- [x] The published Artifact is back in step. "chopchop Slicer Roadmap",
-      https://claude.ai/code/artifact/fce7f6f9-c6ad-49db-b9fd-d0a4cafe4ae6 — the
+- [x] The published roadmap ("chopchop Slicer Roadmap") is back in step: the
       twenty N rows added with details, 77 items becomes 97, the totals now
       derive from `ITEMS.length` so they cannot drift again, and F10 plus the
       thirteen finished N items are checked. N19 is deliberately left unchecked
