@@ -27,19 +27,21 @@ bool improper(const Triangle&a,const Triangle&b){
  return vm::triangles_meet(a,b);
 }
 py::dict inspect_intersections(const py::array &arr,const py::object &cb){
- auto info=arr.request();if(info.ndim!=3||info.shape[1]!=3||info.shape[2]!=3||(arr.dtype().kind()!='f' || info.itemsize!=4 || !arr.dtype().attr("isnative").cast<bool>()))throw std::invalid_argument("Expected native float32 triangles (n,3,3)");
+ auto info=arr.request();if(info.ndim!=3||info.shape[1]!=3||info.shape[2]!=3||(arr.dtype().kind()!='f' || (info.itemsize!=4 && info.itemsize!=8) || !arr.dtype().attr("isnative").cast<bool>()))throw std::invalid_argument("triangles must be a native-endian float32 or float64 array of shape (n,3,3)");
  size_t n=info.shape[0],candidates=0,count=0,invalid=0;std::vector<std::pair<uint32_t,uint32_t>> examples;
  if(n>UINT32_MAX)throw std::invalid_argument("Too many triangles");
  auto tick=[&](const char*stage,size_t done,size_t total){if(!cb.is_none()){py::gil_scoped_acquire lock;cb(stage,done,total);}};
  {py::gil_scoped_release release;
- auto triangle=[&](size_t t){Triangle tri;for(int v=0;v<3;v++){double coords[3];for(int c=0;c<3;c++){float value;std::memcpy(&value,static_cast<char*>(info.ptr)+t*info.strides[0]+v*info.strides[1]+c*info.strides[2],4);coords[c]=value;}tri.v[v]=vm::Vec3{coords[0],coords[1],coords[2]};}return tri;};
+ // Coordinates are evaluated exactly as stored: float32 input is widened, never rounded.
+ auto coord=[&](size_t t,int v,int c)->double{auto ptr=static_cast<char*>(info.ptr)+t*info.strides[0]+v*info.strides[1]+c*info.strides[2];if(info.itemsize==4){float value;std::memcpy(&value,ptr,4);return value;}double value;std::memcpy(&value,ptr,8);return value;};
+ auto triangle=[&](size_t t){Triangle tri;for(int v=0;v<3;v++)tri.v[v]=vm::Vec3{coord(t,v,0),coord(t,v,1),coord(t,v,2)};return tri;};
  // Keep only the triangles a predicate can answer for, remembering each one's
  // index in the caller's array so reported pairs stay meaningful.
  std::vector<Triangle> kept;std::vector<uint32_t> handle;std::vector<vm::Aabb> boxes;
  kept.reserve(n);handle.reserve(n);boxes.reserve(n);
  for(size_t t=0;t<n;t++){
   if(t%65536==0)tick("intersection_boxes",t,n);
-  bool finite=true;for(int v=0;v<3;v++)for(int c=0;c<3;c++){float value;std::memcpy(&value,static_cast<char*>(info.ptr)+t*info.strides[0]+v*info.strides[1]+c*info.strides[2],4);finite=finite&&std::isfinite(value);}
+  bool finite=true;for(int v=0;v<3;v++)for(int c=0;c<3;c++)finite=finite&&std::isfinite(coord(t,v,c));
   if(!finite){invalid++;continue;}auto tri=triangle(t);if(tri.degenerate()){invalid++;continue;}
   kept.push_back(tri);handle.push_back(uint32_t(t));boxes.push_back(vm::triangle_bounds(tri));
  }

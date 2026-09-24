@@ -178,6 +178,7 @@ def voxel_repair(triangles, bounds, settings, *, budget=None, cancel=None, progr
         float(repair['max_deviation_mm']),
         lambda done, total: (cancel.check(), progress('repair_deviation', done, total)))
     if smoothing:
+        # float32 on purpose: check the geometry the STL will actually store.
         intersection = _native.inspect_intersections(np.asarray(vertices[faces], dtype=np.float32))
         if intersection['self_intersections']:
             raise VoxelMillError('repair_self_intersection', 'Smoothing introduced surface intersections', dict(intersection))

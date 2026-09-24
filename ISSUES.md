@@ -117,7 +117,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-026 | Link-time optimization for `_native` | Perf | 5 | 1 | 5 | open |
 | VM-046 | One structured error helper | Arch | 5 | 1 | 5 | open |
 | VM-047 | Deduplicate voxel-size bisection | Arch | 5 | 1 | 5 | open |
-| VM-048 | Consistent dtype contract at the pybind boundary | Arch | 5 | 1 | 5 | open |
+| VM-048 | Consistent dtype contract at the pybind boundary | Arch | 5 | 1 | 5 | done |
 | VM-062 | Shared `tests/conftest.py` | Test/CI | 5 | 1 | 5 | open |
 | VM-070 | Docstrings for the largest undocumented functions | Docs | 5 | 1 | 5 | open |
 | VM-040 | Typed settings model as the single source of truth | Arch | 1 | 5 | 5 | open |
@@ -458,7 +458,7 @@ Ease 5 · Benefit 1 · Confidence: sure · Status: open
 
 ### VM-048 — Consistent dtype contract at the pybind boundary
 
-Ease 5 · Benefit 1 · Confidence: sure · Status: open
+Ease 5 · Benefit 1 · Confidence: sure · Status: done
 
 **Problem.** `inspect_intersections` accepts only float32, while `inspect_mesh` and the distance kernels also accept float64. `repair.py` works around this with a cast at the call site.
 

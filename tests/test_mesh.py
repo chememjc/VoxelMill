@@ -133,7 +133,8 @@ def test_intersection_shared_vertex_and_edge():
       (np.array([[.5,.5,-1],[.5,.5,1],[1,1,1]]),1),
     ]
     for b,expected in cases:
-        assert _native.inspect_intersections(np.array([a,b],dtype=np.float32))['self_intersections']==expected
+        for dtype in (np.float32, np.float64):
+            assert _native.inspect_intersections(np.array([a,b],dtype=dtype))['self_intersections']==expected
 
 
 def test_weld_float64_preserved():
