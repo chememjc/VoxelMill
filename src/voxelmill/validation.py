@@ -504,17 +504,24 @@ def _layer_worker_cap(budget, grid):
     return max(1, min(workers, (ceiling - base) // per_worker))
 
 
-def _tiled_growth_pixels(previous, mask, grid, limit, tile_size=256):
+def _tiled_growth_pixels(previous, mask, grid, limit, tile_size=None):
     """Exact distance-threshold count with bounded tile-local EDT scratch.
 
     A predecessor farther than the threshold cannot change the verdict, so
     each tile needs only a threshold-wide halo, including equality pixels.
     Empty halos are handled explicitly: scipy's EDT otherwise measures to
     an implicit point outside an all-foreground array.
+
+    Tiles are at least four halos wide, so the transform spends most of its
+    work on the tile rather than the halo. A fixed 256 px tile under a 215 px
+    halo (3 mm at 16K pitch) transformed about seven pixels per pixel counted.
+    The count does not depend on the tile size.
     """
     threshold = limit + 1e-10
     hy = min(previous.shape[0], int(math.ceil(threshold / grid.dy)))
     hx = min(previous.shape[1], int(math.ceil(threshold / grid.dx)))
+    if tile_size is None:
+        tile_size = max(256, 4 * max(hy, hx))
     growth = 0
     for y in range(0, mask.shape[0], tile_size):
         y1 = min(y + tile_size, mask.shape[0])

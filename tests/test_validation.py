@@ -744,3 +744,18 @@ def test_lockstep_bottleneck_search_matches_the_per_pocket_search():
     assert len({area for _, area, _, _ in expected}) >= 2
     assert sorted((p['component'], p['bottleneck_area_mm2'], p['bottleneck_area_upper_mm2'],
                    p['seed_zyx']) for p in got['bottleneck_examples']) == sorted(expected)
+
+
+def test_growth_count_does_not_depend_on_tile_size():
+    from types import SimpleNamespace
+    import scipy.ndimage as ndi
+    from voxelmill.validation import _tiled_growth_pixels
+    rng = np.random.default_rng(1)
+    grid = SimpleNamespace(dx=0.05, dy=0.05)
+    for _ in range(4):
+        previous = ndi.binary_dilation(rng.random((300, 420)) < 0.002, iterations=2)
+        mask = rng.random((300, 420)) < 0.3
+        for limit in (0.5, 2.0):
+            counts = {_tiled_growth_pixels(previous, mask, grid, limit, tile_size=size)
+                      for size in (48, 256, None, 1000)}
+            assert len(counts) == 1
