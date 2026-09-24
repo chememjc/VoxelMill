@@ -79,6 +79,7 @@ BRACE_LABELS = {
     'brace_pattern': 'Bracing pattern',
     'brace_min_height_mm': 'Minimum origin height (mm)',
     'brace_azimuth_deg': 'Fan / alternating rotation (°)',
+    'brace_model_pillars': 'Allow braces to join pillars that stand on the model',
 }
 BRACE_CHOICE_LABELS = {
     'brace_destination': {'supports': 'Supports only', 'base': 'Base only', 'both': 'Supports or base'},

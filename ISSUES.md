@@ -81,7 +81,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-023 | Cheap boolean pre-checks for added models | Perf | 5 | 2 | 10 | done |
 | VM-064 | Goldens for the invalid-mesh fixtures | Test/CI | 5 | 2 | 10 | done |
 | VM-041 | One versioned envelope and migration registry for every file format | Arch | 2 | 5 | 10 | partial |
-| VM-092 | CHITUBOX-style cross bracing | Feature | 2 | 5 | 10 | partial |
+| VM-092 | CHITUBOX-style cross bracing | Feature | 2 | 5 | 10 | done |
 | A4 | Profile inheritance with delta storage | Feature | 3 | 3 | 9 | deferred (post-beta) |
 | A5 | Profile compatibility conditions | Feature | 3 | 3 | 9 | deferred (post-beta) |
 | B2 | CTB v4/v5 reader | Feature | 3 | 3 | 9 | deferred (decision) |
@@ -785,7 +785,7 @@ pillars 0.9 mm apart along the bracket's side.
 
 ### VM-092 — CHITUBOX-style cross bracing
 
-Ease 2 · Benefit 5 · Confidence: likely · Status: partial
+Ease 2 · Benefit 5 · Confidence: likely · Status: done
 
 **Problem.** The user is unsure pillars are braced enough. CHITUBOX Light's cross-bracing parameters
 are enabled, diameter 0.8 mm, width 4.0, min Z spacing 2.0 mm, max XY spacing 30 mm, start height
@@ -806,6 +806,16 @@ the plate; on the bracket they reach 22.6 mm unbraced (slenderness 25). (2) A fe
 dense rows stay unbraced when every candidate diagonal fails clearance (25.9 mm on the bracket). Decide
 whether braces may join model-standing pillars, add a fallback for crowded rows, and set a slenderness
 target (for example 15) with a test.
+
+**Done (2026-09-24).** `support.brace_model_pillars` (off by default; a Setup checkbox and
+`--brace-model-pillars`) grounds a model-standing pillar at the top of its own bottom connector and
+measures its minimum brace height from there. On the bracket that braces 16 of 17 model pillars and
+takes their worst run from 22.6 mm to 9.9 mm. The crowded-row case was not clearance: each neighbour
+spent its one connection per interval on its own origins and the alternating rule forbade the rest. A
+rescue pass now retries any run longer than two intervals with those two rules relaxed and every
+clearance check kept, taking the bracket's worst plate pillar from 25.9 mm (slenderness 28.8) to
+10.0 mm (11.1). `tests/test_bracing_model_pillars.py` holds plate slenderness at or under 15 on every
+default fixture.
 
 ### VM-093 — `release.yml` platform selector
 

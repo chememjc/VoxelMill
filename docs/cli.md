@@ -38,17 +38,18 @@ These are accepted by every command except `info`.
 | `--contour-supports` / `--no-contour-supports` | Also sample the outer perimeter of downward-face clusters. Off by default. |
 | `--boundary-supports` / `--no-boundary-supports` | Also sample open mesh boundary edges (crop cuts). Closed solids add none. Off by default. |
 | `--auto-bracing` / `--no-auto-bracing` | Automatic bracing, switched independently of contacts. |
-| `--brace-spacing-mm` | Vertical spacing between downward brace origins, measured from each support shoulder, `support.brace_spacing_mm` (default 15 mm). |
+| `--brace-spacing-mm` | Vertical spacing between downward brace origins, measured from each support shoulder, `support.brace_spacing_mm` (default 5 mm). |
 | `--brace-diameter-mm` | Cross-brace diameter, `support.brace_diameter_mm`. `0` (default) derives it from the thinner of the two connected pillars. |
 | `--brace-max-distance-mm` | Farthest a pillar neighbour may be and still be braced, `support.brace_max_distance_mm`. `0` (default) derives `1.5 * spacing_mm`. |
 | `--brace-max-length-mm` | Maximum complete downward diagonal brace length, `support.brace_max_length_mm` (default 30 mm). Candidates that cannot reach a valid configured destination are omitted. |
-| `--brace-destination {supports,base,both}` | Restrict brace destinations to grounded supports, new base feet, or both. `both` prefers supports and is the default. |
+| `--brace-destination {supports,base,both}` | Restrict brace destinations to grounded supports, new base feet, or both. `supports` is the default. |
 | `--brace-pattern {single,alternating,x}` | Use single diagonals, alternate direction by vertical level, or paired X diagonals between reciprocal vertical shaft spans. Base landings fan in every pattern. |
 | `--brace-branches-per-node N` | Maximum distinct connections per vertical spacing interval, from 1 to 8. Shared incoming connections count; an X pair uses one neighbor slot. |
 | `--brace-angle-deg DEG` | Downward branch angle from horizontal, strictly between 0° and 90°; default 45° gives equal horizontal travel and vertical drop. |
-| `--brace-min-height-mm` | Minimum brace origin height above the plate, `support.brace_min_height_mm`; default 0 allows every shoulder-derived level. |
+| `--brace-min-height-mm` | Minimum brace origin height above the plate, or, with `--brace-model-pillars`, above a model pillar's own foot; `support.brace_min_height_mm`, default 3 mm. |
 | `--brace-azimuth-deg` | Rotate base landing fans and the alternating direction axis around Z, `support.brace_azimuth_deg`; default 0°. |
-| `--part-to-part-supports` / `--no-part-to-part-supports` | Allow or forbid primary support anchors on model material. Braces always require a support-only path to the plate or generated base. |
+| `--brace-model-pillars` / `--no-brace-model-pillars` | Allow braces to join pillars that stand on the model, grounded from the top of their own bottom connector. Off by default. |
+| `--part-to-part-supports` / `--no-part-to-part-supports` | Allow or forbid primary support anchors on model material. Braces still need a grounded support-network destination unless `--brace-model-pillars` is also set. |
 | `--part-to-part-avoidance VALUE` | Route preference from `0` (equal length competition) to `1` (historical plate preference); intermediate values require a proportionally shorter model route. |
 | `--peel-analysis` / `--no-peel-analysis` | Enable or skip the uncalibrated downward-surface peel advisory. Skipping reports `not_run`. Thresholds use `--set peel.KEY=VALUE`. |
 | `--seal-voids` / `--no-seal-voids` | Fill enclosed cavities. On by default. |

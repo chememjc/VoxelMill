@@ -471,6 +471,17 @@ uses one neighbor slot in each touched band and overlapping endpoint bands count
 once. `brace_branches_per_node` limits distinct connections per interval from
 1 to 8 and counts incoming connections. `brace_min_height_mm` excludes lower
 origins, and `brace_azimuth_deg` rotates base fans and the alternating axis.
+
+**Rescue pass (0.6.0):** after the schedule, any pillar left with an unbraced run
+longer than two brace intervals retries the schedule levels inside that run
+once each, with the target's connection quota and the alternating direction
+relaxed; every clearance and collision check still applies. In a dense row the
+neighbours can spend all their connections on their own origins, and on the
+bracket one pillar was left 25.9 mm unbraced (now 10 mm). With
+`brace_model_pillars` on, a model-standing pillar with its own bottom
+connector is grounded at the top of that connector, and its minimum brace
+height is measured from there.
+
 Each strut's radius is scaled to the thinner of the two pillars it connects,
 so a small-pillar run is braced with a strut sized to itself rather than to the
 nominal diameter.

@@ -917,7 +917,7 @@ def build_parser():
                              'of --auto-supports')
     common.add_argument('--brace-spacing-mm', type=float,
                         help='vertical spacing between downward brace origins, measured from '
-                             'each support shoulder; default 15 mm')
+                             'each support shoulder; default 5 mm')
     common.add_argument('--brace-diameter-mm', type=float,
                         help='cross-brace diameter; 0 derives it from the thinner of the '
                              'two connected pillars')
@@ -928,17 +928,22 @@ def build_parser():
                         help='maximum complete downward brace length, including its diagonal '
                              'connection; default 30 mm')
     common.add_argument('--brace-destination', choices=('supports', 'base', 'both'),
-                        help='brace destinations: grounded supports, new base feet, or both (default)')
+                        help='brace destinations: grounded supports (default), new base feet, or both')
     common.add_argument('--brace-pattern', choices=('single', 'alternating', 'x'),
                         help='single diagonals, alternating directions by level, or paired X diagonals between shafts')
     common.add_argument('--brace-branches-per-node', type=int,
                         help='maximum connections per support spacing interval, 1 to 8; an X pair counts once')
     common.add_argument('--brace-angle-deg', type=float, help='downward angle from horizontal, between 0 and 90; default 45')
-    common.add_argument('--brace-min-height-mm', type=float, help='minimum brace origin height above the plate; default 0')
+    common.add_argument('--brace-min-height-mm', type=float,
+                        help='minimum brace origin height above the plate, or, with '
+                             '--brace-model-pillars, above a model pillar\'s own foot; default 3 mm')
     common.add_argument('--brace-azimuth-deg', type=float, help='rotation of base fans and alternating directions; default 0')
+    common.add_argument('--brace-model-pillars', action=argparse.BooleanOptionalAction, default=None,
+                        help='allow braces to join pillars that stand on the model, grounded from the '
+                             'top of their own bottom connector; default off')
     common.add_argument('--part-to-part-supports', action=argparse.BooleanOptionalAction, default=None,
-                        help='allow primary supports to anchor on model material; braces always '
-                             'use grounded support-network destinations')
+                        help='allow primary supports to anchor on model material; braces still need a '
+                             'grounded support-network destination unless --brace-model-pillars is also set')
     common.add_argument('--part-to-part-avoidance', type=float,
                         help='0 scores routes equally by length; 1 always prefers an available plate '
                              'route; intermediate values require proportionally shorter model routes')

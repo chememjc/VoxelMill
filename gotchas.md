@@ -8,6 +8,23 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   establish brace grounding. New graph junctions split their destination edges;
   primary elbow edges share one shoulder-based vertical spacing schedule.
 
+- **A pillar in a dense row can starve for braces.** Each neighbour spends
+  its one connection per interval on its own origins, and the alternating
+  rule forbids the other direction, so on the bracket one pillar stood
+  25.9 mm unbraced between neighbours braced every 5 mm. A half-interval
+  retry did not help, because clearance was never the reason. `_brace` now
+  ends with a rescue pass: any run longer than two intervals retries its
+  schedule levels with the target quota and direction rule relaxed, and every
+  clearance check still applies. Look at the rejection evidence
+  (`pattern_rejected`, `spacing_rejected`) before assuming a collision.
+
+- **Model-standing pillars ground at their own bottom connector.** With
+  `brace_model_pillars` on, the `anchor_junction` node seeds grounding and the
+  minimum brace height is measured from that pillar's own foot. A
+  `small_model` pillar or a model pillar with no bottom connector runs straight
+  from a buried anchor to a contact, so it can never be grounded without
+  grounding through a contact.
+
 - **A candidate cap alone does not bound descending branch origins.** A tiny
   representable spacing on a lone tall support can produce many origins with
   no reachable destination, consuming no candidate attempts. The origin count

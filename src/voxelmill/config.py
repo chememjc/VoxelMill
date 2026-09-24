@@ -134,6 +134,12 @@ DEFAULTS = {
         'brace_destination': 'supports', 'brace_pattern': 'alternating',
         'brace_branches_per_node': 1, 'brace_angle_deg': 45.0,
         'brace_min_height_mm': 3.0, 'brace_azimuth_deg': 0.0,
+        # Off by default: a model-standing pillar's grounding requires a
+        # support-only path to the plate or generated base, so it is never
+        # braced. On admits the vertical shaft above a model pillar's own
+        # bottom connector into that grounding, letting it send and receive
+        # braces like a plate pillar.
+        'brace_model_pillars': False,
         # What the supports land on. 'grid' is the default: less resin and
         # less suction than a solid slab, still one connected base. 'plate' is
         # the convex hull raft, with a 30 degree outer putty-knife bevel.

@@ -71,10 +71,12 @@ independently control brace thickness and neighbor reach. **New in 0.5.4:**
 (`single`, `alternating`, or `x`), `brace_branches_per_node` (1–8),
 `brace_angle_deg` (strictly between 0° and 90°), `brace_min_height_mm`, and
 `brace_azimuth_deg` add destination, pattern, density, angle, height, and
-orientation controls. Brace candidates
-always require a support-only grounded path; model parts are never brace
-anchors, even when primary part-to-part supports are enabled. Candidates that
-intersect occupied model columns on the analysis grid are rejected and
+orientation controls. Brace candidates always require a support-only grounded
+path; model parts are never brace anchors, even when primary part-to-part
+supports are enabled, unless **`brace_model_pillars`** (off by default) is
+also set, in which case a model-anchored pillar with its own bottom connector
+is grounded from the top of that connector like a plate pillar. Candidates
+that intersect occupied model columns on the analysis grid are rejected and
 counted.
 
 `base_type` accepts `plate`, `none`, `pad`, `skate`, `skeleton`, `grid`, and

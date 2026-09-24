@@ -518,6 +518,8 @@ class MainWindow(QtWidgets.QMainWindow):
         'overhang': ('support', 'overhang_angle_deg', '--overhang-angle-deg'),
         'base_type': ('support', 'base_type', '--base-type'),
         'support_auto': ('support', 'automatic', '--auto-supports'),
+        'brace_auto': ('support', 'auto_bracing', '--auto-bracing'),
+        'brace_model_pillars': ('support', 'brace_model_pillars', '--brace-model-pillars'),
         'repair': ('repair', 'aggressiveness', '--repair'),
         'seal': ('repair', 'seal_voids', '--seal-voids'),
         'orifice': ('repair', 'min_orifice_area_mm2', '--min-orifice-area-mm2'),
@@ -703,6 +705,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.support_auto = QtWidgets.QCheckBox('automatic support contacts')
         self.support_auto.setChecked(self.document.settings['support'].get('automatic', True))
         self.support_auto.setToolTip('Clear this to route only contacts placed manually with Shift-click.')
+        self.brace_auto = QtWidgets.QCheckBox('enable bracing')
+        self.brace_auto.setChecked(self.document.settings['support'].get('auto_bracing', True))
+        self.brace_auto.setToolTip('Add the diagonal brace network between standing supports after routing.')
+        self.brace_model_pillars = QtWidgets.QCheckBox('allow braces to join pillars that stand on the model')
+        self.brace_model_pillars.setChecked(self.document.settings['support'].get('brace_model_pillars', False))
+        self.brace_model_pillars.setToolTip(
+            'Off: a pillar anchored on the model is never braced, because bracing only grounds '
+            "through a support-only path to the plate. On: a model pillar's own bottom connector "
+            'grounds it too, so it can be braced like a plate pillar.')
         self.repair = QtWidgets.QComboBox()
         self.repair.addItems(['none', 'conservative', 'aggressive'])
         self.repair.setCurrentText(self.document.settings['repair']['aggressiveness'])
@@ -798,6 +809,8 @@ class MainWindow(QtWidgets.QMainWindow):
                             ('overhang angle deg', 'overhang'),
                             ('base type', 'base_type'),
                             (None, 'support_auto'),
+                            (None, 'brace_auto'),
+                            (None, 'brace_model_pillars'),
                             ('repair', 'repair'),
                             (None, 'seal'),
                             ('min orifice area mm2', 'orifice'),
@@ -1641,6 +1654,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.overhang.setValue(settings['support']['overhang_angle_deg'])
         self.base_type.setCurrentText(settings['support']['base_type'])
         self.support_auto.setChecked(settings['support'].get('automatic', True))
+        self.brace_auto.setChecked(settings['support'].get('auto_bracing', True))
+        self.brace_model_pillars.setChecked(settings['support'].get('brace_model_pillars', False))
         self.repair.setCurrentText(settings['repair']['aggressiveness'])
         self.seal.setChecked(settings['repair']['seal_voids'])
         self.orifice.setValue(settings['repair']['min_orifice_area_mm2'])
@@ -2670,6 +2685,10 @@ class MainWindow(QtWidgets.QMainWindow):
         settings['support']['base_type'] = self.base_type.currentText()
         if 'automatic' in settings['support']:
             settings['support']['automatic'] = self.support_auto.isChecked()
+        if 'auto_bracing' in settings['support']:
+            settings['support']['auto_bracing'] = self.brace_auto.isChecked()
+        if 'brace_model_pillars' in settings['support']:
+            settings['support']['brace_model_pillars'] = self.brace_model_pillars.isChecked()
         settings['process']['layer_height_mm'] = self.layer_height.value()
         settings['process']['bottom_exposure_s'] = self.bottom_exposure.value()
         settings['process']['normal_exposure_s'] = self.normal_exposure.value()
