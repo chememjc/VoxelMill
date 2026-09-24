@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-VoxelMill is alpha software. Only the most recent release gets fixes; there are
+VoxelMill is beta software. Only the most recent release gets fixes; there are
 no maintenance branches. Check your version with `voxelmill --version` and
 compare it against the [latest
 release](https://github.com/chememjc/VoxelMill/releases) before reporting.
@@ -18,7 +18,7 @@ and what an attacker would gain. A crash on a malformed file is worth
 reporting even if you cannot show more than a crash.
 
 There is no bounty, and no guaranteed response time: this is a one-person
-alpha project. You will get an acknowledgement, and the fix and its release
+beta project. You will get an acknowledgement, and the fix and its release
 will be described in the advisory.
 
 ## What is actually exposed

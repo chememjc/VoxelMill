@@ -272,6 +272,6 @@ jobs:
           "
           gh release create "$GITHUB_REF_NAME" dist/VoxelMill-* \
             --repo "${{ github.repository }}" \
-            --title "VoxelMill ${ver} (alpha)" \
+            --title "VoxelMill ${ver} (beta)" \
             --prerelease \
             --notes-file dist/NOTES.md

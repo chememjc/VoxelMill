@@ -2,29 +2,30 @@
 
 A staged Linux application for single-part resin-print preparation. Open work before the first stable release (bugs, performance, architecture and the feature backlog) is tracked in [ISSUES.md](ISSUES.md).
 
-v0.5.5 (alpha) keeps a Python CLI and optional GUI, with hot geometry and raster
+v0.6.0 (beta) keeps a Python CLI and optional GUI, with hot geometry and raster
 work in the C++ `_native` kernels. Portable builds: Linux x86_64 AppImage, two
 thin macOS DMGs (Intel and Apple Silicon), and a Windows x64 zip. See
 [docs/packaging.md](docs/packaging.md) and [docs/platforms.md](docs/platforms.md).
 What will stay stable from 1.0 on is in [docs/stability.md](docs/stability.md).
 
-## Install (alpha binaries)
+## Install (beta binaries)
 
 Download the matching asset from the [GitHub Releases](https://github.com/chememjc/VoxelMill/releases) page.
-The [0.5.5 verification record](reports/releases/v0.5.5.md) documents artifact
-provenance, per-platform acceptance and coverage limits.
+The [0.6.0 verification record](reports/releases/v0.6.0.md) documents artifact
+provenance, per-platform acceptance and coverage limits; earlier releases are
+under [reports/releases/](reports/releases/).
 
 **Linux x86_64**
 
 ```sh
-chmod +x VoxelMill-0.5.5-linux-x86_64.AppImage
-./VoxelMill-0.5.5-linux-x86_64.AppImage --help
-./VoxelMill-0.5.5-linux-x86_64.AppImage gui
+chmod +x VoxelMill-0.6.0-linux-x86_64.AppImage
+./VoxelMill-0.6.0-linux-x86_64.AppImage --help
+./VoxelMill-0.6.0-linux-x86_64.AppImage gui
 ```
 
 The editor needs host OpenGL and X11 or Wayland.
 
-**macOS** — Intel (`macos-x86_64.dmg`) or Apple Silicon (`macos-arm64.dmg`). Copy `VoxelMill.app` to Applications. The build is unsigned, so clear quarantine once:
+**macOS** — Intel (`VoxelMill-0.6.0-macos-x86_64.dmg`) or Apple Silicon (`VoxelMill-0.6.0-macos-arm64.dmg`). Copy `VoxelMill.app` to Applications. The build is unsigned, so clear quarantine once:
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/VoxelMill.app
@@ -33,15 +34,17 @@ open /Applications/VoxelMill.app
 
 If macOS still blocks it: System Settings → Privacy & Security → Open Anyway.
 
-**Windows x64** — unzip `VoxelMill-0.5.5-windows-x64.zip` and run `VoxelMill\VoxelMill.exe` (CLI subcommands work from that same exe). SmartScreen may warn; Open anyway.
+**Windows x64** — unzip `VoxelMill-0.6.0-windows-x64.zip` and run `VoxelMill\VoxelMill.exe` (CLI subcommands work from that same exe). SmartScreen may warn; Open anyway.
 
 The editor's **Configuration** menu includes dedicated **Printer**, **Resin**,
 and **Support** editors with portable configuration saves. The support editor
 renders an example attachment array as dimensions change. Primary part-to-part
-supports require explicit enabling and have an adjustable routing preference.
+supports are on by default and have an adjustable routing preference.
 Braces descend at 45° by default from each support shoulder, with independent diameter,
-vertical spacing (15 mm), neighbour reach, and maximum diagonal length (30 mm).
-They connect only to grounded supports or new plate feet, never model parts.
+vertical spacing (5 mm), neighbour reach, and maximum diagonal length (30 mm).
+They connect only to grounded supports or new plate feet, never model parts;
+the Setup checkbox `brace_model_pillars` also lets them join pillars that stand
+on the model.
 Since 0.5.4, brace destinations (`supports`, `base`, or `both`), branch angle,
 single/alternating/X patterns, per-node connection limits, minimum origin
 height, and azimuth are configurable. The Support editor puts these controls

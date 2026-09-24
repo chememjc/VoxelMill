@@ -1,29 +1,31 @@
-Alpha {version}: portable Linux / macOS / Windows builds. Unsigned.
+Beta {version}: portable Linux / macOS / Windows builds. Unsigned. The first beta.
 
-## Fixes
+## Supports
 
-- **Editor outlines under generic OpenGL.** The build-volume wireframe and the navigation cube outlines now draw in virtual machines and on systems without 3D acceleration (Windows guests under VirtualBox showed only the green front edge before).
-- **Hex infill** (`hollow.infill = "hex"`) no longer crashes when hollowing.
-- **Wall-thickness analysis** no longer refines its voxel grid past the memory budget on thin thresholds.
-- **Editor responsiveness:** background jobs run in parallel again when `resources.workers` is automatic (the default), instead of queueing one at a time. Superseded placement scratch files are removed instead of accumulating in the temporary directory.
-- **Windows core detection** now reads performance and efficiency cores correctly; it previously always fell back to treating every core alike.
-- **Editor settings match validation:** the `assembly.union`, `hollow.mode` and `hollow.infill` dropdowns offer exactly the accepted values (`hex` infill was missing; `raster` and `outer` were offered but refused), and numeric controls no longer allow values that validation rejects.
-- The part-to-part support example now says why it routes nothing while part-to-part supports are off.
+- **Defaults that print.** With default settings, 14 of the 18 test shapes used to fail validation, which blocks the export. Every valid test shape now passes. Contacts sit on a hexagonal lattice, and a repair pass adds a contact wherever a downward face is out of reach. Model anchors can land on slopes up to 60°, and part-to-part anchoring is on by default. Support crevices at the tip/model interface are warnings rather than failures (`repair.support_void_policy = "ignore"`); cavities in the model still fail.
+- **A CHITUBOX Light look.** Contacts are 0.35 mm with 0.2 mm penetration, pillars are 0.9 mm, and 0.6 mm braces zigzag between neighbouring pillars every 5 mm from 3 mm above the plate. The `light` and `heavy` presets and the shipped resin profile are rescaled around these values. Separate pillars keep the support clearance between them.
+- **Braces on pillars standing on the model.** A new checkbox (`support.brace_model_pillars`, `--brace-model-pillars`, off by default) lets braces join pillars that stand on the model. On the bracket test part it braces 16 of its 17 model-standing pillars, and their longest unbraced run drops from 22.6 mm to 9.9 mm.
+- **No starved pillars in dense rows.** A pillar left with an unbraced run longer than two brace intervals gets another attempt at bracing. On the bracket the worst plate pillar went from 25.9 mm unbraced to 10 mm.
+- **Collision audit.** Every `prepare` intersects the supports with each part and checks support shafts against each other (`validation.metrics.support_collisions`). This found and fixed brace feet inside neighbouring pillars, pillars standing partly inside a part's wall, branches overlapping near elbows, and overlapping pillars in tree mode.
+- **`slice`, `verify` and `validate` accept what `prepare` passed.** A single STL or slice file cannot say which voids the supports made, so these commands used to fail, and withhold, an export `prepare` had just passed, on one-voxel crevices under the support tips. Under the default void policy they now warn when no finding can be a model cavity: every void is smaller than a support contact, and any sealed drainage chamber is a single grid cell. A hollow part without a drain still fails.
+- Every report states the longest unbraced pillar run and its slenderness, for pillars on the plate and on the model (`supports.unbraced`).
 
-## Performance
+## Editor
 
-- **Slicing** works from the part's footprint instead of the whole LCD panel for every layer. Written layers are byte-identical to 0.5.4. On a small part at 9K: 24.6 s → 1.3 s; with a mirrored printer 37.7 s → 1.6 s; with 4-level antialiasing 151 s → 13 s.
-- **Large parts on 16K panels:** a plate-filling part prepares in 36 s instead of 96 s and slices in 34 s instead of 46 s. Drainage bottleneck checks share work across chambers, and support routing indexes placed shafts spatially.
-- Native kernels stay multithreaded in builds without oneTBB (the drainage distance transform ran on one core in 0.5.4 portables).
-- The island search no longer builds a full boolean union on every pass, contour and boundary support sampling is vectorized, and the viewport computes its out-of-bounds coloring once per update.
+- **Settings search** ranks every setting by its path, label, CLI flag and help text. It tolerates typos, filters the settings pages and highlights the best match. When the current settings mode hides a match, a link offers to switch modes.
+- **Typed settings pages** for hollowing, peel analysis, assembly and resources. The raw JSON box is now only an Expert fallback.
+- **Keyboard shortcuts** can be changed under Configuration → Shortcuts. The editor refuses conflicting keys, can reset one shortcut or all of them, and saves your changes.
+- **Layer viewer pixel readout:** hover over a layer to see the pixel's coordinates, its position in mm, its value and any issue marked there.
+- **Profile library** asks before replacing unsaved editor changes, and before saving over an existing profile.
+- **Islands** are no longer re-checked after every edit by default, but still after supports are generated. *Verification → Re-check islands after every edit* restores the old behaviour.
+- The Setup form has checkboxes for bracing and for bracing pillars that stand on the model.
 
-## Command-line changes
+## Command line
 
-- `voxelmill info FILE` reads GOO and classic CTB v3 files; `goo-info` and `ctb-info` remain as aliases.
-- A command line that cannot be parsed now exits with status **64**; 2 keeps meaning "the command ran and validation failed". `thickness` no longer returns an undocumented 1.
-- What will stay stable from 1.0 on is written down in `docs/stability.md`.
+- `--brace-model-pillars / --no-brace-model-pillars`.
+- The brace options' help text now states the current defaults.
 
-This is an alpha. The GUI editor, CLI (`prepare`, `slice`, …), and CPU-only native kernels are bundled. CUDA is not. Qt is used via PySide6 under LGPL v3; see `licenses/THIRD-PARTY.md`. Physical print strength has not been validated.
+This is a beta. The GUI editor, CLI (`prepare`, `slice`, …), and CPU-only native kernels are bundled. CUDA is not. Qt is used via PySide6 under LGPL v3; see `licenses/THIRD-PARTY.md`. Physical print strength has not been validated.
 
 ## Install
 

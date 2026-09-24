@@ -14,7 +14,7 @@ body:
     attributes:
       label: Version
       description: Output of `voxelmill --version`, or the release you downloaded.
-      placeholder: VoxelMill 0.5.5
+      placeholder: VoxelMill 0.6.0
     validations:
       required: true
 
