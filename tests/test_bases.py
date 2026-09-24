@@ -348,3 +348,10 @@ def test_slope_and_hex_reach_the_cli_the_editor_and_the_placement_reserve(tmp_pa
     record = json.loads(capsys.readouterr().out)['metrics']['base']
     assert record['type'] == 'hex' and record['edge_slope_deg'] == 75
     assert record['hex_candidate_cells'] > 0
+
+
+def test_every_configured_base_type_has_a_builder():
+    from voxelmill.bases import BASE_BUILDERS, COMPLEXITY_CAPPED, EXPORT_SIMPLIFIED, MUST_CONNECT
+    from voxelmill.config import BASE_TYPES
+    assert set(BASE_BUILDERS) == set(BASE_TYPES)
+    assert COMPLEXITY_CAPPED | MUST_CONNECT | EXPORT_SIMPLIFIED <= set(BASE_TYPES)

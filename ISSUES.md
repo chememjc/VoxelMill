@@ -114,7 +114,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | F4 | Incremental re-slice after a local edit | Feature | 2 | 3 | 6 | open |
 | G13 | Direct-manipulation gizmos for supports, holes and cut planes | Feature | 2 | 3 | 6 | partial |
 | VM-043 | Break up the god functions in routing and orchestration | Arch | 2 | 3 | 6 | open |
-| VM-045 | Strategy registry for bases, tips and anchors | Arch | 2 | 3 | 6 | open |
+| VM-045 | Strategy registry for bases, tips and anchors | Arch | 2 | 3 | 6 | done |
 | VM-082 | macOS signing and notarization | Release | 2 | 3 | 6 | open |
 | VM-026 | Link-time optimization for `_native` | Perf | 5 | 1 | 5 | won't fix (measured) |
 | VM-046 | One structured error helper | Arch | 5 | 1 | 5 | won't fix (typed instead) |
@@ -491,13 +491,15 @@ Ease 3 · Benefit 3 · Confidence: sure · Status: done
 
 ### VM-045 — Strategy registry for bases, tips and anchors
 
-Ease 2 · Benefit 3 · Confidence: likely · Status: open
+Ease 2 · Benefit 3 · Confidence: likely · Status: done
 
 **Problem.** Adding a base type or tip shape needs a new tuple entry in `config.py`, an enum branch in `validate_settings`, and a branch inside `build_base`/`route_contacts`.
 
 **Fix.** Register strategies as `{name: Strategy}` objects that declare their parameters (fed into VM-040) and a `build()` method.
 
 **Where.** `src/voxelmill/config.py:14-24,393-411`, `src/voxelmill/bases.py:220`
+
+**Done (2026-09-23).** `bases.BASE_BUILDERS` maps each `base_type` to a builder (`_base_none`, `_base_plate`, `_base_pads`, `_base_network`) that takes a `BaseContext`, with behaviour flags as named sets (`COMPLEXITY_CAPPED`, `MUST_CONNECT`, `EXPORT_SIMPLIFIED`) and `LATTICES` for the grid and honeycomb. Geometry, records and record key order are identical for all 14 type-and-slope combinations, and a test keeps `BASE_BUILDERS` in step with `config.BASE_TYPES`. Tips and anchors stay as two-way cone/cylinder profiles, since a registry there would be indirection without a third shape. Their validators now use `config.TIP_SHAPES` and `SMALL_PILLAR_SHAPES` instead of repeating the list.
 
 ### VM-046 — One structured error helper
 

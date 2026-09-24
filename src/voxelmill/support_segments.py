@@ -4,6 +4,7 @@ from __future__ import annotations
 import math
 import numpy as np
 
+from .config import SMALL_PILLAR_SHAPES, TIP_SHAPES
 from .contracts import VoxelMillError
 
 
@@ -15,7 +16,7 @@ def tip_segment(start, end, base_radius, contact_radius, shape='cone',
     values = np.r_[start, end, base_radius, contact_radius, break_point_diameter_mm]
     if (start.shape != (3,) or end.shape != (3,) or not np.isfinite(values).all()
             or base_radius <= 0 or contact_radius <= 0
-            or shape not in ('cone', 'cylinder') or break_point_diameter_mm < 0):
+            or shape not in TIP_SHAPES or break_point_diameter_mm < 0):
         raise VoxelMillError('invalid_support', 'Invalid tip segment parameters')
     if shape == 'cone':
         solid = cylinder_between(start, end, base_radius, contact_radius, segments)
@@ -70,7 +71,7 @@ def small_model_pillar(start, end, radius, shape='cone', upper_depth=0.0,
                         'Model pillar endpoints, radius, and depths must be finite') from None
     if start.shape != (3,) or end.shape != (3,) or not np.isfinite(values).all():
         raise VoxelMillError('invalid_support', 'Model pillar endpoints, radius, and depths must be finite')
-    if radius <= 0 or upper_depth < 0 or lower_depth < 0 or shape not in ('cone', 'cylinder'):
+    if radius <= 0 or upper_depth < 0 or lower_depth < 0 or shape not in SMALL_PILLAR_SHAPES:
         raise VoxelMillError('invalid_support', 'Model pillar needs a positive radius, nonnegative depths, and a valid shape')
     if not isinstance(segments, (int, np.integer)) or segments < 8:
         raise VoxelMillError('invalid_support', 'Model pillar needs at least eight circular segments')

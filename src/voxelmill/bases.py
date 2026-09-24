@@ -6,7 +6,9 @@ removal force, and peel stability still require printed calibration artifacts.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 import math
+
 import numpy as np
 
 from .contracts import CancellationToken, VoxelMillError
@@ -258,114 +260,18 @@ def build_base(feet, settings, pillar_radius, *, foot_radii=None, cancel=None):
         return {'solid': None, 'record': record}
     unique = np.unique(feet, axis=0)
     record['unique_feet'] = len(unique)
-    if kind not in ('none', 'plate', 'pad') and len(unique) > MAX_BASE_FEET:
+    builder = BASE_BUILDERS.get(kind)
+    if builder is None:
+        raise VoxelMillError('invalid_support', f'Unknown base type {kind!r}')
+    if kind in COMPLEXITY_CAPPED and len(unique) > MAX_BASE_FEET:
         raise VoxelMillError('base_complexity', f'Base exceeds {MAX_BASE_FEET} unique feet')
-    if kind == 'none':
-        radii = (np.full(len(feet), pillar_radius) if foot_radii is None
-                 else np.asarray(foot_radii, dtype=float))
-        if radii.shape != (len(feet),) or not np.isfinite(radii).all() or (radii <= 0).any():
-            raise VoxelMillError('invalid_support', 'Every plate foot requires a positive finite radius')
-        shapes = []
-        for point, radius in zip(feet, radii):
-            cancel.check()
-            # Pillars/tips use 24-sided rings; count overlaps only once.
-            shapes.append(_circle(float(radius), point, segments=24))
-        footprint = _union(shapes)
-        _record_footprint(record, footprint, None)
-        record.update(volume_mm3=0., removal='no added base; individual support feet',
-                      nominal_disc_area_mm2=float(np.sum(math.pi * radii ** 2)))
+    context = BaseContext(kind, feet, unique, settings, support, float(pillar_radius),
+                          foot_radii, record, cancel)
+    solid, footprint = builder(context)
+    if solid is None:
         return {'solid': None, 'record': record}
-    if kind == 'plate':
-        thickness = float(support['raft_thickness_mm'])
-        slope = float(support.get('raft_slope_deg', 30.0))
-        solid = raft_from_feet(feet, pillar_radius, float(support['raft_expansion_mm']),
-                               thickness, min(.25, thickness / 4), slope)
-        footprint = solid.project()
-        record.update(thickness_mm=thickness, expansion_mm=float(support['raft_expansion_mm']),
-                      raft_slope_deg=slope,
-                      removal='one connected convex slab covering every foot; outer rim sloped for a putty knife')
-    else:
-        thickness = float(support['base_thickness_mm']) or float(support['raft_thickness_mm'])
-        diameter = float(support['base_touch_diameter_mm']) or 2 * (
-            pillar_radius + float(support['raft_expansion_mm']))
-        radius = diameter / 2
-        if radius <= pillar_radius:
-            raise VoxelMillError('invalid_support', 'support.base_touch_diameter_mm must exceed the pillar diameter')
-        record.update(pad_diameter_mm=diameter, pad_thickness_mm=thickness)
-        shapes = []
-        for point in unique:
-            cancel.check()
-            if kind == 'skate':
-                length = float(support['base_skate_length_mm']) or diameter
-                if length < diameter:
-                    raise VoxelMillError('invalid_support', 'Skate length must be at least the touch diameter')
-                half = (length - diameter) / 2
-                shape = _capsule((-half, 0), (half, 0), radius).rotate(
-                    float(support['base_rotation_deg'])).translate(tuple(point))
-            else:
-                shape = _circle(radius, point, segments=24 if kind == 'pad' else CIRCLE_SEGMENTS)
-            shapes.append(shape)
-        footprint = _union(shapes)
-        if kind == 'pad':
-            record.update(removal='individual round pads; overlapping pads merge',
-                          note='circular foot pads, not an inferred CHITUBOX skate shape')
-        elif kind == 'skate':
-            # With base_edge_slope_deg the shared extrude turns this capsule into
-            # a frustum (wider at the plate); slope 0 keeps the vertical wall.
-            record.update(skate_length_mm=length, rotation_deg=float(support['base_rotation_deg']),
-                          removal='individual skate feet; overlapping feet merge',
-                          note='circular or elongated frustum when sloped, vertical capsule when not; '
-                               'CHITUBOX elongation is not known')
-        elif kind in ('skeleton', 'triangle', 'grid', 'hex'):
-            width = float(support['base_strut_width_mm']) or 2 * pillar_radius
-            if kind == 'triangle':
-                edges, triangle_cells = triangulation_edges(unique, cancel=cancel)
-            else:
-                edges = minimum_spanning_edges(unique, cancel=cancel)
-            tethers = []
-            for a, b in edges:
-                cancel.check()
-                tethers.append(_capsule(unique[a], unique[b], width / 2))
-            record.update(strut_width_mm=width, skeleton_edges=len(edges),
-                          skeleton_length_mm=sum(float(np.linalg.norm(unique[a] - unique[b]))
-                                                 for a, b in edges))
-            if kind != 'triangle':
-                record['tree_basis'] = 'Euclidean minimum spanning tree; sorted ties'
-            if kind == 'triangle':
-                frame = footprint.hull()
-                rim = frame - frame.offset(-width, circular_segments=CIRCLE_SEGMENTS)
-                shapes.append(rim)
-                record.update(triangle_edges=len(edges), triangle_cells=triangle_cells,
-                              removal='connected Delaunay triangle struts, perimeter rim and foot pads; '
-                                      'vertical triangular openings',
-                              triangle_basis='sorted-point Delaunay edges; MST fallback for degenerate feet')
-            if kind in ('grid', 'hex'):
-                pitch = float(support['base_cell_size_mm'])
-                if width >= pitch:
-                    raise VoxelMillError('invalid_support', 'Lattice strut width must be less than cell size')
-                rotation = float(support['base_rotation_deg'])
-                lattice, count = (_grid if kind == 'grid' else _hexagons)(
-                    footprint, pitch, width, rotation, cancel)
-                shapes.append(lattice)
-                record.update(cell_size_mm=pitch, rotation_deg=rotation, perimeter_width_mm=width,
-                              cell_basis='center-to-center spacing of adjacent cells')
-                if kind == 'grid':
-                    record.update(grid_candidate_lines=count,
-                                  removal='connected grid, perimeter rim and foot tree; vertical openings')
-                else:
-                    record.update(hex_candidate_cells=count,
-                                  removal='connected honeycomb, perimeter rim and foot tree; '
-                                          'vertical openings')
-            elif kind == 'skeleton':
-                record.update(removal='connected foot tree; open space between its branches')
-            footprint = _union([*shapes, *tethers])
-        else:
-            raise VoxelMillError('invalid_support', f'Unknown base type {kind!r}')
-        cancel.check()
-        solid = _extrude(footprint, thickness, float(support['base_edge_slope_deg']),
-                         float(settings['process']['layer_height_mm']), record, cancel)
     cancel.check()
-    if kind == 'grid':
+    if kind in EXPORT_SIMPLIFIED:
         # Intersecting grid strips can leave near-coincident vertices along a
         # pad boundary. Their double-precision triangles have positive area,
         # but collapse when STL stores float32 coordinates. Simplify the solid
@@ -379,8 +285,179 @@ def build_base(feet, settings, pillar_radius, *, foot_radii=None, cancel=None):
     if solid.status() != m.Error.NoError or solid.is_empty():
         raise VoxelMillError('invalid_support', 'Base construction did not produce valid geometry')
     _record_footprint(record, footprint, solid)
-    if kind in ('skeleton', 'triangle', 'grid', 'hex') and record['connected_components'] != 1:
+    if kind in MUST_CONNECT and record['connected_components'] != 1:
         raise VoxelMillError('invalid_support', 'Base connections are below geometry precision; '
                         'increase base_strut_width_mm')
     record.update(solid=True, volume_mm3=float(solid.volume()))
     return {'solid': solid, 'record': record}
+
+
+@dataclass
+class BaseContext:
+    """What every base builder receives; ``record`` is filled in place."""
+    kind: str
+    feet: np.ndarray
+    unique: np.ndarray
+    settings: dict
+    support: dict
+    pillar_radius: float
+    foot_radii: object
+    record: dict
+    cancel: object
+
+
+def _base_none(c):
+    """Bare feet: no added solid, only the measured plate-touch sections."""
+    radii = (np.full(len(c.feet), c.pillar_radius) if c.foot_radii is None
+             else np.asarray(c.foot_radii, dtype=float))
+    if radii.shape != (len(c.feet),) or not np.isfinite(radii).all() or (radii <= 0).any():
+        raise VoxelMillError('invalid_support', 'Every plate foot requires a positive finite radius')
+    shapes = []
+    for point, radius in zip(c.feet, radii):
+        c.cancel.check()
+        # Pillars/tips use 24-sided rings; count overlaps only once.
+        shapes.append(_circle(float(radius), point, segments=24))
+    footprint = _union(shapes)
+    _record_footprint(c.record, footprint, None)
+    c.record.update(volume_mm3=0., removal='no added base; individual support feet',
+                    nominal_disc_area_mm2=float(np.sum(math.pi * radii ** 2)))
+    return None, footprint
+
+
+def _base_plate(c):
+    """One convex slab over every foot, rim sloped at raft_slope_deg."""
+    thickness = float(c.support['raft_thickness_mm'])
+    slope = float(c.support.get('raft_slope_deg', 30.0))
+    solid = raft_from_feet(c.feet, c.pillar_radius, float(c.support['raft_expansion_mm']),
+                           thickness, min(.25, thickness / 4), slope)
+    c.record.update(thickness_mm=thickness, expansion_mm=float(c.support['raft_expansion_mm']),
+                    raft_slope_deg=slope,
+                    removal='one connected convex slab covering every foot; outer rim sloped for a putty knife')
+    return solid, solid.project()
+
+
+def _foot_pads(c):
+    """A pad (disc, or capsule for skate) under each unique foot; returns the shapes."""
+    support, record = c.support, c.record
+    thickness = float(support['base_thickness_mm']) or float(support['raft_thickness_mm'])
+    diameter = float(support['base_touch_diameter_mm']) or 2 * (
+        c.pillar_radius + float(support['raft_expansion_mm']))
+    radius = diameter / 2
+    if radius <= c.pillar_radius:
+        raise VoxelMillError('invalid_support', 'support.base_touch_diameter_mm must exceed the pillar diameter')
+    record.update(pad_diameter_mm=diameter, pad_thickness_mm=thickness)
+    shapes = []
+    for point in c.unique:
+        c.cancel.check()
+        if c.kind == 'skate':
+            length = float(support['base_skate_length_mm']) or diameter
+            if length < diameter:
+                raise VoxelMillError('invalid_support', 'Skate length must be at least the touch diameter')
+            half = (length - diameter) / 2
+            shape = _capsule((-half, 0), (half, 0), radius).rotate(
+                float(support['base_rotation_deg'])).translate(tuple(point))
+        else:
+            shape = _circle(radius, point, segments=24 if c.kind == 'pad' else CIRCLE_SEGMENTS)
+        shapes.append(shape)
+    if c.kind == 'skate':
+        record['skate_length_mm'] = length
+    return thickness, shapes
+
+
+def _extruded(c, footprint, thickness):
+    c.cancel.check()
+    return _extrude(footprint, thickness, float(c.support['base_edge_slope_deg']),
+                    float(c.settings['process']['layer_height_mm']), c.record, c.cancel)
+
+
+def _base_pads(c):
+    """``pad``: round pads; ``skate``: capsule feet. Overlapping feet merge."""
+    thickness, shapes = _foot_pads(c)
+    footprint = _union(shapes)
+    if c.kind == 'pad':
+        c.record.update(removal='individual round pads; overlapping pads merge',
+                        note='circular foot pads, not an inferred CHITUBOX skate shape')
+    else:
+        # With base_edge_slope_deg the shared extrude turns this capsule into
+        # a frustum (wider at the plate); slope 0 keeps the vertical wall.
+        length = c.record.pop('skate_length_mm')
+        c.record.update(skate_length_mm=length, rotation_deg=float(c.support['base_rotation_deg']),
+                        removal='individual skate feet; overlapping feet merge',
+                        note='circular or elongated frustum when sloped, vertical capsule when not; '
+                             'CHITUBOX elongation is not known')
+    return _extruded(c, footprint, thickness), footprint
+
+
+def _base_network(c):
+    """Pads joined by struts: a spanning tree (``skeleton``), Delaunay edges and a
+    rim (``triangle``), or the tree plus a clipped square/honeycomb lattice and
+    rim (``grid``/``hex``)."""
+    kind, support, record, unique = c.kind, c.support, c.record, c.unique
+    thickness, shapes = _foot_pads(c)
+    footprint = _union(shapes)
+    width = float(support['base_strut_width_mm']) or 2 * c.pillar_radius
+    if kind == 'triangle':
+        edges, triangle_cells = triangulation_edges(unique, cancel=c.cancel)
+    else:
+        edges = minimum_spanning_edges(unique, cancel=c.cancel)
+    tethers = []
+    for a, b in edges:
+        c.cancel.check()
+        tethers.append(_capsule(unique[a], unique[b], width / 2))
+    record.update(strut_width_mm=width, skeleton_edges=len(edges),
+                  skeleton_length_mm=sum(float(np.linalg.norm(unique[a] - unique[b]))
+                                         for a, b in edges))
+    if kind == 'triangle':
+        frame = footprint.hull()
+        rim = frame - frame.offset(-width, circular_segments=CIRCLE_SEGMENTS)
+        shapes.append(rim)
+        record.update(triangle_edges=len(edges), triangle_cells=triangle_cells,
+                      removal='connected Delaunay triangle struts, perimeter rim and foot pads; '
+                              'vertical triangular openings',
+                      triangle_basis='sorted-point Delaunay edges; MST fallback for degenerate feet')
+    else:
+        record['tree_basis'] = 'Euclidean minimum spanning tree; sorted ties'
+    if kind in LATTICES:
+        pitch = float(support['base_cell_size_mm'])
+        if width >= pitch:
+            raise VoxelMillError('invalid_support', 'Lattice strut width must be less than cell size')
+        rotation = float(support['base_rotation_deg'])
+        lattice, count = LATTICES[kind](footprint, pitch, width, rotation, c.cancel)
+        shapes.append(lattice)
+        record.update(cell_size_mm=pitch, rotation_deg=rotation, perimeter_width_mm=width,
+                      cell_basis='center-to-center spacing of adjacent cells')
+        if kind == 'grid':
+            record.update(grid_candidate_lines=count,
+                          removal='connected grid, perimeter rim and foot tree; vertical openings')
+        else:
+            record.update(hex_candidate_cells=count,
+                          removal='connected honeycomb, perimeter rim and foot tree; '
+                                  'vertical openings')
+    elif kind == 'skeleton':
+        record.update(removal='connected foot tree; open space between its branches')
+    footprint = _union([*shapes, *tethers])
+    return _extruded(c, footprint, thickness), footprint
+
+
+#: One builder per ``support.base_type``. A builder returns ``(solid, footprint)``
+#: and records its own evidence; ``solid`` is None when nothing is added. To add
+#: a base type, write its builder, register it here, and add the name to
+#: ``config.BASE_TYPES`` (a test keeps the two in step).
+BASE_BUILDERS = {
+    'none': _base_none,
+    'plate': _base_plate,
+    'pad': _base_pads,
+    'skate': _base_pads,
+    'skeleton': _base_network,
+    'triangle': _base_network,
+    'grid': _base_network,
+    'hex': _base_network,
+}
+#: Lattice generators for the network bases that carry one.
+LATTICES = {'grid': _grid, 'hex': _hexagons}
+#: Bases whose cost grows with every pair of feet, so ``MAX_BASE_FEET`` applies.
+COMPLEXITY_CAPPED = frozenset({'skate', 'skeleton', 'triangle', 'grid', 'hex'})
+#: Bases that promise one connected piece.
+MUST_CONNECT = frozenset({'skeleton', 'triangle', 'grid', 'hex'})
+#: Bases simplified within one float32 step before export.
+EXPORT_SIMPLIFIED = frozenset({'grid'})
