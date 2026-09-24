@@ -17,15 +17,15 @@ here. Keep this file under a screen.
 
 ## In flight
 
-- Phase 2 defaults (VM-091) are in the working tree with docs and ISSUES updated; test fallout is being fixed in tests only. Next: full suite green, `scripts/equivalence.py --update-golden --jobs 4`, commit code and goldens separately. Then VM-092's remainder (see ISSUES).
-- See `handoff.md` (untracked) for the session state and the CHITUBOX automation recipe.
+- Pushed through `61c3f4b`; Linux CI green (goldens 16/18 on the runner, the known cross-CPU drift). Release run 35989690340 builds mac+windows. Next: VM-092's remainder, then Phase 3.
+- See `handoff.md` (untracked) for session state and the CHITUBOX automation recipe.
 
 ## Beta work list
 
 Phase 1 — done: VM-095 (defaults pass), VM-090 (collision audit), VM-094 (multi-part and edge-case tests).
 
 Phase 2 — supports like CHITUBOX Light:
-- VM-091 — done in the working tree (defaults 0.35/0.9 mm, alternating braces every 5 mm from 3 mm, supports-only).
+- VM-091 — done (`4a716cc`).
 - VM-092 — partial — done when: model-standing pillars can be braced (decide), crowded rows get a fallback, and a test holds max slenderness under a target (about 15) on the fixtures — next: `supports._brace` grounding walk (model_anchor exclusion) and the `supports.unbraced` metric.
 
 Phase 3 — stability and release tooling:
