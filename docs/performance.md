@@ -52,6 +52,20 @@ Record a new row after every performance change so the curve stays visible.
 
 Written layer bytes (`layer_blob_sha256`) are identical before and after in all six measured configurations. The remaining AA time is the 16× supersampled raster itself. A native box-average kernel was tried and measured no faster than NumPy (4.9 against 4.7 ms per 15.8 Mpx layer), because the pass is bound by memory reads.
 
+## 16K panels (2026-09-23)
+
+Saturn 4 Ultra 16K geometry (15120×6230, 0.014 mm), 8 workers, a plate-filling 190×78×6 mm slab (about 1,500 contacts, 84 Mpx crop):
+
+| Step | prepare | slice |
+| --- | --- | --- |
+| before | 96.5 s, 2.7 GB | 46.0 s |
+| drainage bisections share labelings (46.4 → 4.2 s of drainage, single-threaded) | — | — |
+| capsule XY index (VM-013) | — | — |
+| exact growth tiles sized to their halo | 36.0 s | 40.5 s |
+| codec applies binary intensity; vectorized exact verify | — | 34.4 s, 1.9 GB |
+
+Reports are identical at every step. Drainage's per-pocket bisection was the single worst cost at this size: 386 whole-volume labelings for 48 pockets.
+
 ## Where the time actually goes — re-measured 2026-09-17 after the 2.74x
 
 The v0.1.0 profile that used to sit here was stale and was steering decisions

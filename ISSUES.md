@@ -80,7 +80,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | B2 | CTB v4/v5 reader | Feature | 3 | 3 | 9 | deferred (decision) |
 | B8 | 3MF / OBJ / PLY import | Feature | 3 | 3 | 9 | open |
 | C10 | Orientation weight calibration + real per-candidate support volume | Feature | 3 | 3 | 9 | partial |
-| F6 | Disk-backed tiled layer records | Feature | 3 | 3 | 9 | open |
+| F6 | Disk-backed tiled layer records | Feature | 3 | 3 | 9 | won't fix (measured) |
 | G12 | Layer viewer: pixel inspection, A/B layer diff | Feature | 3 | 3 | 9 | partial |
 | H4 | SDCP upload and print-control acceptance | Feature | 3 | 3 | 9 | open (hardware) |
 | I1 | Persist and replay analysis artifacts | Feature | 3 | 3 | 9 | open |
@@ -88,7 +88,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-016 | Keep VTK actors and update their input | Perf | 3 | 3 | 9 | open |
 | VM-017 | Optional single-raster fast path for `slice` | Perf | 3 | 3 | 9 | open |
 | VM-018 | Persist the rasterizer Z-interval structure across passes (F3) | Perf | 3 | 3 | 9 | open |
-| VM-019 | Scale check at 12K–16K panels | Perf | 3 | 3 | 9 | open |
+| VM-019 | Scale check at 12K–16K panels | Perf | 3 | 3 | 9 | done |
 | VM-029 | Island scan grows faster than the geometry braces add | Perf | 3 | 3 | 9 | explained (not a defect) |
 | VM-044 | Output-format registry | Arch | 3 | 3 | 9 | open |
 | VM-081 | Test the Apple Silicon build | Release | 3 | 3 | 9 | open |
@@ -308,13 +308,22 @@ Ease 3 · Benefit 3 · Confidence: measure · Status: open
 
 ### VM-019 — Scale check at 12K–16K panels
 
-Ease 3 · Benefit 3 · Confidence: measure · Status: open
+Ease 3 · Benefit 3 · Confidence: measure · Status: done
 
 **Problem.** Validation keeps dense per-layer masks (a 15360×8640 panel is 133 MB per uint8 mask) and several label images per worker. With eight workers, peak RSS may exceed typical 16 GB desktops. The disk-backed tiled records (F6) were never built.
 
 **Fix.** Add a synthetic 16K printer profile to the benchmark and record peak RSS against worker count. If it is over budget, make `ResourceBudget` cap in-flight layers, then consider F6.
 
 **Where.** `src/voxelmill/validation.py:706-810`, `src/voxelmill/resources.py`
+
+**Done (2026-09-23).** Measured on the Saturn 4 Ultra 16K geometry (15120×6230 at 0.014 mm; the GOO codec's 100 Mpx limit fits every real Elegoo panel). Small parts (bracket, pin_array) prepare in about 6 s and slice in 3.5–8.4 s, under 500 MB. The worst case is a plate-filling 190×78 mm slab. The fixes it drove:
+
+| Slab at 16K, 8 workers | Before | After |
+| --- | --- | --- |
+| `prepare` | 96.5 s, 2.7 GB | 36.0 s, 2.5 GB |
+| `slice` | 46.0 s, 1.8 GB | 34.4 s, 1.9 GB |
+
+These came from drainage bisections sharing their labelings, the capsule index (VM-013), halo-sized growth tiles, and the codec intensity change. Every report was identical before and after, and every GOO layer byte-identical. Peak memory stays within a 16 GB desktop, so disk-backed layers (F6) are not needed. The remaining time is dense per-layer passes over an 84 Mpx crop (rasterizing, the growth EDT, previews); see VM-029.
 
 ### VM-020 — Cache the support KD-tree across island passes
 
@@ -690,7 +699,7 @@ the code on 2026-09-23. Items marked `open (hardware)` cannot close without phys
 | B2 | CTB v4/v5 reader | Diff 34 · Imp 55 | deferred (decision) | v3 shipped. v4/v5 are rejected by current decision. |
 | B8 | 3MF / OBJ / PLY import | Diff 30 · Imp 46 | open | Use the `importers.py` interface. Needs an MIT-compatible parser (stdlib zip+xml for 3MF). |
 | C10 | Orientation weight calibration + real per-candidate support volume | Diff 34 · Imp 58 | partial | The ranking UI shipped (2026-09-08). The weights are uncalibrated guesses. |
-| F6 | Disk-backed tiled layer records | Diff 30 · Imp 46 | open | Only if VM-019 shows memory pressure. |
+| F6 | Disk-backed tiled layer records | Diff 30 · Imp 46 | won't fix (measured) | Only if VM-019 shows memory pressure. |
 | G12 | Layer viewer: pixel inspection, A/B layer diff | Diff 26 · Imp 48 | partial | The issue strip and overlays shipped. Confirm the remainder. |
 | H4 | SDCP upload and print-control acceptance | Diff 30 · Imp 50 | open (hardware) | Discovery, status, telemetry, history and time-lapse are verified. Upload, print and motion commands have never been sent. |
 | I1 | Persist and replay analysis artifacts | Diff 26 · Imp 52 | open | Skip the re-slice on threshold-only edits. |
