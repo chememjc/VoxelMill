@@ -220,6 +220,23 @@ def _extrude(footprint, thickness, slope, step, record, cancel):
 def build_base(feet, settings, pillar_radius, *, foot_radii=None, cancel=None):
     """Return the base solid (or None) and measured geometry evidence.
 
+    ``support.base_type`` selects the strategy; each lands every foot in
+    ``feet`` (plate XY) on something:
+
+    - ``none``: no added solid; the record measures bare 24-sided foot sections.
+    - ``plate``: one convex slab over every foot (``raft_from_feet``), expanded
+      by ``raft_expansion_mm``, outer rim sloped at ``raft_slope_deg``.
+    - ``pad`` / ``skate``: a disc or capsule under each unique foot.
+    - ``skeleton``: pads joined by a Euclidean minimum spanning tree.
+    - ``grid`` / ``hex``: the skeleton plus a clipped square or honeycomb
+      lattice and a perimeter rim, rotated by ``base_rotation_deg``.
+    - ``triangle``: pads joined by Delaunay edges and a rim; degenerate foot
+      sets fall back to the spanning tree.
+
+    Every added base except ``plate`` tapers inward by ``base_edge_slope_deg``,
+    quantised to whole layers. The record states what the geometry
+    establishes and, explicitly, what it does not (adhesion, removal force).
+
     ``foot_radii`` carries actual plate-touch radii, including short-pillar
     classes and cones that start at the plate. It only affects bare-foot area;
     explicit pad geometry always uses its configured dimensions.

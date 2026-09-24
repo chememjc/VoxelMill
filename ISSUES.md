@@ -119,7 +119,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-047 | Deduplicate voxel-size bisection | Arch | 5 | 1 | 5 | done |
 | VM-048 | Consistent dtype contract at the pybind boundary | Arch | 5 | 1 | 5 | done |
 | VM-062 | Shared `tests/conftest.py` | Test/CI | 5 | 1 | 5 | done |
-| VM-070 | Docstrings for the largest undocumented functions | Docs | 5 | 1 | 5 | open |
+| VM-070 | Docstrings for the largest undocumented functions | Docs | 5 | 1 | 5 | done |
 | VM-040 | Typed settings model as the single source of truth | Arch | 1 | 5 | 5 | open |
 | VM-012 | Stop re-sampling downward faces for the overhang check | Perf | 4 | 1 | 4 | won't fix (measured) |
 | VM-071 | Section-aware help for repeated field names | Docs | 4 | 1 | 4 | open |
@@ -544,7 +544,7 @@ Ease 4 · Benefit 2 · Confidence: sure · Status: open
 
 ### VM-070 — Docstrings for the largest undocumented functions
 
-Ease 5 · Benefit 1 · Confidence: sure · Status: open
+Ease 5 · Benefit 1 · Confidence: sure · Status: done
 
 **Problem.** `bases.build_base` has no per-strategy geometric contract. `ops.cap_open_cuts` (141 lines) has no docstring. `printer.py` does not say that a dropped connection is not reconnected automatically.
 

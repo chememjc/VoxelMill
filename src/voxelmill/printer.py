@@ -8,6 +8,12 @@ on the network (see :class:`LoopbackTransport`).
 
 The wire format follows CBD's SDCP V3.0.0 document.  SDCP has no authentication
 or encryption; callers should only use the network transport on a trusted LAN.
+
+A dropped connection is never re-established automatically: the reader thread
+fails every pending request with :class:`PrinterDisconnected`, emits a
+``disconnect`` event, and stops. Callers decide whether and when to call
+:meth:`SDCPPrinterAdapter.connect` again, so no command is silently resent to a
+printer whose state is unknown.
 """
 from __future__ import annotations
 
