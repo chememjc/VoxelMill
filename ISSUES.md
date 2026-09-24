@@ -69,7 +69,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-090 | Multi-part support collision audit | Feature | 3 | 5 | 15 | done |
 | VM-096 | Exact-union exports can hold zero-volume folds | Bug | 2 | 2 | 4 | open |
 | VM-091 | Default supports that look like CHITUBOX Light | Feature | 3 | 5 | 15 | open |
-| VM-093 | `release.yml` platform selector | Release | 5 | 3 | 15 | open |
+| VM-093 | `release.yml` platform selector | Release | 5 | 3 | 15 | done |
 | D4 | Raft adhesion / removal-force calibration | Feature | 4 | 3 | 12 | open (hardware) |
 | G2 | Fuzzy, mode-aware settings search | Feature | 4 | 3 | 12 | partial |
 | VM-061 | Lint and type-check configuration | Test/CI | 4 | 3 | 12 | done |
@@ -787,7 +787,7 @@ pillar length and its slenderness, so the user can judge bracing.
 
 ### VM-093 — `release.yml` platform selector
 
-Ease 5 · Benefit 3 · Confidence: sure · Status: open
+Ease 5 · Benefit 3 · Confidence: sure · Status: done
 
 **Problem.** A `release.yml` re-run always rebuilds every platform, so debugging a single failing
 mac or Windows job means rebuilding Linux too.
@@ -796,6 +796,10 @@ mac or Windows job means rebuilding Linux too.
 the build matrix, so mac/win reruns don't rebuild Linux.
 
 **Where.** `.github/workflows/release.yml`
+
+**Done (2026-09-24).** A `plan` job turns the `platforms` dispatch input into the build matrix. A tag push
+still builds all four targets. The CLI smoke now prepares the cube without `--allow-unresolved`, then
+slices and verifies it, on every target including the arm64 runner.
 
 ### VM-094 — Edge-case test matrix
 

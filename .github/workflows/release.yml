@@ -7,6 +7,12 @@ name: release
 
 "on":
   workflow_dispatch:
+    inputs:
+      platforms:
+        description: Which portables to build (a tag push always builds all)
+        type: choice
+        default: all
+        options: [all, linux, mac, windows, mac+windows]
   push:
     tags:
       - 'v0.*'
@@ -19,34 +25,45 @@ defaults:
     shell: bash
 
 jobs:
+  plan:
+    name: select platforms
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - id: select
+        env:
+          # A tag push has no inputs and always builds everything it publishes.
+          PLATFORMS: ${{ inputs.platforms || 'all' }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          # AppDir/AppRun pin CPython 3.10; Mac/Win use 3.11.
+          targets = [
+              {'name': 'linux-appimage', 'os': 'ubuntu-22.04', 'python': '3.10',
+               'kind': 'appimage', 'group': 'linux'},
+              {'name': 'macos-arm', 'os': 'macos-14', 'python': '3.11', 'kind': 'mac',
+               'dmg': 'VoxelMill-macos-arm64.dmg', 'artifact': 'VoxelMill-macos-arm64-dmg',
+               'group': 'mac'},
+              {'name': 'macos-intel', 'os': 'macos-15-intel', 'python': '3.11', 'kind': 'mac',
+               'dmg': 'VoxelMill-macos-x86_64.dmg', 'artifact': 'VoxelMill-macos-x86_64-dmg',
+               'group': 'mac'},
+              {'name': 'windows', 'os': 'windows-latest', 'python': '3.11', 'kind': 'windows',
+               'group': 'windows'},
+          ]
+          wanted = os.environ['PLATFORMS']
+          groups = {'linux', 'mac', 'windows'} if wanted == 'all' else set(wanted.split('+'))
+          chosen = [target for target in targets if target['group'] in groups]
+          print('matrix=' + json.dumps({'include': chosen}))
+          PY
+
   portable:
     name: ${{ matrix.name }}
+    needs: plan
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          # AppDir/AppRun pin CPython 3.10; Mac/Win use 3.11.
-          - name: linux-appimage
-            os: ubuntu-22.04
-            python: '3.10'
-            kind: appimage
-          - name: macos-arm
-            os: macos-14
-            python: '3.11'
-            kind: mac
-            dmg: VoxelMill-macos-arm64.dmg
-            artifact: VoxelMill-macos-arm64-dmg
-          - name: macos-intel
-            os: macos-15-intel
-            python: '3.11'
-            kind: mac
-            dmg: VoxelMill-macos-x86_64.dmg
-            artifact: VoxelMill-macos-x86_64-dmg
-          - name: windows
-            os: windows-latest
-            python: '3.11'
-            kind: windows
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
 
     steps:
       - uses: actions/checkout@v6
@@ -179,8 +196,14 @@ jobs:
           "$BIN" inspect "$CUBE" | tee inspect.json
           grep -q signed_volume inspect.json
           mkdir -p smoke-out
-          "$BIN" prepare "$CUBE" --max-passes 1 --allow-unresolved --output smoke-out/cube.stl | tee prepare.json
+          # Default supports must pass validation on a plain part, so no
+          # --allow-unresolved: a withheld export fails the smoke.
+          "$BIN" prepare "$CUBE" --output smoke-out/cube.stl --report smoke-out/prepare.json
           test -f smoke-out/cube.stl
+          "$BIN" slice smoke-out/cube.stl --output smoke-out/cube.goo \
+            --printer profiles/mars5-ultra.ptr --resin profiles/sunlu-abs-like-gray.res \
+            --report smoke-out/slice.json
+          "$BIN" verify smoke-out/cube.goo --report smoke-out/verify.json
 
       - name: Upload Linux AppImage
         if: matrix.kind == 'appimage'
