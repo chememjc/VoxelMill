@@ -457,10 +457,11 @@ def export_mask(mask, settings, index, grid=None):
 def _frame_placement(mask, grid, printer):
     """Where a cropped mask lands in the full LCD frame, ready to paste.
 
-    Returns ``(row, column, pixels)``: the crop already scaled to LCD intensity
-    and mirrored, at the offset it occupies in the mirrored frame. Everything
-    outside it is dark. Working on the crop keeps every per-layer pass
-    proportional to the part, not to the 36.8 Mpx panel.
+    Returns ``(row, column, pixels)``: the mirrored crop at the offset it
+    occupies in the mirrored frame. Everything outside it is dark. Working on
+    the crop keeps every per-layer pass proportional to the part, not to the
+    36.8 Mpx panel. ``pixels`` still holds raster values; :func:`_lcd_intensity`
+    (or the native codec's ``binary_scale``) turns them into LCD intensity.
     """
     width, height = printer['pixels']
     row, column = grid.row_offset, grid.column_offset
@@ -472,10 +473,7 @@ def _frame_placement(mask, grid, printer):
     mask = np.asarray(mask)
     if mask.dtype != np.uint8:
         raise VoxelMillError('goo_frame', 'Raster mask must use uint8 pixels')
-    # Geometry raster masks are occupancy (0/1). GOO binary exposure requires
-    # full 8-bit LCD intensity (0/255); preserving values above one leaves the
-    # door open for a separately validated grayscale/AA path.
-    pixels = mask * np.uint8(255) if not mask.size or int(mask.max()) <= 1 else mask
+    pixels = mask
     if printer['image_mirror_x']:
         pixels, column = pixels[:, ::-1], width - (column + columns)
     if printer['image_mirror_y']:
@@ -483,10 +481,22 @@ def _frame_placement(mask, grid, printer):
     return row, column, pixels
 
 
+def _lcd_intensity(pixels):
+    """LCD intensity for raster values.
+
+    Geometry raster masks are occupancy (0/1). GOO binary exposure requires
+    full 8-bit LCD intensity (0/255); a mask with any value above one is
+    grayscale coverage and is kept as it is. The native codec applies the same
+    rule when called with ``binary_scale=True``.
+    """
+    return pixels * np.uint8(255) if not pixels.size or int(pixels.max()) <= 1 else pixels
+
+
 def _full_frame(mask, grid, printer):
     """Place a cropped mask into the full LCD frame at its physical position."""
     width, height = printer['pixels']
     row, column, pixels = _frame_placement(mask, grid, printer)
+    pixels = _lcd_intensity(pixels)
     frame = np.zeros((height, width), dtype=np.uint8)
     frame[row:row + pixels.shape[0], column:column + pixels.shape[1]] = pixels
     return frame
@@ -504,7 +514,7 @@ def _frame_mismatch(reader, index, mask, grid, printer, atol):
     height, width = reader.shape
     return int(_native.goo_verify_placed(np.frombuffer(reader.blob(index), dtype=np.uint8),
                                          np.ascontiguousarray(pixels), int(row), int(column),
-                                         int(width), int(height), int(atol)))
+                                         int(width), int(height), int(atol), binary_scale=True))
 
 
 class GooWriter:
@@ -581,7 +591,9 @@ class GooWriter:
         """Add a layer that is dark except ``pixels`` at ``(row, column)``.
 
         Byte-identical to :meth:`add_layer` on the full frame, without building
-        it: the encoder derives the dark runs from the placement.
+        it: the encoder derives the dark runs from the placement. ``pixels``
+        holds raster values; a crop of only 0/1 is exposed at 0/255, exactly
+        as :func:`_lcd_intensity` does.
         """
         self.cancel.check()
         if self.written >= self.layer_count:
@@ -597,8 +609,9 @@ class GooWriter:
         if self.written and z_mm <= self._last_z:
             raise VoxelMillError('goo_layer_z', 'Layer Z values must increase strictly')
         height, width = self.shape
+        # Raster values; 0/1 crops are exposed at full intensity (see _lcd_intensity).
         blob = self._native.goo_encode_placed(np.ascontiguousarray(pixels), int(row), int(column),
-                                              int(width), int(height))
+                                              int(width), int(height), binary_scale=True)
         return self._write_blob(blob, z_mm, exposure_s)
 
     def _write_blob(self, blob, z_mm, exposure_s):
@@ -972,7 +985,9 @@ def _verify_header_settings(header, settings, layer_count):
 def _previewing(stream, heightmap):
     """Feed validation while retaining only a one-value-per-crop-pixel preview map."""
     for layer in stream:
-        heightmap[layer.mask != 0] = layer.index + 1
+        # copyto writes in place; a boolean-index assignment first gathers
+        # every occupied position (about 3x slower on a full 16K crop).
+        np.copyto(heightmap, np.uint32(layer.index + 1), where=layer.mask != 0)
         yield layer
 
 

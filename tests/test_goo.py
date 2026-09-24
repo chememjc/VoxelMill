@@ -541,3 +541,19 @@ def test_placed_verification_rejects_a_damaged_blob():
     blob[1] ^= 0x01                                       # breaks the checksum
     with pytest.raises(ValueError, match='checksum'):
         _native.goo_verify_placed(np.frombuffer(bytes(blob), dtype=np.uint8), crop, 2, 2, 10, 8)
+
+
+def test_binary_scale_exposes_occupancy_at_full_intensity():
+    rng = np.random.default_rng(6)
+    occupancy = (rng.random((20, 30)) < 0.5).astype(np.uint8)
+    frame = np.zeros((40, 50), dtype=np.uint8)
+    frame[5:25, 7:37] = occupancy * 255
+    blob = _native.goo_encode_placed(occupancy, 5, 7, 50, 40, binary_scale=True)
+    assert blob == _native.goo_encode_layer(frame)
+    assert _native.goo_verify_placed(np.frombuffer(blob, dtype=np.uint8), occupancy, 5, 7, 50, 40,
+                                     binary_scale=True) == 0
+    # Grayscale coverage (any value above 1) is exposed as it is.
+    coverage = occupancy * np.uint8(200)
+    frame[5:25, 7:37] = coverage
+    assert _native.goo_encode_placed(coverage, 5, 7, 50, 40, binary_scale=True) == \
+        _native.goo_encode_layer(frame)

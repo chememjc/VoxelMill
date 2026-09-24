@@ -11,6 +11,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
@@ -130,30 +131,49 @@ py::bytes encode_layer(py::array_t<uint8_t, py::array::c_style | py::array::forc
 }
 
 struct Placement {
- const uint8_t *pixels;  // C-contiguous crop, already at LCD intensity
+ const uint8_t *pixels;  // C-contiguous crop
  size_t rows, columns, row, column, width, height;
+ // LCD intensity of each crop value. With binary scaling, a crop holding only
+ // 0/1 exposes 1 as 255 (full intensity); any value above 1 means grayscale
+ // coverage, and the crop is then taken as-is.
+ std::array<uint8_t, 256> intensity;
+ bool binary_scale;
 };
 
-Placement placement(const py::buffer_info &crop, int row, int column, int width, int height) {
+Placement placement(const py::buffer_info &crop, int row, int column, int width, int height,
+                    bool binary_scale) {
  if (crop.ndim != 2) throw std::invalid_argument("layer crop must be two dimensional");
  checked_pixels(width, height);
  Placement p{static_cast<const uint8_t *>(crop.ptr), size_t(crop.shape[0]), size_t(crop.shape[1]),
-             size_t(row), size_t(column), size_t(width), size_t(height)};
+             size_t(row), size_t(column), size_t(width), size_t(height), {}, false};
  if (row < 0 || column < 0 || p.row + p.rows > p.height || p.column + p.columns > p.width)
   throw std::invalid_argument("layer crop falls outside the frame");
+ for (int v = 0; v < 256; ++v) p.intensity[size_t(v)] = uint8_t(v);
+ p.binary_scale = binary_scale;
  return p;
+}
+
+// Resolve binary scaling. A branch-free max reduction, so the compiler can
+// vectorize it; callers run it with the GIL released.
+void resolve_intensity(Placement &p) {
+ if (!p.binary_scale) return;
+ const size_t count = p.rows * p.columns;
+ uint8_t largest = 0;
+ for (size_t i = 0; i < count; ++i) largest = std::max(largest, p.pixels[i]);
+ if (largest <= 1) p.intensity[1] = 0xff;
 }
 
 // Byte-identical to encode_layer on the full frame with `crop` pasted at
 // (row, column) and every other pixel dark, without building that frame.
 py::bytes encode_placed(py::array_t<uint8_t, py::array::c_style | py::array::forcecast> crop,
-                        int row, int column, int width, int height) {
- const Placement p = placement(crop.request(), row, column, width, height);
+                        int row, int column, int width, int height, bool binary_scale) {
+ Placement p = placement(crop.request(), row, column, width, height, binary_scale);
  std::vector<uint8_t> out;
  out.reserve(p.rows * p.columns / 16 + 256);
  out.push_back(LAYER_MAGIC);
  {
   py::gil_scoped_release release;
+  resolve_intensity(p);
   RunEmitter runs{out};
   const size_t total = p.width * p.height;
   if (!p.rows || !p.columns) {
@@ -167,7 +187,7 @@ py::bytes encode_placed(py::array_t<uint8_t, py::array::c_style | py::array::for
     while (index < p.columns) {
      const uint8_t value = line[index];
      const size_t end = run_end(line, index, p.columns, value);
-     runs.push(value, end - index);
+     runs.push(p.intensity[value], end - index);
      index = end;
     }
     runs.push(0, after + (r + 1 < p.rows ? p.column : (p.height - p.row - p.rows) * p.width));
@@ -257,15 +277,23 @@ py::array_t<uint8_t> decode_layer(py::buffer blob, int width, int height) {
 // frame `crop` pasted at (row, column) on a dark panel, without materializing
 // either frame. Every framing and checksum error raises, as in decode_layer.
 size_t verify_placed(py::buffer blob, py::array_t<uint8_t, py::array::c_style | py::array::forcecast> crop,
-                     int row, int column, int width, int height, int atol) {
+                     int row, int column, int width, int height, int atol, bool binary_scale) {
  if (atol < 0 || atol > 255) throw std::invalid_argument("atol must be 0..255");
  py::buffer_info info = flat_blob(blob);
- const Placement p = placement(crop.request(), row, column, width, height);
+ Placement p = placement(crop.request(), row, column, width, height, binary_scale);
  const size_t total = p.width * p.height;
  const uint8_t *data = static_cast<const uint8_t *>(info.ptr);
  size_t mismatches = 0;
  {
   py::gil_scoped_release release;
+  resolve_intensity(p);
+  // The raw crop value exposed at each intensity. The mapping is one-to-one
+  // over the values a crop can hold, so an exact check counts equal bytes,
+  // a loop the compiler vectorizes.
+  std::array<int, 256> raw_for;
+  raw_for.fill(-1);
+  for (int v = 0; v < 256; ++v)
+   if (raw_for[p.intensity[size_t(v)]] < 0) raw_for[p.intensity[size_t(v)]] = v;
   walk_layer(data, size_t(info.size), total, [&](uint8_t color, size_t pixel, size_t stride) {
    size_t end = pixel + stride;
    while (pixel < end) {
@@ -281,10 +309,20 @@ size_t verify_placed(py::buffer blob, py::array_t<uint8_t, py::array::c_style | 
      const size_t lo = std::max(x, p.column), hi = std::min(x_end, p.column + p.columns);
      if (lit) mismatches += span - (hi > lo ? hi - lo : 0);
      if (hi > lo) {
-      const uint8_t *line = p.pixels + (y - p.row) * p.columns;
-      for (size_t c = lo; c < hi; ++c) {
-       const int difference = int(line[c - p.column]) - int(color);
-       mismatches += (difference < 0 ? -difference : difference) > atol;
+      const uint8_t *line = p.pixels + (y - p.row) * p.columns - p.column;
+      if (atol == 0) {
+       const int raw = raw_for[color];
+       size_t equal = 0;
+       if (raw >= 0) {
+        const uint8_t want = uint8_t(raw);
+        for (size_t c = lo; c < hi; ++c) equal += line[c] == want;
+       }
+       mismatches += (hi - lo) - equal;
+      } else {
+       for (size_t c = lo; c < hi; ++c) {
+        const int difference = int(p.intensity[line[c]]) - int(color);
+        mismatches += (difference < 0 ? -difference : difference) > atol;
+       }
       }
      }
     }
@@ -301,11 +339,13 @@ void bind_goo(py::module_ &m) {
  m.def("goo_decode_layer", &decode_layer, py::arg("blob"), py::arg("width"), py::arg("height"),
        "Decode a GOO v3 layer blob; every framing and checksum error raises");
  m.def("goo_encode_placed", &encode_placed, py::arg("crop"), py::arg("row"), py::arg("column"),
-       py::arg("width"), py::arg("height"),
+       py::arg("width"), py::arg("height"), py::arg("binary_scale") = false,
        "Encode a (width,height) layer that is dark except `crop` at (row, column); "
-       "byte-identical to goo_encode_layer on that full frame");
+       "byte-identical to goo_encode_layer on that full frame. binary_scale exposes a "
+       "crop holding only 0/1 at 0/255");
  m.def("goo_verify_placed", &verify_placed, py::arg("blob"), py::arg("crop"), py::arg("row"),
        py::arg("column"), py::arg("width"), py::arg("height"), py::arg("atol") = 0,
+       py::arg("binary_scale") = false,
        "Decode a GOO v3 layer blob and count pixels that differ by more than atol from `crop` "
        "at (row, column) on a dark frame; every framing and checksum error raises");
 }
