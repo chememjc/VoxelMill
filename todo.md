@@ -14,12 +14,15 @@ here. Keep this file under a screen.
 
 ## In flight
 
-- In progress: VM-043 (split prepare / route_contacts / _brace), then VM-042 window.py split.
+- VM-043 partial: next is route_contacts per-contact geometry emission + metrics block, then `_brace` (425 lines). Verify every routing change with the scratch harness idea: record plan_supports graph/metrics/solid-hash for 4 shapes x 8 support scenarios before, compare after (identical required); plus `scripts/equivalence.py --jobs 4` (18/18) and the full suite.
+- Then VM-042 (split gui/window.py into controllers), VM-015 (incremental routing), VM-014 CI perf A/B, VM-083, VM-085, feature backlog.
 - Needs the user: VM-080 (tagging publishes a release) and pushing `master` (CI has never run on GitHub).
 - Commit rule from the user: messages describe only the diff since the last commit, with no tool or session references and no attribution trailers.
+- Verification habits: byte-identical output checks before/after every perf or refactor change; mark ISSUES.md status in both table and detail (`Status:` line), re-sort table by ease×benefit.
 
 ## Done this session (2026-09-23), newest first
 
+- `3600ab8` VM-043 partial (route_contacts split, small_pillar.mode metric bug); `482993b` prepare split into stages
 - `22d69c9`, `f8a6274` VM-040 partial: settings_schema.FIELDS (fixed 3 bad GUI enums + 57 out-of-range controls), VM-071; `b97a527` VM-049 partial (stability.md, exit 64, CLI snapshot)
 - `a863263` VM-041 partial (versioning.py); `18753cd` VM-045 base registry; `03af9ef` VM-044 format registry
 - `4fabfd3`…`26e1a83` VM-022, VM-020/028/018/017/027/F5 closed by measurement, VM-065 (Windows offsets bug), VM-016, VM-072, VM-063, VM-024/025 decided
