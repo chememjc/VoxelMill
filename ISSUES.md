@@ -98,7 +98,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-019 | Scale check at 12K–16K panels | Perf | 3 | 3 | 9 | done |
 | VM-029 | Island scan grows faster than the geometry braces add | Perf | 3 | 3 | 9 | explained (not a defect) |
 | VM-044 | Output-format registry | Arch | 3 | 3 | 9 | done |
-| VM-081 | Test the Apple Silicon build | Release | 3 | 3 | 9 | open |
+| VM-081 | Test the Apple Silicon build | Release | 3 | 3 | 9 | done |
 | G8 | Keyboard shortcut editor (theme shipped) | Feature | 4 | 2 | 8 | partial |
 | I3 | Print-time auto-calibration from measured prints | Feature | 4 | 2 | 8 | open (hardware) |
 | VM-020 | Cache the support KD-tree across island passes | Perf | 4 | 2 | 8 | won't fix (measured) |
@@ -673,13 +673,18 @@ Ease 5 · Benefit 4 · Confidence: sure · Status: done
 
 ### VM-081 — Test the Apple Silicon build
 
-Ease 3 · Benefit 3 · Confidence: sure · Status: open
+Ease 3 · Benefit 3 · Confidence: sure · Status: done
 
 **Problem.** The arm64 DMG is built but has never run. Wheel availability of `manifold3d` and VTK on arm64 is also unconfirmed.
 
 **Fix.** Smoke-test it on an M-series host (for example a CI `macos-14` runner running `--version` and a `prepare` of a cube).
 
 **Where.** `docs/platforms.md`
+
+**Done (2026-09-24).** Release run 35989690340 built the arm64 DMG on `macos-14`, and the packaged app passed
+the CLI smoke there: `--version`, `inspect`, a default `prepare` of the cube with no `--allow-unresolved`,
+then `slice` and `verify`. The `manifold3d` and VTK arm64 wheels resolve. A GUI launch on real Apple
+Silicon hardware is still unverified.
 
 ### VM-082 — macOS signing and notarization
 

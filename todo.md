@@ -17,7 +17,7 @@ here. Keep this file under a screen.
 
 ## In flight
 
-- Pushed through `61c3f4b`; Linux CI green (goldens 16/18 on the runner, the known cross-CPU drift). Release run 35989690340 builds mac+windows. Next: VM-092's remainder, then Phase 3.
+- Pushed through `61c3f4b`; Linux CI green (goldens 16/18 on the runner, the known cross-CPU drift). Release run 35989690340 (mac+windows) green; VM-081 done. Next: VM-092's remainder, then Phase 3.
 - See `handoff.md` (untracked) for session state and the CHITUBOX automation recipe.
 
 ## Beta work list
@@ -29,7 +29,7 @@ Phase 2 — supports like CHITUBOX Light:
 - VM-092 — partial — done when: model-standing pillars can be braced (decide), crowded rows get a fallback, and a test holds max slenderness under a target (about 15) on the fixtures — next: `supports._brace` grounding walk (model_anchor exclusion) and the `supports.unbraced` metric.
 
 Phase 3 — stability and release tooling:
-- VM-093 — done. VM-081 — the release smoke on macos-14 already runs prepare/slice/verify; mark done once a 0.5.6 run is green there.
+- VM-093, VM-081 — done.
 - VM-083 — memory ceiling works on macOS/Windows — done when: a Windows Job-object commit limit is wired and the macOS budget is marked advisory in the report — next: implement in `resources.py`.
 - VM-014 — CI perf gate beyond local fixtures — done when: an opt-in job does a base-vs-head A/B on the same runner and fails on a >15% regression — next: add the workflow job.
 - B3 — printer database beyond the Mars 5 Ultra — done when: new printers are added with verified specs — next: extract specs from the installed CHITUBOX machine configs and the vendor spec.
