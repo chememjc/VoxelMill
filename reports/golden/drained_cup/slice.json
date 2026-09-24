@@ -86,7 +86,7 @@
   "validation": {
     "checks": {
       "closed_surface": "pass",
-      "drainage_bottlenecks": "fail",
+      "drainage_bottlenecks": "warn",
       "enclosed_voids": "pass",
       "growth_span": "pass",
       "image_orientation": "warn",
@@ -251,50 +251,17 @@
         "severity": "warning"
       },
       {
-        "code": "drainage_bottleneck",
+        "code": "unattributed_drainage_bottleneck",
         "details": {
-          "analysis_grid": [
-            158,
-            157,
-            191
-          ],
-          "analysis_pitch_mm": 0.18806319451591877,
-          "area_definition": "circular-equivalent maximum inscribed path clearance on sampled grid",
-          "bottleneck_examples": [
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 2,
-              "core_volume_mm3": 0.013302749787049376,
-              "seed_zyx": [
-                42,
-                94,
-                36
-              ]
-            }
-          ],
-          "bottleneck_volume_definition": "eroded chamber cores; excludes narrow neck and boundary shell",
           "bottlenecked_components": 1,
           "bottlenecked_volume_mm3": 0.013302749787049376,
-          "clearance_radius_mm": 0.5641895835477563,
-          "enclosed_components": 0,
-          "enclosed_volume_mm3": 0.0,
-          "ignored_bottlenecked_components": 0,
-          "ignored_bottlenecked_volume_mm3": 0,
-          "min_orifice_area_mm2": 1.0,
-          "min_void_volume_mm3": 0.0,
-          "occupancy_closed": true,
-          "sampling": "XY cell centers and Z subsamples; sub-grid walls may be missed",
-          "status": "complete",
-          "unclosed_rows": 0,
-          "unclosed_slices": 0,
-          "void_components": 1,
-          "z_subsamples_per_cell": 1
+          "policy": "ignore",
+          "single_cell_sealed_chambers": 0
         },
         "layer": null,
-        "message": "Void connects to the exterior only through an orifice below the configured area",
+        "message": "Drainage necks were found but a single file cannot say whether the supports or the model form them; rerun with repair.support_void_policy=fail to treat them as failures",
         "position_mm": null,
-        "severity": "error"
+        "severity": "warning"
       }
     ],
     "metrics": {
@@ -489,7 +456,7 @@
         "peak_volume_mm3": 6227.664296400002
       }
     },
-    "passed": false,
+    "passed": true,
     "schema_version": 1
   },
   "verification": {
@@ -504,6 +471,6 @@
     "pixel_comparison": "exact",
     "standalone_check": "voxelmill verify <file.goo>"
   },
-  "warned": true,
+  "warned": false,
   "written": true
 }

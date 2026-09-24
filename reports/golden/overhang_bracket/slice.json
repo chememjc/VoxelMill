@@ -86,8 +86,8 @@
   "validation": {
     "checks": {
       "closed_surface": "pass",
-      "drainage_bottlenecks": "fail",
-      "enclosed_voids": "fail",
+      "drainage_bottlenecks": "warn",
+      "enclosed_voids": "warn",
       "growth_span": "pass",
       "image_orientation": "warn",
       "overlap": "pass",
@@ -96,30 +96,6 @@
       "transient_traps": "warn"
     },
     "diagnostics": [
-      {
-        "code": "enclosed_voids",
-        "details": {
-          "count": 1,
-          "examples": [
-            {
-              "component": 596,
-              "first_layer": 304,
-              "volume_mm3": 1.6199999999999997e-05
-            }
-          ],
-          "min_void_volume_mm3": 0.0,
-          "negligible_count": 0,
-          "negligible_volume_mm3": 0.0,
-          "nodes": 1407,
-          "peak_present_trapped_layer": 525,
-          "peak_present_trapped_volume_mm3": 0.00014580000000000064,
-          "volume_mm3": 1.6199999999999997e-05
-        },
-        "layer": null,
-        "message": "Enclosed empty-space components remain in rasterized output",
-        "position_mm": null,
-        "severity": "error"
-      },
       {
         "code": "transient_trap",
         "details": {
@@ -275,391 +251,31 @@
         "severity": "warning"
       },
       {
-        "code": "drainage_bottleneck",
+        "code": "unattributed_enclosed_voids",
         "details": {
-          "analysis_grid": [
-            243,
-            153,
-            244
-          ],
-          "analysis_pitch_mm": 0.18806319451591877,
-          "area_definition": "circular-equivalent maximum inscribed path clearance on sampled grid",
-          "bottleneck_examples": [
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 2,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                25,
-                22,
-                149
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 3,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                157,
-                26,
-                109
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.6665191650390626,
-              "bottleneck_area_upper_mm2": 0.6729125976562501,
-              "component": 4,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                158,
-                26,
-                110
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 5,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                159,
-                26,
-                111
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 6,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                159,
-                27,
-                109
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 7,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                160,
-                27,
-                110
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.6665191650390626,
-              "bottleneck_area_upper_mm2": 0.6729125976562501,
-              "component": 8,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                162,
-                83,
-                179
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.6665191650390626,
-              "bottleneck_area_upper_mm2": 0.6729125976562501,
-              "component": 9,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                163,
-                83,
-                178
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.6665191650390626,
-              "bottleneck_area_upper_mm2": 0.6729125976562501,
-              "component": 10,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                163,
-                84,
-                179
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 11,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                164,
-                83,
-                177
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 12,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                164,
-                84,
-                178
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 13,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                169,
-                24,
-                106
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 14,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                169,
-                24,
-                138
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 15,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                169,
-                25,
-                107
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 16,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                169,
-                26,
-                108
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 17,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                170,
-                24,
-                137
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 18,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                170,
-                24,
-                152
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 19,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                170,
-                25,
-                106
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 20,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                170,
-                26,
-                107
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 21,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                171,
-                25,
-                136
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 22,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                171,
-                25,
-                151
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 23,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                171,
-                26,
-                106
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 24,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                171,
-                26,
-                137
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 25,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                171,
-                26,
-                152
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 26,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                172,
-                25,
-                135
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 27,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                172,
-                25,
-                150
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.6665191650390626,
-              "bottleneck_area_upper_mm2": 0.6729125976562501,
-              "component": 28,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                172,
-                26,
-                136
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.6665191650390626,
-              "bottleneck_area_upper_mm2": 0.6729125976562501,
-              "component": 29,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                172,
-                26,
-                151
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 30,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                172,
-                27,
-                137
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 31,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                173,
-                26,
-                135
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 32,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                173,
-                26,
-                150
-              ]
-            },
-            {
-              "bottleneck_area_mm2": 0.8862457275390625,
-              "bottleneck_area_upper_mm2": 0.89361572265625,
-              "component": 33,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                173,
-                27,
-                136
-              ]
-            }
-          ],
-          "bottleneck_volume_definition": "eroded chamber cores; excludes narrow neck and boundary shell",
-          "bottlenecked_components": 43,
-          "bottlenecked_volume_mm3": 0.28600912042156157,
-          "clearance_radius_mm": 0.5641895835477563,
-          "enclosed_components": 0,
-          "enclosed_volume_mm3": 0.0,
-          "ignored_bottlenecked_components": 0,
-          "ignored_bottlenecked_volume_mm3": 0,
-          "min_orifice_area_mm2": 1.0,
-          "min_void_volume_mm3": 0.0,
-          "occupancy_closed": true,
-          "sampling": "XY cell centers and Z subsamples; sub-grid walls may be missed",
-          "status": "complete",
-          "unclosed_rows": 0,
-          "unclosed_slices": 0,
-          "void_components": 1,
-          "z_subsamples_per_cell": 1
+          "contact_sphere_mm3": 0.022449297503777055,
+          "count": 1,
+          "largest_mm3": 1.6199999999999997e-05,
+          "policy": "ignore",
+          "volume_mm3": 1.6199999999999997e-05
         },
         "layer": null,
-        "message": "Void connects to the exterior only through an orifice below the configured area",
+        "message": "Enclosed voids were found, each no larger than a support contact, but a single file cannot say whether supports or the model form them; rerun with repair.support_void_policy=fail to treat them as failures",
         "position_mm": null,
-        "severity": "error"
+        "severity": "warning"
+      },
+      {
+        "code": "unattributed_drainage_bottleneck",
+        "details": {
+          "bottlenecked_components": 43,
+          "bottlenecked_volume_mm3": 0.28600912042156157,
+          "policy": "ignore",
+          "single_cell_sealed_chambers": 0
+        },
+        "layer": null,
+        "message": "Drainage necks were found but a single file cannot say whether the supports or the model form them; rerun with repair.support_void_policy=fail to treat them as failures",
+        "position_mm": null,
+        "severity": "warning"
       }
     ],
     "metrics": {
@@ -1201,7 +817,7 @@
         "peak_volume_mm3": 0.00014580000000000064
       }
     },
-    "passed": false,
+    "passed": true,
     "schema_version": 1
   },
   "verification": {
@@ -1216,6 +832,6 @@
     "pixel_comparison": "exact",
     "standalone_check": "voxelmill verify <file.goo>"
   },
-  "warned": true,
+  "warned": false,
   "written": true
 }
