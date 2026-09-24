@@ -64,3 +64,12 @@ def test_added_model_support_overrides_are_scoped(tmp_path):
     from voxelmill.contracts import VoxelMillError
     with pytest.raises(VoxelMillError, match='support table'):
         normalize_extra_model({'path': 'part.stl', 'overrides': {'process': {'layer_height_mm': 0.1}}})
+
+
+def test_box_precheck_only_skips_pairs_that_cannot_share_volume():
+    from voxelmill.pipeline import _boxes_overlap
+    unit = (0, 0, 0, 1, 1, 1)
+    assert _boxes_overlap(unit, (0.5, 0.5, 0.5, 2, 2, 2))
+    assert _boxes_overlap(unit, (-1, -1, -1, 2, 2, 2))            # containment
+    assert not _boxes_overlap(unit, (1, 0, 0, 2, 1, 1))           # shared face: zero volume
+    assert not _boxes_overlap(unit, (0, 0, 3, 1, 1, 4))           # apart in Z only

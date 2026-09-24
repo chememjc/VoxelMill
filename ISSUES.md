@@ -72,7 +72,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-014 | Retry/hollow benchmark fixture and CI perf gate | Perf | 3 | 4 | 12 | open |
 | VM-049 | Public-contract freeze checklist for 1.0 | Arch | 3 | 4 | 12 | open |
 | A8 | Presets embedded in profiles | Feature | 5 | 2 | 10 | partial |
-| VM-023 | Cheap boolean pre-checks for added models | Perf | 5 | 2 | 10 | open |
+| VM-023 | Cheap boolean pre-checks for added models | Perf | 5 | 2 | 10 | done |
 | VM-064 | Goldens for the invalid-mesh fixtures | Test/CI | 5 | 2 | 10 | done |
 | VM-041 | One versioned envelope and migration registry for every file format | Arch | 2 | 5 | 10 | open |
 | A4 | Profile inheritance with delta storage | Feature | 3 | 3 | 9 | open |
@@ -316,7 +316,7 @@ Ease 4 · Benefit 2 · Confidence: likely · Status: open
 
 ### VM-023 — Cheap boolean pre-checks for added models
 
-Ease 5 · Benefit 2 · Confidence: sure · Status: open
+Ease 5 · Benefit 2 · Confidence: sure · Status: done
 
 **Problem.** `_append_extra_models` runs an exact Manifold intersection between every pair of parts.
 

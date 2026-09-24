@@ -186,6 +186,8 @@ def _append_extra_models(placed, extra_models, settings, directory, budget, canc
         for existing in solids:
             if existing is None or incoming is None:
                 continue
+            if not _boxes_overlap(existing.bounding_box(), incoming.bounding_box()):
+                continue  # disjoint boxes cannot share volume; skip the exact boolean
             overlap = m.Manifold.batch_boolean([existing, incoming], m.OpType.Intersect)
             if (overlap.status() == m.Error.NoError and not overlap.is_empty()
                     and overlap.volume() > 1e-9):
@@ -208,6 +210,12 @@ def _append_extra_models(placed, extra_models, settings, directory, budget, canc
     return mapped, {'parts': parts, 'collision': 'model_solids_only',
                     'supports': 'shared column field and part-to-part routes',
                     'placed_parts': chunks}
+
+
+def _boxes_overlap(first, second):
+    """Whether two ``(min_x, min_y, min_z, max_x, max_y, max_z)`` boxes share volume."""
+    return all(first[axis] < second[axis + 3] and second[axis] < first[axis + 3]
+               for axis in range(3))
 
 
 def _reslice(path, settings, budget, cancel, progress, *, track_voids=True, assembly=None):
