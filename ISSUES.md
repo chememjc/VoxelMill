@@ -115,7 +115,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-045 | Strategy registry for bases, tips and anchors | Arch | 2 | 3 | 6 | open |
 | VM-082 | macOS signing and notarization | Release | 2 | 3 | 6 | open |
 | VM-026 | Link-time optimization for `_native` | Perf | 5 | 1 | 5 | open |
-| VM-046 | One structured error helper | Arch | 5 | 1 | 5 | open |
+| VM-046 | One structured error helper | Arch | 5 | 1 | 5 | won't fix (typed instead) |
 | VM-047 | Deduplicate voxel-size bisection | Arch | 5 | 1 | 5 | done |
 | VM-048 | Consistent dtype contract at the pybind boundary | Arch | 5 | 1 | 5 | done |
 | VM-062 | Shared `tests/conftest.py` | Test/CI | 5 | 1 | 5 | open |
@@ -438,13 +438,15 @@ Ease 2 · Benefit 3 · Confidence: likely · Status: open
 
 ### VM-046 — One structured error helper
 
-Ease 5 · Benefit 1 · Confidence: sure · Status: open
+Ease 5 · Benefit 1 · Confidence: sure · Status: won't fix (typed instead)
 
 **Problem.** `config._error`, `presets._fail`, `profiles._fail` and `project._fail` are four copies of the same helper.
 
 **Fix.** `VoxelMillError.invalid(code, message, **detail)` in `contracts.py`.
 
 **Where.** `src/voxelmill/config.py:253`, `src/voxelmill/presets.py:141`, `src/voxelmill/profiles.py:39`, `src/voxelmill/project.py:32`
+
+**Decision (2026-09-23).** Each helper is a two-line binding of its module's error code, so a shared factory would save nothing. They are now typed `-> NoReturn`, which is what lets mypy follow control flow past them. The real consolidation of error handling comes with VM-041's single loader.
 
 ### VM-047 — Deduplicate voxel-size bisection
 

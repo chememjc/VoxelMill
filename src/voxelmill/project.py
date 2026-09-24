@@ -17,6 +17,7 @@ import stat
 import struct
 import tempfile
 import zipfile
+from typing import NoReturn
 
 from .contracts import VoxelMillError
 
@@ -29,7 +30,7 @@ MAX_SOURCE_BYTES = 16 * 1024**3
 CHUNK_BYTES = 1024 * 1024
 
 
-def _fail(message):
+def _fail(message) -> NoReturn:
     raise VoxelMillError('invalid_project', message)
 
 

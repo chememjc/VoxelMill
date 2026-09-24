@@ -4,6 +4,7 @@ from __future__ import annotations
 from copy import deepcopy
 from pathlib import Path
 import math
+from typing import NoReturn
 try:
     import tomllib
 except ImportError:  # Python 3.10
@@ -250,7 +251,7 @@ def fill_legacy_settings(settings):
     return settings
 
 
-def _error(message):
+def _error(message) -> NoReturn:
     raise VoxelMillError('invalid_profile', message)
 
 

@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+from typing import NoReturn
 
 from .config import DEFAULTS, validate_settings
 from .contracts import VoxelMillError
@@ -139,7 +140,7 @@ def list_process_presets() -> tuple[str, ...]:
     return tuple(_builtin_process_tables())
 
 
-def _fail(message):
+def _fail(message) -> NoReturn:
     raise VoxelMillError('invalid_preset', message)
 
 
