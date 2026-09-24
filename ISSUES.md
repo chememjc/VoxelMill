@@ -70,7 +70,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | A7 | GUI profile manager: dirty-state save/discard | Feature | 3 | 4 | 12 | partial |
 | E7 | TSMC: define, validate and document all 18 motion fields | Feature | 3 | 4 | 12 | partial |
 | VM-014 | Retry/hollow benchmark fixture and CI perf gate | Perf | 3 | 4 | 12 | partial |
-| VM-049 | Public-contract freeze checklist for 1.0 | Arch | 3 | 4 | 12 | open |
+| VM-049 | Public-contract freeze checklist for 1.0 | Arch | 3 | 4 | 12 | partial |
 | A8 | Presets embedded in profiles | Feature | 5 | 2 | 10 | partial |
 | VM-023 | Cheap boolean pre-checks for added models | Perf | 5 | 2 | 10 | done |
 | VM-064 | Goldens for the invalid-mesh fixtures | Test/CI | 5 | 2 | 10 | done |
@@ -537,13 +537,15 @@ Ease 5 · Benefit 1 · Confidence: sure · Status: done
 
 ### VM-049 — Public-contract freeze checklist for 1.0
 
-Ease 3 · Benefit 4 · Confidence: sure · Status: open
+Ease 3 · Benefit 4 · Confidence: sure · Status: partial
 
 **Problem.** Pre-stable, anything can change. At stable, the CLI flags and exit codes, report schema, project and profile formats and the `--set` key paths become promises. Pinning `manifold3d==3.3.2` and `tomli==2.2.1` exactly will also block downstream packagers.
 
 **Fix.** Before tagging 1.0: rename anything awkward (VM-040/041/044 first), freeze `schemas/voxelmill-report.schema.json` at v1, document exit codes, relax exact pins to compatible ranges, and add a test that fails when a CLI flag disappears.
 
 **Where.** `pyproject.toml:11`, `schemas/`, `docs/cli.md`
+
+**Progress (2026-09-23).** Done: `docs/stability.md` states what is promised from 1.0 and what guards each promise. Usage errors now exit 64 instead of argparse's 2, which read as "validation failed". `thickness` no longer returns an undocumented 1. `tests/test_cli_surface.py` fails when a recorded command or option disappears. `manifold3d` and `tomli` are pinned to compatible ranges. Left for the 1.0 tag itself: finish VM-040 renames first, freeze the report schema at v1, retire `fill_legacy_settings` (VM-041), and promote the golden CI job to blocking.
 
 ## Testing, CI and tooling
 

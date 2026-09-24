@@ -14,12 +14,13 @@ here. Keep this file under a screen.
 
 ## In flight
 
-- In progress: VM-044 output-format registry. Then VM-045, VM-043, VM-040 → VM-041, VM-042, VM-049.
+- In progress: VM-049 contract freeze (exit codes doc, CLI surface snapshot test, relaxed pins). Then VM-043, VM-040, VM-042.
 - Needs the user: VM-080 (tagging publishes a release) and pushing `master` (CI has never run on GitHub).
 - Commit rule from the user: messages describe only the diff since the last commit, with no tool or session references and no attribution trailers.
 
 ## Done this session (2026-09-23), newest first
 
+- `a863263` VM-041 partial (versioning.py); `18753cd` VM-045 base registry; `03af9ef` VM-044 format registry
 - `4fabfd3`…`26e1a83` VM-022, VM-020/028/018/017/027/F5 closed by measurement, VM-065 (Windows offsets bug), VM-016, VM-072, VM-063, VM-024/025 decided
 - `a08ded7`…`38ea010` VM-019 16K check (slab prepare 96→36 s, slice 46→34 s), VM-013 capsule index, drainage lockstep, growth tiles, VM-015 partial (one exact union per search), VM-029 explained
 - `bb28f88` VM-030 slicing from the crop (24.6 → 1.3 s), VM-014 partial; `ff15229` VM-029 opened (bisected bracing drift); `197a2dd` VM-026 closed

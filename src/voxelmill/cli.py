@@ -893,7 +893,7 @@ def cmd_thickness(args):
     payload = {'schema_version': 1, 'command': 'thickness', 'input': str(args.input),
                'checks': {'wall_thickness': report['status']}, **report}
     _emit(payload, args.report)
-    return 0 if report['status'] in ('pass', 'warn', 'not_run') else 1
+    return 0 if report['status'] in ('pass', 'warn', 'not_run') else 2
 
 
 def cmd_calibrate(args):
@@ -911,8 +911,24 @@ def cmd_calibrate(args):
     return 0
 
 
+#: Exit status for a command line that could not be parsed (BSD sysexits
+#: EX_USAGE). argparse's own 2 would read as "validation failed".
+EXIT_USAGE = 64
+
+
+class _Parser(argparse.ArgumentParser):
+    """argparse with a usage error exiting :data:`EXIT_USAGE`, not 2.
+
+    Subcommand parsers inherit this class, so every command behaves the same.
+    """
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        self.exit(EXIT_USAGE, f'{self.prog}: error: {message}\n')
+
+
 def build_parser():
-    parser = argparse.ArgumentParser(prog='voxelmill', description=__doc__.splitlines()[0])
+    parser = _Parser(prog='voxelmill', description=__doc__.splitlines()[0])
     parser.add_argument('--version', action='version', version=_version())
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument('--printer', dest='printer_profile', help='printer .ptr profile')

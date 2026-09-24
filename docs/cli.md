@@ -11,11 +11,12 @@ writes to stderr instead and the two can be redirected separately.
 | `0` | The command succeeded and, where it validates, validation passed. |
 | `2` | The command ran and the answer is no: validation failed, or an export was withheld or warned. The report is still written. |
 | `3` | A structured `VoxelMillError`. A JSON `{"error": …}` object goes to stderr with a stable `code` field. |
+| `64` | The command line could not be parsed (unknown option, missing argument). Usage goes to stderr; nothing ran. |
 | `130` | Canceled with SIGINT. |
 
 A `2` is a result, not a crash: the evidence is the product, and it is written
-whether or not the geometry file was. Only `3` means the question went
-unanswered.
+whether or not the geometry file was. Only `3` and `64` mean the question went
+unanswered. These codes are part of the stable interface.
 
 ## Settings options
 

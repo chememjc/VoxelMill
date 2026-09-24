@@ -6,6 +6,7 @@ v0.5.4 (alpha) keeps a Python CLI and optional GUI, with hot geometry and raster
 work in the C++ `_native` kernels. Portable builds: Linux x86_64 AppImage, two
 thin macOS DMGs (Intel and Apple Silicon), and a Windows x64 zip. See
 [docs/packaging.md](docs/packaging.md) and [docs/platforms.md](docs/platforms.md).
+What will stay stable from 1.0 on is in [docs/stability.md](docs/stability.md).
 
 ## Install (alpha binaries)
 

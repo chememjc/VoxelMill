@@ -28,6 +28,7 @@ VoxelMill is a Linux single-part resin 3D-print preparation tool that transforms
 | `src/voxelmill/pipeline.py` | End-to-end orchestration: placement → ingestion/repair → exact or raster union → export → reslice → validation |
 | `src/voxelmill/project.py` | Project file I/O and metadata persistence |
 | `src/voxelmill/printer.py` | Printer discovery, connection, status/attributes telemetry, print history and time-lapse downloads, camera URL access, upload and printer state machine |
+| `src/voxelmill/versioning.py` | Schema versions of every persisted kind (profile, settings, preset, project), one-step migrations and documented refusals; `upgrade()` is the only version check. See [stability.md](stability.md) |
 | `src/voxelmill/formats.py` | Printer file format registry: `for_path(path)` returns the `SliceFormat` (GOO, CTB v3) that reads, summarizes, displays and verifies that file; add a format by adding one subclass to `FORMATS` |
 | `src/voxelmill/goo.py` | GOO format layer encoding/decoding and file operations |
 | `src/voxelmill/arrange.py` | Deterministic bottom-left shelf packer: `arrange_footprints(footprints, envelope, *, clearance_mm=0.0, fixed=())` returns one plate-center offset per footprint, refusing rather than returning an overlapping layout when something does not fit. Pure XY geometry; no mesh handling |
