@@ -113,7 +113,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | C5 | Suction-cup / peel force calibration | Feature | 2 | 3 | 6 | open (hardware) |
 | F4 | Incremental re-slice after a local edit | Feature | 2 | 3 | 6 | open |
 | G13 | Direct-manipulation gizmos for supports, holes and cut planes | Feature | 2 | 3 | 6 | partial |
-| VM-043 | Break up the god functions in routing and orchestration | Arch | 2 | 3 | 6 | open |
+| VM-043 | Break up the god functions in routing and orchestration | Arch | 2 | 3 | 6 | partial |
 | VM-045 | Strategy registry for bases, tips and anchors | Arch | 2 | 3 | 6 | done |
 | VM-082 | macOS signing and notarization | Release | 2 | 3 | 6 | open |
 | VM-026 | Link-time optimization for `_native` | Perf | 5 | 1 | 5 | won't fix (measured) |
@@ -473,13 +473,15 @@ Ease 1 · Benefit 4 · Confidence: sure · Status: open
 
 ### VM-043 — Break up the god functions in routing and orchestration
 
-Ease 2 · Benefit 3 · Confidence: sure · Status: open
+Ease 2 · Benefit 3 · Confidence: sure · Status: partial
 
 **Problem.** `supports.route_contacts` is 515 lines, with around 15 `global_*` shadow variables saved and restored around a per-contact loop. `supports._brace` is 425 lines, `pipeline.prepare` 391, and `bases.build_base` 150. They are hard to test piecemeal and hard to extend.
 
 **Fix.** Make a `ContactRouter` class with per-contact parameter resolution, candidate search, tip/anchor sizing and graph emission as methods. Turn `prepare` into a list of named stage functions sharing a `PrepareContext` dataclass, which also gives `stage_timing` its stage names for free. The golden reports (`scripts/equivalence.py`) guard behavior.
 
 **Where.** `src/voxelmill/supports.py:661,1529`, `src/voxelmill/pipeline.py:304`, `src/voxelmill/bases.py:220`
+
+**Progress (2026-09-23).** `pipeline.prepare` went from 391 lines to a 43-line stage sequence over a `PrepareRun`, with identical output on seven covering runs. In `route_contacts` (515 → 379 lines), per-contact dimensions are now a `ContactSpec`, which retired the `global_*` shadow copies, and the plate-route search and model-anchor evaluation are their own functions. A 32-scenario harness (plate branches, anchors, both small-pillar modes, trees, overrides, bracing) shows identical graphs, metrics and solids. The split fixed a latent bug: the run-level `small_pillar.mode` metric reported the last contact's override. Still open: the per-contact geometry emission and the metrics block in `route_contacts`, and `_brace` (425 lines).
 
 ### VM-044 — Output-format registry
 

@@ -70,3 +70,14 @@ def test_cone_cylinder_and_break_point_are_closed_positive_solids():
         assert len(solid.decompose()) == 1
     assert cylinder.volume() < cone.volume()
     assert ball.volume() > cone.volume()
+
+
+def test_run_metrics_describe_the_configuration_not_the_last_override():
+    """The small-pillar mode was read after the loop from the last contact's
+    override, so one overridden contact relabelled the whole run."""
+    settings, field = scene()
+    settings['support']['auto_bracing'] = False
+    points = [[-10, 0, 8.0], [-5, 0, 8.0]]
+    overrides = [{'position_mm': points[-1], 'parameters': {'small_pillar_mode': 'model'}}]
+    plan, _ = route_contacts(points, field, settings, contact_parameters=overrides)
+    assert plan.metrics['small_pillar']['mode'] == settings['support']['small_pillar_mode'] == 'middle'
