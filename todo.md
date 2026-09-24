@@ -14,10 +14,14 @@ here. Keep this file under a screen.
 
 ## In flight
 
-- VM-060 CI test workflow, then VM-061 lint config, then VM-011 TBB in CI.
+- VM-012 overhang sample reuse, then VM-023, VM-062, VM-046/047/048, VM-070.
+- Needs the user: VM-080 (tagging publishes a release), pushing `master` (CI has never run on GitHub).
 
 ## Done this session (2026-09-23), newest first
 
+- `4ad96f1` VM-061 ruff+mypy in CI; VM-004 thickness budget bug (found by lint)
+- `6932254` VM-060 CI workflow, VM-064 goldens re-recorded at HEAD
+- `8ea38c4` VM-011 std::thread fallback (release build confirmed TBB-less)
 - `1394be1` VM-002 editor job pool, VM-003 scratch leak
 - `aab35cc` VM-001 hex infill crash, VM-010 `_bottom_open` vectorized
 - `e45b359` audit → ISSUES.md; trackers retired

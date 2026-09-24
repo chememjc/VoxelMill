@@ -66,3 +66,32 @@ def test_object_groups_apply_per_part_pillar_overrides():
     records = metrics['object_contact_parameters']
     assert records
     assert all(row['parameters']['pillar_diameter_mm'] == 1.6 for row in records)
+
+
+def _reference_perimeter(faces, spacing):
+    """The original per-edge loop; the vector form must reproduce it exactly."""
+    def segment(a, b):
+        steps = max(1, int(np.ceil(np.linalg.norm(b - a) / spacing)))
+        ts = np.linspace(0.0, 1.0, steps + 1)
+        return (1.0 - ts)[:, None] * a + ts[:, None] * b
+    counts, segments = {}, []
+    for face in faces:
+        for i in range(3):
+            a, b = face[i], face[(i + 1) % 3]
+            ra, rb = tuple(np.round(a, 5)), tuple(np.round(b, 5))
+            key = (ra, rb) if ra <= rb else (rb, ra)
+            counts[key] = counts.get(key, 0) + 1
+            segments.append((key, a, b))
+    points = [segment(a, b) for key, a, b in segments if counts[key] == 1]
+    return np.concatenate(points) if points else np.empty((0, 3))
+
+
+def test_vectorized_perimeter_samples_match_the_edge_loop():
+    from voxelmill.supports import _perimeter_samples
+    rng = np.random.default_rng(5)
+    # Rounded coordinates force shared and reversed edges; the zero face is degenerate.
+    for faces in (np.round(rng.normal(size=(400, 3, 3)), 1), rng.normal(size=(50, 3, 3)),
+                  np.zeros((2, 3, 3))):
+        for spacing in (0.25, 2.0):
+            assert np.array_equal(_perimeter_samples(faces, spacing),
+                                  _reference_perimeter(faces, spacing))

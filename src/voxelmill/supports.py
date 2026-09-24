@@ -278,37 +278,43 @@ def downward_contacts(triangles, settings, *, cancel=None, progress=no_progress,
     return np.concatenate(points), areas
 
 
-def _sample_segment(start, end, spacing):
-    start = np.asarray(start, dtype=np.float64)
-    end = np.asarray(end, dtype=np.float64)
-    length = float(np.linalg.norm(end - start))
-    steps = max(1, int(math.ceil(length / max(float(spacing), 1e-9))))
-    ts = np.linspace(0.0, 1.0, steps + 1)
-    return (1.0 - ts)[:, None] * start + ts[:, None] * end
-
-
 def _perimeter_samples(faces, spacing):
-    """Samples along edges that belong to only one downward face (the contour)."""
+    """Samples along edges that belong to only one downward face (the contour).
+
+    Edges are matched on vertices rounded to 1e-5 mm, regardless of direction.
+    Samples come out in face order, then edge order within a face, each
+    segment walked from its first vertex as the face lists it.
+    """
     faces = np.asarray(faces, dtype=np.float64).reshape(-1, 3, 3)
     if not len(faces):
         return np.empty((0, 3))
-    counts = {}
-    segments = []
-    for face in faces:
-        for i in range(3):
-            a, b = face[i], face[(i + 1) % 3]
-            ra, rb = tuple(np.round(a, 5)), tuple(np.round(b, 5))
-            key = (ra, rb) if ra <= rb else (rb, ra)
-            counts[key] = counts.get(key, 0) + 1
-            segments.append((key, a, b))
-    points = []
-    for key, a, b in segments:
-        if counts[key] != 1:
-            continue
-        points.append(_sample_segment(a, b, spacing))
-    if not points:
+    starts = faces.reshape(-1, 3)                       # edge i of face f: f*3 + i
+    ends = faces[:, [1, 2, 0]].reshape(-1, 3)
+    ra, rb = np.round(starts, 5), np.round(ends, 5)
+    # Undirected key: the lexicographically smaller rounded endpoint first.
+    differs = ra != rb
+    first = np.argmax(differs, axis=1)
+    rows = np.arange(len(ra))
+    swap = differs.any(axis=1) & (ra[rows, first] > rb[rows, first])
+    keys = np.where(swap[:, None], np.hstack([rb, ra]), np.hstack([ra, rb]))
+    _, inverse, counts = np.unique(keys, axis=0, return_inverse=True, return_counts=True)
+    single = counts[inverse.reshape(-1)] == 1
+    if not single.any():
         return np.empty((0, 3))
-    return np.concatenate(points)
+    return _sample_segments(starts[single], ends[single], spacing)
+
+
+def _sample_segments(starts, ends, spacing):
+    """Points every ``spacing`` or closer along each segment, both ends included, in order."""
+    lengths = np.linalg.norm(ends - starts, axis=1)
+    steps = np.maximum(1, np.ceil(lengths / max(float(spacing), 1e-9)).astype(np.int64))
+    per = steps + 1
+    owner = np.repeat(np.arange(len(steps)), per)
+    local = np.arange(int(per.sum())) - np.repeat(np.cumsum(per) - per, per)
+    # np.linspace(0, 1, n): arange(n) * (1 / (n - 1)), with the last value exactly 1.
+    ts = local * (1.0 / steps[owner])
+    ts[np.cumsum(per) - 1] = 1.0
+    return (1.0 - ts)[:, None] * starts[owner] + ts[:, None] * ends[owner]
 
 
 def _open_boundary_samples(triangles, spacing, min_z=0.2):
@@ -320,15 +326,12 @@ def _open_boundary_samples(triangles, spacing, min_z=0.2):
     rounded = np.round(tris.reshape(-1, 3), 5)
     uniq, inverse = np.unique(rounded, axis=0, return_inverse=True)
     directed, _count = _directed_boundary_edges(inverse.reshape(-1, 3))
-    points = []
-    for a, b in directed:
-        pa, pb = uniq[a], uniq[b]
-        if (float(pa[2]) + float(pb[2])) / 2 < min_z:
-            continue
-        points.append(_sample_segment(pa, pb, spacing))
-    if not points:
+    edges = np.asarray(directed, dtype=np.int64).reshape(-1, 2)
+    pa, pb = uniq[edges[:, 0]], uniq[edges[:, 1]]
+    above = (pa[:, 2] + pb[:, 2]) / 2 >= min_z
+    if not above.any():
         return np.empty((0, 3))
-    return np.concatenate(points)
+    return _sample_segments(pa[above], pb[above], spacing)
 
 
 def _cells(points, spacing):

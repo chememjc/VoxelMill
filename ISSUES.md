@@ -65,7 +65,6 @@ Sorted from easiest and most significant to hardest and least valuable.
 | B5 | Print-time estimation: physical calibration | Feature | 3 | 5 | 15 | open (hardware) |
 | D4 | Raft adhesion / removal-force calibration | Feature | 4 | 3 | 12 | open (hardware) |
 | G2 | Fuzzy, mode-aware settings search | Feature | 4 | 3 | 12 | partial |
-| VM-012 | Stop re-sampling downward faces for the overhang check | Perf | 4 | 3 | 12 | open |
 | VM-061 | Lint and type-check configuration | Test/CI | 4 | 3 | 12 | done |
 | A7 | GUI profile manager: dirty-state save/discard | Feature | 3 | 4 | 12 | partial |
 | E7 | TSMC: define, validate and document all 18 motion fields | Feature | 3 | 4 | 12 | partial |
@@ -102,7 +101,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | E3 | Cross-sectional-area-driven exposure | Feature | 3 | 2 | 6 | open |
 | E6 | LED uniformity mask compensation | Feature | 3 | 2 | 6 | open |
 | F5 | SIMD in the rasterizer inner loop | Feature | 3 | 2 | 6 | open |
-| VM-021 | Vectorize contour/boundary sampling | Perf | 3 | 2 | 6 | open |
+| VM-021 | Vectorize contour/boundary sampling | Perf | 3 | 2 | 6 | done |
 | VM-024 | Only one of the three `analyze_layers` calls in `prepare` can be shared | Perf | 3 | 2 | 6 | open |
 | VM-025 | Fold `UnionLayerStream` per-group slices into one native call | Perf | 3 | 2 | 6 | open |
 | VM-063 | Direct tests for `gui/services.py` and camera math | Test/CI | 3 | 2 | 6 | open |
@@ -122,6 +121,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-062 | Shared `tests/conftest.py` | Test/CI | 5 | 1 | 5 | open |
 | VM-070 | Docstrings for the largest undocumented functions | Docs | 5 | 1 | 5 | open |
 | VM-040 | Typed settings model as the single source of truth | Arch | 1 | 5 | 5 | open |
+| VM-012 | Stop re-sampling downward faces for the overhang check | Perf | 4 | 1 | 4 | won't fix (measured) |
 | VM-071 | Section-aware help for repeated field names | Docs | 4 | 1 | 4 | open |
 | VM-084 | Windows topology on real hybrid hardware | Release | 4 | 1 | 4 | open |
 | F7 | GPU orientation search (CPU fallback mandatory) | Feature | 2 | 2 | 4 | open |
@@ -202,13 +202,15 @@ Ease 4 · Benefit 4 · Confidence: likely · Status: done
 
 ### VM-012 — Stop re-sampling downward faces for the overhang check
 
-Ease 4 · Benefit 3 · Confidence: sure · Status: open
+Ease 4 · Benefit 1 · Confidence: sure · Status: won't fix (measured)
 
 **Problem.** `apply_overhang_check` calls `downward_contacts` again after routing already computed the identical samples. That doubles the sampling cost, including the Python-loop perimeter and boundary samplers, on every `prepare` and every GUI print check.
 
 **Fix.** Return the samples from `plan_supports` (they already feed `contact_coverage`) and pass them into `analyze_overhangs`. Alternatively, memoize `downward_contacts` on (triangles id, relevant support keys). The comment requires the same sampler, and reuse keeps that guarantee.
 
 **Where.** `src/voxelmill/overhangs.py:67`, `src/voxelmill/supports.py:512,551`, `src/voxelmill/pipeline.py:553`
+
+**Measured (2026-09-23).** With default settings the sampler takes 24 ms on a 245k-triangle sphere, so the duplicate call is noise. With `contour_supports` on it took 0.57 s, nearly all of it in `_perimeter_samples`. VM-021 vectorized that (4.06 s → 0.45 s on all 245k faces, bit-identical), which removes what was worth saving here.
 
 ### VM-013 — Spatial index for routed-capsule collision checks
 
@@ -292,13 +294,15 @@ Ease 4 · Benefit 2 · Confidence: measure · Status: open
 
 ### VM-021 — Vectorize contour/boundary sampling
 
-Ease 3 · Benefit 2 · Confidence: likely · Status: open
+Ease 3 · Benefit 2 · Confidence: likely · Status: done
 
 **Problem.** `_perimeter_samples` builds a Python dict of rounded vertex-pair tuples one triangle at a time, which dominates `downward_contacts` when contour or boundary supports are on.
 
 **Fix.** Use the `np.unique(..., axis=0, return_counts=True)` edge-dedup that `_open_boundary_samples` already uses.
 
 **Where.** `src/voxelmill/supports.py:290-311`
+
+**Done (2026-09-23).** `_perimeter_samples` and `_open_boundary_samples` now build and sample every edge in NumPy through `_sample_segments`. Output is bit-identical to the loops (pinned by a reference test), and 9× faster on 245k faces.
 
 ### VM-022 — Cheaper per-override setting validation
 
