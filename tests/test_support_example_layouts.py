@@ -206,3 +206,12 @@ def test_saving_an_example_writes_every_group(tmp_path):
     path = tmp_path / 'showcase.stl'
     save_example(path, example)
     assert path.exists() and path.stat().st_size > 0
+
+
+def test_part_to_part_says_why_nothing_routes_with_defaults():
+    from voxelmill.config import resolve_settings
+    from voxelmill.support_example import support_example
+    example = support_example(resolve_settings(), layout='part-to-part')
+    assert example['hint'].startswith('Nothing routes')
+    enabled = resolve_settings(overrides={'support': {'allow_part_to_part': True}})
+    assert not support_example(enabled, layout='part-to-part')['hint'].startswith('Nothing routes')

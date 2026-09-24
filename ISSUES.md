@@ -134,7 +134,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | A9 | Import CHITUBOX / Lychee profiles | Feature | 3 | 1 | 3 | open |
 | C11 | Text / serial embossing | Feature | 3 | 1 | 3 | open |
 | VM-028 | Minor: CUDA morphology allocation, MST, lock polling, undo copies | Perf | 3 | 1 | 3 | won't fix (measured) |
-| VM-072 | The historical `part-to-part` support example routes nothing | Docs | 3 | 1 | 3 | open |
+| VM-072 | The historical `part-to-part` support example routes nothing | Docs | 3 | 1 | 3 | done |
 | D1 | Joint support type | Feature | 1 | 3 | 3 | partial |
 | D6 | Support mechanics calibration; promote anchor-load warn→fail | Feature | 1 | 3 | 3 | open (hardware) |
 
@@ -627,7 +627,7 @@ Ease 4 · Benefit 1 · Confidence: sure · Status: open
 
 ### VM-072 — The historical `part-to-part` support example routes nothing
 
-Ease 3 · Benefit 1 · Confidence: sure · Status: open
+Ease 3 · Benefit 1 · Confidence: sure · Status: done
 
 **Problem.** Under default settings the `part-to-part` example layout produces no routes, which is why `showcase` forces its own.
 

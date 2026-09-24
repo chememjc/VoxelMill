@@ -173,8 +173,12 @@ def support_example(settings, height_mm=20.0, *, layout='array', cancel=None):
                            if plan.solids else np.empty((0, 3, 3))),
               'raft': (manifold_triangles(base) if base is not None
                        else np.empty((0, 3, 3)))}
-    hints = {'part-to-part': 'Enable part-to-part supports and set avoidance to 0 '
-                             'to compare model routes.',
+    blocked = layout == 'part-to-part' and not settings['support'].get('allow_part_to_part')
+    hints = {'part-to-part': ('Nothing routes: every contact here sits over the lower part and '
+                              'part-to-part supports are off. Enable them and set avoidance to 0 '
+                              'to compare model routes.' if blocked else
+                              'Enable part-to-part supports and set avoidance to 0 '
+                              'to compare model routes.'),
              'showcase': 'Forces the part-to-part and thin-pillar settings listed '
                          'under overrides so every route kind is visible.'}
     return {'triangles': groups, 'contacts': contacts, 'metrics': plan.metrics,
