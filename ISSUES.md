@@ -115,7 +115,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-043 | Break up the god functions in routing and orchestration | Arch | 2 | 3 | 6 | open |
 | VM-045 | Strategy registry for bases, tips and anchors | Arch | 2 | 3 | 6 | open |
 | VM-082 | macOS signing and notarization | Release | 2 | 3 | 6 | open |
-| VM-026 | Link-time optimization for `_native` | Perf | 5 | 1 | 5 | open |
+| VM-026 | Link-time optimization for `_native` | Perf | 5 | 1 | 5 | won't fix (measured) |
 | VM-046 | One structured error helper | Arch | 5 | 1 | 5 | won't fix (typed instead) |
 | VM-047 | Deduplicate voxel-size bisection | Arch | 5 | 1 | 5 | done |
 | VM-048 | Consistent dtype contract at the pybind boundary | Arch | 5 | 1 | 5 | done |
@@ -357,13 +357,15 @@ Ease 3 · Benefit 2 · Confidence: measure · Status: open
 
 ### VM-026 — Link-time optimization for `_native`
 
-Ease 5 · Benefit 1 · Confidence: measure · Status: open
+Ease 5 · Benefit 1 · Confidence: measure · Status: won't fix (measured)
 
 **Problem.** No `INTERPROCEDURAL_OPTIMIZATION` is set. The gain is probably small, because the hot loops live inside single translation units.
 
 **Fix.** `set_property(TARGET _native PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)` when `check_ipo_supported` passes. Keep it only if the benchmark improves.
 
 **Where.** `CMakeLists.txt`
+
+**Measured (2026-09-23).** With IPO the bracket benchmark ran 4.21–4.32 s against 4.23–4.36 s without, which is noise. The hot loops already live inside single translation units. Not adopted.
 
 ### VM-027 — x86-64-v3 kernels with runtime dispatch
 
