@@ -37,7 +37,7 @@ AppImage.
 | NumPy | 1.26.4 (`>=1.26,<3`) | BSD-3-Clause | [`third-party/numpy-LICENSE.txt`](third-party/numpy-LICENSE.txt) | Reproduce copyright notice |
 | SciPy | 1.12.0 (`>=1.10,<2`) | BSD-3-Clause | [`third-party/scipy-LICENSE.txt`](third-party/scipy-LICENSE.txt) | Reproduce copyright notice |
 | manifold3d | 3.3.2 (`~=3.3.2`) | Apache-2.0 | [`third-party/manifold3d-LICENSE.txt`](third-party/manifold3d-LICENSE.txt) | Reproduce notice; state changes if modified (none made) |
-| threadpoolctl | 3.6.0 (`>=3.1,<4`) | BSD-3-Clause | [`third-party/threadpoolctl-LICENSE.txt`](third-party/threadpoolctl-LICENSE.txt) | Reproduce copyright notice |
+| threadpoolctl | 3.7.0 (`>=3.1,<4`) | BSD-3-Clause | [`third-party/threadpoolctl-LICENSE.txt`](third-party/threadpoolctl-LICENSE.txt) | Reproduce copyright notice |
 | websocket-client | 1.8.0 (`>=1.7,<2`) | Apache-2.0 | [`third-party/websocket-client-LICENSE.txt`](third-party/websocket-client-LICENSE.txt) | Reproduce notice |
 | tomli | 2.2.1 (`>=2,<3`, Python < 3.11) | MIT | [`third-party/tomli-LICENSE.txt`](third-party/tomli-LICENSE.txt) | Reproduce copyright notice |
 

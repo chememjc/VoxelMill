@@ -582,12 +582,13 @@ matches those pixels. Cavity filling remains unavailable without an exact solid.
 
 ## Setup tab: config keys, CLI flags, and the modified baseline
 
-`MainWindow.SETTING_KEYS` names twelve compact Setup controls — layer height,
+`MainWindow.SETTING_KEYS` names fifteen compact Setup controls — layer height,
 bottom and normal exposure, bottom and transition layer counts, support
-spacing, overhang angle, automatic support contacts, repair mode, seal
-cavities, minimum orifice area, and clip-to-build-volume — and for each one
-its resolved-settings section and key and, for most of them, a dedicated CLI
-flag. Each control's tooltip states its `section.key` and how to set it from
+spacing, overhang angle, base type, automatic support contacts, automatic
+bracing, brace model pillars, repair mode, seal cavities, minimum orifice
+area, and clip-to-build-volume — and for each one its resolved-settings
+section and key and, for most of them, a dedicated CLI flag. Each control's
+tooltip states its `section.key` and how to set it from
 the command line: with the dedicated flag when one exists (e.g.
 `--support-spacing-mm`), or with `--set section.key=VALUE` always. Bottom
 exposure, normal exposure, bottom layers, and transition layers have no
@@ -599,7 +600,7 @@ not accept. The **scale X Y Z**, **mirror axes**, rotation, center offset,
 and lift controls are not part of this set — they are placement decisions
 for this part, not profile settings, and carry their own tooltips instead.
 
-Beside each of the twelve controls sits a dot and a circular-arrow revert
+Beside each of the fifteen controls sits a dot and a circular-arrow revert
 button. The dot appears only when the control's current value differs from
 `Document.baseline_settings` — the settings the printer/resin profile stack
 resolved to before any editor edit — and its tooltip names both the old and

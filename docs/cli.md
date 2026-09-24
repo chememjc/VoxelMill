@@ -32,7 +32,7 @@ These are accepted by every command except `info`.
 | `--elephant-foot-mm` | Sets `process.elephant_foot_compensation_mm`: shrinks the exported bottom layers by this radius in mm, ramping linearly to zero. `0` disables it. Rejected above `1.0` mm. |
 | `--elephant-foot-layers` | Sets `process.elephant_foot_layers`, the layer count the ramp runs over. `0` derives it from `process.bottom_layers`. |
 | `--drop-attached-unroutable` / `--no-drop-attached-unroutable` | After routing, drop contacts that will not fit if they already have material one printer layer below. Island and manual contacts are never dropped. On by default. |
-| `--support-void-policy {fail,ignore,fill}` | `fail` (default) keeps support-generated voids as export failures. `ignore` records support-class voids without failing; model-class still fails. `fill` seals enclosed shells after an exact union. |
+| `--support-void-policy {fail,ignore,fill}` | `fail` keeps support-generated voids as export failures. `ignore` (default) records support-class voids without failing; model-class still fails. `fill` seals enclosed shells after an exact union. |
 | `--auto-supports` / `--no-auto-supports` | Automatic contact selection. Turning it off leaves only manual contacts; it does not disable supports. |
 | `--tree-supports` / `--no-tree-supports` | Cluster nearby vertical plate supports onto one trunk. Off by default. |
 | `--contour-supports` / `--no-contour-supports` | Also sample the outer perimeter of downward-face clusters. Off by default. |
@@ -129,7 +129,7 @@ export and reslices it independently before accepting it.
 | `--contacts PATH` | JSON array of manual `[x, y, z]` contacts in final plate coordinates. |
 | `--paint PATH` | JSON `{blocked, enforced}` arrays of plate-coordinate centroids. Block drops automatic contacts on those faces; enforce always places them. Island births are never blocked. Nothing is painted automatically. A `.voxmil` input carries paint per object in each object's own frame instead, and both forms are accepted; when `--paint` is written into a saved project its marks are recorded against the primary part, which is exact for a single part and is stated in the report when added parts are present. |
 | `--add-model PATH` | Another STL on the same plate. Repeatable. Only model-solid intersections are collisions; support envelopes may overlap and the planner treats every part as one field. Pose is identity rotation, no XY offset, 5 mm lift. |
-| `--add-model-spec JSON` | JSON object or array of added models with `path`, `rotate [RX,RY,RZ]`, `center_offset [X,Y]`, `lift_mm`, `scale [X,Y,Z]`, `mirror [X,Y,Z]`, and optional `overrides.support` (a support-key overlay for that part only). Repeatable. The object panel's per-part controls cover rotate, offset, lift and the attachment overlay; scale and mirror per added part are set only here or in a `.voxmil` project, not from the editor. |
+| `--add-model-spec JSON_FILE` | A JSON file holding an object or array of added models with `path`, `rotate [RX,RY,RZ]`, `center_offset [X,Y]`, `lift_mm`, `scale [X,Y,Z]`, `mirror [X,Y,Z]`, and optional `overrides.support` (a support-key overlay for that part only). Repeatable. The object panel's per-part controls cover rotate, offset, lift and the attachment overlay; scale and mirror per added part are set only here or in a `.voxmil` project, not from the editor. |
 | `--contact-parameters PATH` | JSON array of `{position_mm, parameters}` records. `parameters` may contain only per-contact geometry keys (tip, pillar, anchor, small-pillar). Global defaults stay unchanged; unmatched positions are reported and not applied. |
 | `--tip-shape {cone,cylinder}` | Top contact shape for every support that does not have its own override. |
 | `--break-point-diameter-mm` | Optional ball at the top contact for a controlled snap-off. `0` disables it. |
@@ -140,7 +140,7 @@ export and reslices it independently before accepting it.
 | `--no-drainage`, `--no-void-analysis` | Skip a check rather than pass it. The check reports `not_run`. |
 | `--no-overhang-check` | Skip the unsupported-overhang coverage check; it reports `not_run`. This check is advisory (a warning) and never blocks an export on its own; see [algorithms.md](algorithms.md#unsupported-overhangs). |
 | `--drop-attached-unroutable` / `--no-drop-attached-unroutable` | After routing, drop contacts that will not fit if they already have material in a 3×3 printer-pitch neighbourhood one layer below. Island and manual contacts are never dropped. On by default. |
-| `--support-void-policy {fail,ignore,fill}` | `fail` (default) keeps support-generated voids as export failures. `ignore` records support-class voids and bottlenecks without failing; model-class still fails. `fill` seals enclosed shells after an exact union; drainage necks are not shells. |
+| `--support-void-policy {fail,ignore,fill}` | `fail` keeps support-generated voids as export failures. `ignore` (default) records support-class voids and bottlenecks without failing; model-class still fails. `fill` seals enclosed shells after an exact union; drainage necks are not shells. |
 | `--no-memory-limit` | Do not set an address-space ceiling for the run. |
 
 Scale is never changed to make a part fit. A failed search is reported as
@@ -422,9 +422,9 @@ is available. Exit codes match `validate` and `slice`: `0` on a passing report,
 Runs one `OPERATION` over many `INPUT` files, one after another in this
 process. `OPERATION` is one of `prepare`, `slice`, `validate`, `islands`,
 `measure`, `inspect`, `verify` — the keys of `BATCH_OUTPUTS`. `info`,
-`profile`, `resin`, `preset`, `completion`, `manpage`, `gui` and `batch`
-itself cannot be batched. Each item is parsed by `build_parser()` — the same
-subparser a direct `voxelmill OPERATION ...` call would use — and dispatched
+`profile`, `resin`, `preset`, `completion`, `manpage`, `report-html`, `gui`
+and `batch` itself cannot be batched. Each item is parsed by `build_parser()`
+— the same subparser a direct `voxelmill OPERATION ...` call would use — and dispatched
 to that operation's own `func`, so an option cannot exist for a single run
 and not for a batched one. An argument that operation's parser rejects
 raises `SystemExit`, which `batch` catches and records as an `invalid_option`
@@ -708,6 +708,17 @@ part for a masked stereolithography printer") rather than the parser's own
 line entry point." — which names the file, not the program; a man page's
 `NAME` line is what `apropos`/`man -k` search, so `manpage` supplies a real
 summary instead of that line.
+
+## `report-html`
+
+    voxelmill report-html output/left.json --output output/left.html
+
+Renders a previously written JSON report (`prepare`, `slice`, `validate`,
+`verify`, or any other command's `--report` output) as a static, readable
+HTML page: a pass/fail banner, then diagnostics grouped by severity
+(`error`, `warning`, `info`, `debug`). It reads no mesh and touches no
+project state — a report-to-report transform for skimming a result without
+a JSON viewer. `--output` is required.
 
 ## `support-example`
 
