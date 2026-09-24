@@ -14,11 +14,14 @@ here. Keep this file under a screen.
 
 ## In flight
 
-- VM-070 docstrings, VM-026 LTO (measure), then VM-014 fixtures → VM-013/015/018/019.
-- Needs the user: VM-080 (tagging publishes a release), pushing `master` (CI has never run on GitHub).
+- VM-013 capsule spatial index (benchmark: `scripts/benchmark.py --only prepare_retry`), then VM-029 island-scan profile, VM-019 16K check.
+- Needs the user: VM-080 (tagging publishes a release) and pushing `master` (CI has never run on GitHub).
+- Commit rule from the user: messages describe only the diff since the last commit, with no tool or session references and no attribution trailers.
 
 ## Done this session (2026-09-23), newest first
 
+- `bb28f88` VM-030 slicing from the crop (24.6 → 1.3 s), VM-014 partial; `ff15229` VM-029 opened (bisected bracing drift); `197a2dd` VM-026 closed
+- `d3514d5` VM-070; `f507eca` VM-062
 - `3a44595`…`8951c9a` VM-021, VM-023, VM-048, VM-047, VM-046 (won't fix, typed), VM-062; VM-012 retired by measurement
 - `4ad96f1` VM-061 ruff+mypy in CI; VM-004 thickness budget bug (found by lint)
 - `6932254` VM-060 CI workflow, VM-064 goldens re-recorded at HEAD

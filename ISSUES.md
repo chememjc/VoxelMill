@@ -69,7 +69,6 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-061 | Lint and type-check configuration | Test/CI | 4 | 3 | 12 | done |
 | A7 | GUI profile manager: dirty-state save/discard | Feature | 3 | 4 | 12 | partial |
 | E7 | TSMC: define, validate and document all 18 motion fields | Feature | 3 | 4 | 12 | partial |
-| VM-013 | Spatial index for routed-capsule collision checks | Perf | 3 | 4 | 12 | open |
 | VM-014 | Retry/hollow benchmark fixture and CI perf gate | Perf | 3 | 4 | 12 | partial |
 | VM-049 | Public-contract freeze checklist for 1.0 | Arch | 3 | 4 | 12 | open |
 | A8 | Presets embedded in profiles | Feature | 5 | 2 | 10 | partial |
@@ -85,6 +84,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | G12 | Layer viewer: pixel inspection, A/B layer diff | Feature | 3 | 3 | 9 | partial |
 | H4 | SDCP upload and print-control acceptance | Feature | 3 | 3 | 9 | open (hardware) |
 | I1 | Persist and replay analysis artifacts | Feature | 3 | 3 | 9 | open |
+| VM-013 | Spatial index for routed-capsule collision checks | Perf | 3 | 3 | 9 | open |
 | VM-016 | Keep VTK actors and update their input | Perf | 3 | 3 | 9 | open |
 | VM-017 | Optional single-raster fast path for `slice` | Perf | 3 | 3 | 9 | open |
 | VM-018 | Persist the rasterizer Z-interval structure across passes (F3) | Perf | 3 | 3 | 9 | open |
@@ -129,7 +129,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | F7 | GPU orientation search (CPU fallback mandatory) | Feature | 2 | 2 | 4 | open |
 | VM-027 | x86-64-v3 kernels with runtime dispatch | Perf | 2 | 2 | 4 | open |
 | B1 | Encrypted CTB writer | Feature | 1 | 4 | 4 | deferred (decision) |
-| VM-015 | Incremental island-guard passes | Perf | 1 | 4 | 4 | open |
+| VM-015 | Incremental island-guard passes | Perf | 1 | 4 | 4 | partial |
 | VM-042 | Split `gui/window.py` (3,874 lines) into controllers | Arch | 1 | 4 | 4 | open |
 | A9 | Import CHITUBOX / Lychee profiles | Feature | 3 | 1 | 3 | open |
 | C11 | Text / serial embossing | Feature | 3 | 1 | 3 | open |
@@ -216,13 +216,15 @@ Ease 4 · Benefit 1 · Confidence: sure · Status: won't fix (measured)
 
 ### VM-013 — Spatial index for routed-capsule collision checks
 
-Ease 3 · Benefit 4 · Confidence: sure · Status: open
+Ease 3 · Benefit 3 · Confidence: sure · Status: open
 
 **Problem.** `_hits_occupied` scans every previously routed capsule for each candidate route, so `route_contacts` is O(k²) in contacts, and the island guard repeats it for each pass. Plates with thousands of contacts will be dominated by this.
 
 **Fix.** Keep a uniform XY bucket grid (cell ≈ 2 × max pillar radius + clearance) of capsule AABBs on `ColumnField`, and test only the capsules in overlapping cells. Vectorize the five sample points per capsule pair with NumPy. Benchmark on `pin_array` and a dense plate first.
 
 **Where.** `src/voxelmill/supports.py:423-455`
+
+**Measured (2026-09-23).** On pin_array (about 440 support parts, 4 passes), `_hits_occupied` is 0.32 s of about 7 s single-threaded. The union (2.5 s) and bracing (2.0 s) dominate. It grows with contacts squared, so build this when a plate with thousands of contacts is benchmarked, not before.
 
 ### VM-014 — Retry/hollow benchmark fixture and CI perf gate
 
@@ -238,13 +240,15 @@ Ease 3 · Benefit 4 · Confidence: sure · Status: partial
 
 ### VM-015 — Incremental island-guard passes
 
-Ease 1 · Benefit 4 · Confidence: sure · Status: open
+Ease 1 · Benefit 4 · Confidence: sure · Status: partial
 
 **Problem.** Each island-guard pass re-runs `replan` over all contacts (full routing) and a full Manifold `assemble` of every support solid. Only the raster scan is cropped. On plates that retry, this is passes × (routing + boolean union). `point not in extra` is also a list scan.
 
 **Fix.** Route only the new contacts against the existing `ColumnField`/occupied capsules, then union the new solids onto the previous union, or keep supports as a separate raster group, which the grouped raster path already supports. Use a set for `extra`. Depends on VM-013 and VM-014.
 
 **Where.** `src/voxelmill/island_guard.py:122-203`, `src/voxelmill/pipeline.py:458-464`
+
+**Progress (2026-09-23).** Search passes now build the grouped raster assembly only (`assemble(exact=False)`), and the exact union is built once, for the plan that is returned. The island scan never read the solid. On pin_array (4 passes) this took the run from 5.63 to 4.82 s, with byte-identical output STLs and identical island results. Still open: routing itself is redone from scratch every pass.
 
 ### VM-029 — Island scan grows faster than the geometry braces add
 

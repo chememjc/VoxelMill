@@ -124,8 +124,13 @@ class Assembly:
                            severity='warning', details=self.report)]
 
 
-def assemble(model, support_solids, raft, *, budget=None, cancel=None):
-    """Try the exact union; otherwise OR model and trusted generated occupancy."""
+def assemble(model, support_solids, raft, *, budget=None, cancel=None, exact=True):
+    """Try the exact union; otherwise OR model and trusted generated occupancy.
+
+    ``exact=False`` skips the boolean union and returns the grouped raster
+    assembly only. The island scan reads nothing but the groups, so a search
+    pass that is not the final answer need not pay for the union.
+    """
     import manifold3d as m
     cancel = cancel or CancellationToken()
     budget = budget or ResourceBudget(**model.settings['resources'])
@@ -141,7 +146,7 @@ def assemble(model, support_solids, raft, *, budget=None, cancel=None):
                                 np.concatenate([geometry.manifold_triangles(s) for s in generated]).astype(np.float32),
                                 'closed_positive'))
     solid, blocked = None, list(model.blocked_by)
-    if model.solid is not None:
+    if model.solid is not None and exact:
         try:
             solid = m.Manifold.batch_boolean([model.solid, *generated], m.OpType.Add)
         except ValueError as error:
@@ -150,7 +155,7 @@ def assemble(model, support_solids, raft, *, budget=None, cancel=None):
         if solid is not None and (solid.status() != m.Error.NoError or solid.is_empty()):
             blocked.append({'code': 'union_failed', 'manifold_status': str(solid.status())})
             solid = None
-    if solid is None and model.settings['assembly']['union'] == 'exact':
+    if exact and solid is None and model.settings['assembly']['union'] == 'exact':
         raise VoxelMillError('exact_union_unavailable', 'Exact boolean union is unavailable', {'findings': blocked})
     support_fill = None
     if model.settings['repair'].get('support_void_policy') == 'fill':

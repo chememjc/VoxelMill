@@ -144,7 +144,9 @@ def route_without_islands(model, settings, *, replan, budget=None, cancel=None,
     for attempt in range(1, max_passes + 1):
         cancel.check()
         plan, raft = replan(extra)
-        union = assemble(model, plan.solids, raft, budget=budget, cancel=cancel)
+        # Scans read only the raster groups; the exact union is built once,
+        # below, for the plan that is actually returned.
+        union = assemble(model, plan.solids, raft, budget=budget, cancel=cancel, exact=False)
         bounds = np.asarray(union.bounds, dtype=float).reshape(2, 3)
         layer_count = max(0, math.ceil(bounds[1][2] / layer_height))
         window = (None, None)
@@ -189,6 +191,8 @@ def route_without_islands(model, settings, *, replan, budget=None, cancel=None,
         confirm['stopped'] = 'confirmation'
         passes.append(confirm)
         record = confirm
+    if plan is not None:
+        union = assemble(model, plan.solids, raft, budget=budget, cancel=cancel)
     remaining = int(record['islands']) if record is not None else 0
     return {
         'plan': plan,

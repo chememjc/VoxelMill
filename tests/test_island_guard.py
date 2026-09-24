@@ -101,6 +101,23 @@ def test_a_floating_slab_gains_a_contact_and_the_last_word_is_a_full_scan():
     assert result['passes'][-1]['confirms_pass'] == result['passes'][-2]['pass']
 
 
+def test_only_the_returned_plan_pays_for_an_exact_union(monkeypatch):
+    """Scans read the raster groups alone, so search passes skip the boolean."""
+    import voxelmill.island_guard as guard
+    calls = []
+
+    def counting(*args, **kwargs):
+        calls.append(kwargs.get('exact', True))
+        return assemble(*args, **kwargs)
+
+    monkeypatch.setattr(guard, 'assemble', counting)
+    s = settings()
+    result = route_without_islands(floating_disc_model(s), s, replan=pillar_replan(), max_passes=4)
+    assert len(result['passes']) > 1
+    assert calls.count(True) == 1 and calls[-1] is True
+    assert result['union'].solid is not None
+
+
 def test_max_passes_defaults_to_the_configured_limit():
     s = settings(support={'max_island_passes': 3})
     model = prepare_model(triangles(block((4, 4, 4), (-2, -2, 0))), s)
