@@ -89,7 +89,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-017 | Optional single-raster fast path for `slice` | Perf | 3 | 3 | 9 | open |
 | VM-018 | Persist the rasterizer Z-interval structure across passes (F3) | Perf | 3 | 3 | 9 | open |
 | VM-019 | Scale check at 12K–16K panels | Perf | 3 | 3 | 9 | open |
-| VM-029 | Island scan grows faster than the geometry braces add | Perf | 3 | 3 | 9 | open |
+| VM-029 | Island scan grows faster than the geometry braces add | Perf | 3 | 3 | 9 | explained (not a defect) |
 | VM-044 | Output-format registry | Arch | 3 | 3 | 9 | open |
 | VM-081 | Test the Apple Silicon build | Release | 3 | 3 | 9 | open |
 | G8 | Keyboard shortcut editor (theme shipped) | Feature | 4 | 2 | 8 | partial |
@@ -252,13 +252,15 @@ Ease 1 · Benefit 4 · Confidence: sure · Status: partial
 
 ### VM-029 — Island scan grows faster than the geometry braces add
 
-Ease 3 · Benefit 3 · Confidence: sure · Status: open
+Ease 3 · Benefit 3 · Confidence: sure · Status: explained (not a defect)
 
 **Problem.** The bracket headline drifted from 3.15 s to 4.25 s (+35 %) with no ledger entry. Bisecting the 43 commits after `78cb860` pins the whole step on `ad1186c` (default grounded bracing, 0.5.3). With `support.auto_bracing=false`, HEAD is back to 3.23 s. Bracing adds 21 % triangles (76.8k → 93.3k) yet island_guard time rises 62 % (1.08 → 1.75 s) and reslice 22 %. Something in the scan scales with brace shape, not with triangle count: long diagonal members crossing many layers, or more components per layer for the labelers and the void forest.
 
 **Fix.** Profile `scan_assembly_islands` with and without bracing (per-thread cProfile, as in `docs/performance.md`), then act on what it shows. Candidates include the rasterizer's active-set cost for long diagonals (VM-018) and per-layer component counts. Keep `docs/performance.md` rows current so drift like this shows up the day it happens.
 
 **Where.** `src/voxelmill/island_guard.py`, `src/voxelmill/validation.py`, `native/raster.cpp`
+
+**Finding (2026-09-23).** The scan grows with the raster crop's area, not with triangle count. On the bracket, a brace lands on the plate about 17.7 mm beyond the part's +X edge, so the assembly bounds, and every layer's crop, widen from 2514 to 3497 px (+39 %). The dense per-layer passes (`occupancy_mask`, `extract_runs`, the growth EDT) grow by the same 35–46 % in a single-threaded profile diff. Nothing is wrong. The lever is making dense passes proportional to occupied pixels rather than to the crop, the way VM-030 did for slicing. That is part of VM-019's 16K scale work.
 
 ### VM-030 — Slicing cost scaled with the LCD panel, not the part
 

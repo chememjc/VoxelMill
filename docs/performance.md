@@ -179,6 +179,8 @@ shape that actually retries or hollows before spending effort on them.
   eight, with output bit-identical to scipy at every worker count.
   `_native.HAS_TBB` says which build is loaded.
 
+- **Per-layer validation cost follows the crop's area, not the triangle count.** The crop is the whole assembly's bounding box, so one outlying brace or foot widens every layer. Default bracing widened the bracket's crop by 39 % and cost 35–46 % in each dense pass (VM-029). When a change moves the headline, compare `reopened.grid` before blaming the geometry code.
+
 ## Retired ideas (measured, do not redo)
 
 - **Layer-parallel `tbb::parallel_for` over validation.** The pool is limited by
