@@ -17,7 +17,7 @@ here. Keep this file under a screen.
 
 ## In flight
 
-v0.6.0 beta release. Code work is committed and pushed through f3f129b. Next: documentation audit, version bump and release notes, `gh workflow run release -f platforms=mac+windows`, verification on the Intel iMac and the Win11 VM, then ask the user before tagging.
+v0.6.0 beta: everything is committed and pushed, CI and the mac+windows release run are green, and the iMac, Win11 and local AppImage checks passed (`reports/releases/v0.6.0.md`). Next: the user's go-ahead, then `git tag v0.6.0 && git push origin v0.6.0`; after the tag run, download the four published assets, re-test them, and add a "Published release" table to the record.
 
 Done for the beta: VM-095, VM-090, VM-094, VM-091, VM-092, VM-093, VM-081, A7, G2, G3 (beta scope), G8, G12 pixel inspection.
 
