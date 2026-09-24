@@ -89,8 +89,8 @@ cmake -S . -B build/appimage-cpu -G Ninja \
 cmake --build build/appimage-cpu -j2
 
 APPIMAGE_EXTRACT_AND_RUN=1 .venv/bin/python scripts/build_appimage.py \
-  --appdir output/appimage-054/VoxelMill.AppDir \
-  --output output/appimage-054/VoxelMill-0.5.4-linux-x86_64.AppImage \
+  --appdir output/appimage-055/VoxelMill.AppDir \
+  --output output/appimage-055/VoxelMill-0.5.5-linux-x86_64.AppImage \
   --tool packaging/appimage/appimagetool \
   --native-extension build/appimage-cpu/_native.cpython-310-x86_64-linux-gnu.so
 ```
@@ -109,23 +109,23 @@ outside a restricted execution sandbox:
 
 ```sh
 .venv/bin/python scripts/appimage_acceptance.py \
-  output/appimage-054/VoxelMill-0.5.4-linux-x86_64.AppImage \
-  --output-dir output/appimage-054/acceptance-final \
-  --expected-version 0.5.4 --support-options
+  output/appimage-055/VoxelMill-0.5.5-linux-x86_64.AppImage \
+  --output-dir output/appimage-055/acceptance-final \
+  --expected-version 0.5.5 --support-options
 ```
 
 For an artifact downloaded from the tagged release, use a new evidence
 directory and record the workflow run that produced it:
 
 ```sh
-mkdir -p /tmp/voxelmill-v0.5.4
-gh release download v0.5.4 \
-  --pattern 'VoxelMill-0.5.4-linux-x86_64.AppImage' \
-  --dir /tmp/voxelmill-v0.5.4
+mkdir -p /tmp/voxelmill-v0.5.5
+gh release download v0.5.5 \
+  --pattern 'VoxelMill-0.5.5-linux-x86_64.AppImage' \
+  --dir /tmp/voxelmill-v0.5.5
 .venv/bin/python scripts/appimage_acceptance.py \
-  /tmp/voxelmill-v0.5.4/VoxelMill-0.5.4-linux-x86_64.AppImage \
-  --output-dir output/appimage-054/published-acceptance \
-  --expected-version 0.5.4 --support-options \
+  /tmp/voxelmill-v0.5.5/VoxelMill-0.5.5-linux-x86_64.AppImage \
+  --output-dir output/appimage-055/published-acceptance \
+  --expected-version 0.5.5 --support-options \
   --workflow-url https://github.com/OWNER/REPOSITORY/actions/runs/RUN_ID
 ```
 

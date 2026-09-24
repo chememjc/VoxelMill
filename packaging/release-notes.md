@@ -1,28 +1,29 @@
 Alpha {version}: portable Linux / macOS / Windows builds. Unsigned.
 
-## Configurable supports
+## Fixes
 
-- A dedicated **Bracing** tab exposes vertical spacing, support-to-support reach, maximum branch length, and diameter. Common controls are also visible in Simple Setup.
-- Choose **Supports only**, **Base only**, or **Supports or base** destinations. Adjust density from 1–8 connections per node, branch angle, minimum origin height, and fan rotation.
-- Select single diagonals, alternating diagonals, or X bracing. X pairs require reciprocal vertical shaft spans and share a junction at their crossing.
-- Use **Show part-to-part supports** to demonstrate model anchors in a clear lower/upper model-gap example. The action explicitly enables model anchors and sets avoidance to zero in the editor draft.
-- Angled and tree shafts now join conical tip bases continuously, closing the visible notch beneath the tip.
-- A new **Showcase** example puts every support kind in one picture: a plate route, a branch around a blocker, a model anchor, a thin model pillar, a supported island, and the brace network. It forces the six settings those routes need and lists them under the picture, so nothing has to be found first. Part-to-part anchor fields and thin-pillar fields are now separate tabs, since thin pillars in middle mode apply to every pillar, not only to part-to-part routes.
+- **Editor outlines under generic OpenGL.** The build-volume wireframe and the navigation cube outlines now draw in virtual machines and on systems without 3D acceleration (Windows guests under VirtualBox showed only the green front edge before).
+- **Hex infill** (`hollow.infill = "hex"`) no longer crashes when hollowing.
+- **Wall-thickness analysis** no longer refines its voxel grid past the memory budget on thin thresholds.
+- **Editor responsiveness:** background jobs run in parallel again when `resources.workers` is automatic (the default), instead of queueing one at a time. Superseded placement scratch files are removed instead of accumulating in the temporary directory.
+- **Windows core detection** now reads performance and efficiency cores correctly; it previously always fell back to treating every core alike.
+- **Editor settings match validation:** the `assembly.union`, `hollow.mode` and `hollow.infill` dropdowns offer exactly the accepted values (`hex` infill was missing; `raster` and `outer` were offered but refused), and numeric controls no longer allow values that validation rejects.
+- The part-to-part support example now says why it routes nothing while part-to-part supports are off.
 
-## Editor navigation and clarity
+## Performance
 
-- The navigation cube's twelve 45° sides are now clickable, so all 26 facets it draws select a view. Only facet perimeters are outlined; the lines that used to cross every face are gone.
-- The orbit arrows step **45°**, matching the sides the cube shows, and sit close to the cube instead of far out from it. Two new chevrons on the top row roll the view 45° left or right in its own plane.
-- Every option carries hover text explaining what it does, from one shared table both the Setup rows and the dedicated editors read. Previously the part-to-part and thin-pillar fields had no explanation in either place. The **hover text delay** is adjustable in Configuration → Preferences (default 1000 ms) and applies immediately.
-- The Report tab lists every report field as Parameter / Value rows with collapsible groups, instead of a raw JSON dump. Right-click still gives **Copy report as JSON**; the payload is unchanged.
-- `gui --screenshot PNG` writes an image of the window, 3D view included. It captures the app's own window, so it needs no screen-recording permission and works over SSH on every platform.
-- Fixed: a leftover autosave made every unattended launch stop on a recovery prompt nobody could answer. That prompt now skips when the wizard does, and the autosave is left in place for the next interactive start.
+- **Slicing** works from the part's footprint instead of the whole LCD panel for every layer. Written layers are byte-identical to 0.5.4. On a small part at 9K: 24.6 s → 1.3 s; with a mirrored printer 37.7 s → 1.6 s; with 4-level antialiasing 151 s → 13 s.
+- **Large parts on 16K panels:** a plate-filling part prepares in 36 s instead of 96 s and slices in 34 s instead of 46 s. Drainage bottleneck checks share work across chambers, and support routing indexes placed shafts spatially.
+- Native kernels stay multithreaded in builds without oneTBB (the drainage distance transform ran on one core in 0.5.4 portables).
+- The island search no longer builds a full boolean union on every pass, contour and boundary support sampling is vectorized, and the viewport computes its out-of-bounds coloring once per update.
 
-The CLI, presets, projects, and routing reports preserve these options. Main pillars remain; default brace spacing is 15 mm, maximum complete length is 30 mm, and angle is 45°. Model parts never anchor braces. Branch thickness, clearance, build boundaries, complete base footprints, cancellation, and candidate limits remain checked.
+## Command-line changes
 
-Linux verification includes the full test suite, prepared-mesh and decoded-layer connectivity checks, and actual-render AppImage acceptance. A few tests require unavailable reference files, FreeCAD, or shells. Support struts are checked for reaching what they were routed to by unioning the router's own solids and requiring a single connected component. Physical print strength has not been validated.
+- `voxelmill info FILE` reads GOO and classic CTB v3 files; `goo-info` and `ctb-info` remain as aliases.
+- A command line that cannot be parsed now exits with status **64**; 2 keeps meaning "the command ran and validation failed". `thickness` no longer returns an undocumented 1.
+- What will stay stable from 1.0 on is written down in `docs/stability.md`.
 
-This is an alpha. The GUI editor, CLI (`prepare`, `slice`, …), and CPU-only native kernels are bundled. CUDA is not. Qt is used via PySide6 under LGPL v3; see `licenses/THIRD-PARTY.md`.
+This is an alpha. The GUI editor, CLI (`prepare`, `slice`, …), and CPU-only native kernels are bundled. CUDA is not. Qt is used via PySide6 under LGPL v3; see `licenses/THIRD-PARTY.md`. Physical print strength has not been validated.
 
 ## Install
 
