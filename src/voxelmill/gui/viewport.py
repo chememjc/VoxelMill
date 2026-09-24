@@ -115,7 +115,8 @@ def paint_face_colors(triangles, paint, radius, base_color):
     return colors
 
 
-def polydata_from_triangles(triangles, settings=None, base_color=None, face_colors=None):
+def polydata_from_triangles(triangles, settings=None, base_color=None, face_colors=None,
+                            outside=None):
     """Triangle soup as VTK geometry, optionally flagged against the envelope.
 
     Geometry is one three-point cell per triangle with unshared vertices, so
@@ -124,6 +125,9 @@ def polydata_from_triangles(triangles, settings=None, base_color=None, face_colo
     support contact on the actor whose ``role`` is ``'model'``, and splitting
     out-of-bounds triangles into their own actor would silently stop supports
     being placed on them.
+
+    ``outside`` is an already computed :func:`out_of_bounds_mask` for these
+    triangles; it is derived from ``settings`` when not given.
     """
     triangles = np.ascontiguousarray(triangles, dtype=np.float32).reshape(-1, 3, 3)
     points = triangles.reshape(-1, 3)
@@ -139,7 +143,8 @@ def polydata_from_triangles(triangles, settings=None, base_color=None, face_colo
                   numpy_support.numpy_to_vtkIdTypeArray(connectivity, deep=True))
     data.SetPolys(array)
     if settings is not None or face_colors is not None:
-        outside = out_of_bounds_mask(triangles, settings) if settings is not None else None
+        if outside is None and settings is not None:
+            outside = out_of_bounds_mask(triangles, settings)
         if face_colors is None:
             base = tuple(int(round(255 * c)) for c in (base_color or (0.78, 0.79, 0.82)))
             colors = np.empty((count, 3), dtype=np.uint8)
@@ -736,14 +741,15 @@ class Scene:
         if role == 'model' and paint:
             radius = float((settings or {}).get('support', {}).get('spacing_mm', 3.0)) / 2
             face_colors = paint_face_colors(triangles, paint, radius, color)
+        outside = out_of_bounds_mask(triangles, settings) if settings is not None else None
         mapper = vtk.vtkPolyDataMapper()
-        mapper.SetInputData(polydata_from_triangles(triangles, settings, color, face_colors))
+        mapper.SetInputData(polydata_from_triangles(triangles, settings, color, face_colors,
+                                                    outside=outside))
         if settings is not None or face_colors is not None:
             mapper.SetScalarModeToUseCellData()
             mapper.SetColorModeToDirectScalars()
-            if settings is not None:
-                self.out_of_bounds[key] = int(np.count_nonzero(
-                    out_of_bounds_mask(triangles, settings)))
+            if outside is not None:
+                self.out_of_bounds[key] = int(np.count_nonzero(outside))
         actor = vtk.vtkActor()
         actor.SetMapper(mapper)
         actor.GetProperty().SetColor(*color)

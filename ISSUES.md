@@ -85,7 +85,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | H4 | SDCP upload and print-control acceptance | Feature | 3 | 3 | 9 | open (hardware) |
 | I1 | Persist and replay analysis artifacts | Feature | 3 | 3 | 9 | open |
 | VM-013 | Spatial index for routed-capsule collision checks | Perf | 3 | 3 | 9 | done |
-| VM-016 | Keep VTK actors and update their input | Perf | 3 | 3 | 9 | open |
+| VM-016 | Keep VTK actors and update their input | Perf | 3 | 3 | 9 | done |
 | VM-017 | Optional single-raster fast path for `slice` | Perf | 3 | 3 | 9 | open |
 | VM-018 | Persist the rasterizer Z-interval structure across passes (F3) | Perf | 3 | 3 | 9 | open |
 | VM-019 | Scale check at 12K–16K panels | Perf | 3 | 3 | 9 | done |
@@ -276,13 +276,15 @@ Ease 3 · Benefit 5 · Confidence: sure · Status: done
 
 ### VM-016 — Keep VTK actors and update their input
 
-Ease 3 · Benefit 3 · Confidence: likely · Status: open
+Ease 3 · Benefit 3 · Confidence: likely · Status: done
 
 **Problem.** `Scene.set_mesh` tears down and rebuilds mapper, actor and polydata (deep-copying through `numpy_to_vtk`) on the UI thread after every model, support or attachment job. It also runs `out_of_bounds_mask` over the full array before decimation. Near the 1.5M-triangle display cap this causes visible stalls after each edit.
 
 **Fix.** Reuse the actor and mapper per key and swap `SetInputData`. Build the polydata in the worker job (pure VTK data objects are thread-safe to construct). Decimate before computing the mask.
 
 **Where.** `src/voxelmill/gui/viewport.py:712-755`, `src/voxelmill/gui/window.py:3186-3229`
+
+**Measured and done (2026-09-23).** At the 1.5M-triangle display cap, `set_mesh` took 160 ms. Actor and mapper creation is negligible, and decimation already happens before the mask, so the audit's premise was wrong. The measurable waste was `out_of_bounds_mask` computed twice, once for the colors and again for the count (59 ms each). It is now computed once and passed to `polydata_from_triangles`: 161 → 99 ms per update.
 
 ### VM-017 — Optional single-raster fast path for `slice`
 
