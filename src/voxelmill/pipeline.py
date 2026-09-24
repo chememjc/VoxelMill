@@ -754,7 +754,10 @@ def _collision_audit(run):
     """
     from .collisions import support_model_intrusion, support_overlaps
     validation, plan = run.validation, run.plan
-    if run.part_meshes:
+    if run.part_meshes and not run.settings['hollow']['enabled']:
+        # Per part, for attribution. Hollowing runs after the parts are
+        # merged, so a hollowed plate is only checked as the finished solid;
+        # the placed meshes still hold the material hollowing removed.
         parts = []
         for mesh in run.part_meshes:
             try:

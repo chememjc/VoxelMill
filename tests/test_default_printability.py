@@ -158,3 +158,13 @@ def test_intrusion_separates_tips_from_shafts_through_a_part():
     assert result['expected_pieces'] == 1
     assert result['intrusions'] == 1
     assert result['worst']['center_mm'][0] == pytest.approx(-3, abs=0.7)
+
+
+@pytest.mark.parametrize('name', ('overhang_bracket', 'pin_array', 'torus'))
+def test_tree_supports_never_collide(name):
+    report = prepare(SHAPES / f'{name}.stl',
+                     resolve_settings(overrides={'support': {'tree_supports': True}}))
+    audit = report['validation']['metrics']['support_collisions']
+    assert audit['intrusions'] == 0, audit['worst']
+    assert audit['support_overlaps'] == 0, audit['support_overlap_examples']
+    assert report['validation']['passed']

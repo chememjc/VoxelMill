@@ -1358,6 +1358,9 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                                       'middle_z': middle_z, 'order': order,
                                       'tip_radius': min(tip_base_r, contact_r),
                                       'tip_span': float(z + penetration - base_z)})
+                    # Reserve the vertical: it is what a tree falls back to,
+                    # and later routes must not be woven through it.
+                    _mark_occupied(field, (x, y, middle_z), (x, y, base_z), run_r)
                 else:
                     solids.append(cylinder_between((x, y, middle_z), (x, y, base_z), run_r))
                     _mark_occupied(field, (x, y, middle_z), (x, y, base_z), run_r)
@@ -1523,6 +1526,30 @@ def _emit_tree_supports(jobs, solids, pillars, feet, foot_radii, field, settings
     contacts_in_trees = 0
     clearance_mm = float(support['support_clearance_mm'])
     branch_tangent = math.tan(math.radians(float(support['pillar_angle_deg'])))
+    # Shafts a new tree must not touch: every other contact's vertical run
+    # (routing already cleared those against each other) and the trees
+    # accepted so far. A tree is new geometry the router never saw.
+    verticals = [((job['x'], job['y'], 0.0), (job['x'], job['y'], job['base_z']), job['run_r'])
+                 for job in jobs]
+    accepted = []
+
+    def tree_hits(segments, members):
+        others = [capsule for index, capsule in enumerate(verticals) if index not in members]
+        others += accepted
+        if not others:
+            return False
+        low = np.array([capsule[0] for capsule in others], dtype=float)
+        high = np.array([capsule[1] for capsule in others], dtype=float)
+        radii = np.array([capsule[2] for capsule in others], dtype=float)
+        for start, end, r in segments:
+            count = len(others)
+            gaps = segment_distances(np.broadcast_to(np.asarray(start, dtype=float), (count, 3)),
+                                     np.broadcast_to(np.asarray(end, dtype=float), (count, 3)),
+                                     low, high)
+            if np.any(gaps < radii + r - 1e-9):
+                return True
+        return False
+
     for members in clusters:
         group = [jobs[i] for i in members]
         if len(group) < 2:
@@ -1551,6 +1578,14 @@ def _emit_tree_supports(jobs, solids, pillars, feet, foot_radii, field, settings
                                     job['run_r'], clearance_mm, cancel):
                     branches_clear = False
                     break
+        if branches_clear:
+            tree_segments = [((tx, ty, 0.0), (tx, ty, trunk_top), run_r)] + [
+                ((tx, ty, trunk_top), (job['x'], job['y'], job['base_z']), job['run_r'])
+                for job in group]
+            if tree_hits(tree_segments, set(members)):
+                branches_clear = False
+            else:
+                accepted.extend(tree_segments)
         if not branches_clear:
             for job in group:
                 solids.append(cylinder_between((job['x'], job['y'], job['middle_z']),

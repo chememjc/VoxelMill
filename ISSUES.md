@@ -77,7 +77,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | E7 | TSMC: define, validate and document all 18 motion fields | Feature | 3 | 4 | 12 | partial |
 | VM-014 | Retry/hollow benchmark fixture and CI perf gate | Perf | 3 | 4 | 12 | partial |
 | VM-049 | Public-contract freeze checklist for 1.0 | Arch | 3 | 4 | 12 | partial |
-| VM-094 | Edge-case test matrix | Test/CI | 3 | 4 | 12 | open |
+| VM-094 | Edge-case test matrix | Test/CI | 3 | 4 | 12 | done |
 | A8 | Presets embedded in profiles | Feature | 5 | 2 | 10 | partial |
 | VM-023 | Cheap boolean pre-checks for added models | Perf | 5 | 2 | 10 | done |
 | VM-064 | Goldens for the invalid-mesh fixtures | Test/CI | 5 | 2 | 10 | done |
@@ -803,7 +803,7 @@ slices and verifies it, on every target including the arm64 runner.
 
 ### VM-094 — Edge-case test matrix
 
-Ease 3 · Benefit 4 · Confidence: sure · Status: open
+Ease 3 · Benefit 4 · Confidence: sure · Status: done
 
 **Problem.** Multi-part plates, branching supports between adjacent parts, the settings-schema bounds,
 degenerate meshes, determinism and output-format round trips have no dedicated coverage, so regressions
@@ -818,6 +818,14 @@ prepare or a structured error, never a traceback; determinism (same plate twice 
 part order doesn't change the support graph beyond relabeling); mirrored/AA slice and CTB round trips.
 
 **Where.** `tests/test_multipart_plates.py`, `scripts/make_test_shapes.py`
+
+**Done (2026-09-24).** `tests/test_multipart_plates.py` has 10 plate scenarios: adjacent, tree, overhanging,
+touching, per-part overrides, hollow plus solid, rotated or out of bounds, determinism, and three in a
+row. `tests/test_edge_cases.py` has 27 cases: a flush part, a part taller than the printer, a
+sub-layer feature, the range walk of every support field, mirrored AA slices and a CTB round trip.
+They found two bugs, both fixed. In tree mode a candidate's vertical was never reserved, and trunks
+were never checked against other shafts, so pillars overlapped (9 on the bracket). The collision audit
+checked a hollowed multi-part plate against the parts as they were before hollowing.
 
 ### VM-095 — Default settings fail validation on simple shapes
 
