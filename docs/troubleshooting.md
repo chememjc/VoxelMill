@@ -198,9 +198,12 @@ Look at `bottleneck_examples`. Volumes in the hundredths of a cubic millimeter
 with roughly 0.67 mm² of clearance are tip/model crevices (or, on dense real
 parts, base-dependent pockets), not a defect in the solid model alone. Options:
 
-- `--support-void-policy ignore` — records support-class bottlenecks under
-  `ignored_support_bottlenecks` and does not fail that check; model-class
-  findings still fail.
+- `--support-void-policy ignore` (the default) — records support-class
+  bottlenecks under `ignored_support_bottlenecks` and does not fail that check;
+  model-class findings still fail. `validate`, `slice` and `verify` cannot
+  classify a single file, so under this policy they warn
+  (`unattributed_drainage_bottleneck`) unless a sealed chamber is larger than
+  one drainage-grid cell.
 - Change tip geometry — on the synthetic sphere, `contact_diameter_mm=0.9` or
   `tip_base_diameter_mm=0.4` (equal to contact, no taper) closed the crevice;
   longer tips were not proven.

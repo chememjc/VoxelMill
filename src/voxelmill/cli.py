@@ -980,9 +980,9 @@ def build_parser():
     common.add_argument('--boundary-supports', action=argparse.BooleanOptionalAction, default=None,
                         help='also sample open mesh boundary edges (crop cuts); closed solids add none')
     common.add_argument('--support-void-policy', choices=SUPPORT_VOID_POLICIES,
-                        help='fail (default) keeps support-generated voids as export failures; '
-                             'ignore drops support-class voids only; fill seals enclosed support '
-                             'shells on the exact path')
+                        help='ignore (default) reports support-class voids as warnings while '
+                             'model cavities still fail; fail keeps every enclosed void as an export '
+                             'failure; fill seals enclosed support shells on the exact path')
     common.add_argument('--peel-analysis', dest='peel_analysis', action=argparse.BooleanOptionalAction,
                         default=None, help='enable advisory peel analysis (uncalibrated thresholds)')
     common.add_argument('--min-orifice-area-mm2', type=float,
@@ -1081,9 +1081,10 @@ def build_parser():
     prep.add_argument('--add-model', action='append', metavar='PATH',
                       help='additional STL on the same plate; refuse only if the model solids intersect, '
                            'not if support envelopes overlap. Repeatable.')
-    prep.add_argument('--add-model-spec', action='append', metavar='JSON',
-                      help='JSON object or array for added models, with path, rotate [RX,RY,RZ], '
-                           'center_offset [X,Y], lift_mm, scale [X,Y,Z], and mirror [X,Y,Z]. Repeatable.')
+    prep.add_argument('--add-model-spec', action='append', metavar='JSON_FILE',
+                      help='JSON file holding an object or array for added models, with path, '
+                           'rotate [RX,RY,RZ], center_offset [X,Y], lift_mm, scale [X,Y,Z], and '
+                           'mirror [X,Y,Z]. Repeatable.')
     prep.add_argument('--removed-contacts', help='JSON array of suppressed automatic contact positions, as in the editor')
     prep.add_argument('--components', action='store_true', help='also write model/support/raft STLs')
     prep.add_argument('--project', help='write a .voxmil project archive')

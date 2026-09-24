@@ -1114,6 +1114,65 @@ def apply_support_void_policy(report, settings):
     return report
 
 
+def soften_unattributed_voids(report, settings):
+    """Apply a lenient ``support_void_policy`` where the findings cannot be attributed.
+
+    ``prepare`` knows which solid is support and classifies each void and
+    drainage neck (:func:`apply_support_void_policy`). One STL, GOO or CTB
+    carries no such record, so ``validate``, ``slice`` and ``verify`` used to
+    fail an export ``prepare`` had just passed, on single-voxel crevices
+    under its own support tips. Under ``ignore`` or ``fill`` they now warn
+    instead, but only where the finding cannot be a model cavity: enclosed
+    voids whose largest component is no bigger than a sphere of the support
+    contact diameter, and drainage findings whose sealed chambers, if any, are
+    each a single analysis cell. A hollow part without a drain still fails.
+    ``fail`` changes nothing.
+    """
+    policy = settings['repair'].get('support_void_policy', 'fail')
+    if policy == 'fail':
+        return report
+    voids = report.metrics.get('enclosed_voids')
+    if report.checks.get('enclosed_voids') == 'fail' and voids and not voids.get('classified'):
+        largest = max((float(item['volume_mm3']) for item in voids.get('examples') or ()), default=0.0)
+        diameter = float(settings['support']['contact_diameter_mm'])
+        bound = math.pi / 6 * diameter ** 3
+        if largest <= bound:
+            report.checks['enclosed_voids'] = 'warn'
+            report.diagnostics = [d for d in report.diagnostics if d.code != 'enclosed_voids']
+            report.diagnostics.append(Diagnostic(
+                'unattributed_enclosed_voids',
+                'Enclosed voids were found, each no larger than a support contact, but a single '
+                'file cannot say whether supports or the model form them; rerun with '
+                'repair.support_void_policy=fail to treat them as failures',
+                severity='warning',
+                details={'policy': policy, 'count': voids.get('count'),
+                         'volume_mm3': voids.get('volume_mm3'), 'largest_mm3': largest,
+                         'contact_sphere_mm3': bound}))
+    drain = report.metrics.get('drainage')
+    # Every sealed chamber holds at least one analysis cell, so a total of one
+    # cell per chamber proves each is a single cell: a crevice at the drainage
+    # grid's resolution, never a designed cavity.
+    sealed = int(drain.get('enclosed_components') or 0) if drain else 0
+    cell = float(drain.get('analysis_pitch_mm') or 0.0) ** 3 if drain else 0.0
+    single_cells = not sealed or (
+        cell > 0 and float(drain.get('enclosed_volume_mm3') or 0.0) <= sealed * cell * (1 + 1e-6))
+    if (report.checks.get('drainage_bottlenecks') == 'fail' and drain and not drain.get('classified')
+            and single_cells):
+        report.checks['drainage_bottlenecks'] = 'warn'
+        report.diagnostics = [d for d in report.diagnostics if d.code != 'drainage_bottleneck']
+        report.diagnostics.append(Diagnostic(
+            'unattributed_drainage_bottleneck',
+            'Drainage necks were found but a single file cannot say whether the '
+            'supports or the model form them; rerun with '
+            'repair.support_void_policy=fail to treat them as failures',
+            severity='warning',
+            details={'policy': policy,
+                     'bottlenecked_components': drain.get('bottlenecked_components'),
+                     'bottlenecked_volume_mm3': drain.get('bottlenecked_volume_mm3'),
+                     'single_cell_sealed_chambers': sealed}))
+    return report
+
+
 def _border_ids(labels):
     return np.unique(np.concatenate((labels[0].ravel(), labels[-1].ravel(),
                                     labels[:, 0].ravel(), labels[:, -1].ravel(),

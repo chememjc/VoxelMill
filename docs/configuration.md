@@ -315,10 +315,14 @@ support-class voids and drainage bottlenecks as warnings (under
 `ignored_support_voids` / `ignored_support_bottlenecks`); a hollow model cavity
 still fails. It is the default because the tip/model crevices of an ordinary
 solid part are single-voxel pockets that otherwise withheld the export of a
-plain sphere or cylinder. `fail` fails export on any of them. `validate` sees a
-single STL and cannot attribute a neck to the supports or the model; under
-`ignore` it reports drainage bottlenecks as a warning
-(`unattributed_drainage_bottleneck`), while a sealed chamber still fails. `fill` seals enclosed shells after an exact
+plain sphere or cylinder. `fail` fails export on any of them. `validate`,
+`slice` and `verify` see one STL or slice file and cannot attribute a finding
+to the supports or the model. Under `ignore` or `fill` they warn instead of
+failing where the finding cannot be a model cavity: enclosed voids whose
+largest component is no bigger than a sphere of `support.contact_diameter_mm`
+(`unattributed_enclosed_voids`), and drainage findings whose sealed chambers,
+if any, are each a single drainage-grid cell (`unattributed_drainage_bottleneck`).
+A hollow part without a drain still fails. `fill` seals enclosed shells after an exact
 union and re-validates; on the raster path the fill stage is `not_run` and
 enclosed voids are not claimed as a pass. Fill does not close tip/model
 drainage necks — those need tip geometry (wider contact or less taper), not a

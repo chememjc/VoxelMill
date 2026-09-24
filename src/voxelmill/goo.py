@@ -1194,7 +1194,7 @@ def verify_goo(path, settings, *, cancel=None, budget=None, progress=no_progress
     nothing here can substitute for it.
     """
     from .contracts import ResourceBudget
-    from .validation import analyze_layers
+    from .validation import analyze_layers, soften_unattributed_voids
 
     cancel = cancel or CancellationToken()
     budget = budget or ResourceBudget(**settings['resources'])
@@ -1207,6 +1207,7 @@ def verify_goo(path, settings, *, cancel=None, budget=None, progress=no_progress
                                 crop=crop)
         report = analyze_layers(stream, stream.grid, derived, cancel=cancel, budget=budget,
                                 progress=progress, track_voids=track_voids)
+        soften_unattributed_voids(report, derived)
         report.diagnostics.extend(stream.diagnostics())
         report.metrics['peel_risk'] = {
             'status': 'not_run', 'reason': 'GOO masks do not retain oriented STL surface regions',
@@ -1286,7 +1287,7 @@ def slice_stl(source, output, settings, *, allow_unresolved=False, cancel=None,
     from .contracts import Diagnostic, ResourceBudget
     from .mesh import open_stl
     from .raster import MeshLayerStream
-    from .validation import analyze_drainage, analyze_layers, drainage_check
+    from .validation import analyze_drainage, analyze_layers, drainage_check, soften_unattributed_voids
 
     cancel = cancel or CancellationToken()
     budget = ResourceBudget(**settings['resources'])
@@ -1397,6 +1398,7 @@ def slice_stl(source, output, settings, *, allow_unresolved=False, cancel=None,
                 validation.checks['drainage_bottlenecks'] = 'not_run'
                 validation.diagnostics.append(Diagnostic(
                     'drainage_not_run', str(error), severity='warning', details=error.details))
+            soften_unattributed_voids(validation, settings)
         source_validation = validation.to_dict()
         if not validation.passed and not allow_unresolved:
             return {'schema_version': 1, 'source': asset, 'output': str(output),

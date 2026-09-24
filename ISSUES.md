@@ -1,4 +1,4 @@
-# ISSUES — work before the first stable release
+/# ISSUES — work before the first stable release
 
 The single source of truth for open work: bugs, performance, architecture, tooling, release and the
 feature backlog. It replaces `plan.md`, `plan2.md`, `nextsteps.md` and the task half of `platforms.md`
@@ -131,6 +131,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-070 | Docstrings for the largest undocumented functions | Docs | 5 | 1 | 5 | done |
 | VM-040 | Typed settings model as the single source of truth | Arch | 1 | 5 | 5 | partial |
 | VM-096 | Exact-union exports can hold zero-volume folds | Bug | 2 | 2 | 4 | open |
+| VM-097 | A tip can touch a neighbouring model anchor's foot | Bug | 3 | 2 | 6 | open |
 | VM-012 | Stop re-sampling downward faces for the overhang check | Perf | 4 | 1 | 4 | won't fix (measured) |
 | VM-071 | Section-aware help for repeated field names | Docs | 4 | 1 | 4 | done |
 | VM-084 | Windows topology on real hybrid hardware | Release | 4 | 1 | 4 | open |
@@ -908,6 +909,21 @@ Neither `simplify` nor `set_tolerance` (up to 3 µm) removes them all. Keeping b
 removed the sphere's folds but broke the brace schedule, and was reverted.
 
 **Where.** `src/voxelmill/assembly.py` (`assemble`), `src/voxelmill/supports.py` (`_brace`, tip segments)
+
+### VM-097 — A tip can touch a neighbouring model anchor's foot
+
+Ease 3 · Benefit 2 · Confidence: sure · Status: open
+
+**Problem.** On `floatvalveR7-cover.stl` with defaults, `prepare` warns `support_collisions`: seven
+pairs where a contact tip and the bottom connector of a nearby model-anchored pillar lie 0.22–0.36 mm
+apart, closer than their radii plus clearance, without a graph joint. Both sit on the model surface, so
+the fused material is small, but the audit is right that the graph does not describe it.
+
+**Fix.** When a model anchor is placed, check its bottom connector against existing tips (and a new
+tip against placed anchors) with the same capsule test the collision audit uses, and move or reject
+the anchor.
+
+**Where.** `src/voxelmill/supports.py` (`_model_anchor_candidate`, `route_contacts`)
 
 ## Feature backlog
 

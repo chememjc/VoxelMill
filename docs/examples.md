@@ -105,19 +105,21 @@ lift, one correction pass, `--allow-unresolved` throughout:
 .venv/bin/voxelmill verify output/plan2/nut.goo --report output/plan2/nut-verify.json
 ```
 
-The cover runs the same three commands against `floatvalveR7-cover.stl`. This
-was the first time either part had produced a `.goo`. All three commands exit
-`2` for both parts — see the exit-code table in [cli.md](cli.md): `2` is a
+The cover runs the same three commands against `floatvalveR7-cover.stl`. With
+the current defaults (`repair.support_void_policy="ignore"`, the CHITUBOX
+Light-style bracing and the multi-part collision audit), all three commands
+exit `0` for both parts: every check passes or warns, none fails. A failing
+check would exit `2` — see the exit-code table in [cli.md](cli.md): `2` is a
 result, not a crash, and the report is written whether or not the geometry
 file was. `--allow-unresolved` is what keeps a warned export instead of
 withholding it; without it `slice` writes no file and the report says why.
 
-The nut rasterizes to 355 layers and a 7.4 MiB GOO; `slice` took 43.9 s,
-standalone `verify` 30.2 s over a 1974 x 1933 analysis window. The cover, on
-the exact assembly path, rasterizes to 609 layers and a 30.7 MiB GOO; `slice`
-took 198.4 s, `verify` 159.3 s over a 3338 x 3316 window. (These numbers come
-from the local reports under `output/plan2/`, which are gitignored, not
-committed.)
+The nut rasterizes to 355 layers and a 6.6 MiB GOO; `slice` took about 2 s,
+standalone `verify` about 4 s over a 2016 x 2008 analysis window. The cover, on
+the exact assembly path, rasterizes to 611 layers and a 28.9 MiB GOO; `slice`
+took about 9 s, `verify` about 9 s over a 3344 x 3354 window. (These numbers
+come from the local reports under `output/plan2/`, which are gitignored, not
+committed, and will vary by machine.)
 
 Both files passed every post-write check `slice` makes: framing, header
 settings, per-layer timing and motion, and every decoded LCD pixel against a
@@ -133,33 +135,41 @@ only recompute a provably identical answer.
 Standalone `verify` is the check for when there is no source mesh: it works
 from the `.goo` file alone, on a grid built from the file's own header,
 through a different code path into the same `analyze_layers`. Run on
-`nut.goo` and `cover.goo`, it reaches the same verdict `prepare`'s
-source-raster analysis reported on the same five checks, for both parts. The
-nut, identically at `prepare` and at `verify`:
+`nut.goo` and `cover.goo`, it reaches the same five checks `slice`'s reslice
+already reported, for both parts:
 
 ```json
 {
   "raster_connectivity": "pass",  "overlap": "pass",
-  "growth_span": "pass",          "enclosed_voids": "fail",
+  "growth_span": "pass",          "enclosed_voids": "warn",
   "transient_traps": "warn"
 }
 ```
 
-The cover matches the same way, differing only in `growth_span`, which is
-`fail` in both its `prepare` and its `verify` report. That agreement, from two
-independent code paths, is what backs `slice`'s shortcut above.
+That agreement, from two independent code paths, is what backs `slice`'s
+shortcut above.
 
-Neither export actually passes — Tier 0.1's gate is a `.goo` that passes.
-Read the nut's `enclosed_voids: fail` as a worked example of how to read a
-failing report. The evidence is one component:
+`enclosed_voids` reads differently at `prepare` than it does at `slice`/
+`verify` for the identical geometry, and the difference is itself worth
+reading carefully. `prepare`'s reslice can attribute each enclosed void to the
+geometry that produced it (`void_class`), so the nut's twelve void components
+— all sitting under support tips — are recorded as `ignored_support_voids`:
+the default `repair.support_void_policy="ignore"` treats a support-class void
+as a support byproduct, not a model defect, so `enclosed_voids` reads `pass`.
+`slice` and `verify` reslice one file, with no such attribution available.
+They warn instead (`unattributed_enclosed_voids`) because the largest of the
+twelve components is far smaller than a sphere of the 0.35 mm contact
+diameter, so none of them can be a model cavity; with
+`repair.support_void_policy="fail"` they fail. The evidence is one of the
+twelve components:
 
 ```json
-{"count": 1, "volume_mm3": 1.62e-05, "examples": [{"component": 635, "volume_mm3": 1.62e-05, "first_layer": 269}]}
+{"component": 621, "volume_mm3": 1.62e-05, "first_layer": 100}
 ```
 
 `1.62e-5 mm3` is exactly one pixel at one layer: `0.018 x 0.018 x 0.05 mm =
 1.62e-5 mm3`, this printer's pixel pitch and layer height. It is created by
-the new support anchors, not present in the model.
+the support tips, not present in the model.
 `repair.min_void_volume_mm3` defaults to `0` deliberately — every enclosed
 void is counted, however small. Raising it to make this specific check pass
 would be choosing a threshold to clear a gate, not fixing anything; if a
@@ -169,13 +179,20 @@ it (`negligible_count` and `negligible_volume_mm3` here,
 the equivalent drainage case — see
 [drainage_bottlenecks: fail](troubleshooting.md)).
 
-The nut's other failures are the same kind of thing: `support_routes` (34 of
-229 contacts unroutable) and `drainage_bottlenecks` (6 support crevices,
-~0.4 mm3) are the support structure, not the model. The cover's remaining
-failures — `growth_span`, `enclosed_voids`, `support_routes` (51 of 773
-contacts unroutable) and `drainage_bottlenecks` — are the same category on a
-larger, more heavily supported part; `support_coverage` now passes for the
-cover.
+Drainage follows the same shape: `prepare` records the nut's one support-tip
+crevice (~0.0067 mm3) and the cover's twenty-three (~0.17 mm3) as
+`ignored_support_bottlenecks`, so `drainage_bottlenecks` passes there too.
+`slice`, unable to attribute them, warns on the same components
+(`unattributed_drainage_bottleneck`); the cover's four sealed chambers are
+each a single drainage-grid cell, which no model cavity can be.
+Support routing itself is clean on both parts under current defaults —
+`contacts_failed` is `0` for both. Of the sampled contacts, the nut routes 105
+of 221 (71 dropped as already attached one layer below, 45 skipped by the
+density cap) and the cover routes 445 of 824 (255 dropped as attached, 124
+skipped by the density cap). The cover additionally warns
+`support_collisions` (seven graph capsules overlap without the graph joining
+them) and `support_anchor_load` (some contacts carry more downward area than
+`max_contact_load_mm2`) — both warnings, not export gates.
 
 This run establishes that the chain works end to end on real, defective
 geometry, on both the raster and exact assembly paths, and that the file it
@@ -293,7 +310,7 @@ _voxelmill_complete() {
 ```
 
 ```
-.TH VOXELMILL 1 "2026-09-07" "voxelmill 0.1.0" "voxelmill manual"
+.TH VOXELMILL 1 "2026-09-24" "VoxelMill 0.6.0" "voxelmill manual"
 .SH NAME
 voxelmill \- prepare, support, slice and verify a single part for a masked stereolithography printer
 ```

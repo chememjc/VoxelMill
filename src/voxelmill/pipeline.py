@@ -35,7 +35,7 @@ from .assembly import prepare_model, assemble, RasterParity
 from .supports import plan_supports, build_column_field, apply_support_validation
 from .validation import (analyze_layers, analyze_drainage, drainage_check,
                          attribute_drainage_by_model, attribute_enclosed_voids_by_model,
-                         apply_support_void_policy)
+                         apply_support_void_policy, soften_unattributed_voids)
 from .peel import apply_peel_check
 from .overhangs import apply_overhang_check
 from .island_guard import route_without_islands
@@ -291,26 +291,9 @@ def validate_stl(source, settings, *, budget=None, cancel=None, progress=no_prog
                                          cancel=cancel, progress=progress)
                 report.metrics['drainage'] = drain
                 report.checks['drainage_bottlenecks'] = drainage_check(drain)
-                policy = settings['repair'].get('support_void_policy', 'fail')
-                if (policy != 'fail' and report.checks['drainage_bottlenecks'] == 'fail'
-                        and not drain.get('enclosed_components')):
-                    # One STL carries no record of which triangles are support,
-                    # so a neck cannot be attributed the way prepare does. Under
-                    # a lenient policy say so rather than failing every
-                    # supported export on its own tip crevices; sealed
-                    # chambers still fail.
-                    report.checks['drainage_bottlenecks'] = 'warn'
-                    report.diagnostics.append(Diagnostic(
-                        'unattributed_drainage_bottleneck',
-                        'Drainage necks were found but a single STL cannot say whether the '
-                        'supports or the model form them; rerun with '
-                        'repair.support_void_policy=fail to treat them as failures',
-                        severity='warning',
-                        details={'policy': policy,
-                                 'bottlenecked_components': drain.get('bottlenecked_components'),
-                                 'bottlenecked_volume_mm3': drain.get('bottlenecked_volume_mm3')}))
         else:
             report.checks['drainage_bottlenecks'] = 'not_run'
+    soften_unattributed_voids(report, settings)
     report.metrics['timing'] = timer.as_dict()
     return report
 

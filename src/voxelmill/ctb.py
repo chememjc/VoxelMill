@@ -307,7 +307,7 @@ def _file_settings(settings, header):
 
 def verify_ctb(path, settings, *, cancel=None, budget=None, progress=no_progress, track_voids=True):
     """Deep-check decoded v3 pixels using the same topology analysis as STL and GOO."""
-    from .validation import analyze_layers
+    from .validation import analyze_layers, soften_unattributed_voids
     cancel = cancel or CancellationToken(); budget = budget or ResourceBudget(**settings['resources'])
     with CtbReader(path) as reader:
         effective, record = _file_settings(settings, reader.header)
@@ -316,6 +316,7 @@ def verify_ctb(path, settings, *, cancel=None, budget=None, progress=no_progress
         layers = (Layer(item.index, item.z_mm, reader.decode(item.index)) for item in reader.layers)
         report = analyze_layers(layers, grid, effective, cancel=cancel, budget=budget,
                                 progress=progress, track_voids=track_voids)
+        soften_unattributed_voids(report, effective)
         report.metrics['ctb'] = {'version': VERSION, 'encrypted': False, 'shape_px': list(reader.shape)}
         return {'schema_version': 1, 'format': 'ctb', 'version': VERSION, 'layers': len(reader.layers),
                 'settings_from_file': record, 'report': report.to_dict(),

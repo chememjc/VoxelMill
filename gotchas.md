@@ -25,6 +25,19 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   from a buried anchor to a contact, so it can never be grounded without
   grounding through a contact.
 
+- **The AppImage acceptance script pins the release defaults.** It asserted
+  the 0.5.x brace spacing (15 mm) and part-to-part off, and nothing ran it
+  between releases, so the default changes of the beta went unnoticed until
+  the release build. Update `_assert_release_settings`, `run_inside` and
+  `tests/test_appimage_acceptance.py` together whenever a default they name
+  changes.
+
+- **`prepare` passing does not mean `slice` of its output passes.** `prepare`
+  classifies voids as support or model; `slice`, `verify` and `validate` see one
+  file and cannot. Under the lenient void policy they now warn on crevice-sized
+  findings (`soften_unattributed_voids`), but any new single-file check must
+  apply the same helper or it will withhold exports `prepare` accepted.
+
 - **A candidate cap alone does not bound descending branch origins.** A tiny
   representable spacing on a lone tall support can produce many origins with
   no reachable destination, consuming no candidate attempts. The origin count
