@@ -94,11 +94,12 @@ def test_a_check_that_did_not_run_never_reports_as_passed(tmp_path, sphere):
 
 
 def test_support_void_policy_ignore_drops_tip_crevices_but_not_model_cavities(tmp_path):
-    """Default fails support drainage; ignore keeps model cavities failing."""
+    """Strict policy fails support drainage; ignore (the default) keeps model cavities failing."""
     sphere = tmp_path / 'sphere.stl'
     write_stl(sphere, manifold_triangles(m.Manifold.sphere(6, 64)))
     supported = resolve_settings(overrides={'support': {'base_type': 'none'},
-                                            'repair': {'seal_voids': False}})
+                                            'repair': {'seal_voids': False,
+                                                       'support_void_policy': 'fail'}})
     failed = prepare(sphere, supported, drainage=True, track_voids=False)
     assert failed['validation']['checks']['drainage_bottlenecks'] == 'fail'
     assert failed['validation']['metrics']['drainage']['bottlenecked_components'] >= 1

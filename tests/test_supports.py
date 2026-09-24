@@ -379,8 +379,9 @@ def test_downward_samples_use_build_independent_arithmetic():
     samples, _ = downward_contacts(face, settings)
     a, b, c = face[0]
     assert np.array_equal(samples[0], (a + b + c) / 3.0)
-    steps = int(min(64, max(1, np.ceil(np.sqrt(2 * 0.5 * np.linalg.norm(
-        np.cross(b - a, c - a))) / 1.3))))
+    # The lattice is laid at a fraction of the spacing along the longest edge.
+    longest = max(np.linalg.norm(b - a), np.linalg.norm(c - b), np.linalg.norm(a - c))
+    steps = int(min(64, np.ceil(longest / (1.3 / 8))))
     lattice = np.array([(i, j, steps - i - j) for i in range(steps + 1)
                         for j in range(steps - i + 1)], dtype=np.float64) / steps
     expected = lattice[:, :1] * a + lattice[:, 1:2] * b + lattice[:, 2:3] * c

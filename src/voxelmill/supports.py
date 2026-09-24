@@ -36,6 +36,7 @@ from .raster import RasterGrid
 from .contact_parameters import (contact_key, normalize_contact_parameters,
                                   parameters_for_contact)
 from .paint import apply_paint, normalize_paint
+from .collisions import segment_distances
 
 CROSS = ndi.generate_binary_structure(2, 1)
 
@@ -129,6 +130,10 @@ class ColumnField:
         return int(hi[position - 1]) if position else None
 
 
+#: Largest margin, in mm, the column field keeps around the part for branches.
+BRANCH_MARGIN_CAP_MM = 12.0
+
+
 def build_column_field(triangles, bounds, settings, *, pitch_mm=None, budget=None,
                        cancel=None, progress=no_progress):
     """Raster the placed model once and keep only per-column runs and islands."""
@@ -139,10 +144,19 @@ def build_column_field(triangles, bounds, settings, *, pitch_mm=None, budget=Non
     printer_pitch = min(settings['printer']['pixel_pitch_mm'])
     pitch = float(pitch_mm) if pitch_mm else max(printer_pitch, min(settings['support']['spacing_mm'] / 20.0, 0.15))
     dz = float(settings['process']['layer_height_mm'])
-    x0 = bounds[0][0] - 2 * pitch
-    y0 = bounds[0][1] - 2 * pitch
-    width = int(math.ceil((bounds[1][0] - bounds[0][0]) / pitch)) + 4
-    height = int(math.ceil((bounds[1][1] - bounds[0][1]) / pitch)) + 4
+    # Past the footprint by a branch's whole reach, so a contact on an edge
+    # over lower material can still branch out to free plate beside the part.
+    # Capped: a coarse spacing would otherwise grow the field quadratically
+    # for branches that long routes rarely use.
+    support = settings['support']
+    reach = min(BRANCH_MARGIN_CAP_MM,
+                2 * float(support['spacing_mm']) + float(support['pillar_diameter_mm']) / 2
+                + float(support['support_clearance_mm']))
+    margin = 2 + int(math.ceil(reach / pitch))
+    x0 = bounds[0][0] - margin * pitch
+    y0 = bounds[0][1] - margin * pitch
+    width = int(math.ceil((bounds[1][0] - bounds[0][0]) / pitch)) + 2 * margin
+    height = int(math.ceil((bounds[1][1] - bounds[0][1]) / pitch)) + 2 * margin
     grid = RasterGrid(width, height, x0, y0, pitch, pitch)
     layers = max(1, int(math.ceil((bounds[1][2] - 1e-9) / dz)))
     budget.require(width * height * 40 + len(triangles) * 80 + 128 * 1024**2, 'support column analysis')
@@ -256,19 +270,12 @@ def downward_contacts(triangles, settings, *, cancel=None, progress=no_progress,
         # differently across NumPy/BLAS builds and CPUs, and thinning rounds
         # samples to spacing cells, so a one-ulp change moved contacts.
         points.append((faces[:, 0] + faces[:, 1] + faces[:, 2]) / 3.0)
-        # A face wider than the spacing needs a lattice of contacts, not a
+        # A face wider than the sample pitch needs a lattice of samples, not a
         # centroid: a single flat underside is often one pair of triangles, and
-        # sampling it once leaves its whole perimeter unsupported.
-        areas_selected = norm[selected] / 2
-        big = np.flatnonzero(areas_selected > spacing * spacing / 2)
-        for index in big[:max_lattice_faces]:
-            cancel.check()
-            steps = int(min(64, max(1, math.ceil(math.sqrt(2 * areas_selected[index]) / spacing))))
-            lattice = np.array([(i, j, steps - i - j) for i in range(steps + 1)
-                                for j in range(steps - i + 1)], dtype=np.float64) / steps
-            face = faces[index]
-            points.append(lattice[:, :1] * face[0] + lattice[:, 1:2] * face[1]
-                          + lattice[:, 2:3] * face[2])
+        # sampling it once leaves its whole perimeter unsupported. The pitch is
+        # a fraction of the spacing so coverage can be measured, and contacts
+        # chosen, to within a small part of a contact's reach.
+        points.extend(_face_lattices(faces, sample_pitch_mm(settings), max_lattice_faces, cancel))
         if support.get('contour_supports'):
             contour = _perimeter_samples(faces, spacing)
             if len(contour):
@@ -281,6 +288,41 @@ def downward_contacts(triangles, settings, *, cancel=None, progress=no_progress,
     if not points:
         return np.empty((0, 3)), areas
     return np.concatenate(points), areas
+
+
+#: Downward faces are sampled at this fraction of the contact spacing.
+SAMPLE_PITCH_FRACTION = 1 / 8
+#: Largest lattice (steps per edge) laid on one face.
+MAX_FACE_STEPS = 64
+
+
+def sample_pitch_mm(settings):
+    """Distance between downward-face samples for the current spacing."""
+    return float(settings['support']['spacing_mm']) * SAMPLE_PITCH_FRACTION
+
+
+def _face_lattices(faces, pitch, max_faces, cancel):
+    """Barycentric lattices on faces whose longest edge exceeds ``pitch``.
+
+    Faces are grouped by step count so each group is one vectorized product.
+    Lattice points use explicit weighted sums (see ``downward_contacts``).
+    """
+    faces = np.asarray(faces, dtype=np.float64).reshape(-1, 3, 3)
+    edges = np.stack([np.linalg.norm(faces[:, 1] - faces[:, 0], axis=1),
+                      np.linalg.norm(faces[:, 2] - faces[:, 1], axis=1),
+                      np.linalg.norm(faces[:, 0] - faces[:, 2], axis=1)], axis=1).max(axis=1)
+    steps = np.minimum(MAX_FACE_STEPS, np.ceil(edges / pitch)).astype(np.int64)
+    big = np.flatnonzero(steps > 1)[:max_faces]
+    out = []
+    for count in np.unique(steps[big]):
+        cancel.check()
+        chosen = faces[big[steps[big] == count]]
+        lattice = np.array([(i, j, count - i - j) for i in range(count + 1)
+                            for j in range(count - i + 1)], dtype=np.float64) / count
+        w0, w1, w2 = lattice[:, 0][None, :, None], lattice[:, 1][None, :, None], lattice[:, 2][None, :, None]
+        out.append((w0 * chosen[:, None, 0] + w1 * chosen[:, None, 1]
+                    + w2 * chosen[:, None, 2]).reshape(-1, 3))
+    return out
 
 
 def _perimeter_samples(faces, spacing):
@@ -347,31 +389,125 @@ def _cells(points, spacing):
     return np.rint(pts[:, :2] / spacing).astype(np.int64)
 
 
-def _thin(candidates, mandatory, spacing):
-    """Keep the lowest automatic candidate per XY spacing cell; mandatory always kept.
+def contact_reach_mm(settings):
+    """Farthest a downward point may sit from its nearest contact.
 
-    A 3D cell grid used to plant a contact every ``spacing`` along Z inside one
-    XY cell on a tilted overhang. Automatic survivors are then greedily spaced
-    at least ``spacing`` apart in 3D so diagonal cell neighbours cannot sit on
-    top of each other. Mandatory contacts (raster islands, island-guard extra
-    contacts, manual/paint enforcers) bypass the density cap.
+    The smaller of the spacing and the growth-span limit less the tip radius,
+    less the sampling pitch's own uncertainty, so a surface point between two
+    samples is covered too and the first layer of an overhang never grows
+    past ``max_span_mm`` from a tip.
     """
+    support = settings['support']
+    spacing = float(support['spacing_mm'])
+    span = float(support['max_span_mm']) - float(support['contact_diameter_mm']) / 2
+    pitch = sample_pitch_mm(settings)
+    return max(pitch, min(spacing, span) - pitch * 0.6)
+
+
+def _hex_nodes(xy, spacing):
+    """Nearest node of a hexagonal lattice with ``spacing`` between neighbours."""
+    row_pitch = spacing * math.sqrt(3) / 2
+    base = np.floor(xy[:, 1] / row_pitch).astype(np.int64)
+    best = best_i = best_j = None
+    for j in (base - 1, base, base + 1):
+        shift = (j & 1) * (spacing / 2)
+        i = np.rint((xy[:, 0] - shift) / spacing).astype(np.int64)
+        node = np.stack([i * spacing + shift, j * row_pitch], axis=1)
+        gap = np.hypot(xy[:, 0] - node[:, 0], xy[:, 1] - node[:, 1])
+        if best is None:
+            best, best_i, best_j = gap, i, j
+        else:
+            closer = gap < best
+            best = np.where(closer, gap, best)
+            best_i = np.where(closer, i, best_i)
+            best_j = np.where(closer, j, best_j)
+    return best_i, best_j, best
+
+
+def _thin(candidates, mandatory, spacing, reach=None):
+    """Choose automatic contacts from dense samples; mandatory always kept.
+
+    Contacts sit on a hexagonal XY lattice at ``spacing``: in each lattice
+    cell and ``spacing``-tall Z band, the sample nearest the node is taken, so
+    stacked and sloped surfaces each get their own. Picks nearer than half a
+    spacing to an earlier (lower) one are dropped. A repair pass then adds a
+    contact at every sample still farther than ``reach`` from all contacts,
+    lowest and farthest first, which is what guarantees coverage at rims and
+    on features smaller than a lattice cell. Mandatory contacts (raster
+    islands, island-guard extras, manual/paint enforcers) bypass the density
+    cap and count towards coverage.
+    """
+    from scipy.spatial import cKDTree
     mandatory = np.asarray(mandatory, dtype=float).reshape(-1, 3)
     candidates = np.asarray(candidates, dtype=float).reshape(-1, 3)
     if not len(candidates):
         return mandatory
-    order = np.argsort(candidates[:, 2], kind='stable')
-    ordered = candidates[order]
-    cells = _cells(ordered, spacing)
-    if len(mandatory):
-        taken = _cells(mandatory, spacing)
-        keys = np.concatenate((taken, cells))
-        _, first = np.unique(keys, axis=0, return_index=True)
-        chosen = np.sort(first[first >= len(taken)]) - len(taken)
-    else:
-        _, first = np.unique(cells, axis=0, return_index=True)
-        chosen = np.sort(first)
-    automatic = ordered[chosen]
+    reach = float(spacing if reach is None else reach)
+    i, j, gap = _hex_nodes(candidates[:, :2], spacing)
+    band = np.floor(candidates[:, 2] / spacing).astype(np.int64)
+    # Nearest the node first, then lowest, then input order: a total order,
+    # so the choice never depends on sort stability or the platform.
+    order = np.lexsort((np.arange(len(candidates)), candidates[:, 2], gap, band, j, i))
+    keys = np.stack([i[order], j[order], band[order]], axis=1)
+    first = np.ones(len(order), dtype=bool)
+    first[1:] = np.any(keys[1:] != keys[:-1], axis=1)
+    # A node far from any sample belongs to a neighbouring surface patch's
+    # rim; leave that area to the repair pass rather than planting a tip on
+    # the very edge.
+    picks = order[first & (gap[order] <= spacing * 0.5)]
+    picks = picks[np.lexsort((picks, candidates[picks, 2]))]
+    chosen = []
+    kept = list(mandatory)
+    if len(picks):
+        tree = cKDTree(candidates[picks])
+        neighbours = tree.query_ball_point(candidates[picks], spacing * 0.5)
+        blocked = np.zeros(len(picks), dtype=bool)
+        if len(mandatory):
+            near = cKDTree(mandatory).query(candidates[picks], distance_upper_bound=spacing * 0.5)[0]
+            blocked |= np.isfinite(near)
+        for index in range(len(picks)):
+            if blocked[index]:
+                continue
+            chosen.append(picks[index])
+            for other in neighbours[index]:
+                if other > index:
+                    blocked[other] = True
+    kept.extend(candidates[chosen])
+    kept = np.asarray(kept, dtype=float).reshape(-1, 3)
+    distance = (cKDTree(kept).query(candidates)[0] if len(kept)
+                else np.full(len(candidates), np.inf))
+    uncovered = np.flatnonzero(distance > reach)
+    added = []
+    if len(uncovered):
+        pitch = max(reach / 8, 1e-6)
+        order = uncovered[np.lexsort((uncovered, -distance[uncovered],
+                                      np.floor(candidates[uncovered, 2] / pitch)))]
+        cells = {}
+        cell = reach
+        for index in order:
+            point = candidates[index]
+            key = tuple(np.floor(point / cell).astype(np.int64))
+            hit = False
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    for dz in (-1, 0, 1):
+                        for other in cells.get((key[0] + dx, key[1] + dy, key[2] + dz), ()):
+                            if np.dot(other - point, other - point) <= reach * reach:
+                                hit = True
+                                break
+                        if hit:
+                            break
+                    if hit:
+                        break
+                if hit:
+                    break
+            if hit:
+                continue
+            cells.setdefault(key, []).append(point)
+            added.append(index)
+    automatic = np.concatenate([candidates[np.sort(np.asarray(chosen, dtype=np.int64))],
+                                candidates[np.sort(np.asarray(added, dtype=np.int64))]])
+    automatic = automatic[np.lexsort((automatic[:, 1], automatic[:, 0], automatic[:, 2]))]
     return np.concatenate((mandatory, automatic)) if len(mandatory) else automatic
 
 
@@ -398,19 +534,6 @@ def _exclude_spheres(contact, penetration, break_point, extra=()):
             continue
         spheres.append((np.asarray(item[0], dtype=float), float(item[1])))
     return spheres
-
-
-def _cell_in_exclude(x, y, z_lo, z_hi, exclude):
-    if not exclude:
-        return False
-    for center, radius in exclude:
-        cz = min(max(float(center[2]), z_lo), z_hi)
-        dx = x - float(center[0])
-        dy = y - float(center[1])
-        dz = cz - float(center[2])
-        if dx * dx + dy * dy + dz * dz <= radius * radius:
-            return True
-    return False
 
 
 def _segment_clear(field, start, end, clearance, samples=16, radius=0.0, exclude=None):
@@ -481,29 +604,57 @@ class CapsuleIndex:
 def _hits_occupied(field, start, end, radius):
     """True when this capsule overlaps an already-routed shaft along its length.
 
-    Interior samples skip the ends, so a T-joint or shared foot is not an
-    overlap. Parallel shafts that share a long run are.
+    Exact segment distance over the whole length. A pair joined on purpose,
+    a T-joint or a shared foot, has an endpoint of one lying on the other's
+    axis, and is not an overlap. Parallel shafts that share a run are
+    overlaps wherever they meet, including near an elbow.
     """
     start, end = np.asarray(start, dtype=float), np.asarray(end, dtype=float)
     axis = end - start
-    if float(axis @ axis) < 1e-20:
+    length = math.sqrt(float(axis @ axis))
+    if length < 1e-10:
         return False
-    samples = [start + axis * (step / 8) for step in (2, 3, 4, 5, 6)]
-    for other_start, other_end, other_r in field.occupied_capsules.near(samples, radius):
-        other_start = np.asarray(other_start, dtype=float)
-        other_end = np.asarray(other_end, dtype=float)
-        other_axis = other_end - other_start
-        other_len2 = float(other_axis @ other_axis)
-        limit2 = (float(radius) + float(other_r)) ** 2
-        for point in samples:
-            if other_len2 < 1e-20:
-                delta = point - other_start
-            else:
-                t = max(0.0, min(1.0, float((point - other_start) @ other_axis / other_len2)))
-                delta = point - (other_start + t * other_axis)
-            if float(delta @ delta) < limit2:
-                return True
-    return False
+    others = field.occupied_capsules.near(np.stack([start, end]), radius)
+    if not others:
+        return False
+    low = np.array([item[0] for item in others], dtype=float)
+    high = np.array([item[1] for item in others], dtype=float)
+    limit = float(radius) + np.array([item[2] for item in others], dtype=float)
+    count = len(others)
+    starts, ends = np.broadcast_to(start, (count, 3)), np.broadcast_to(end, (count, 3))
+    gaps = segment_distances(starts, ends, low, high)
+    hit = gaps < limit - 1e-9
+    if not hit.any():
+        return False
+    # A joint only touches near the joint: trim the joined end by the radii
+    # and test again, so a shaft that continues along the other is still hit.
+    unit = axis / length
+    for which, point in ((0, start), (1, end)):
+        here = np.broadcast_to(point, (count, 3))
+        joined = hit & (segment_distances(here, here, low, high) < 1e-6)
+        if not joined.any():
+            continue
+        trim = np.minimum(limit, length)[:, None] * unit[None, :]
+        rest_start = starts + trim if which == 0 else starts
+        rest_end = ends if which == 0 else ends - trim
+        hit &= ~joined | (segment_distances(rest_start, rest_end, low, high) < limit - 1e-9)
+    for other in (low, high):
+        joined = hit & (segment_distances(other, other, starts, ends) < 1e-6)
+        if joined.any():
+            hit &= ~joined | ~_joint_only(starts, ends, low, high, other, limit)
+    return bool(hit.any())
+
+
+def _joint_only(starts, ends, low, high, joint, limit):
+    """Whether the other capsule touches this one only within ``limit`` of ``joint``."""
+    axis = high - low
+    length = np.linalg.norm(axis, axis=1)
+    unit = axis / np.maximum(length, 1e-12)[:, None]
+    trim = np.minimum(limit, length)[:, None] * unit
+    at_low = np.all(np.isclose(joint, low), axis=1)
+    rest_low = np.where(at_low[:, None], low + trim, low)
+    rest_high = np.where(at_low[:, None], high, high - trim)
+    return segment_distances(rest_low, rest_high, starts, ends) >= limit - 1e-9
 
 
 def _mark_occupied(field, start, end, radius):
@@ -581,7 +732,7 @@ def select_contacts(triangles, field, settings, *, cancel=None, progress=no_prog
             enforced_blocks.append(enforced)
             if group_settings['support']['automatic']:
                 automatic_any = True
-                thinned = _thin(samples, [], spacing)
+                thinned = _thin(samples, [], spacing, contact_reach_mm(group_settings))
                 candidate_blocks.append(thinned)
                 keys = tuple(group.get('override_keys') or ())
                 params = {key: group_settings['support'][key]
@@ -618,7 +769,7 @@ def select_contacts(triangles, field, settings, *, cancel=None, progress=no_prog
         candidates, mandatory = np.empty((0, 3)), []
     mandatory.extend(np.asarray(point, dtype=float) for point in extra_contacts)
     mandatory.extend(np.asarray(point, dtype=float) for point in enforced)
-    contacts = _thin(candidates, mandatory, spacing)
+    contacts = _thin(candidates, mandatory, spacing, contact_reach_mm(settings))
     removed = np.asarray(list(removed_contacts), dtype=float).reshape(-1, 3)
     kept = np.asarray(list(extra_contacts), dtype=float).reshape(-1, 3)
     if len(removed) and len(contacts):
@@ -680,13 +831,22 @@ def contact_coverage(samples, contacts, settings, downward_area_mm2):
             'anchor_load': 'fail' if overloaded else 'pass'}
 
 
-def _model_anchor_clear(field, column, x, y, surface_z, length, depth, radius, clearance, cancel):
+#: Steepest surface a model anchor may land on, from horizontal. Material
+#: that rises from the landing point no faster than this is the surface the
+#: anchor embeds in, as a tip does on a slope; anything steeper is a wall.
+ANCHOR_MAX_SLOPE_DEG = 60.0
+
+
+def _model_anchor_clear(field, column, x, y, surface_z, length, depth, radius, clearance, cancel,
+                        top_radius=None):
     """Bound a new bottom connector on the existing column analysis grid.
 
     The lower endpoint must stay in the central column's immediately preceding
-    material run. Above that surface the full connector envelope plus XY
-    clearance must be empty. This is deliberately conservative for a taper,
-    and only as accurate as the column lattice.
+    material run. Above that surface the connector, a taper from ``radius`` at
+    the surface to ``top_radius`` at ``length``, plus XY clearance must be
+    empty, except for the landing surface itself rising under the anchor no
+    steeper than ``ANCHOR_MAX_SLOPE_DEG``. Only as accurate as the column
+    lattice.
     """
     low, high = field.runs(column)
     # surface_z was produced by z_of(run_top); floor can lose one index on
@@ -697,8 +857,11 @@ def _model_anchor_clear(field, column, x, y, surface_z, length, depth, radius, c
         return False
     if not length:
         return True
+    bottom_r = float(radius)
+    top_r = bottom_r if top_radius is None else float(top_radius)
     grid = field.grid
-    reach = radius + float(clearance)
+    reach = max(bottom_r, top_r) + float(clearance)
+    slope = math.tan(math.radians(ANCHOR_MAX_SLOPE_DEG))
     c0 = max(0, int(math.floor((x - reach - grid.x0) / grid.dx)))
     c1 = min(grid.width, int(math.ceil((x + reach - grid.x0) / grid.dx)))
     r0 = max(0, int(math.floor((y - reach - grid.y0) / grid.dy)))
@@ -710,13 +873,35 @@ def _model_anchor_clear(field, column, x, y, surface_z, length, depth, radius, c
             # Distance to the nearest point of this cell, not its center.
             dx = max(grid.x0 + col * grid.dx - x, x - (grid.x0 + (col + 1) * grid.dx), 0.)
             dy = max(grid.y0 + row * grid.dy - y, y - (grid.y0 + (row + 1) * grid.dy), 0.)
-            if dx * dx + dy * dy <= reach * reach and field.blocked(field.column(row, col), top, last):
-                return False
+            distance = math.hypot(dx, dy)
+            if distance > reach:
+                continue
+            lows, highs = field.runs(field.column(row, col))
+            # Column tops are sampled at cell centres, so the slope allowance
+            # is measured there; the nearest-point distance still decides
+            # whether the connector reaches the cell at all.
+            centre = math.hypot(grid.x0 + (col + .5) * grid.dx - x, grid.y0 + (row + .5) * grid.dy - y)
+            rise = top + 1 + int(math.floor(centre * slope / field.dz + 1e-9))
+            for run_lo, run_hi in zip(lows.tolist(), highs.tolist()):
+                if run_lo >= last or run_hi <= top:
+                    continue
+                if run_lo <= rise and run_hi <= rise:
+                    # The landing surface itself, rising no steeper than the
+                    # limit all the way to its top. A run that climbs past the
+                    # limit anywhere is a wall, even beyond the anchor's reach.
+                    continue
+                seg_lo, seg_hi = max(run_lo, top), min(run_hi, last)
+                if seg_hi <= seg_lo:
+                    continue
+                height = (seg_hi - top) * field.dz
+                taper = bottom_r + (top_r - bottom_r) * min(1.0, height / length)
+                if distance <= taper + float(clearance):
+                    return False
     return True
 
 
 def _plate_route(field, column, contact_index, point, base_z, spec, spacing, clearance_mm,
-                 branch_attempts, usable_shaft, exempt):
+                 branch_attempts, usable_shaft, exempt, model_shaft_clear=None):
     """A route from one contact's tip base to the plate.
 
     Returns ``(kind, anchor, elbow, skipped)``: kind is ``'vertical'`` (a free
@@ -727,6 +912,9 @@ def _plate_route(field, column, contact_index, point, base_z, spec, spacing, cle
     """
     x, y, _z = point
     pillar_r, clearance = spec.pillar_r, spec.clearance
+    if model_shaft_clear is None:
+        def model_shaft_clear(start, end, radius):
+            return True
     branch_tangent = spec.branch_tangent
     _usable_shaft = usable_shaft
     plate_kind = plate_anchor = plate_elbow = None
@@ -740,7 +928,12 @@ def _plate_route(field, column, contact_index, point, base_z, spec, spacing, cle
             # A second vertical on top of an existing shaft. Skip it rather
             # than weaving a 45° branch that fails drainage.
             return None, None, None, True
-        plate_kind, plate_anchor = 'vertical', (x, y, 0.0)
+        # The central column being free is not enough: a contact on a part's
+        # edge would stand its pillar half inside the wall below. Test the
+        # pillar's own radius, without clearance, so curvature beside the
+        # tip (excluded around it) still allows a vertical.
+        if model_shaft_clear((x, y, 0.0), (x, y, base_z), pillar_r):
+            plate_kind, plate_anchor = 'vertical', (x, y, 0.0)
     if plate_kind is None:
         best = None
         radius = max(1, int(math.ceil(min(2 * spacing, max(0.0, base_z)) / field.grid.dx)))
@@ -845,7 +1038,8 @@ def _model_anchor_candidate(field, column, contact_index, point, spec, support, 
                 # direct attachment remains unchanged when both dimensions are 0.
                 if (not (fit_bottom or anchor_depth) or _model_anchor_clear(
                         field, column, x, y, anchor_z, fit_bottom, anchor_depth,
-                        max(bottom_r, candidate_r), support['support_clearance_mm'], cancel)):
+                        bottom_r, support['support_clearance_mm'], cancel,
+                        top_radius=candidate_r)):
                     middle_lo, middle_hi = anchor_z + fit_bottom, z - fit_tip
                     extra_exclude = [((x, y, anchor_z),
                                       max(anchor_depth, support['break_point_diameter_mm'] / 2,
@@ -999,9 +1193,12 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                 return False
             return not _hits_occupied(field, start, end, radius)
 
+        def _model_shaft_clear(start, end, radius):
+            return _shaft_clear(field, start, end, radius, 0.0, cancel, exclude)  # noqa: B023
+
         plate_kind, plate_anchor, plate_elbow, skipped = _plate_route(
             field, column, contact_index, (x, y, z), base_z, spec, spacing, clearance_mm,
-            branch_attempts, _usable_shaft, exempt)
+            branch_attempts, _usable_shaft, exempt, _model_shaft_clear)
         if skipped:
             density_skipped += 1
             continue
@@ -1441,18 +1638,35 @@ def plan_supports(triangles, bounds, settings, *, field=None, budget=None, cance
         protected = [tuple(point) for point in extra_contacts]
         protected.extend((*island['position_mm'], island['z_mm']) for island in field.islands)
         apply_attached_unroutable_drops(plan, triangles, settings, protected=protected,
+                                        slack_mm=math.hypot(field.grid.dx, field.grid.dy),
                                         cancel=cancel)
     return plan, raft
 
 
-def attached_below(triangles, contacts, settings, *, cancel=None):
-    """Printer-pitch 3x3 occupancy one layer below each contact.
+def attached_reach_mm(settings):
+    """How close material one layer below must be for a contact to count as attached.
+
+    Within a pillar's radius plus clearance of a wall no pillar can be routed
+    anyway, and the overhang there cantilevers less than a pillar's width from
+    material that is already printed.
+    """
+    support = settings['support']
+    pillar = float(support['pillar_diameter_mm']) / 2
+    tip_base = float(support.get('tip_base_diameter_mm') or 0.0) / 2
+    return max(pillar, tip_base) + float(support['support_clearance_mm'])
+
+
+def attached_below(triangles, contacts, settings, *, cancel=None, slack_mm=0.0):
+    """Printer-pitch occupancy one layer below each contact, within ``attached_reach_mm``.
 
     The router uses a coarser analysis grid, so a sample on a near-vertical wall
     can sit just outside the occupied cell and still rest on material that the
-    layer analysis will treat as connected. This asks the same question on the
-    printer lattice ``raster_connectivity`` uses. Measurement, then a drop
-    decision in ``apply_attached_unroutable_drops``; it does not emit geometry.
+    layer analysis will treat as connected, and a sample beside a wall has no
+    room for a pillar. This asks on the printer lattice ``raster_connectivity``
+    uses. Measurement, then a drop decision in
+    ``apply_attached_unroutable_drops``; it does not emit geometry.
+    ``slack_mm`` widens the reach by the routing grid's cell, whose clearance
+    tests block that much earlier than the exact distance.
     """
     from . import _native
 
@@ -1466,6 +1680,9 @@ def attached_below(triangles, contacts, settings, *, cancel=None):
     grid = RasterGrid.for_bounds(bounds, settings, crop=True)
     order = sorted(range(len(contacts)), key=lambda i: contacts[i][2])
     raster = _native.Rasterizer(np.asarray(triangles, dtype=np.float32), cancel.check)
+    reach = attached_reach_mm(settings) + float(slack_mm)
+    reach_cols = max(1, int(math.ceil(reach / grid.dx)) + 1)
+    reach_rows = max(1, int(math.ceil(reach / grid.dy)) + 1)
     results = [None] * len(contacts)
     cache_index, cache_mask = None, None
     for position in order:
@@ -1486,13 +1703,23 @@ def attached_below(triangles, contacts, settings, *, cancel=None):
         if not (0 <= row < grid.height and 0 <= col < grid.width):
             results[position] = False
             continue
-        r0, r1 = max(0, row - 1), min(grid.height, row + 2)
-        c0, c1 = max(0, col - 1), min(grid.width, col + 2)
-        results[position] = bool(cache_mask[r0:r1, c0:c1].any())
+        r0, r1 = max(0, row - reach_rows), min(grid.height, row + reach_rows + 1)
+        c0, c1 = max(0, col - reach_cols), min(grid.width, col + reach_cols + 1)
+        window = cache_mask[r0:r1, c0:c1] != 0
+        if window.any():
+            rows, cols = np.nonzero(window)
+            px = grid.x0 + (cols + c0 + .5) * grid.dx
+            py = grid.y0 + (rows + r0 + .5) * grid.dy
+            # One pixel of slack keeps the historical 3x3 neighbourhood inside.
+            limit = reach + math.hypot(grid.dx, grid.dy)
+            results[position] = bool(np.any((px - x) ** 2 + (py - y) ** 2 <= limit * limit))
+        else:
+            results[position] = False
     return results
 
 
-def apply_attached_unroutable_drops(plan, triangles, settings, *, protected=(), cancel=None):
+def apply_attached_unroutable_drops(plan, triangles, settings, *, protected=(), cancel=None,
+                                    slack_mm=0.0):
     """Reclassify unroutable contacts that already rest on printed material.
 
     Island births and manual/correction contacts in ``protected`` stay failed.
@@ -1504,7 +1731,7 @@ def apply_attached_unroutable_drops(plan, triangles, settings, *, protected=(), 
         plan.metrics['contacts_dropped_attached'] = 0
         return plan
     protected_keys = {contact_key(point) for point in protected}
-    attached = attached_below(triangles, positions, settings, cancel=cancel)
+    attached = attached_below(triangles, positions, settings, cancel=cancel, slack_mm=slack_mm)
     dropped_keys = set()
     kept = []
     for point, is_attached in zip(positions, attached):
@@ -1527,7 +1754,8 @@ def apply_attached_unroutable_drops(plan, triangles, settings, *, protected=(), 
                 'support_dropped_attached',
                 'Unroutable contact already has material one printer layer below; no pillar emitted',
                 severity='warning', position_mm=list(diagnostic.position_mm),
-                details={'basis': '3x3 printer-pitch neighbourhood one layer below',
+                details={'basis': 'printer-pitch material one layer below within the attach reach',
+                         'attach_reach_mm': attached_reach_mm(settings),
                          'reason': 'near-vertical or already-attached surface'}))
         else:
             rewritten.append(diagnostic)
@@ -1538,7 +1766,8 @@ def apply_attached_unroutable_drops(plan, triangles, settings, *, protected=(), 
                 'support_dropped_attached',
                 'Unroutable contact already has material one printer layer below; no pillar emitted',
                 severity='warning', position_mm=list(key),
-                details={'basis': '3x3 printer-pitch neighbourhood one layer below'}))
+                details={'basis': 'printer-pitch material one layer below within the attach reach',
+                         'attach_reach_mm': attached_reach_mm(settings)}))
     plan.diagnostics[:] = rewritten
     plan.graph.diagnostics = [d.__dict__ for d in plan.diagnostics]
     return plan
@@ -1555,6 +1784,7 @@ def _brace_clear(field, start, end, radius, clearance, cancel=None, exclude=None
     """
     reach = float(radius) + float(clearance)
     cancel = cancel or CancellationToken()
+    cancel.check()
     grid = field.grid
     start = np.asarray(start, dtype=float)
     end = np.asarray(end, dtype=float)
@@ -1564,38 +1794,96 @@ def _brace_clear(field, start, end, radius, clearance, cancel=None, exclude=None
     c1 = min(grid.width, int(math.ceil((x1 - grid.x0) / grid.dx)))
     r0 = max(0, int(math.floor((y0 - grid.y0) / grid.dy)))
     r1 = min(grid.height, int(math.ceil((y1 - grid.y0) / grid.dy)))
+    if c1 <= c0 or r1 <= r0:
+        return True
+    rows, cols = np.meshgrid(np.arange(r0, r1), np.arange(c0, c1), indexing='ij')
+    rows, cols = rows.ravel(), cols.ravel()
+    px = grid.x0 + (cols + .5) * grid.dx
+    py = grid.y0 + (rows + .5) * grid.dy
     direction = end[:2] - start[:2]
     length2 = float(direction @ direction)
     allowance = reach + math.hypot(grid.dx, grid.dy) / 2
-    for row in range(r0, r1):
+    pad = np.full(len(px), reach)
+    if length2 <= 1e-20:
+        lateral = np.hypot(px - start[0], py - start[1])
+        keep = lateral <= allowance
+        t0 = np.zeros(len(px))
+        t1 = np.ones(len(px))
+        # A vertical capsule's end caps reach only sqrt(r^2 - d^2) past its
+        # ends at lateral distance d; padding every cell by the full radius
+        # made a shaft standing on a surface collide with that surface.
+        nearest = np.maximum(0.0, lateral - math.hypot(grid.dx, grid.dy) / 2)
+        pad = np.sqrt(np.maximum(0.0, reach ** 2 - np.minimum(nearest, reach) ** 2))
+    else:
+        t = ((px - start[0]) * direction[0] + (py - start[1]) * direction[1]) / length2
+        distance2 = (px - (start[0] + t * direction[0])) ** 2 + (py - (start[1] + t * direction[1])) ** 2
+        keep = distance2 <= allowance ** 2
+        span = np.sqrt(np.maximum(0.0, allowance ** 2 - distance2) / length2)
+        t0, t1 = np.maximum(0.0, t - span), np.minimum(1.0, t + span)
+        keep &= t0 <= t1
+    if not keep.any():
+        return True
+    rows, cols, px, py, t0, t1 = rows[keep], cols[keep], px[keep], py[keep], t0[keep], t1[keep]
+    pad = pad[keep]
+    z_a = start[2] + t0 * (end[2] - start[2])
+    z_b = start[2] + t1 * (end[2] - start[2])
+    z_lo, z_hi = np.minimum(z_a, z_b) - pad, np.maximum(z_a, z_b) + pad
+    # Every cell whose runs meet the swept Z range, ignoring exclusions: the
+    # common case is none, and then nothing below needs a Python loop.
+    lo_q = np.maximum(0, np.floor((z_lo - field.z0) / field.dz).astype(np.int64))
+    hi_q = np.floor((z_hi - field.z0) / field.dz).astype(np.int64) + 1
+    columns = rows * grid.width + cols
+    first, stop = field.ptr[columns].astype(np.int64), field.ptr[columns + 1].astype(np.int64)
+    counts = stop - first
+    hit = np.zeros(len(columns), dtype=bool)
+    live = (hi_q > lo_q) & (counts > 0)
+    for step in range(int(counts[live].max()) if live.any() else 0):
+        index = first + step
+        valid = live & (index < stop)
+        safe = np.where(valid, index, 0)
+        hit |= valid & (field.lo[safe] < hi_q) & (field.hi[safe] > lo_q)
+    if not hit.any():
+        return True
+    if not exclude:
+        return False
+    for position in np.flatnonzero(hit):
         cancel.check()
-        for col in range(c0, c1):
-            point = np.array([grid.x0 + (col + .5) * grid.dx,
-                              grid.y0 + (row + .5) * grid.dy])
-            if length2 <= 1e-20:
-                if np.linalg.norm(point - start[:2]) > allowance:
-                    continue
-                t0, t1 = 0.0, 1.0
-            else:
-                t = float((point - start[:2]) @ direction / length2)
-                distance2 = float(np.sum((point - (start[:2] + t * direction)) ** 2))
-                if distance2 > allowance ** 2:
-                    continue
-                span = math.sqrt(max(0.0, allowance ** 2 - distance2) / length2)
-                t0, t1 = max(0.0, t - span), min(1.0, t + span)
-                if t0 > t1:
-                    continue
-            z_a = start[2] + t0 * (end[2] - start[2])
-            z_b = start[2] + t1 * (end[2] - start[2])
-            z_lo, z_hi = min(z_a, z_b) - reach, max(z_a, z_b) + reach
-            if _cell_in_exclude(point[0], point[1], z_lo, z_hi, exclude):
-                continue
-            lo = max(0, field.layer_of(z_lo))
-            hi = field.layer_of(z_hi) + 1
-            if hi > lo:
-                if field.blocked(row * grid.width + col, lo, hi):
-                    return False
+        for part_lo, part_hi in _outside_exclude(px[position], py[position], z_lo[position],
+                                                 z_hi[position], exclude):
+            lo = max(0, field.layer_of(part_lo))
+            hi = field.layer_of(part_hi) + 1
+            if hi > lo and field.blocked(int(columns[position]), lo, hi):
+                return False
     return True
+
+
+def _outside_exclude(x, y, z_lo, z_hi, exclude):
+    """Parts of ``[z_lo, z_hi]`` in column ``(x, y)`` outside every exclusion sphere.
+
+    Each sphere removes only its own chord through the column, so material
+    below or above an intended tip is still seen by the shaft passing it.
+    """
+    spans = [(z_lo, z_hi)]
+    for center, radius in exclude or ():
+        dx, dy = x - float(center[0]), y - float(center[1])
+        half2 = float(radius) ** 2 - dx * dx - dy * dy
+        if half2 < 0:
+            continue
+        half = math.sqrt(half2)
+        cut_lo, cut_hi = float(center[2]) - half, float(center[2]) + half
+        kept = []
+        for lo, hi in spans:
+            if cut_hi <= lo or cut_lo >= hi:
+                kept.append((lo, hi))
+                continue
+            if lo < cut_lo:
+                kept.append((lo, cut_lo))
+            if cut_hi < hi:
+                kept.append((cut_hi, hi))
+        spans = kept
+        if not spans:
+            break
+    return spans
 
 
 def _cone_intersections(origin, start, end, tangent=1.0):
@@ -1653,7 +1941,7 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
     cancel = cancel or CancellationToken()
     cancel.check()
     evidence = evidence if evidence is not None else {}
-    for key in ('collision_rejected', 'bounds_rejected', 'foot_rejected',
+    for key in ('collision_rejected', 'support_collision_rejected', 'bounds_rejected', 'foot_rejected',
                 'length_rejected', 'spacing_rejected', 'ungrounded_rejected',
                 'no_destination_rejected', 'pattern_rejected', 'duplicate_rejected',
                 'examined', 'origins_examined', 'new_feet'):
@@ -1755,6 +2043,21 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
             return band(z) == band(previous)
         return any(sum(any(same_interval(owner, height) for height in previous)
                        for previous in connected.get(owner, ())) >= quota for owner in owners)
+
+    def near_other(start, end, r, skip):
+        # A capsule check, not a centreline one: a diagonal or foot stem that
+        # passes beside another support fuses with it as surely as one that
+        # crosses its axis, and the graph would never record that joint.
+        start, end = np.asarray(start, dtype=float), np.asarray(end, dtype=float)
+        others = [segment for segment in segments if not segment['owners'] & skip]
+        if not others:
+            return False
+        low = np.array([segment['start'] for segment in others])
+        high = np.array([segment['end'] for segment in others])
+        reach = np.array([segment['edge'].radius_mm for segment in others]) + r + clearance
+        gaps = segment_distances(np.broadcast_to(start, low.shape), np.broadcast_to(end, low.shape),
+                                  low, high)
+        return bool(np.any(gaps < reach - 1e-7))
 
     def attempt():
         cancel.check()
@@ -1923,6 +2226,9 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
                 if field is not None and not _brace_clear(field, origin, destination, strut_r, clearance, cancel):
                     evidence['collision_rejected'] += 1
                     continue
+                if near_other(origin, destination, strut_r, {owner} | segment['owners']):
+                    evidence['support_collision_rejected'] += 1
+                    continue
                 if pattern == 'x':
                     if not attempt():
                         return added
@@ -1939,6 +2245,9 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
                         continue
                     if field is not None and not _brace_clear(field, high, low, strut_r, clearance, cancel):
                         evidence['collision_rejected'] += 1
+                        continue
+                    if near_other(high, low, strut_r, {owner, target_owner}):
+                        evidence['support_collision_rejected'] += 1
                         continue
                 accepted = (destination, segment)
                 break
@@ -2000,6 +2309,10 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
                         if field is not None and (not _brace_clear(field, origin, destination, strut_r, clearance, cancel)
                                 or not _brace_clear(field, bottom, destination, strut_r, clearance, cancel)):
                             evidence['collision_rejected'] += 1
+                            continue
+                        if (near_other(origin, destination, strut_r, {owner})
+                                or near_other(bottom, destination, strut_r, {owner})):
+                            evidence['support_collision_rejected'] += 1
                             continue
                         accepted = (destination, None)
                         break

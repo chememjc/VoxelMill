@@ -53,7 +53,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 
 | ID | Item | Area | Ease | Benefit | Score | Status |
 | --- | --- | --- | ---: | ---: | ---: | --- |
-| VM-095 | Default settings fail validation on simple shapes | Bug | 4 | 5 | 20 | open |
+| VM-095 | Default settings fail validation on simple shapes | Bug | 4 | 5 | 20 | done |
 | VM-001 | `hollow.infill = "hex"` crashes | Bug | 5 | 4 | 20 | done |
 | VM-002 | Editor job pool runs one job at a time by default | Bug | 5 | 4 | 20 | done |
 | VM-080 | Release the line-actor fix | Release | 5 | 4 | 20 | done |
@@ -66,7 +66,8 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-010 | Vectorize `hollow._bottom_open` | Perf | 5 | 3 | 15 | done |
 | B5 | Print-time estimation: physical calibration | Feature | 3 | 5 | 15 | open (hardware) |
 | VM-030 | Slicing cost scaled with the LCD panel, not the part | Perf | 3 | 5 | 15 | done |
-| VM-090 | Multi-part support collision audit | Feature | 3 | 5 | 15 | open |
+| VM-090 | Multi-part support collision audit | Feature | 3 | 5 | 15 | done |
+| VM-096 | Exact-union exports can hold zero-volume folds | Bug | 2 | 2 | 4 | open |
 | VM-091 | Default supports that look like CHITUBOX Light | Feature | 3 | 5 | 15 | open |
 | VM-093 | `release.yml` platform selector | Release | 5 | 3 | 15 | open |
 | D4 | Raft adhesion / removal-force calibration | Feature | 4 | 3 | 12 | open (hardware) |
@@ -742,8 +743,16 @@ count support-to-support capsule overlaps that are not graph junctions. Reuse `C
 `_hits_occupied` and the `_append_extra_models` boolean pattern. This is also the troubleshooting tool.
 Tests land in `tests/test_multipart_plates.py`.
 
-**Where.** `src/voxelmill/validation.py`, `src/voxelmill/supports.py`, `src/voxelmill/pipeline.py`
-(`_append_extra_models`), `tests/test_multipart_plates.py`
+**Where.** `src/voxelmill/collisions.py`, `src/voxelmill/pipeline.py` (`_collision_audit`),
+`tests/test_default_printability.py`
+
+**Done (2026-09-24).** Every `prepare` reports `validation.metrics.support_collisions` and a warning
+check. It found three real defects on the default fixtures. Brace feet landed inside neighbouring pillars
+(32–105 per fixture), because only centrelines were checked. Tip exclusion spheres skipped whole columns,
+so a vertical pillar on a part's edge stood inside the wall below for 30 mm. `_hits_occupied` sampled only
+the middle half of a shaft, so branches overlapped near elbows. All three are fixed: braces use a capsule
+check, exclusions cover only their chord, and occupancy uses the exact segment distance with only true
+joints exempt. The multi-part plate tests are VM-094.
 
 ### VM-091 — Default supports that look like CHITUBOX Light
 
@@ -823,6 +832,38 @@ why. Done when a default `prepare` of every valid fixture passes, and a test kee
 
 **Where.** `src/voxelmill/config.py`, `src/voxelmill/validation.py`, `src/voxelmill/supports.py`,
 `reports/golden/`
+
+**Done (2026-09-24).** 17 of 18 goldens now pass; the exception is `nonmanifold_edge`, an invalid mesh.
+`tests/test_default_printability.py` requires every valid fixture to pass with zero failed contacts and
+zero collisions. The root causes, in order:
+
+- *growth_span*: one contact per XY spacing cell left gaps up to about twice the spacing. Contacts now sit
+  on a hexagonal lattice, and a repair pass adds contacts until every downward sample is within the reach
+  (`contact_reach_mm`). Downward faces are sampled at an eighth of the spacing.
+- *voids*: the tip/model crevices of a solid part were single-voxel pockets. `support_void_policy` now
+  defaults to `ignore`, which records them as support-class warnings; model cavities still fail.
+  `validate` cannot attribute a neck in one STL, so under `ignore` it warns and says why.
+- *routes*: model anchors refused any sloped landing, because the whole connector height was tested at
+  full width. The check now follows the taper and lets the landing surface rise up to 60°.
+  `allow_part_to_part` is on by default, as in CHITUBOX. A contact within a pillar's reach of a wall
+  counts as attached. The column field reaches past the part so edge contacts can branch outward.
+
+### VM-096 — Exact-union exports can hold zero-volume folds
+
+Ease 2 · Benefit 2 · Confidence: sure · Status: open
+
+**Problem.** The exact Manifold union is epsilon-valid. Where a brace grazes a pillar's shoulder rim, or a
+tip cone enters a curved surface near tangency, it can emit coplanar folds or zero-area triangles.
+Reopening the exported STL through the strict importer then reports `self_intersections` or
+`degenerate_triangles`. This affects the default torus (14 pairs) and bracket, and HEAD had the torus too.
+Slicing, `prepare`'s reslice and `validate` are unaffected, because they rasterize. Only a strict
+re-import (`inspect`, or `prepare` of our own output) notices.
+
+**Fix.** Avoid the tangencies when generating geometry, or clean folds after the union and re-verify.
+Neither `simplify` nor `set_tolerance` (up to 3 µm) removes them all. Keeping brace ends off shoulders
+removed the sphere's folds but broke the brace schedule, and was reverted.
+
+**Where.** `src/voxelmill/assembly.py` (`assemble`), `src/voxelmill/supports.py` (`_brace`, tip segments)
 
 ## Feature backlog
 

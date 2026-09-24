@@ -76,7 +76,7 @@ DEFAULTS = {
         # Primary supports may anchor on another model only when explicitly
         # enabled.  Brace destinations are always support-network nodes and
         # never inherit this policy.
-        'allow_part_to_part': False,
+        'allow_part_to_part': True,
         # After routing, drop unroutable contacts that already have material in
         # a 3x3 printer-pitch neighbourhood one layer below. Near-vertical walls
         # sampled on both sides of the surface do not need a pillar. Island and
@@ -181,11 +181,11 @@ DEFAULTS = {
         # 0 = exact-coordinate weld; positive (capped at 0.05 mm) is an explicit
         # STEP/CAD import repair for near-duplicate tessellation vertices.
         'weld_tolerance_mm': 0.0,
-        # fail: any enclosed void or drainage bottleneck blocks export (default).
-        # ignore: support-class findings are recorded and do not fail; model-class
-        # still fails. fill: exact-path enclosed shells after union are filled;
+        # fail: any enclosed void or drainage bottleneck blocks export.
+        # ignore (default): support-class findings are recorded and do not fail;
+        # model-class still fails. fill: exact-path enclosed shells after union are filled;
         # drainage necks are not shells and still need tip geometry.
-        'support_void_policy': 'fail',
+        'support_void_policy': 'ignore',
     },
     'assembly': {'union': 'auto', 'require_raster_parity': True, 'max_parity_examples': 16,
                  # Off by default: clipping destroys geometry the printer

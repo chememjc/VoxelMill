@@ -291,6 +291,24 @@ def validate_stl(source, settings, *, budget=None, cancel=None, progress=no_prog
                                          cancel=cancel, progress=progress)
                 report.metrics['drainage'] = drain
                 report.checks['drainage_bottlenecks'] = drainage_check(drain)
+                policy = settings['repair'].get('support_void_policy', 'fail')
+                if (policy != 'fail' and report.checks['drainage_bottlenecks'] == 'fail'
+                        and not drain.get('enclosed_components')):
+                    # One STL carries no record of which triangles are support,
+                    # so a neck cannot be attributed the way prepare does. Under
+                    # a lenient policy say so rather than failing every
+                    # supported export on its own tip crevices; sealed
+                    # chambers still fail.
+                    report.checks['drainage_bottlenecks'] = 'warn'
+                    report.diagnostics.append(Diagnostic(
+                        'unattributed_drainage_bottleneck',
+                        'Drainage necks were found but a single STL cannot say whether the '
+                        'supports or the model form them; rerun with '
+                        'repair.support_void_policy=fail to treat them as failures',
+                        severity='warning',
+                        details={'policy': policy,
+                                 'bottlenecked_components': drain.get('bottlenecked_components'),
+                                 'bottlenecked_volume_mm3': drain.get('bottlenecked_volume_mm3')}))
         else:
             report.checks['drainage_bottlenecks'] = 'not_run'
     report.metrics['timing'] = timer.as_dict()
@@ -714,6 +732,8 @@ def _advisory_checks(run, overhang_check, drainage, track_voids):
         run.report['stages']['support_cavity_fill'] = fill
         validation.metrics['support_cavity_fill'] = fill
     apply_support_void_policy(validation, settings)
+    with run.timer.stage('collision_audit'):
+        _collision_audit(run)
     if run.load_diagnostics:
         validation.diagnostics.extend(run.load_diagnostics)
     if run.transform_note is not None:
@@ -724,6 +744,54 @@ def _advisory_checks(run, overhang_check, drainage, track_voids):
             details=run.report['stages']['transform']))
     run.report['validation'] = validation.to_dict()
     run.report['support_graph'] = asdict(run.plan.graph)
+
+
+def _collision_audit(run):
+    """Exact support-into-part and support-into-support evidence for the plate.
+
+    A warning, not a gate: the router avoids collisions by construction on a
+    sampled field, and this is the independent check of that claim.
+    """
+    from .collisions import support_model_intrusion, support_overlaps
+    validation, plan = run.validation, run.plan
+    if run.part_meshes:
+        parts = []
+        for mesh in run.part_meshes:
+            try:
+                parts.append(geometry.mesh_to_manifold(np.asarray(mesh))[0])
+            except VoxelMillError as error:
+                if error.code == 'canceled':
+                    raise
+                parts.append(None)
+    else:
+        parts = [run.model.solid]
+    intrusion = support_model_intrusion(plan.solids, parts, plan.graph, run.settings,
+                                        cancel=run.cancel)
+    overlaps = support_overlaps(plan.graph)
+    audit = {**intrusion, 'support_overlaps': overlaps['overlaps'],
+             'support_overlap_examples': overlaps['examples'],
+             'basis': 'exact boolean of support solids against each part; graph capsules '
+                      'for support pairs; tip and anchor pieces are expected'}
+    validation.metrics['support_collisions'] = audit
+    if intrusion['unchecked_parts'] == len(parts):
+        # No exact part solid (raster union path): the audit is evidence, not
+        # a check, so its absence must not turn a passing export into a
+        # not-run failure.
+        audit['status'] = 'not_run: no exact part solid to intersect'
+        return
+    found = intrusion['intrusions'] or overlaps['overlaps']
+    validation.checks['support_collisions'] = 'warn' if found else 'pass'
+    if intrusion['intrusions']:
+        validation.diagnostics.append(Diagnostic(
+            'support_model_intrusion', 'A support passes through a part away from its tip or anchor',
+            severity='warning', position_mm=(intrusion['worst'] or {}).get('center_mm'),
+            details={key: intrusion[key] for key in ('intrusions', 'intrusion_volume_mm3', 'worst',
+                                                     'allowance_mm')}))
+    if overlaps['overlaps']:
+        validation.diagnostics.append(Diagnostic(
+            'support_overlap', 'Two supports overlap where the support graph does not join them',
+            severity='warning', details={'overlaps': overlaps['overlaps'],
+                                         'examples': overlaps['examples'][:8]}))
 
 
 def _publish(run, output, allow_unresolved, components):

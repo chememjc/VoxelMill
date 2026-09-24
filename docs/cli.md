@@ -193,6 +193,16 @@ them) are `null` when the resin profile leaves `density_g_cm3`/
 `cost_per_liter` at `0.0`, meaning "not supplied" — see
 [configuration.md](configuration.md).
 
+`validation.metrics.support_collisions` audits the routed supports
+independently of the router. The support solids are intersected exactly with
+each part, and every piece away from a contact tip or model anchor (beyond
+`allowance_mm`) counts as an `intrusion`. Graph capsules that overlap without
+the graph joining them count as `support_overlaps`. Either one sets
+`checks.support_collisions` to `warn` and adds a `support_model_intrusion` or
+`support_overlap` diagnostic with the worst location. It is a warning, not a
+gate, and on the raster union path, with no exact part solid, the metrics say
+`not_run` and no check is added.
+
 ## `measure`
 
     voxelmill measure inputstl/left_temporal_bone_mars5_oriented.stl \
@@ -706,8 +716,8 @@ Builds the attachment illustration used by the support editor. `--layout array`
 (the default) uses four contacts; `--layout part-to-part` uses a broad lower
 and upper model platform to demonstrate model anchors. Both obey the caller's
 settings exactly, so a dimension edit is comparable before and after, which
-also means `part-to-part` routes nothing until `allow_part_to_part` is
-enabled.
+also means `part-to-part` routes nothing when `allow_part_to_part` is turned
+off. Its platform reaches past a branch's reach, so every contact lands on it.
 
 `--layout showcase` exists for the opposite reason. It spreads six contacts
 over five stations, each shaped to force a different route, so every kind the

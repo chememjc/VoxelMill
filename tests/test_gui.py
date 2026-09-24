@@ -1342,7 +1342,8 @@ def test_apply_settings_does_not_flatten_extra_part_lifts(application, tmp_path)
 
 def test_allow_part_to_part_checkbox_toggles_the_setting(application):
     window = MainWindow(small_settings(), None, headless=True)
-    assert window.document.settings['support']['allow_part_to_part'] is False
+    assert window.document.settings['support']['allow_part_to_part'] is True
+    assert window.actions_map['allow_part_to_part'].isChecked()
     window.actions_map['allow_part_to_part'].setChecked(False)
     assert window.document.settings['support']['allow_part_to_part'] is False
     window.actions_map['allow_part_to_part'].setChecked(True)

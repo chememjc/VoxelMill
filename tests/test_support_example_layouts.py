@@ -57,19 +57,21 @@ def test_historical_layouts_route_once_part_to_part_is_enabled(layout):
     assert len(example['triangles']['supports'])
 
 
-def test_part_to_part_layout_is_empty_until_its_setting_is_enabled():
+def test_part_to_part_layout_is_empty_when_its_setting_is_off():
     """Recorded, not endorsed: the historical layouts obey the caller exactly.
 
     ``part-to-part``'s broad lower platform blocks every plate route, so with
-    ``allow_part_to_part`` off -- the default -- all four contacts are
-    unroutable and the picture is bare. That is what the editor's "Show
-    part-to-part supports" button exists to fix, and what the ``showcase``
-    layout avoids by forcing the setting itself.
+    ``allow_part_to_part`` turned off all four contacts are unroutable and the
+    picture is bare, which the hint explains. With the default (on) every
+    contact lands on the lower part.
     """
-    example = _example('part-to-part')
+    example = _example('part-to-part', allow_part_to_part=False)
     assert example['metrics']['contacts_routed'] == 0
     assert example['metrics']['contacts_failed'] == len(example['contacts'])
-    assert example['hint']
+    assert example['hint'].startswith('Nothing routes')
+    default = _example('part-to-part')
+    assert default['metrics']['contacts_failed'] == 0
+    assert default['metrics']['routing']['model_anchor'] == len(default['contacts'])
 
 
 def test_showcase_exercises_every_support_category():
@@ -208,10 +210,9 @@ def test_saving_an_example_writes_every_group(tmp_path):
     assert path.exists() and path.stat().st_size > 0
 
 
-def test_part_to_part_says_why_nothing_routes_with_defaults():
+def test_part_to_part_says_why_nothing_routes_when_disabled():
     from voxelmill.config import resolve_settings
     from voxelmill.support_example import support_example
-    example = support_example(resolve_settings(), layout='part-to-part')
-    assert example['hint'].startswith('Nothing routes')
-    enabled = resolve_settings(overrides={'support': {'allow_part_to_part': True}})
-    assert not support_example(enabled, layout='part-to-part')['hint'].startswith('Nothing routes')
+    disabled = resolve_settings(overrides={'support': {'allow_part_to_part': False}})
+    assert support_example(disabled, layout='part-to-part')['hint'].startswith('Nothing routes')
+    assert not support_example(resolve_settings(), layout='part-to-part')['hint'].startswith('Nothing routes')

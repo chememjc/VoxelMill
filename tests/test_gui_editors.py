@@ -244,6 +244,9 @@ def test_apply_invalidates_parent_jobs_before_the_dialog_closes(app, monkeypatch
 
 def test_bracing_tab_and_model_gap_round_trip(app, tmp_path):
     document = Document()
+    # Part-to-part is on by default; start from off so the demo's apply and
+    # undo are observable.
+    document.settings['support']['allow_part_to_part'] = False
     dialog = ConfigurationEditor(document, 'support', headless=True)
     assert dialog.tabs.tabText(0) == 'Bracing'
     for key, value in {'brace_spacing_mm': '8', 'brace_max_distance_mm': '12',

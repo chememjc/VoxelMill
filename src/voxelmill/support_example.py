@@ -53,10 +53,13 @@ def _array_geometry(m, spacing, height_mm, layout):
     pedestal = m.Manifold.cube((spacing * .8, spacing * .8, height_mm * .4)).translate(
         (-spacing * .9, -spacing * .9, 0))
     if layout == 'part-to-part':
-        # A broad lower platform makes the model-to-model gap legible. The
-        # router still obeys the user's allow/avoidance settings without edits.
-        pedestal = m.Manifold.cube((2 * spacing, 2 * spacing, height_mm * .4)).translate(
-            (-spacing, -spacing, 0))
+        # A broad lower platform makes the model-to-model gap legible. It
+        # reaches past a branch's two-spacing reach on every side, so no
+        # contact can route to the plate. The router still obeys the user's
+        # allow/avoidance settings without edits.
+        half = 3.5 * spacing
+        pedestal = m.Manifold.cube((2 * half, 2 * half, height_mm * .4)).translate(
+            (-half, -half, 0))
     return beam + pedestal, contacts
 
 
@@ -175,10 +178,11 @@ def support_example(settings, height_mm=20.0, *, layout='array', cancel=None):
                        else np.empty((0, 3, 3)))}
     blocked = layout == 'part-to-part' and not settings['support'].get('allow_part_to_part')
     hints = {'part-to-part': ('Nothing routes: every contact here sits over the lower part and '
-                              'part-to-part supports are off. Enable them and set avoidance to 0 '
-                              'to compare model routes.' if blocked else
-                              'Enable part-to-part supports and set avoidance to 0 '
-                              'to compare model routes.'),
+                              'part-to-part supports are off. Enable them to route onto the '
+                              'lower part.' if blocked else
+                              'Every contact sits over the lower part, so each lands on it. Lower '
+                              'the avoidance below 1 to let model routes compete with plate routes '
+                              'where both exist.'),
              'showcase': 'Forces the part-to-part and thin-pillar settings listed '
                          'under overrides so every route kind is visible.'}
     return {'triangles': groups, 'contacts': contacts, 'metrics': plan.metrics,

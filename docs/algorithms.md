@@ -148,8 +148,8 @@ support class, not closed shells.
 
 | Policy | Behavior |
 | --- | --- |
-| `fail` (default) | Any enclosed void or drainage bottleneck fails export. |
-| `ignore` | Support-class findings are recorded (`ignored_support_voids`, `ignored_support_bottlenecks`) as warnings and do not fail those checks; model-class still fails. |
+| `fail` | Any enclosed void or drainage bottleneck fails export. |
+| `ignore` (default) | Support-class findings are recorded (`ignored_support_voids`, `ignored_support_bottlenecks`) as warnings and do not fail those checks; model-class still fails. |
 | `fill` | After an exact union, `fill_enclosed_cavities` seals enclosed shells on the union solid and the export is re-validated. The raster path reports `support_cavity_fill.status=not_run` and must not claim those voids passed. Drainage necks are not shells — fill is not a crevice fix; prefer less tip taper / wider contact, then re-measure. |
 
 Growth and span use conservative coarse upper bounds with an exact
@@ -392,14 +392,29 @@ level-wise step changes no height. What remains is what the part keeps.
 
 ## Supports
 
-Contacts come from downward faces and from raster island births, thinned to
-one automatic contact per XY `spacing_mm` cell (lowest Z wins); islands,
-manual/paint enforcers, and correction extras bypass the density cap.
+Contacts come from downward faces and from raster island births. Downward
+faces are sampled at an eighth of `spacing_mm`. Automatic contacts sit on a
+hexagonal XY lattice at `spacing_mm`: in each lattice cell and
+`spacing_mm`-tall Z band the sample nearest the node is taken, and picks within
+half a spacing of a lower one are dropped. A repair pass then adds a contact at
+every sample still farther than the *reach* from all contacts, lowest and
+farthest first. The reach is the smaller of `spacing_mm` and `max_span_mm` less
+the tip radius, less the sampling uncertainty, so every downward point is
+covered and the first layer of a flat underside never grows past `max_span_mm`
+from a tip. Islands, manual/paint enforcers, and correction extras bypass the
+density cap and count towards coverage.
 `route_contacts` tries three strategies in order: a vertical pillar to the
 plate, then an angled or branched route to a free column within
 `2 * spacing_mm`, then a contact onto already-printed model material below it.
+The column field reaches past the part's footprint by a branch's reach (capped
+at 12 mm), so an edge contact over lower material can branch out beside it.
 Shaft clearance is a capsule of radius plus `support_clearance_mm`, not
-centerline samples; the occupancy overlay skips overlapping shafts. Every
+centerline samples; a vertical pillar is also tested at its own radius, so a
+contact on a part's edge cannot stand its pillar inside the wall below. The
+tip region is excluded only along each exclusion sphere's own chord, never for
+a whole column. The occupancy overlay rejects a shaft that comes within the two
+radii of an earlier one anywhere along its length, except at an intended joint
+(an endpoint on the other axis) and only near it. Every
 failed route is reported with a capped diagnostic count and reaches the export
 decision: exact raster connectivity alone does not prove the planned contacts
 were placed or are removable.
@@ -486,7 +501,10 @@ never dropped. A true free overhang that will not fit still fails. Coverage
 is left against the original selection so the drop does not invent uncovered
 samples. This does not certify that the wall will not sag.
 
-When a model anchor is available, `allow_part_to_part` gates it. With the
+When a model anchor is available, `allow_part_to_part` (default on) gates it.
+An anchor may land on a slope up to 60°: material that rises from the landing
+point no faster than that is the surface the anchor embeds in, as a tip does,
+while anything steeper within the tapered connector's reach is a wall. With the
 default avoidance of `1`, the router keeps the historical plate-first choice;
 at `0`, model and plate candidates compete by total centerline length. Values
 between them require the model route to be shorter by the configured ratio.

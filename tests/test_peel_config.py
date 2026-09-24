@@ -7,13 +7,14 @@ from voxelmill.config import DEFAULTS, resolve_settings, validate_settings
 from voxelmill.contracts import VoxelMillError
 
 
-def test_support_defaults_require_opt_in_model_anchors_and_use_downward_braces():
+def test_support_defaults_allow_model_anchors_and_use_downward_braces():
     support = resolve_settings()['support']
     assert support['model_anchor_length_mm'] == 2.0
     assert support['model_anchor_diameter_mm'] == 0.4
     assert support['model_anchor_penetration_mm'] == 0.15
     assert support['break_point_diameter_mm'] == 0.8
-    assert support['allow_part_to_part'] is False
+    assert support['allow_part_to_part'] is True
+    assert support['part_to_part_avoidance'] == 1.0
     assert support['brace_spacing_mm'] == 15.0
     assert support['brace_max_length_mm'] == 30.0
     assert 'brace_start_height_mm' not in support

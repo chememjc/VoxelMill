@@ -813,9 +813,11 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   serialization then crashed instead of returning its validation failure.
 
 - **Less tip taper closes the sphere crevice; a longer tip was not proven.** On
-  the synthetic supported sphere, `contact_diameter_mm=0.9` or
-  `tip_base_diameter_mm=0.4` (equal to contact, no taper) removed the drainage
-  bottleneck entirely. Extending tip length was not shown to help.
+  the synthetic supported sphere, `tip_base_diameter_mm=0.4` (equal to the
+  contact, no taper) removes the drainage bottleneck entirely. Under the old
+  grid-cell contact layout `contact_diameter_mm=0.9` did too; with the
+  hexagonal layout it makes seven necks, so the finding was layout-specific.
+  Extending tip length was not shown to help.
   `repair.support_void_policy=ignore` can record those support-class necks
   without failing export; `fill` seals enclosed shells after an exact union and
   does not fix drainage necks. Do not silently raise `min_void_volume_mm3` to
@@ -1591,3 +1593,27 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   2.2 to 18/18 locally and the runner to 16/18. The rest is transcendental math
   on a different CPU path; do not promise bit-identical reports across
   machines, and avoid `mean`/`@` where the result is rounded to a lattice.
+
+- **An exclusion sphere must remove its chord, not its column.** The tip
+  region is excluded from shaft clearance so a contact is not its own
+  collision. Skipping every column the sphere touched, over the whole height,
+  blinded a vertical pillar within about 1 mm of its contact: a contact on a
+  part's edge stood a 0.6 mm pillar half inside the wall below for 30 mm, and
+  nothing noticed until the exact collision audit intersected the solids.
+- **Sampling the middle of a shaft misses overlaps at its ends.** Five samples
+  between 25 % and 75 % of a shaft let branches overlap another route next to
+  an elbow. Use the exact segment distance, and exempt only a real joint (an
+  endpoint lying on the other axis), trimmed so a shaft that continues along
+  the other is still caught.
+- **A column field the size of the part cannot branch outward.** A contact on
+  a shelf edge over lower material needs a free column beside the part. The
+  field now reaches a branch's length past the footprint, capped at 12 mm,
+  because coarse spacings made it grow quadratically.
+- **One contact per spacing cell is not coverage.** Picking the lowest sample
+  in each XY cell left gaps near twice the spacing, and a plain cylinder
+  failed `growth_span`. Coverage has to be enforced against dense samples, not
+  implied by the density.
+- **Measure a slope at the cell centre.** Column tops are sampled at cell
+  centres. Measuring the slope allowance to the far side of a cell let a
+  vertical wall 0.5 mm away pass as a 60° slope on a coarse grid.
+
