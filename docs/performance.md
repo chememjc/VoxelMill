@@ -34,6 +34,8 @@ actually retries or hollows before you claim a win there.
 | + RLE per-layer analysis in `validation.py` | **3.45 s** | 545 MB | **21.4x vs v0.1.0**, 3.7x on top of 12.9 s; validation 0.93 s |
 | + UnionLayerStream `slice_into` OR | **2.84 s** | — | island_guard 1.24 → 0.83 s |
 | + native 3D EDT | **2.32 s** | 350 MB | **31.8x vs v0.1.0**; drainage 0.75 → 0.23 s |
+| `78cb860` re-measured 2026-09-23 (wall, best of 2) | 3.15 s | — | Same commit as the row above, timed as process wall time on today's machine state; use this as the comparable baseline |
+| + default grounded bracing (`ad1186c`, 0.5.3) | 4.25 s | 477 MB | **+35 %, bisected.** 186 → 394 support edges and +21 % triangles, but island_guard +62 %. With `support.auto_bracing=false` HEAD runs 3.23 s. See ISSUES.md VM-029 |
 
 Record a new row after every performance change so the curve stays visible.
 
