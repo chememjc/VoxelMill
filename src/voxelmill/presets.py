@@ -16,9 +16,10 @@ from typing import NoReturn
 
 from .config import DEFAULTS, validate_settings
 from .contracts import VoxelMillError
+from .versioning import CURRENT_VERSIONS, upgrade
 
 
-PRESET_SCHEMA_VERSION = 1
+PRESET_SCHEMA_VERSION = CURRENT_VERSIONS['preset']
 _SUPPORT = 'support'
 _PROCESS = 'process'
 
@@ -175,8 +176,7 @@ def _validate_document(value, section: str = _SUPPORT):
     if 'notes' in data and (not isinstance(data['notes'], list) or
                           any(not isinstance(note, str) for note in data['notes'])):
         _fail('Preset notes must be an array of strings')
-    if type(data['schema_version']) is not int or data['schema_version'] != PRESET_SCHEMA_VERSION:
-        _fail('Preset schema_version must be integer 1')
+    data = upgrade('preset', data, code='invalid_preset')
     if not isinstance(data['name'], str) or not data['name'].strip():
         _fail('Preset name must be a nonempty string')
     data['name'] = data['name'].strip()

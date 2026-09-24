@@ -20,6 +20,7 @@ import zipfile
 from typing import NoReturn
 
 from .contracts import VoxelMillError
+from .versioning import CURRENT_VERSIONS, upgrade
 
 MANIFEST_NAME = 'manifest.json'
 SOURCE_NAME = 'source/original.stl'
@@ -81,7 +82,7 @@ def _unique_object(pairs):
 
 
 #: Bumped to 2 when paint became one local-frame record per plate object.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = CURRENT_VERSIONS['project']
 
 
 def _decode(data):
@@ -89,15 +90,7 @@ def _decode(data):
         manifest = json.loads(data, parse_constant=_reject_constant, object_pairs_hook=_unique_object)
     except (ValueError, UnicodeError, RecursionError) as exc:
         raise VoxelMillError('invalid_project', f'Invalid JSON manifest: {exc}') from exc
-    if not isinstance(manifest, dict) or type(manifest.get('schema_version')) is not int:
-        _fail(f'Project requires schema_version integer {SCHEMA_VERSION}')
-    if manifest['schema_version'] != SCHEMA_VERSION:
-        # Schema 2 moved paint from plate-coordinate centroids to one
-        # local-frame record per object. A schema-1 mark cannot be attributed
-        # to a part after the fact, so it is refused rather than silently
-        # reinterpreted as belonging to the primary.
-        _fail(f'Project schema_version {manifest["schema_version"]} is not supported; '
-              f'this build reads and writes {SCHEMA_VERSION}')
+    manifest = upgrade('project', manifest, code='invalid_project')
     # Also rejects exponent overflows (e.g. 1e999), which parse_constant misses.
     _encode(manifest)
     return manifest

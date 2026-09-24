@@ -25,6 +25,7 @@ from typing import NoReturn
 
 from .config import DEFAULTS, _read, resolve_settings
 from .contracts import VoxelMillError
+from .versioning import CURRENT_VERSIONS
 
 PRINTER_SUFFIX = '.ptr'
 RESIN_SUFFIX = '.res'
@@ -313,7 +314,7 @@ def dumps_printer_profile(settings, name=None, *, hardware_only=False) -> str:
         if not isinstance(name, str) or not name.strip():
             _fail('Printer profile name must be a nonempty string')
         printer['name'] = name.strip()
-    lines = ['schema_version = 1', '',
+    lines = [f"schema_version = {CURRENT_VERSIONS['profile']}", '',
              '# Written by voxelmill profile save from a fully resolved settings stack.']
     if hardware_only:
         lines.append('# This hardware-only profile supplies printer settings; other sections inherit.')
@@ -430,7 +431,7 @@ def resin_document(reference) -> dict:
 
 
 def dumps_resin_profile(document) -> str:
-    lines = ['schema_version = 1', '',
+    lines = [f"schema_version = {CURRENT_VERSIONS['profile']}", '',
              '# Written by voxelmill resin bind.  Each processes.<printer-id> block',
              '# applies only to that printer id.', '']
     _toml_table('resin', document['resin'], lines)

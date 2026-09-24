@@ -74,7 +74,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | A8 | Presets embedded in profiles | Feature | 5 | 2 | 10 | partial |
 | VM-023 | Cheap boolean pre-checks for added models | Perf | 5 | 2 | 10 | done |
 | VM-064 | Goldens for the invalid-mesh fixtures | Test/CI | 5 | 2 | 10 | done |
-| VM-041 | One versioned envelope and migration registry for every file format | Arch | 2 | 5 | 10 | open |
+| VM-041 | One versioned envelope and migration registry for every file format | Arch | 2 | 5 | 10 | partial |
 | A4 | Profile inheritance with delta storage | Feature | 3 | 3 | 9 | open |
 | A5 | Profile compatibility conditions | Feature | 3 | 3 | 9 | open |
 | B2 | CTB v4/v5 reader | Feature | 3 | 3 | 9 | deferred (decision) |
@@ -449,13 +449,15 @@ Ease 1 · Benefit 5 · Confidence: sure · Status: open
 
 ### VM-041 — One versioned envelope and migration registry for every file format
 
-Ease 2 · Benefit 5 · Confidence: sure · Status: open
+Ease 2 · Benefit 5 · Confidence: sure · Status: partial
 
 **Problem.** Profiles, presets, projects and reports each carry their own `schema_version` handling (`1` literals in `profiles.py`, `PRESET_SCHEMA_VERSION`, project `SCHEMA_VERSION`) and ad-hoc legacy shims (`fill_legacy_settings`). After the first stable release, every mismatch here becomes a compatibility promise.
 
 **Fix.** A shared `{"kind": ..., "schema_version": N, ...}` envelope in `contracts.py`, with a `MIGRATIONS[kind][N] -> N+1` registry and a single `load_versioned(kind, data)` entry point. Reset all versions to 1 at stable and delete the pre-stable shims. Document the stability policy (what may change in a minor release) in ISSUES.md or `docs/`.
 
 **Where.** `src/voxelmill/config.py:219-250`, `src/voxelmill/presets.py:20`, `src/voxelmill/profiles.py:245`, `src/voxelmill/project.py`
+
+**Progress (2026-09-23).** `voxelmill/versioning.py` now owns every version decision. `CURRENT_VERSIONS` lists profile, settings, preset and project; `MIGRATIONS[kind][n]` upgrades one step; `REFUSED` records why a version is not migrated (project schema 1); and `upgrade(kind, data, code=...)` is the one check, used by the profile reader, settings validation, preset loader and project loader. Files from a newer build are refused as newer. Open: `fill_legacy_settings` still fills pre-stable schema-1 gaps outside the registry. Retire it at 1.0 (VM-049), or turn it into a real migration if the settings schema is bumped with VM-040.
 
 ### VM-042 — Split `gui/window.py` (3,874 lines) into controllers
 

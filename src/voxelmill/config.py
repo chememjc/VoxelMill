@@ -11,6 +11,7 @@ except ImportError:  # Python 3.10
     import tomli as tomllib
 
 from .contracts import VoxelMillError
+from .versioning import CURRENT_VERSIONS, upgrade
 
 BASE_TYPES = ('plate', 'none', 'pad', 'skate', 'skeleton', 'grid', 'hex', 'triangle')
 MODEL_ANCHOR_SHAPES = ('cone', 'cylinder')
@@ -25,7 +26,7 @@ SUPPORT_VOID_POLICIES = ('fail', 'ignore', 'fill')
 EXAMPLE_LAYOUTS = ('array', 'part-to-part', 'showcase')
 
 DEFAULTS = {
-    'schema_version': 1,
+    'schema_version': CURRENT_VERSIONS['settings'],
     'printer': {
         'id': 'mars5-ultra', 'name': 'Elegoo Mars 5 Ultra',
         'build_mm': [153.36, 77.76, 165.0], 'pixels': [8520, 4320],
@@ -290,9 +291,7 @@ def _read(path):
             data = tomllib.load(stream)
     except (OSError, tomllib.TOMLDecodeError) as exc:
         raise VoxelMillError('invalid_profile', f'Cannot read profile {path}: {exc}') from exc
-    if type(data.get('schema_version')) is not int or data['schema_version'] != 1:
-        _error('Profile schema_version must be integer 1')
-    return data
+    return upgrade('profile', data, code='invalid_profile')
 
 
 def _number(value, name, minimum=0, positive=False):
@@ -305,8 +304,9 @@ def _number(value, name, minimum=0, positive=False):
 def validate_settings(settings):
     """Validate a fully resolved dictionary; return it unchanged."""
     _keys(settings, DEFAULTS, 'settings')
-    if set(settings) != set(DEFAULTS) or type(settings['schema_version']) is not int or settings['schema_version'] != 1:
+    if set(settings) != set(DEFAULTS):
         _error('Resolved settings require all sections and schema_version 1')
+    upgrade('settings', settings, code='invalid_profile')
     for section in ('printer', 'resin', 'process', 'support', 'peel', 'repair', 'assembly', 'resources', 'hollow'):
         _keys(settings[section], DEFAULTS[section], section)
         if set(settings[section]) != set(DEFAULTS[section]):
