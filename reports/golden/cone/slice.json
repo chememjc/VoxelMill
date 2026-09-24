@@ -47,7 +47,7 @@
     ]
   },
   "format": "goo",
-  "layer_blob_sha256": "5143136c272cf91ab396be8b21902815edf93b95a34c9d030057819cbdfc4f60",
+  "layer_blob_sha256": "8a5737907a7bed130362f7c92f703df2b9ff2b24f135f50cb0e1a9da5f30e9a2",
   "layers": 500,
   "output": "out.goo",
   "print_time_s": 3705,
@@ -58,8 +58,8 @@
     "density_g_cm3": null,
     "mass_g": null,
     "source": "raster_volume_mm3",
-    "volume_ml": 2.8967753465999992,
-    "volume_mm3": 2896.7753465999995
+    "volume_ml": 2.6897113692,
+    "volume_mm3": 2689.7113692
   },
   "schema_version": 1,
   "shape_px": [
@@ -69,24 +69,24 @@
   "source": {
     "bounds": [
       [
-        -14.296728134155273,
-        -12.600000381469727,
+        -12.153531074523926,
+        -12.449999809265137,
         0.0
       ],
       [
-        14.296728134155273,
-        15.300000190734863,
+        12.153531074523926,
+        12.449999809265137,
         25.0
       ]
     ],
     "path": "prepared.stl",
-    "sha256": "8da4d2bf4931ff1a496d100bc1c9af1890de61c8345af5e9b23518602399c10a",
-    "triangles": 49466
+    "sha256": "a0acad87b03ddf69ae14feaec80020eec41ad605bf741cd69d73e51cd68e3612",
+    "triangles": 46002
   },
   "validation": {
     "checks": {
       "closed_surface": "pass",
-      "drainage_bottlenecks": "fail",
+      "drainage_bottlenecks": "pass",
       "enclosed_voids": "pass",
       "growth_span": "pass",
       "image_orientation": "warn",
@@ -100,10 +100,10 @@
         "code": "transient_trap",
         "details": {
           "definition": "empty space enclosed by already-printed material except toward the growth direction",
-          "peak_layer": 37,
-          "peak_volume_mm3": 9.719999999986814e-05
+          "peak_layer": 30,
+          "peak_volume_mm3": 4.8599999999999975e-05
         },
-        "layer": 37,
+        "layer": 30,
         "message": "Empty space is enclosed by already-printed material during part of the build",
         "position_mm": null,
         "severity": "warning"
@@ -140,7 +140,7 @@
           "bottom_layer_top_mm": 0.2,
           "bottom_lift_speed": 0.05,
           "build_z_mm": 165.0,
-          "candidate_triangle_count": 3628,
+          "candidate_triangle_count": 3544,
           "heuristic": "uncalibrated geometry score; not a force or failure prediction",
           "layer_height_mm": 0.05,
           "limitations": [
@@ -149,61 +149,61 @@
             "open, duplicate and nonmanifold surfaces require independent validation"
           ],
           "max_angle_deg": 10.0,
-          "maximum_projected_area_mm2": 592.1051383612269,
-          "maximum_score": 5.9210513836122685,
+          "maximum_projected_area_mm2": 477.25456629196526,
+          "maximum_score": 4.7725456629196525,
           "normal_lift_speed": 0.05,
           "reference_lift_speed": 0.05,
           "region_count": 1322,
           "regions": [
             {
-              "area_mm2": 592.1051383612269,
+              "area_mm2": 477.25456629196526,
               "bottom_layer_intersection": true,
               "bounds": [
                 [
-                  -14.296728134155273,
-                  -12.600000381469727,
+                  -12.153531074523926,
+                  -12.449999809265137,
                   0.0
                 ],
                 [
-                  14.296728134155273,
-                  15.300000190734863,
+                  12.153531074523926,
+                  12.449999809265137,
                   0.0
                 ]
               ],
               "lift_speed": 0.05,
               "mean_z_mm": 0.0,
               "normal_layer_intersection": false,
-              "projected_area_mm2": 592.1051383612269,
-              "score": 5.9210513836122685,
+              "projected_area_mm2": 477.25456629196526,
+              "score": 4.7725456629196525,
               "threshold": true,
-              "triangle_count": 128,
+              "triangle_count": 48,
               "z_layer_span": [
                 0,
                 0
               ]
             },
             {
-              "area_mm2": 299.90327240599765,
+              "area_mm2": 296.7701797576692,
               "bottom_layer_intersection": false,
               "bounds": [
                 [
                   -10.0,
-                  -9.98486328125,
+                  -9.983161926269531,
                   5.0
                 ],
                 [
                   10.0,
-                  9.98486328125,
+                  9.983161926269531,
                   5.0
                 ]
               ],
               "lift_speed": 0.05,
-              "mean_z_mm": 4.999999999999986,
+              "mean_z_mm": 4.999999999999997,
               "normal_layer_intersection": true,
-              "projected_area_mm2": 299.90327240599765,
-              "score": 3.089912503576946,
+              "projected_area_mm2": 296.7701797576692,
+              "score": 3.057632155079016,
               "threshold": true,
-              "triangle_count": 2180,
+              "triangle_count": 2176,
               "z_layer_span": [
                 100,
                 100
@@ -212,7 +212,7 @@
           ],
           "regions_truncated": false,
           "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-          "source_triangle_count": 49466,
+          "source_triangle_count": 46002,
           "status": "complete",
           "threshold_area_mm2": 100.0,
           "threshold_region_count": 2,
@@ -222,86 +222,28 @@
         "message": "Large downward surface regions warrant review of orientation and release settings",
         "position_mm": null,
         "severity": "warning"
-      },
-      {
-        "code": "drainage_bottleneck",
-        "details": {
-          "analysis_grid": [
-            157,
-            153,
-            137
-          ],
-          "analysis_pitch_mm": 0.18806319451591877,
-          "area_definition": "circular-equivalent maximum inscribed path clearance on sampled grid",
-          "bottleneck_examples": [
-            {
-              "bottleneck_area_mm2": 0.55084228515625,
-              "bottleneck_area_upper_mm2": 0.5566558837890625,
-              "component": 2,
-              "core_volume_mm3": 0.006651374893524688,
-              "seed_zyx": [
-                9,
-                88,
-                105
-              ]
-            }
-          ],
-          "bottleneck_volume_definition": "eroded chamber cores; excludes narrow neck and boundary shell",
-          "bottlenecked_components": 1,
-          "bottlenecked_volume_mm3": 0.006651374893524688,
-          "clearance_radius_mm": 0.5641895835477563,
-          "enclosed_components": 0,
-          "enclosed_volume_mm3": 0.0,
-          "ignored_bottlenecked_components": 0,
-          "ignored_bottlenecked_volume_mm3": 0,
-          "min_orifice_area_mm2": 1.0,
-          "min_void_volume_mm3": 0.0,
-          "occupancy_closed": true,
-          "sampling": "XY cell centers and Z subsamples; sub-grid walls may be missed",
-          "status": "complete",
-          "unclosed_rows": 0,
-          "unclosed_slices": 0,
-          "void_components": 1,
-          "z_subsamples_per_cell": 1
-        },
-        "layer": null,
-        "message": "Void connects to the exterior only through an orifice below the configured area",
-        "position_mm": null,
-        "severity": "error"
       }
     ],
     "metrics": {
       "antialias_levels": 1,
       "antialias_supports": false,
       "crop_origin_px": [
-        3464,
-        1458
+        3583,
+        1467
       ],
       "diagnostic_examples_capped": 128,
       "drainage": {
         "analysis_grid": [
-          157,
-          153,
+          134,
+          137,
           137
         ],
         "analysis_pitch_mm": 0.18806319451591877,
         "area_definition": "circular-equivalent maximum inscribed path clearance on sampled grid",
-        "bottleneck_examples": [
-          {
-            "bottleneck_area_mm2": 0.55084228515625,
-            "bottleneck_area_upper_mm2": 0.5566558837890625,
-            "component": 2,
-            "core_volume_mm3": 0.006651374893524688,
-            "seed_zyx": [
-              9,
-              88,
-              105
-            ]
-          }
-        ],
+        "bottleneck_examples": [],
         "bottleneck_volume_definition": "eroded chamber cores; excludes narrow neck and boundary shell",
-        "bottlenecked_components": 1,
-        "bottlenecked_volume_mm3": 0.006651374893524688,
+        "bottlenecked_components": 0,
+        "bottlenecked_volume_mm3": 0,
         "clearance_radius_mm": 0.5641895835477563,
         "enclosed_components": 0,
         "enclosed_volume_mm3": 0.0,
@@ -323,15 +265,15 @@
         "min_void_volume_mm3": 0.0,
         "negligible_count": 0,
         "negligible_volume_mm3": 0.0,
-        "nodes": 850,
-        "peak_present_trapped_layer": 37,
-        "peak_present_trapped_volume_mm3": 9.719999999986814e-05,
+        "nodes": 522,
+        "peak_present_trapped_layer": 30,
+        "peak_present_trapped_volume_mm3": 4.8599999999999975e-05,
         "volume_mm3": 0.0
       },
-      "exposed_pixels": 178813293,
+      "exposed_pixels": 166031566,
       "grid": [
-        1592,
-        1554
+        1354,
+        1386
       ],
       "growth_decimation": 8,
       "growth_violation_pixels": 0,
@@ -346,7 +288,7 @@
         "bottom_layer_top_mm": 0.2,
         "bottom_lift_speed": 0.05,
         "build_z_mm": 165.0,
-        "candidate_triangle_count": 3628,
+        "candidate_triangle_count": 3544,
         "heuristic": "uncalibrated geometry score; not a force or failure prediction",
         "layer_height_mm": 0.05,
         "limitations": [
@@ -355,61 +297,61 @@
           "open, duplicate and nonmanifold surfaces require independent validation"
         ],
         "max_angle_deg": 10.0,
-        "maximum_projected_area_mm2": 592.1051383612269,
-        "maximum_score": 5.9210513836122685,
+        "maximum_projected_area_mm2": 477.25456629196526,
+        "maximum_score": 4.7725456629196525,
         "normal_lift_speed": 0.05,
         "reference_lift_speed": 0.05,
         "region_count": 1322,
         "regions": [
           {
-            "area_mm2": 592.1051383612269,
+            "area_mm2": 477.25456629196526,
             "bottom_layer_intersection": true,
             "bounds": [
               [
-                -14.296728134155273,
-                -12.600000381469727,
+                -12.153531074523926,
+                -12.449999809265137,
                 0.0
               ],
               [
-                14.296728134155273,
-                15.300000190734863,
+                12.153531074523926,
+                12.449999809265137,
                 0.0
               ]
             ],
             "lift_speed": 0.05,
             "mean_z_mm": 0.0,
             "normal_layer_intersection": false,
-            "projected_area_mm2": 592.1051383612269,
-            "score": 5.9210513836122685,
+            "projected_area_mm2": 477.25456629196526,
+            "score": 4.7725456629196525,
             "threshold": true,
-            "triangle_count": 128,
+            "triangle_count": 48,
             "z_layer_span": [
               0,
               0
             ]
           },
           {
-            "area_mm2": 299.90327240599765,
+            "area_mm2": 296.7701797576692,
             "bottom_layer_intersection": false,
             "bounds": [
               [
                 -10.0,
-                -9.98486328125,
+                -9.983161926269531,
                 5.0
               ],
               [
                 10.0,
-                9.98486328125,
+                9.983161926269531,
                 5.0
               ]
             ],
             "lift_speed": 0.05,
-            "mean_z_mm": 4.999999999999986,
+            "mean_z_mm": 4.999999999999997,
             "normal_layer_intersection": true,
-            "projected_area_mm2": 299.90327240599765,
-            "score": 3.089912503576946,
+            "projected_area_mm2": 296.7701797576692,
+            "score": 3.057632155079016,
             "threshold": true,
-            "triangle_count": 2180,
+            "triangle_count": 2176,
             "z_layer_span": [
               100,
               100
@@ -418,7 +360,7 @@
         ],
         "regions_truncated": false,
         "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-        "source_triangle_count": 49466,
+        "source_triangle_count": 46002,
         "status": "complete",
         "threshold_area_mm2": 100.0,
         "threshold_region_count": 2,
@@ -428,14 +370,14 @@
         0.018,
         0.018
       ],
-      "raster_volume_mm3": 2896.7753465999995,
+      "raster_volume_mm3": 2689.7113692,
       "transient_traps": {
         "definition": "empty space enclosed by already-printed material except toward the growth direction",
-        "peak_layer": 37,
-        "peak_volume_mm3": 9.719999999986814e-05
+        "peak_layer": 30,
+        "peak_volume_mm3": 4.8599999999999975e-05
       }
     },
-    "passed": false,
+    "passed": true,
     "schema_version": 1
   },
   "verification": {
@@ -450,6 +392,6 @@
     "pixel_comparison": "exact",
     "standalone_check": "voxelmill verify <file.goo>"
   },
-  "warned": true,
+  "warned": false,
   "written": true
 }

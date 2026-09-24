@@ -47,7 +47,7 @@
     ]
   },
   "format": "goo",
-  "layer_blob_sha256": "2c4bd2cd0256760f77e417a5b91b2a8cabca11ab0f707e743374708874ebc3a2",
+  "layer_blob_sha256": "d6f945d8ada7ef2cc16d0deb3c10231ec6a86c31a01787925a5d5a704c36dab8",
   "layers": 500,
   "output": "out.goo",
   "print_time_s": 3705,
@@ -58,8 +58,8 @@
     "density_g_cm3": null,
     "mass_g": null,
     "source": "raster_volume_mm3",
-    "volume_ml": 8.966150738999998,
-    "volume_mm3": 8966.150738999999
+    "volume_ml": 8.766631328399999,
+    "volume_mm3": 8766.631328399999
   },
   "schema_version": 1,
   "shape_px": [
@@ -69,19 +69,19 @@
   "source": {
     "bounds": [
       [
-        -14.362500190734863,
-        -12.600000381469727,
+        -12.449999809265137,
+        -12.449999809265137,
         0.0
       ],
       [
-        14.362500190734863,
-        12.600000381469727,
+        12.449999809265137,
+        12.449999809265137,
         25.0
       ]
     ],
     "path": "prepared.stl",
-    "sha256": "7a5e9fd26732121afbcf0d9afcd475cb4afc2b2db0ce52bde684ef88c7b59bdb",
-    "triangles": 58744
+    "sha256": "7242c0ec03adb30fa0b9d67441e3443f06ceea67ce88d69ead1747dbfae56f5e",
+    "triangles": 55016
   },
   "validation": {
     "checks": {
@@ -100,10 +100,10 @@
         "code": "transient_trap",
         "details": {
           "definition": "empty space enclosed by already-printed material except toward the growth direction",
-          "peak_layer": 26,
-          "peak_volume_mm3": 0.00019440000000000036
+          "peak_layer": 23,
+          "peak_volume_mm3": 0.00012960000000000174
         },
-        "layer": 26,
+        "layer": 23,
         "message": "Empty space is enclosed by already-printed material during part of the build",
         "position_mm": null,
         "severity": "warning"
@@ -140,7 +140,7 @@
           "bottom_layer_top_mm": 0.2,
           "bottom_lift_speed": 0.05,
           "build_z_mm": 165.0,
-          "candidate_triangle_count": 4264,
+          "candidate_triangle_count": 4284,
           "heuristic": "uncalibrated geometry score; not a force or failure prediction",
           "layer_height_mm": 0.05,
           "limitations": [
@@ -149,41 +149,41 @@
             "open, duplicate and nonmanifold surfaces require independent validation"
           ],
           "max_angle_deg": 10.0,
-          "maximum_projected_area_mm2": 693.3690616216168,
-          "maximum_score": 6.933690616216168,
+          "maximum_projected_area_mm2": 602.9081463333504,
+          "maximum_score": 6.029081463333504,
           "normal_lift_speed": 0.05,
           "reference_lift_speed": 0.05,
           "region_count": 1610,
           "regions": [
             {
-              "area_mm2": 693.3690616216168,
+              "area_mm2": 602.9081463333504,
               "bottom_layer_intersection": true,
               "bounds": [
                 [
-                  -14.362500190734863,
-                  -12.600000381469727,
+                  -12.449999809265137,
+                  -12.449999809265137,
                   0.0
                 ],
                 [
-                  14.362500190734863,
-                  12.600000381469727,
+                  12.449999809265137,
+                  12.449999809265137,
                   0.0
                 ]
               ],
               "lift_speed": 0.05,
               "mean_z_mm": 0.0,
               "normal_layer_intersection": false,
-              "projected_area_mm2": 693.3690616216168,
-              "score": 6.933690616216168,
+              "projected_area_mm2": 602.9081463333504,
+              "score": 6.029081463333504,
               "threshold": true,
-              "triangle_count": 78,
+              "triangle_count": 98,
               "z_layer_span": [
                 0,
                 0
               ]
             },
             {
-              "area_mm2": 383.23350466408783,
+              "area_mm2": 379.4105263361163,
               "bottom_layer_intersection": false,
               "bounds": [
                 [
@@ -198,10 +198,10 @@
                 ]
               ],
               "lift_speed": 0.05,
-              "mean_z_mm": 4.999999999999996,
+              "mean_z_mm": 5.000000000000003,
               "normal_layer_intersection": true,
-              "projected_area_mm2": 383.23350466408783,
-              "score": 3.948466411690602,
+              "projected_area_mm2": 379.4105263361163,
+              "score": 3.9090781501296825,
               "threshold": true,
               "triangle_count": 2578,
               "z_layer_span": [
@@ -212,7 +212,7 @@
           ],
           "regions_truncated": false,
           "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-          "source_triangle_count": 58744,
+          "source_triangle_count": 55016,
           "status": "complete",
           "threshold_area_mm2": 100.0,
           "threshold_region_count": 2,
@@ -228,14 +228,14 @@
       "antialias_levels": 1,
       "antialias_supports": false,
       "crop_origin_px": [
-        3461,
-        1458
+        3567,
+        1467
       ],
       "diagnostic_examples_capped": 128,
       "drainage": {
         "analysis_grid": [
-          157,
-          138,
+          137,
+          137,
           137
         ],
         "analysis_pitch_mm": 0.18806319451591877,
@@ -265,15 +265,15 @@
         "min_void_volume_mm3": 0.0,
         "negligible_count": 0,
         "negligible_volume_mm3": 0.0,
-        "nodes": 672,
-        "peak_present_trapped_layer": 26,
-        "peak_present_trapped_volume_mm3": 0.00019440000000000036,
+        "nodes": 700,
+        "peak_present_trapped_layer": 23,
+        "peak_present_trapped_volume_mm3": 0.00012960000000000174,
         "volume_mm3": 0.0
       },
-      "exposed_pixels": 553466095,
+      "exposed_pixels": 541150082,
       "grid": [
-        1598,
-        1404
+        1386,
+        1386
       ],
       "growth_decimation": 8,
       "growth_violation_pixels": 0,
@@ -288,7 +288,7 @@
         "bottom_layer_top_mm": 0.2,
         "bottom_lift_speed": 0.05,
         "build_z_mm": 165.0,
-        "candidate_triangle_count": 4264,
+        "candidate_triangle_count": 4284,
         "heuristic": "uncalibrated geometry score; not a force or failure prediction",
         "layer_height_mm": 0.05,
         "limitations": [
@@ -297,41 +297,41 @@
           "open, duplicate and nonmanifold surfaces require independent validation"
         ],
         "max_angle_deg": 10.0,
-        "maximum_projected_area_mm2": 693.3690616216168,
-        "maximum_score": 6.933690616216168,
+        "maximum_projected_area_mm2": 602.9081463333504,
+        "maximum_score": 6.029081463333504,
         "normal_lift_speed": 0.05,
         "reference_lift_speed": 0.05,
         "region_count": 1610,
         "regions": [
           {
-            "area_mm2": 693.3690616216168,
+            "area_mm2": 602.9081463333504,
             "bottom_layer_intersection": true,
             "bounds": [
               [
-                -14.362500190734863,
-                -12.600000381469727,
+                -12.449999809265137,
+                -12.449999809265137,
                 0.0
               ],
               [
-                14.362500190734863,
-                12.600000381469727,
+                12.449999809265137,
+                12.449999809265137,
                 0.0
               ]
             ],
             "lift_speed": 0.05,
             "mean_z_mm": 0.0,
             "normal_layer_intersection": false,
-            "projected_area_mm2": 693.3690616216168,
-            "score": 6.933690616216168,
+            "projected_area_mm2": 602.9081463333504,
+            "score": 6.029081463333504,
             "threshold": true,
-            "triangle_count": 78,
+            "triangle_count": 98,
             "z_layer_span": [
               0,
               0
             ]
           },
           {
-            "area_mm2": 383.23350466408783,
+            "area_mm2": 379.4105263361163,
             "bottom_layer_intersection": false,
             "bounds": [
               [
@@ -346,10 +346,10 @@
               ]
             ],
             "lift_speed": 0.05,
-            "mean_z_mm": 4.999999999999996,
+            "mean_z_mm": 5.000000000000003,
             "normal_layer_intersection": true,
-            "projected_area_mm2": 383.23350466408783,
-            "score": 3.948466411690602,
+            "projected_area_mm2": 379.4105263361163,
+            "score": 3.9090781501296825,
             "threshold": true,
             "triangle_count": 2578,
             "z_layer_span": [
@@ -360,7 +360,7 @@
         ],
         "regions_truncated": false,
         "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-        "source_triangle_count": 58744,
+        "source_triangle_count": 55016,
         "status": "complete",
         "threshold_area_mm2": 100.0,
         "threshold_region_count": 2,
@@ -370,11 +370,11 @@
         0.018,
         0.018
       ],
-      "raster_volume_mm3": 8966.150738999999,
+      "raster_volume_mm3": 8766.631328399999,
       "transient_traps": {
         "definition": "empty space enclosed by already-printed material except toward the growth direction",
-        "peak_layer": 26,
-        "peak_volume_mm3": 0.00019440000000000036
+        "peak_layer": 23,
+        "peak_volume_mm3": 0.00012960000000000174
       }
     },
     "passed": true,

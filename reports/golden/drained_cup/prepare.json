@@ -21,23 +21,23 @@
   "diagnostics": [],
   "export": {
     "path": "prepared.stl",
-    "triangles": 102458,
+    "triangles": 96624,
     "warned": false,
     "written": true
   },
   "passes": [
     {
-      "exported_triangles": 102458,
+      "exported_triangles": 96624,
       "kind": "full_reslice",
       "pass": 1,
       "plate_fit": true,
       "raft": true,
-      "raster_volume_mm3": 8673.335285399999,
+      "raster_volume_mm3": 8121.827815199998,
       "supports": {
         "allow_part_to_part": true,
         "analysis": {
           "analysis_pitch_mm": 0.15,
-          "columns": 65536,
+          "columns": 64516,
           "enclosed_void_volume_mm3": 0.0,
           "layer_height_mm": 0.05,
           "layers": 700,
@@ -52,58 +52,58 @@
           "cell_basis": "center-to-center spacing of adjacent cells",
           "cell_size_mm": 6.0,
           "connected_components": 1,
-          "contact_area_mm2": 764.5769160988453,
-          "convex_envelope_area_mm2": 764.6142764321088,
+          "contact_area_mm2": 642.1014984066138,
+          "convex_envelope_area_mm2": 642.648601139819,
           "does_not_establish": "plate adhesion, removal force, or print stability",
           "establishes": "the shape and size of the base",
           "export_simplification_basis": "one float32 coordinate step; redundant grid edges",
-          "export_simplification_mm": 1.9073486328125e-06,
-          "feet": 122,
+          "export_simplification_mm": 9.5367431640625e-07,
+          "feet": 73,
           "footprint_basis": "union of emitted polygon sections at the plate",
           "grid_candidate_lines": 14,
-          "open_area_fraction": 4.8861673676541024e-05,
-          "open_area_mm2": 0.03736033326345023,
-          "pad_diameter_mm": 5.2,
+          "open_area_fraction": 0.0008513248643735048,
+          "open_area_mm2": 0.547102733205179,
+          "pad_diameter_mm": 4.9,
           "pad_thickness_mm": 1.0,
-          "perimeter_width_mm": 1.2,
+          "perimeter_width_mm": 0.9,
           "removal": "connected grid, perimeter rim and foot tree; vertical openings",
           "rotation_deg": 0.0,
-          "skeleton_edges": 121,
-          "skeleton_length_mm": 221.9635435818622,
+          "skeleton_edges": 72,
+          "skeleton_length_mm": 191.47547631662022,
           "solid": true,
-          "strut_width_mm": 1.2,
+          "strut_width_mm": 0.9,
           "tree_basis": "Euclidean minimum spanning tree; sorted ties",
           "type": "grid",
-          "unique_feet": 122,
-          "volume_mm3": 764.5769160974819
+          "unique_feet": 73,
+          "volume_mm3": 642.1014984110312
         },
         "brace_angle_deg": 45.0,
         "brace_azimuth_deg": 0.0,
         "brace_branches_per_node": 1,
-        "brace_candidates_examined": 345,
-        "brace_destination": "both",
+        "brace_candidates_examined": 156,
+        "brace_destination": "supports",
         "brace_diameter_mm": 0.6,
         "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
         "brace_max_distance_mm": 4.5,
         "brace_max_length_mm": 30.0,
-        "brace_min_height_mm": 0.0,
-        "brace_new_feet": 49,
+        "brace_min_height_mm": 3.0,
+        "brace_new_feet": 0,
         "brace_origins_examined": 73,
-        "brace_pattern": "single",
+        "brace_pattern": "alternating",
         "brace_rejections": {
           "bounds_rejected": 65,
           "collision_rejected": 0,
           "duplicate_rejected": 0,
           "foot_rejected": 0,
           "length_rejected": 0,
-          "no_destination_rejected": 0,
-          "pattern_rejected": 0,
-          "spacing_rejected": 148,
-          "support_collision_rejected": 83,
+          "no_destination_rejected": 50,
+          "pattern_rejected": 71,
+          "spacing_rejected": 19,
+          "support_collision_rejected": 0,
           "ungrounded_rejected": 26
         },
-        "brace_spacing_mm": 15.0,
-        "braces": 61,
+        "brace_spacing_mm": 5.0,
+        "braces": 12,
         "braces_capped": false,
         "braces_collision_rejected": 0,
         "contact_load_limit_mm2": 36.0,
@@ -369,7 +369,7 @@
         "small_pillars": 0,
         "spacing_mm": 3.0,
         "suppressed_contacts": 0,
-        "tip_base_diameter_mm": 1.2,
+        "tip_base_diameter_mm": 0.9,
         "tip_length_mm": 2.0,
         "tree": {
           "clusters": 0,
@@ -378,24 +378,41 @@
           "kept_independent": 0,
           "trunks": 0
         },
+        "unbraced": {
+          "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are never braced",
+          "model": {
+            "braced_pillars": 0,
+            "max_mm": 24.0,
+            "max_slenderness": 26.67,
+            "median_mm": 24.0,
+            "pillars": 26
+          },
+          "plate": {
+            "braced_pillars": 12,
+            "max_mm": 3.0,
+            "max_slenderness": 3.33,
+            "median_mm": 3.0,
+            "pillars": 73
+          }
+        },
         "uncovered_fraction": 0.0,
         "uncovered_samples": 0,
         "unroutable_positions": []
       },
       "union_bounds": [
         [
-          -17.225000001490116,
-          -14.517917804419994,
+          -14.375,
+          -14.36791780591011,
           0.0
         ],
         [
-          17.299999997019768,
-          15.775933936238289,
+          14.450000002980232,
+          14.36791780591011,
           35.0
         ]
       ],
-      "union_triangles": 102458,
-      "union_volume_mm3": 8673.694791077072,
+      "union_triangles": 96624,
+      "union_volume_mm3": 8122.272703283805,
       "validation": {
         "checks": {
           "closed_surface": "pass",
@@ -417,7 +434,7 @@
             "details": {
               "definition": "empty space enclosed by already-printed material except toward the growth direction",
               "peak_layer": 699,
-              "peak_volume_mm3": 5926.635572399985
+              "peak_volume_mm3": 6227.664296400002
             },
             "layer": 699,
             "message": "Empty space is enclosed by already-printed material during part of the build",
@@ -431,7 +448,7 @@
               "bottom_layer_top_mm": 0.2,
               "bottom_lift_speed": 0.05,
               "build_z_mm": 165.0,
-              "candidate_triangle_count": 7184,
+              "candidate_triangle_count": 7256,
               "heuristic": "uncalibrated geometry score; not a force or failure prediction",
               "layer_height_mm": 0.05,
               "limitations": [
@@ -440,68 +457,68 @@
                 "open, duplicate and nonmanifold surfaces require independent validation"
               ],
               "max_angle_deg": 10.0,
-              "maximum_projected_area_mm2": 764.576914682945,
-              "maximum_score": 7.64576914682945,
+              "maximum_projected_area_mm2": 642.101494947874,
+              "maximum_score": 6.4210149494787405,
               "normal_lift_speed": 0.05,
               "reference_lift_speed": 0.05,
               "region_count": 2795,
               "regions": [
                 {
-                  "area_mm2": 764.576914682945,
+                  "area_mm2": 642.101494947874,
                   "bottom_layer_intersection": true,
                   "bounds": [
                     [
-                      -17.225000381469727,
-                      -14.51791763305664,
+                      -14.375,
+                      -14.367918014526367,
                       0.0
                     ],
                     [
-                      17.299999237060547,
-                      15.775934219360352,
+                      14.449999809265137,
+                      14.367918014526367,
                       0.0
                     ]
                   ],
                   "lift_speed": 0.05,
                   "mean_z_mm": 0.0,
                   "normal_layer_intersection": false,
-                  "projected_area_mm2": 764.576914682945,
-                  "score": 7.64576914682945,
+                  "projected_area_mm2": 642.101494947874,
+                  "score": 6.4210149494787405,
                   "threshold": true,
-                  "triangle_count": 54,
+                  "triangle_count": 128,
                   "z_layer_span": [
                     0,
                     0
                   ]
                 },
                 {
-                  "area_mm2": 432.4731685278772,
+                  "area_mm2": 428.1054294811702,
                   "bottom_layer_intersection": false,
                   "bounds": [
                     [
-                      -11.988812446594238,
+                      -11.98715877532959,
                       -12.0,
                       5.0
                     ],
                     [
-                      11.98486328125,
+                      11.983161926269531,
                       12.0,
                       5.0
                     ]
                   ],
                   "lift_speed": 0.05,
-                  "mean_z_mm": 5.0000000000000036,
+                  "mean_z_mm": 4.999999999999996,
                   "normal_layer_intersection": true,
-                  "projected_area_mm2": 432.4731685278772,
-                  "score": 4.45578416059025,
+                  "projected_area_mm2": 428.1054294811702,
+                  "score": 4.410783212836298,
                   "threshold": true,
-                  "triangle_count": 3014,
+                  "triangle_count": 3012,
                   "z_layer_span": [
                     100,
                     100
                   ]
                 },
                 {
-                  "area_mm2": 233.7297824207078,
+                  "area_mm2": 231.95482611500267,
                   "bottom_layer_intersection": false,
                   "bounds": [
                     [
@@ -516,10 +533,10 @@
                     ]
                   ],
                   "lift_speed": 0.05,
-                  "mean_z_mm": 32.99999999999999,
+                  "mean_z_mm": 33.00000000000001,
                   "normal_layer_intersection": true,
-                  "projected_area_mm2": 233.7297824207078,
-                  "score": 2.804757389048494,
+                  "projected_area_mm2": 231.95482611500267,
+                  "score": 2.783457913380032,
                   "threshold": true,
                   "triangle_count": 1324,
                   "z_layer_span": [
@@ -530,7 +547,7 @@
               ],
               "regions_truncated": false,
               "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-              "source_triangle_count": 102458,
+              "source_triangle_count": 96624,
               "status": "complete",
               "threshold_area_mm2": 100.0,
               "threshold_region_count": 3,
@@ -544,7 +561,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -560,7 +577,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -576,7 +593,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -592,7 +609,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -608,7 +625,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -624,7 +641,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -640,7 +657,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -656,7 +673,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -672,7 +689,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -688,7 +705,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -704,7 +721,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -720,7 +737,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -736,7 +753,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -752,7 +769,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -768,7 +785,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -784,7 +801,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -806,12 +823,12 @@
             "min_void_volume_mm3": 0.0,
             "negligible_count": 0,
             "negligible_volume_mm3": 0.0,
-            "nodes": 1364,
+            "nodes": 2153,
             "peak_present_trapped_layer": 699,
-            "peak_present_trapped_volume_mm3": 5926.635572399985,
+            "peak_present_trapped_volume_mm3": 6227.664296400002,
             "volume_mm3": 0.0
           },
-          "exposed_pixels": 535391067,
+          "exposed_pixels": 501347396,
           "growth_decimation": 8,
           "growth_violation_pixels": 0,
           "island_components": 0,
@@ -824,7 +841,7 @@
             "bottom_layer_top_mm": 0.2,
             "bottom_lift_speed": 0.05,
             "build_z_mm": 165.0,
-            "candidate_triangle_count": 7184,
+            "candidate_triangle_count": 7256,
             "heuristic": "uncalibrated geometry score; not a force or failure prediction",
             "layer_height_mm": 0.05,
             "limitations": [
@@ -833,68 +850,68 @@
               "open, duplicate and nonmanifold surfaces require independent validation"
             ],
             "max_angle_deg": 10.0,
-            "maximum_projected_area_mm2": 764.576914682945,
-            "maximum_score": 7.64576914682945,
+            "maximum_projected_area_mm2": 642.101494947874,
+            "maximum_score": 6.4210149494787405,
             "normal_lift_speed": 0.05,
             "reference_lift_speed": 0.05,
             "region_count": 2795,
             "regions": [
               {
-                "area_mm2": 764.576914682945,
+                "area_mm2": 642.101494947874,
                 "bottom_layer_intersection": true,
                 "bounds": [
                   [
-                    -17.225000381469727,
-                    -14.51791763305664,
+                    -14.375,
+                    -14.367918014526367,
                     0.0
                   ],
                   [
-                    17.299999237060547,
-                    15.775934219360352,
+                    14.449999809265137,
+                    14.367918014526367,
                     0.0
                   ]
                 ],
                 "lift_speed": 0.05,
                 "mean_z_mm": 0.0,
                 "normal_layer_intersection": false,
-                "projected_area_mm2": 764.576914682945,
-                "score": 7.64576914682945,
+                "projected_area_mm2": 642.101494947874,
+                "score": 6.4210149494787405,
                 "threshold": true,
-                "triangle_count": 54,
+                "triangle_count": 128,
                 "z_layer_span": [
                   0,
                   0
                 ]
               },
               {
-                "area_mm2": 432.4731685278772,
+                "area_mm2": 428.1054294811702,
                 "bottom_layer_intersection": false,
                 "bounds": [
                   [
-                    -11.988812446594238,
+                    -11.98715877532959,
                     -12.0,
                     5.0
                   ],
                   [
-                    11.98486328125,
+                    11.983161926269531,
                     12.0,
                     5.0
                   ]
                 ],
                 "lift_speed": 0.05,
-                "mean_z_mm": 5.0000000000000036,
+                "mean_z_mm": 4.999999999999996,
                 "normal_layer_intersection": true,
-                "projected_area_mm2": 432.4731685278772,
-                "score": 4.45578416059025,
+                "projected_area_mm2": 428.1054294811702,
+                "score": 4.410783212836298,
                 "threshold": true,
-                "triangle_count": 3014,
+                "triangle_count": 3012,
                 "z_layer_span": [
                   100,
                   100
                 ]
               },
               {
-                "area_mm2": 233.7297824207078,
+                "area_mm2": 231.95482611500267,
                 "bottom_layer_intersection": false,
                 "bounds": [
                   [
@@ -909,10 +926,10 @@
                   ]
                 ],
                 "lift_speed": 0.05,
-                "mean_z_mm": 32.99999999999999,
+                "mean_z_mm": 33.00000000000001,
                 "normal_layer_intersection": true,
-                "projected_area_mm2": 233.7297824207078,
-                "score": 2.804757389048494,
+                "projected_area_mm2": 231.95482611500267,
+                "score": 2.783457913380032,
                 "threshold": true,
                 "triangle_count": 1324,
                 "z_layer_span": [
@@ -923,7 +940,7 @@
             ],
             "regions_truncated": false,
             "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-            "source_triangle_count": 102458,
+            "source_triangle_count": 96624,
             "status": "complete",
             "threshold_area_mm2": 100.0,
             "threshold_region_count": 3,
@@ -933,40 +950,40 @@
             0.018,
             0.018
           ],
-          "raster_volume_mm3": 8673.335285399999,
+          "raster_volume_mm3": 8121.827815199998,
           "reopened": {
             "bounds": [
               [
-                -17.225000381469727,
-                -14.51791763305664,
+                -14.375,
+                -14.367918014526367,
                 0.0
               ],
               [
-                17.299999237060547,
-                15.775934219360352,
+                14.449999809265137,
+                14.367918014526367,
                 35.0
               ]
             ],
             "crop_origin_px": [
-              3302,
-              1352
+              3460,
+              1360
             ],
             "grid": [
-              1921,
-              1686
+              1604,
+              1600
             ],
             "negative_winding_crossings": 0,
             "open_layers": 0,
             "open_rows": 0,
             "path": "prepared.stl",
-            "sha256": "31bc343689cb263028b92ca757dda2caf3a884b0704cb0135adea9b5e3565da0",
-            "triangles": 102458
+            "sha256": "bc1e2b6b6287e685e2483312fa5937b5b1eae58229234c7ffad18482da5eba5e",
+            "triangles": 96624
           },
           "supports": {
             "allow_part_to_part": true,
             "analysis": {
               "analysis_pitch_mm": 0.15,
-              "columns": 65536,
+              "columns": 64516,
               "enclosed_void_volume_mm3": 0.0,
               "layer_height_mm": 0.05,
               "layers": 700,
@@ -981,58 +998,58 @@
               "cell_basis": "center-to-center spacing of adjacent cells",
               "cell_size_mm": 6.0,
               "connected_components": 1,
-              "contact_area_mm2": 764.5769160988453,
-              "convex_envelope_area_mm2": 764.6142764321088,
+              "contact_area_mm2": 642.1014984066138,
+              "convex_envelope_area_mm2": 642.648601139819,
               "does_not_establish": "plate adhesion, removal force, or print stability",
               "establishes": "the shape and size of the base",
               "export_simplification_basis": "one float32 coordinate step; redundant grid edges",
-              "export_simplification_mm": 1.9073486328125e-06,
-              "feet": 122,
+              "export_simplification_mm": 9.5367431640625e-07,
+              "feet": 73,
               "footprint_basis": "union of emitted polygon sections at the plate",
               "grid_candidate_lines": 14,
-              "open_area_fraction": 4.8861673676541024e-05,
-              "open_area_mm2": 0.03736033326345023,
-              "pad_diameter_mm": 5.2,
+              "open_area_fraction": 0.0008513248643735048,
+              "open_area_mm2": 0.547102733205179,
+              "pad_diameter_mm": 4.9,
               "pad_thickness_mm": 1.0,
-              "perimeter_width_mm": 1.2,
+              "perimeter_width_mm": 0.9,
               "removal": "connected grid, perimeter rim and foot tree; vertical openings",
               "rotation_deg": 0.0,
-              "skeleton_edges": 121,
-              "skeleton_length_mm": 221.9635435818622,
+              "skeleton_edges": 72,
+              "skeleton_length_mm": 191.47547631662022,
               "solid": true,
-              "strut_width_mm": 1.2,
+              "strut_width_mm": 0.9,
               "tree_basis": "Euclidean minimum spanning tree; sorted ties",
               "type": "grid",
-              "unique_feet": 122,
-              "volume_mm3": 764.5769160974819
+              "unique_feet": 73,
+              "volume_mm3": 642.1014984110312
             },
             "brace_angle_deg": 45.0,
             "brace_azimuth_deg": 0.0,
             "brace_branches_per_node": 1,
-            "brace_candidates_examined": 345,
-            "brace_destination": "both",
+            "brace_candidates_examined": 156,
+            "brace_destination": "supports",
             "brace_diameter_mm": 0.6,
             "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
             "brace_max_distance_mm": 4.5,
             "brace_max_length_mm": 30.0,
-            "brace_min_height_mm": 0.0,
-            "brace_new_feet": 49,
+            "brace_min_height_mm": 3.0,
+            "brace_new_feet": 0,
             "brace_origins_examined": 73,
-            "brace_pattern": "single",
+            "brace_pattern": "alternating",
             "brace_rejections": {
               "bounds_rejected": 65,
               "collision_rejected": 0,
               "duplicate_rejected": 0,
               "foot_rejected": 0,
               "length_rejected": 0,
-              "no_destination_rejected": 0,
-              "pattern_rejected": 0,
-              "spacing_rejected": 148,
-              "support_collision_rejected": 83,
+              "no_destination_rejected": 50,
+              "pattern_rejected": 71,
+              "spacing_rejected": 19,
+              "support_collision_rejected": 0,
               "ungrounded_rejected": 26
             },
-            "brace_spacing_mm": 15.0,
-            "braces": 61,
+            "brace_spacing_mm": 5.0,
+            "braces": 12,
             "braces_capped": false,
             "braces_collision_rejected": 0,
             "contact_load_limit_mm2": 36.0,
@@ -1298,7 +1315,7 @@
             "small_pillars": 0,
             "spacing_mm": 3.0,
             "suppressed_contacts": 0,
-            "tip_base_diameter_mm": 1.2,
+            "tip_base_diameter_mm": 0.9,
             "tip_length_mm": 2.0,
             "tree": {
               "clusters": 0,
@@ -1307,6 +1324,23 @@
               "kept_independent": 0,
               "trunks": 0
             },
+            "unbraced": {
+              "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are never braced",
+              "model": {
+                "braced_pillars": 0,
+                "max_mm": 24.0,
+                "max_slenderness": 26.67,
+                "median_mm": 24.0,
+                "pillars": 26
+              },
+              "plate": {
+                "braced_pillars": 12,
+                "max_mm": 3.0,
+                "max_slenderness": 3.33,
+                "median_mm": 3.0,
+                "pillars": 73
+              }
+            },
             "uncovered_fraction": 0.0,
             "uncovered_samples": 0,
             "unroutable_positions": []
@@ -1314,7 +1348,7 @@
           "transient_traps": {
             "definition": "empty space enclosed by already-printed material except toward the growth direction",
             "peak_layer": 699,
-            "peak_volume_mm3": 5926.635572399985
+            "peak_volume_mm3": 6227.664296400002
           }
         },
         "passed": true,
@@ -1385,10 +1419,10 @@
     "search": {
       "full_resolution_bounds": true,
       "mode": "explicit",
-      "nominal_xy_support_reserve_mm": 2.6,
+      "nominal_xy_support_reserve_mm": 2.45,
       "requires_support_envelope_recheck": true,
       "reserve_relaxed": false,
-      "xy_support_reserve_mm": 2.6
+      "xy_support_reserve_mm": 2.45
     }
   },
   "schema_version": 1,
@@ -1523,15 +1557,15 @@
       "brace_angle_deg": 45.0,
       "brace_azimuth_deg": 0.0,
       "brace_branches_per_node": 1,
-      "brace_destination": "both",
-      "brace_diameter_mm": 0.0,
+      "brace_destination": "supports",
+      "brace_diameter_mm": 0.6,
       "brace_max_distance_mm": 0.0,
       "brace_max_length_mm": 30.0,
-      "brace_min_height_mm": 0.0,
-      "brace_pattern": "single",
-      "brace_spacing_mm": 15.0,
+      "brace_min_height_mm": 3.0,
+      "brace_pattern": "alternating",
+      "brace_spacing_mm": 5.0,
       "break_point_diameter_mm": 0.8,
-      "contact_diameter_mm": 0.4,
+      "contact_diameter_mm": 0.35,
       "contour_supports": false,
       "drop_attached_unroutable": true,
       "max_contact_gap_mm": 0.0,
@@ -1547,9 +1581,9 @@
       "model_anchor_shape": "cone",
       "overhang_angle_deg": 45.0,
       "part_to_part_avoidance": 1.0,
-      "penetration_mm": 0.15,
+      "penetration_mm": 0.2,
       "pillar_angle_deg": 45.0,
-      "pillar_diameter_mm": 1.2,
+      "pillar_diameter_mm": 0.9,
       "raft_expansion_mm": 2.0,
       "raft_slope_deg": 30.0,
       "raft_thickness_mm": 1.0,
@@ -1592,7 +1626,7 @@
         {
           "name": "supports_and_raft",
           "orientation": "closed_positive",
-          "triangles": 116332
+          "triangles": 110156
         }
       ],
       "max_displacement_mm": 0.0,
@@ -1658,8 +1692,8 @@
       "density_g_cm3": null,
       "mass_g": null,
       "source": "raster_volume_mm3",
-      "volume_ml": 8.673335285399999,
-      "volume_mm3": 8673.335285399999
+      "volume_ml": 8.121827815199998,
+      "volume_mm3": 8121.827815199998
     },
     "transform": {
       "mirror": [
@@ -1690,7 +1724,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1706,7 +1740,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1722,7 +1756,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1738,7 +1772,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1754,7 +1788,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1770,7 +1804,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1786,7 +1820,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1802,7 +1836,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1818,7 +1852,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1834,7 +1868,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1850,7 +1884,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1866,7 +1900,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1882,7 +1916,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1898,7 +1932,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1914,7 +1948,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1930,7 +1964,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -1948,805 +1982,805 @@
       {
         "end": "joint0",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot0"
       },
       {
         "end": "contact0",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint0"
       },
       {
         "end": "joint1",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot1"
       },
       {
         "end": "contact1",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint1"
       },
       {
         "end": "joint2",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot2"
       },
       {
         "end": "contact2",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint2"
       },
       {
         "end": "joint3",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot3"
       },
       {
         "end": "contact3",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint3"
       },
       {
         "end": "joint4",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot4"
       },
       {
         "end": "contact4",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint4"
       },
       {
         "end": "joint5",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot5"
       },
       {
         "end": "contact5",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint5"
+      },
+      {
+        "end": "joint6",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot6"
       },
       {
         "end": "contact6",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint6"
       },
       {
         "end": "joint7",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot7"
       },
       {
         "end": "contact7",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint7"
       },
       {
         "end": "contact8",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint8"
       },
       {
         "end": "joint9",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot9"
       },
       {
         "end": "contact9",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint9"
       },
       {
         "end": "contact10",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint10"
       },
       {
         "end": "joint11",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot11"
       },
       {
         "end": "contact11",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint11"
       },
       {
         "end": "contact12",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint12"
       },
       {
         "end": "joint13",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot13"
       },
       {
         "end": "contact13",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint13"
       },
       {
         "end": "joint14",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot14"
       },
       {
         "end": "contact14",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint14"
       },
       {
         "end": "joint15",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot15"
       },
       {
         "end": "contact15",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint15"
       },
       {
         "end": "joint16",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot16"
       },
       {
         "end": "contact16",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint16"
       },
       {
         "end": "joint17",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot17"
       },
       {
         "end": "contact17",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint17"
       },
       {
         "end": "joint18",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot18"
       },
       {
         "end": "contact18",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint18"
       },
       {
         "end": "joint19",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot19"
       },
       {
         "end": "contact19",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint19"
       },
       {
         "end": "joint20",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot20"
       },
       {
         "end": "contact20",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint20"
       },
       {
         "end": "joint21",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot21"
       },
       {
         "end": "contact21",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint21"
       },
       {
         "end": "joint22",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot22"
       },
       {
         "end": "contact22",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint22"
       },
       {
         "end": "joint23",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot23"
       },
       {
         "end": "contact23",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint23"
       },
       {
         "end": "joint24",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot24"
       },
       {
         "end": "contact24",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint24"
       },
       {
         "end": "joint25",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot25"
       },
       {
         "end": "contact25",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint25"
       },
       {
         "end": "joint26",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot26"
       },
       {
         "end": "contact26",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint26"
       },
       {
         "end": "joint27",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot27"
       },
       {
         "end": "contact27",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint27"
       },
       {
         "end": "joint28",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot28"
       },
       {
         "end": "contact28",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint28"
       },
       {
         "end": "joint29",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot29"
       },
       {
         "end": "contact29",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint29"
       },
       {
         "end": "joint30",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot30"
       },
       {
         "end": "contact30",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint30"
       },
       {
         "end": "joint31",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot31"
       },
       {
         "end": "contact31",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint31"
       },
       {
         "end": "contact32",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint32"
       },
       {
         "end": "contact33",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint33"
       },
       {
         "end": "joint34",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot34"
       },
       {
         "end": "contact34",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint34"
       },
       {
         "end": "joint35",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot35"
       },
       {
         "end": "contact35",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint35"
       },
       {
         "end": "joint36",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot36"
       },
       {
         "end": "contact36",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint36"
       },
       {
         "end": "joint37",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot37"
       },
       {
         "end": "contact37",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint37"
       },
       {
         "end": "joint38",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot38"
       },
       {
         "end": "contact38",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint38"
       },
       {
         "end": "contact39",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint39"
       },
       {
         "end": "contact40",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint40"
       },
       {
         "end": "joint41",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot41"
       },
       {
         "end": "contact41",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint41"
       },
       {
         "end": "joint42",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot42"
       },
       {
         "end": "contact42",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint42"
       },
       {
         "end": "joint43",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot43"
       },
       {
         "end": "contact43",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint43"
       },
       {
         "end": "joint44",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot44"
       },
       {
         "end": "contact44",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint44"
       },
       {
         "end": "joint45",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot45"
       },
       {
         "end": "contact45",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint45"
       },
       {
         "end": "joint46",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot46"
       },
       {
         "end": "contact46",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint46"
       },
       {
         "end": "joint47",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot47"
       },
       {
         "end": "contact47",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint47"
       },
       {
         "end": "joint48",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot48"
       },
       {
         "end": "contact48",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint48"
       },
       {
         "end": "joint49",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot49"
       },
       {
         "end": "contact49",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint49"
       },
       {
         "end": "joint50",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot50"
       },
       {
         "end": "contact50",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint50"
       },
       {
         "end": "joint51",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot51"
       },
       {
         "end": "contact51",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint51"
       },
       {
         "end": "joint52",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot52"
       },
       {
         "end": "contact52",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint52"
       },
       {
         "end": "joint53",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot53"
       },
       {
         "end": "contact53",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint53"
       },
       {
         "end": "joint54",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot54"
       },
       {
         "end": "contact54",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint54"
       },
       {
         "end": "joint55",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot55"
       },
       {
         "end": "contact55",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint55"
       },
       {
         "end": "joint56",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot56"
       },
       {
         "end": "contact56",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint56"
       },
       {
         "end": "joint57",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot57"
       },
       {
         "end": "contact57",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint57"
       },
       {
         "end": "joint58",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot58"
       },
       {
         "end": "contact58",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint58"
       },
       {
         "end": "joint59",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot59"
       },
       {
         "end": "contact59",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint59"
       },
       {
         "end": "joint60",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot60"
       },
       {
         "end": "contact60",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint60"
       },
       {
         "end": "joint61",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot61"
       },
       {
         "end": "contact61",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint61"
       },
       {
         "end": "joint62",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot62"
       },
       {
         "end": "contact62",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint62"
       },
       {
         "end": "joint63",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot63"
       },
       {
         "end": "contact63",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint63"
       },
       {
         "end": "contact64",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint64"
       },
       {
         "end": "contact65",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint65"
       },
       {
         "end": "joint66",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot66"
       },
       {
         "end": "contact66",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint66"
       },
       {
         "end": "joint67",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot67"
       },
       {
         "end": "contact67",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint67"
       },
       {
         "end": "contact68",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint68"
       },
       {
         "end": "contact69",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint69"
       },
       {
         "end": "joint70",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot70"
       },
       {
         "end": "contact70",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint70"
-      },
-      {
-        "end": "joint71",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot71"
       },
       {
         "end": "contact71",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint71"
       },
       {
         "end": "joint72",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot72"
       },
       {
         "end": "contact72",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint72"
       },
       {
@@ -2758,13 +2792,13 @@
       {
         "end": "joint73",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint73"
       },
       {
         "end": "contact73",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint73"
       },
       {
@@ -2776,13 +2810,13 @@
       {
         "end": "joint74",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint74"
       },
       {
         "end": "contact74",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint74"
       },
       {
@@ -2794,13 +2828,13 @@
       {
         "end": "joint75",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint75"
       },
       {
         "end": "contact75",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint75"
       },
       {
@@ -2812,13 +2846,13 @@
       {
         "end": "joint76",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint76"
       },
       {
         "end": "contact76",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint76"
       },
       {
@@ -2830,13 +2864,13 @@
       {
         "end": "joint78",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint78"
       },
       {
         "end": "contact78",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint78"
       },
       {
@@ -2848,13 +2882,13 @@
       {
         "end": "joint81",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint81"
       },
       {
         "end": "contact81",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint81"
       },
       {
@@ -2866,13 +2900,13 @@
       {
         "end": "joint82",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint82"
       },
       {
         "end": "contact82",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint82"
       },
       {
@@ -2884,13 +2918,13 @@
       {
         "end": "joint83",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint83"
       },
       {
         "end": "contact83",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint83"
       },
       {
@@ -2902,13 +2936,13 @@
       {
         "end": "joint84",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint84"
       },
       {
         "end": "contact84",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint84"
       },
       {
@@ -2920,13 +2954,13 @@
       {
         "end": "joint85",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint85"
       },
       {
         "end": "contact85",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint85"
       },
       {
@@ -2938,13 +2972,13 @@
       {
         "end": "joint87",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint87"
       },
       {
         "end": "contact87",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint87"
       },
       {
@@ -2956,13 +2990,13 @@
       {
         "end": "joint88",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint88"
       },
       {
         "end": "contact88",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint88"
       },
       {
@@ -2974,13 +3008,13 @@
       {
         "end": "joint89",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint89"
       },
       {
         "end": "contact89",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint89"
       },
       {
@@ -2992,13 +3026,13 @@
       {
         "end": "joint90",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint90"
       },
       {
         "end": "contact90",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint90"
       },
       {
@@ -3010,13 +3044,13 @@
       {
         "end": "joint92",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint92"
       },
       {
         "end": "contact92",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint92"
       },
       {
@@ -3028,13 +3062,13 @@
       {
         "end": "joint93",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint93"
       },
       {
         "end": "contact93",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint93"
       },
       {
@@ -3046,13 +3080,13 @@
       {
         "end": "joint94",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint94"
       },
       {
         "end": "contact94",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint94"
       },
       {
@@ -3064,13 +3098,13 @@
       {
         "end": "joint95",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint95"
       },
       {
         "end": "contact95",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint95"
       },
       {
@@ -3082,13 +3116,13 @@
       {
         "end": "joint96",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint96"
       },
       {
         "end": "contact96",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint96"
       },
       {
@@ -3100,13 +3134,13 @@
       {
         "end": "joint99",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint99"
       },
       {
         "end": "contact99",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint99"
       },
       {
@@ -3118,13 +3152,13 @@
       {
         "end": "joint100",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint100"
       },
       {
         "end": "contact100",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint100"
       },
       {
@@ -3136,13 +3170,13 @@
       {
         "end": "joint101",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint101"
       },
       {
         "end": "contact101",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint101"
       },
       {
@@ -3154,13 +3188,13 @@
       {
         "end": "joint105",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint105"
       },
       {
         "end": "contact105",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint105"
       },
       {
@@ -3172,13 +3206,13 @@
       {
         "end": "joint106",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint106"
       },
       {
         "end": "contact106",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint106"
       },
       {
@@ -3190,13 +3224,13 @@
       {
         "end": "joint107",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint107"
       },
       {
         "end": "contact107",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint107"
       },
       {
@@ -3208,818 +3242,230 @@
       {
         "end": "joint110",
         "kind": "model_anchor",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "anchor_joint110"
       },
       {
         "end": "contact110",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint110"
       },
       {
         "end": "brace_joint323",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot6"
+        "radius_mm": 0.45,
+        "start": "foot65"
       },
       {
-        "end": "joint6",
+        "end": "joint65",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "brace_joint323"
       },
       {
         "end": "brace_joint323",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "joint71"
+        "start": "joint72"
       },
       {
         "end": "brace_joint324",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot65"
+        "radius_mm": 0.45,
+        "start": "foot8"
       },
       {
-        "end": "joint65",
+        "end": "joint8",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "brace_joint324"
       },
       {
         "end": "brace_joint324",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "joint72"
+        "start": "joint3"
       },
       {
-        "end": "brace_landing2",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot2"
+        "end": "brace_joint325",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot10"
       },
       {
-        "end": "brace_landing2",
+        "end": "joint10",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint325"
+      },
+      {
+        "end": "brace_joint325",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "joint0"
+        "start": "joint4"
+      },
+      {
+        "end": "brace_joint326",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot71"
+      },
+      {
+        "end": "joint71",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint326"
+      },
+      {
+        "end": "brace_joint326",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint6"
       },
       {
         "end": "brace_joint327",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot8"
+        "radius_mm": 0.45,
+        "start": "foot12"
       },
       {
-        "end": "joint8",
+        "end": "joint12",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "brace_joint327"
       },
       {
         "end": "brace_joint327",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "joint3"
+        "start": "joint7"
       },
       {
         "end": "brace_joint328",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot10"
+        "radius_mm": 0.45,
+        "start": "foot33"
       },
       {
-        "end": "joint10",
+        "end": "joint33",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "brace_joint328"
       },
       {
         "end": "brace_joint328",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "joint4"
+        "start": "joint23"
       },
       {
-        "end": "brace_landing5",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot5"
+        "end": "brace_joint329",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot32"
       },
       {
-        "end": "brace_landing5",
+        "end": "joint32",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint329"
+      },
+      {
+        "end": "brace_joint329",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "joint5"
+        "start": "joint24"
+      },
+      {
+        "end": "brace_joint330",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot39"
+      },
+      {
+        "end": "joint39",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint330"
+      },
+      {
+        "end": "brace_joint330",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint34"
       },
       {
         "end": "brace_joint331",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot12"
+        "radius_mm": 0.45,
+        "start": "foot40"
       },
       {
-        "end": "joint12",
+        "end": "joint40",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "brace_joint331"
       },
       {
         "end": "brace_joint331",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "joint7"
-      },
-      {
-        "end": "brace_landing7",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot7"
-      },
-      {
-        "end": "brace_landing7",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint9"
-      },
-      {
-        "end": "brace_landing8",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot8"
-      },
-      {
-        "end": "brace_landing8",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint11"
-      },
-      {
-        "end": "brace_landing9",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot9"
-      },
-      {
-        "end": "brace_landing9",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint13"
-      },
-      {
-        "end": "brace_landing10",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot10"
-      },
-      {
-        "end": "brace_landing10",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint14"
-      },
-      {
-        "end": "brace_landing11",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot11"
-      },
-      {
-        "end": "brace_landing11",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint15"
-      },
-      {
-        "end": "brace_landing12",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot12"
-      },
-      {
-        "end": "brace_landing12",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint16"
-      },
-      {
-        "end": "brace_landing13",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot13"
-      },
-      {
-        "end": "brace_landing13",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint17"
-      },
-      {
-        "end": "brace_landing14",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot14"
-      },
-      {
-        "end": "brace_landing14",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint18"
-      },
-      {
-        "end": "brace_landing15",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot15"
-      },
-      {
-        "end": "brace_landing15",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint19"
-      },
-      {
-        "end": "brace_landing16",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot16"
-      },
-      {
-        "end": "brace_landing16",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint20"
-      },
-      {
-        "end": "brace_landing17",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot17"
-      },
-      {
-        "end": "brace_landing17",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint21"
-      },
-      {
-        "end": "brace_landing18",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot18"
-      },
-      {
-        "end": "brace_landing18",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint22"
-      },
-      {
-        "end": "brace_joint356",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot33"
-      },
-      {
-        "end": "joint33",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint356"
-      },
-      {
-        "end": "brace_joint356",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint23"
-      },
-      {
-        "end": "brace_joint357",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot32"
-      },
-      {
-        "end": "joint32",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint357"
-      },
-      {
-        "end": "brace_joint357",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint24"
-      },
-      {
-        "end": "brace_landing21",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot21"
-      },
-      {
-        "end": "brace_landing21",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint25"
-      },
-      {
-        "end": "brace_landing22",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot22"
-      },
-      {
-        "end": "brace_landing22",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint26"
-      },
-      {
-        "end": "brace_landing23",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot23"
-      },
-      {
-        "end": "brace_landing23",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint27"
-      },
-      {
-        "end": "brace_landing24",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot24"
-      },
-      {
-        "end": "brace_landing24",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint28"
-      },
-      {
-        "end": "brace_landing25",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot25"
-      },
-      {
-        "end": "brace_landing25",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint29"
-      },
-      {
-        "end": "brace_landing26",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot26"
-      },
-      {
-        "end": "brace_landing26",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint30"
-      },
-      {
-        "end": "brace_landing27",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot27"
-      },
-      {
-        "end": "brace_landing27",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint31"
-      },
-      {
-        "end": "brace_joint372",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot39"
-      },
-      {
-        "end": "joint39",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint372"
-      },
-      {
-        "end": "brace_joint372",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint34"
-      },
-      {
-        "end": "brace_landing29",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot29"
-      },
-      {
-        "end": "brace_landing29",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint35"
-      },
-      {
-        "end": "brace_landing30",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot30"
-      },
-      {
-        "end": "brace_landing30",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint36"
-      },
-      {
-        "end": "brace_landing31",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot31"
-      },
-      {
-        "end": "brace_landing31",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint37"
-      },
-      {
-        "end": "brace_joint379",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot40"
-      },
-      {
-        "end": "joint40",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint379"
-      },
-      {
-        "end": "brace_joint379",
-        "kind": "brace",
-        "radius_mm": 0.3,
         "start": "joint38"
       },
       {
-        "end": "brace_landing33",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot33"
-      },
-      {
-        "end": "brace_landing33",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint41"
-      },
-      {
-        "end": "brace_landing34",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot34"
-      },
-      {
-        "end": "brace_landing34",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint42"
-      },
-      {
-        "end": "brace_landing35",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot35"
-      },
-      {
-        "end": "brace_landing35",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint43"
-      },
-      {
-        "end": "brace_landing36",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot36"
-      },
-      {
-        "end": "brace_landing36",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint44"
-      },
-      {
-        "end": "brace_landing37",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot37"
-      },
-      {
-        "end": "brace_landing37",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint45"
-      },
-      {
-        "end": "brace_landing38",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot38"
-      },
-      {
-        "end": "brace_landing38",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint46"
-      },
-      {
-        "end": "brace_landing39",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot39"
-      },
-      {
-        "end": "brace_landing39",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint47"
-      },
-      {
-        "end": "brace_landing40",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot40"
-      },
-      {
-        "end": "brace_landing40",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint48"
-      },
-      {
-        "end": "brace_landing41",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot41"
-      },
-      {
-        "end": "brace_landing41",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint49"
-      },
-      {
-        "end": "brace_landing42",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot42"
-      },
-      {
-        "end": "brace_landing42",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint50"
-      },
-      {
-        "end": "brace_landing43",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot43"
-      },
-      {
-        "end": "brace_landing43",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint51"
-      },
-      {
-        "end": "brace_landing44",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot44"
-      },
-      {
-        "end": "brace_landing44",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint52"
-      },
-      {
-        "end": "brace_landing45",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot45"
-      },
-      {
-        "end": "brace_landing45",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint53"
-      },
-      {
-        "end": "brace_landing46",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot46"
-      },
-      {
-        "end": "brace_landing46",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint54"
-      },
-      {
-        "end": "brace_landing47",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot47"
-      },
-      {
-        "end": "brace_landing47",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint55"
-      },
-      {
-        "end": "brace_landing48",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot48"
-      },
-      {
-        "end": "brace_landing48",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint56"
-      },
-      {
-        "end": "brace_landing49",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot49"
-      },
-      {
-        "end": "brace_landing49",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint57"
-      },
-      {
-        "end": "brace_landing50",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot50"
-      },
-      {
-        "end": "brace_landing50",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint58"
-      },
-      {
-        "end": "brace_joint416",
+        "end": "brace_joint332",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot64"
       },
       {
         "end": "joint64",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint416"
+        "radius_mm": 0.45,
+        "start": "brace_joint332"
       },
       {
-        "end": "brace_joint416",
+        "end": "brace_joint332",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint59"
       },
       {
-        "end": "brace_landing52",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot52"
-      },
-      {
-        "end": "brace_landing52",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint60"
-      },
-      {
-        "end": "brace_joint419",
+        "end": "brace_joint333",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot68"
       },
       {
         "end": "joint68",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint419"
+        "radius_mm": 0.45,
+        "start": "brace_joint333"
       },
       {
-        "end": "brace_joint419",
+        "end": "brace_joint333",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint61"
       },
       {
-        "end": "brace_landing54",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot54"
-      },
-      {
-        "end": "brace_landing54",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint62"
-      },
-      {
-        "end": "brace_joint422",
+        "end": "brace_joint334",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot69"
       },
       {
         "end": "joint69",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint422"
+        "radius_mm": 0.45,
+        "start": "brace_joint334"
       },
       {
-        "end": "brace_joint422",
+        "end": "brace_joint334",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint63"
-      },
-      {
-        "end": "brace_landing56",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot56"
-      },
-      {
-        "end": "brace_landing56",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint66"
-      },
-      {
-        "end": "brace_landing57",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot57"
-      },
-      {
-        "end": "brace_landing57",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint67"
-      },
-      {
-        "end": "brace_landing58",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot58"
-      },
-      {
-        "end": "brace_landing58",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint70"
-      },
-      {
-        "end": "brace_landing59",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot59"
-      },
-      {
-        "end": "brace_landing59",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint1"
-      },
-      {
-        "end": "brace_landing60",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot60"
-      },
-      {
-        "end": "brace_landing60",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint2"
       }
     ],
     "nodes": [
@@ -6934,40 +6380,13 @@
         "id": "brace_joint323",
         "kind": "brace_junction",
         "position_mm": [
-          -9.618325652145758,
-          -7.151316317116342,
-          0.8242196769246085
-        ]
-      },
-      {
-        "id": "brace_joint324",
-        "kind": "brace_junction",
-        "position_mm": [
           9.618325652145758,
           7.151316317116342,
           0.8242196769246085
         ]
       },
       {
-        "id": "brace_foot2",
-        "kind": "foot",
-        "position_mm": [
-          -14.625000000000002,
-          0.07499999999999962,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing2",
-        "kind": "brace_junction",
-        "position_mm": [
-          -14.625000000000002,
-          0.07499999999999962,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint327",
+        "id": "brace_joint324",
         "kind": "brace_junction",
         "position_mm": [
           -9.069818538168203,
@@ -6976,7 +6395,7 @@
         ]
       },
       {
-        "id": "brace_joint328",
+        "id": "brace_joint325",
         "kind": "brace_junction",
         "position_mm": [
           -8.94507454716882,
@@ -6985,25 +6404,16 @@
         ]
       },
       {
-        "id": "brace_foot5",
-        "kind": "foot",
-        "position_mm": [
-          -13.131700468063356,
-          -2.5758597850799556,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing5",
+        "id": "brace_joint326",
         "kind": "brace_junction",
         "position_mm": [
-          -13.131700468063356,
-          -2.5758597850799556,
-          0.3
+          -7.539959797492394,
+          -7.795067347013033,
+          0.8242196769246076
         ]
       },
       {
-        "id": "brace_joint331",
+        "id": "brace_joint327",
         "kind": "brace_junction",
         "position_mm": [
           -7.558149732076204,
@@ -7012,223 +6422,7 @@
         ]
       },
       {
-        "id": "brace_foot7",
-        "kind": "foot",
-        "position_mm": [
-          -9.055425000745197,
-          2.766465533056925,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing7",
-        "kind": "brace_junction",
-        "position_mm": [
-          -9.055425000745197,
-          2.766465533056925,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot8",
-        "kind": "foot",
-        "position_mm": [
-          -7.612719535827637,
-          0.1026847457885749,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing8",
-        "kind": "brace_junction",
-        "position_mm": [
-          -7.612719535827637,
-          0.1026847457885749,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot9",
-        "kind": "foot",
-        "position_mm": [
-          -7.485389993740962,
-          5.291852481548604,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing9",
-        "kind": "brace_junction",
-        "position_mm": [
-          -7.485389993740962,
-          5.291852481548604,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot10",
-        "kind": "foot",
-        "position_mm": [
-          -8.693454774220784,
-          -10.381248792012531,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing10",
-        "kind": "brace_junction",
-        "position_mm": [
-          -8.693454774220784,
-          -10.381248792012531,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot11",
-        "kind": "foot",
-        "position_mm": [
-          -5.993454774220784,
-          -2.482554864046865,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing11",
-        "kind": "brace_junction",
-        "position_mm": [
-          -5.993454774220784,
-          -2.482554864046865,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot12",
-        "kind": "foot",
-        "position_mm": [
-          -5.993454774220784,
-          2.7161390639188,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing12",
-        "kind": "brace_junction",
-        "position_mm": [
-          -5.993454774220784,
-          2.7161390639188,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot13",
-        "kind": "foot",
-        "position_mm": [
-          -8.687333063645797,
-          10.384918004816228,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing13",
-        "kind": "brace_junction",
-        "position_mm": [
-          -8.687333063645797,
-          10.384918004816228,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot14",
-        "kind": "foot",
-        "position_mm": [
-          -5.92257180966829,
-          7.872347369946931,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing14",
-        "kind": "brace_junction",
-        "position_mm": [
-          -5.92257180966829,
-          7.872347369946931,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot15",
-        "kind": "foot",
-        "position_mm": [
-          -4.592201232910156,
-          5.286862723032634,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing15",
-        "kind": "brace_junction",
-        "position_mm": [
-          -4.592201232910156,
-          5.286862723032634,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot16",
-        "kind": "foot",
-        "position_mm": [
-          -4.519494009799645,
-          10.541127254923836,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing16",
-        "kind": "brace_junction",
-        "position_mm": [
-          -4.519494009799645,
-          10.541127254923836,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot17",
-        "kind": "foot",
-        "position_mm": [
-          -4.501317204022016,
-          -5.082593398797707,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing17",
-        "kind": "brace_junction",
-        "position_mm": [
-          -4.501317204022016,
-          -5.082593398797707,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot18",
-        "kind": "foot",
-        "position_mm": [
-          -4.464963592466761,
-          0.019324399604172537,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing18",
-        "kind": "brace_junction",
-        "position_mm": [
-          -4.464963592466761,
-          0.019324399604172537,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint356",
+        "id": "brace_joint328",
         "kind": "brace_junction",
         "position_mm": [
           -1.3400166220963001,
@@ -7237,7 +6431,7 @@
         ]
       },
       {
-        "id": "brace_joint357",
+        "id": "brace_joint329",
         "kind": "brace_junction",
         "position_mm": [
           -1.3400166220963001,
@@ -7246,133 +6440,7 @@
         ]
       },
       {
-        "id": "brace_foot21",
-        "kind": "foot",
-        "position_mm": [
-          -3.011977347116622,
-          -2.549620952303447,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing21",
-        "kind": "brace_junction",
-        "position_mm": [
-          -3.011977347116622,
-          -2.549620952303447,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot22",
-        "kind": "foot",
-        "position_mm": [
-          -2.9938450881413052,
-          2.64035686008514,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing22",
-        "kind": "brace_junction",
-        "position_mm": [
-          -2.9938450881413052,
-          2.64035686008514,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot23",
-        "kind": "foot",
-        "position_mm": [
-          -2.9575805701906717,
-          7.753122429620653,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing23",
-        "kind": "brace_junction",
-        "position_mm": [
-          -2.9575805701906717,
-          7.753122429620653,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot24",
-        "kind": "foot",
-        "position_mm": [
-          -1.5038276091217992,
-          -5.088481682538985,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing24",
-        "kind": "brace_junction",
-        "position_mm": [
-          -1.5038276091217992,
-          -5.088481682538985,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot25",
-        "kind": "foot",
-        "position_mm": [
-          -1.5038276091217992,
-          0.136238199472428,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing25",
-        "kind": "brace_junction",
-        "position_mm": [
-          -1.5038276091217992,
-          0.136238199472428,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot26",
-        "kind": "foot",
-        "position_mm": [
-          -1.5038276091217992,
-          10.54787940979004,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing26",
-        "kind": "brace_junction",
-        "position_mm": [
-          -1.5038276091217992,
-          10.54787940979004,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot27",
-        "kind": "foot",
-        "position_mm": [
-          -1.4856263883411882,
-          5.358258184790612,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing27",
-        "kind": "brace_junction",
-        "position_mm": [
-          -1.4856263883411882,
-          5.358258184790612,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint372",
+        "id": "brace_joint330",
         "kind": "brace_junction",
         "position_mm": [
           1.3400166220963001,
@@ -7381,61 +6449,7 @@
         ]
       },
       {
-        "id": "brace_foot29",
-        "kind": "foot",
-        "position_mm": [
-          1.653273178848927e-16,
-          -2.5499999999999994,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing29",
-        "kind": "brace_junction",
-        "position_mm": [
-          1.653273178848927e-16,
-          -2.5499999999999994,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot30",
-        "kind": "foot",
-        "position_mm": [
-          1.653273178848927e-16,
-          2.7000000000000006,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing30",
-        "kind": "brace_junction",
-        "position_mm": [
-          1.653273178848927e-16,
-          2.7000000000000006,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot31",
-        "kind": "foot",
-        "position_mm": [
-          1.653273178848927e-16,
-          7.950000000000001,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing31",
-        "kind": "brace_junction",
-        "position_mm": [
-          1.653273178848927e-16,
-          7.950000000000001,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint379",
+        "id": "brace_joint331",
         "kind": "brace_junction",
         "position_mm": [
           1.3400166220963001,
@@ -7444,331 +6458,7 @@
         ]
       },
       {
-        "id": "brace_foot33",
-        "kind": "foot",
-        "position_mm": [
-          1.4856263883411887,
-          0.041741815209389355,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing33",
-        "kind": "brace_junction",
-        "position_mm": [
-          1.4856263883411887,
-          0.041741815209389355,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot34",
-        "kind": "foot",
-        "position_mm": [
-          1.5038276091217997,
-          -5.147879409790038,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing34",
-        "kind": "brace_junction",
-        "position_mm": [
-          1.5038276091217997,
-          -5.147879409790038,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot35",
-        "kind": "foot",
-        "position_mm": [
-          1.5038276091217997,
-          5.263761800527574,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing35",
-        "kind": "brace_junction",
-        "position_mm": [
-          1.5038276091217997,
-          5.263761800527574,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot36",
-        "kind": "foot",
-        "position_mm": [
-          1.5038276091217997,
-          10.488481682538987,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing36",
-        "kind": "brace_junction",
-        "position_mm": [
-          1.5038276091217997,
-          10.488481682538987,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot37",
-        "kind": "foot",
-        "position_mm": [
-          2.9575805701906717,
-          -2.3531224296206514,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing37",
-        "kind": "brace_junction",
-        "position_mm": [
-          2.9575805701906717,
-          -2.3531224296206514,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot38",
-        "kind": "foot",
-        "position_mm": [
-          3.0119773471166216,
-          7.949620952303448,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing38",
-        "kind": "brace_junction",
-        "position_mm": [
-          3.0119773471166216,
-          7.949620952303448,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot39",
-        "kind": "foot",
-        "position_mm": [
-          3.030109606091938,
-          13.175933937799362,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing39",
-        "kind": "brace_junction",
-        "position_mm": [
-          3.030109606091938,
-          13.175933937799362,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot40",
-        "kind": "foot",
-        "position_mm": [
-          3.0301096060919384,
-          -7.803185317629859,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing40",
-        "kind": "brace_junction",
-        "position_mm": [
-          3.0301096060919384,
-          -7.803185317629859,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot41",
-        "kind": "foot",
-        "position_mm": [
-          4.464963592466761,
-          5.380675600395829,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing41",
-        "kind": "brace_junction",
-        "position_mm": [
-          4.464963592466761,
-          5.380675600395829,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot42",
-        "kind": "foot",
-        "position_mm": [
-          4.5013172040220155,
-          10.482593398797707,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing42",
-        "kind": "brace_junction",
-        "position_mm": [
-          4.5013172040220155,
-          10.482593398797707,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot43",
-        "kind": "foot",
-        "position_mm": [
-          4.5194940097996446,
-          -5.141127254923836,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing43",
-        "kind": "brace_junction",
-        "position_mm": [
-          4.5194940097996446,
-          -5.141127254923836,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot44",
-        "kind": "foot",
-        "position_mm": [
-          4.592201232910156,
-          0.11313727696736686,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing44",
-        "kind": "brace_junction",
-        "position_mm": [
-          4.592201232910156,
-          0.11313727696736686,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot45",
-        "kind": "foot",
-        "position_mm": [
-          5.92257180966829,
-          -2.4723473699469305,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing45",
-        "kind": "brace_junction",
-        "position_mm": [
-          5.92257180966829,
-          -2.4723473699469305,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot46",
-        "kind": "foot",
-        "position_mm": [
-          8.687333063645797,
-          -10.384918004816228,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing46",
-        "kind": "brace_junction",
-        "position_mm": [
-          8.687333063645797,
-          -10.384918004816228,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot47",
-        "kind": "foot",
-        "position_mm": [
-          5.993454774220784,
-          2.6838609360812007,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing47",
-        "kind": "brace_junction",
-        "position_mm": [
-          5.993454774220784,
-          2.6838609360812007,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot48",
-        "kind": "foot",
-        "position_mm": [
-          5.993454774220784,
-          7.882554864046867,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing48",
-        "kind": "brace_junction",
-        "position_mm": [
-          5.993454774220784,
-          7.882554864046867,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot49",
-        "kind": "foot",
-        "position_mm": [
-          8.693454774220784,
-          10.381248792012531,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing49",
-        "kind": "brace_junction",
-        "position_mm": [
-          8.693454774220784,
-          10.381248792012531,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot50",
-        "kind": "foot",
-        "position_mm": [
-          7.485389993740962,
-          0.10814751845139758,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing50",
-        "kind": "brace_junction",
-        "position_mm": [
-          7.485389993740962,
-          0.10814751845139758,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint416",
+        "id": "brace_joint332",
         "kind": "brace_junction",
         "position_mm": [
           9.617886934524925,
@@ -7777,25 +6467,7 @@
         ]
       },
       {
-        "id": "brace_foot52",
-        "kind": "foot",
-        "position_mm": [
-          7.612719535827637,
-          5.297315254211426,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing52",
-        "kind": "brace_junction",
-        "position_mm": [
-          7.612719535827637,
-          5.297315254211426,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint419",
+        "id": "brace_joint333",
         "kind": "brace_junction",
         "position_mm": [
           11.014626094273158,
@@ -7804,120 +6476,12 @@
         ]
       },
       {
-        "id": "brace_foot54",
-        "kind": "foot",
-        "position_mm": [
-          9.055425000745196,
-          2.6335344669430762,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing54",
-        "kind": "brace_junction",
-        "position_mm": [
-          9.055425000745196,
-          2.6335344669430762,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint422",
+        "id": "brace_joint334",
         "kind": "brace_junction",
         "position_mm": [
           11.021586910370857,
           4.729563743837418,
           0.9779949124595839
-        ]
-      },
-      {
-        "id": "brace_foot56",
-        "kind": "foot",
-        "position_mm": [
-          13.131700468063356,
-          2.575859785079956,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing56",
-        "kind": "brace_junction",
-        "position_mm": [
-          13.131700468063356,
-          2.575859785079956,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot57",
-        "kind": "foot",
-        "position_mm": [
-          13.24636336817886,
-          -2.6324719660209883,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing57",
-        "kind": "brace_junction",
-        "position_mm": [
-          13.24636336817886,
-          -2.6324719660209883,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot58",
-        "kind": "foot",
-        "position_mm": [
-          14.700000000000001,
-          0.0,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing58",
-        "kind": "brace_junction",
-        "position_mm": [
-          14.700000000000001,
-          0.0,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot59",
-        "kind": "foot",
-        "position_mm": [
-          -13.246363368178859,
-          2.632471966020989,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing59",
-        "kind": "brace_junction",
-        "position_mm": [
-          -13.246363368178859,
-          2.632471966020989,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot60",
-        "kind": "foot",
-        "position_mm": [
-          2.9938450881413052,
-          2.75964313991486,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing60",
-        "kind": "brace_junction",
-        "position_mm": [
-          2.9938450881413052,
-          2.75964313991486,
-          0.3
         ]
       }
     ],
@@ -7947,7 +6511,7 @@
         "details": {
           "definition": "empty space enclosed by already-printed material except toward the growth direction",
           "peak_layer": 699,
-          "peak_volume_mm3": 5926.635572399985
+          "peak_volume_mm3": 6227.664296400002
         },
         "layer": 699,
         "message": "Empty space is enclosed by already-printed material during part of the build",
@@ -7961,7 +6525,7 @@
           "bottom_layer_top_mm": 0.2,
           "bottom_lift_speed": 0.05,
           "build_z_mm": 165.0,
-          "candidate_triangle_count": 7184,
+          "candidate_triangle_count": 7256,
           "heuristic": "uncalibrated geometry score; not a force or failure prediction",
           "layer_height_mm": 0.05,
           "limitations": [
@@ -7970,68 +6534,68 @@
             "open, duplicate and nonmanifold surfaces require independent validation"
           ],
           "max_angle_deg": 10.0,
-          "maximum_projected_area_mm2": 764.576914682945,
-          "maximum_score": 7.64576914682945,
+          "maximum_projected_area_mm2": 642.101494947874,
+          "maximum_score": 6.4210149494787405,
           "normal_lift_speed": 0.05,
           "reference_lift_speed": 0.05,
           "region_count": 2795,
           "regions": [
             {
-              "area_mm2": 764.576914682945,
+              "area_mm2": 642.101494947874,
               "bottom_layer_intersection": true,
               "bounds": [
                 [
-                  -17.225000381469727,
-                  -14.51791763305664,
+                  -14.375,
+                  -14.367918014526367,
                   0.0
                 ],
                 [
-                  17.299999237060547,
-                  15.775934219360352,
+                  14.449999809265137,
+                  14.367918014526367,
                   0.0
                 ]
               ],
               "lift_speed": 0.05,
               "mean_z_mm": 0.0,
               "normal_layer_intersection": false,
-              "projected_area_mm2": 764.576914682945,
-              "score": 7.64576914682945,
+              "projected_area_mm2": 642.101494947874,
+              "score": 6.4210149494787405,
               "threshold": true,
-              "triangle_count": 54,
+              "triangle_count": 128,
               "z_layer_span": [
                 0,
                 0
               ]
             },
             {
-              "area_mm2": 432.4731685278772,
+              "area_mm2": 428.1054294811702,
               "bottom_layer_intersection": false,
               "bounds": [
                 [
-                  -11.988812446594238,
+                  -11.98715877532959,
                   -12.0,
                   5.0
                 ],
                 [
-                  11.98486328125,
+                  11.983161926269531,
                   12.0,
                   5.0
                 ]
               ],
               "lift_speed": 0.05,
-              "mean_z_mm": 5.0000000000000036,
+              "mean_z_mm": 4.999999999999996,
               "normal_layer_intersection": true,
-              "projected_area_mm2": 432.4731685278772,
-              "score": 4.45578416059025,
+              "projected_area_mm2": 428.1054294811702,
+              "score": 4.410783212836298,
               "threshold": true,
-              "triangle_count": 3014,
+              "triangle_count": 3012,
               "z_layer_span": [
                 100,
                 100
               ]
             },
             {
-              "area_mm2": 233.7297824207078,
+              "area_mm2": 231.95482611500267,
               "bottom_layer_intersection": false,
               "bounds": [
                 [
@@ -8046,10 +6610,10 @@
                 ]
               ],
               "lift_speed": 0.05,
-              "mean_z_mm": 32.99999999999999,
+              "mean_z_mm": 33.00000000000001,
               "normal_layer_intersection": true,
-              "projected_area_mm2": 233.7297824207078,
-              "score": 2.804757389048494,
+              "projected_area_mm2": 231.95482611500267,
+              "score": 2.783457913380032,
               "threshold": true,
               "triangle_count": 1324,
               "z_layer_span": [
@@ -8060,7 +6624,7 @@
           ],
           "regions_truncated": false,
           "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-          "source_triangle_count": 102458,
+          "source_triangle_count": 96624,
           "status": "complete",
           "threshold_area_mm2": 100.0,
           "threshold_region_count": 3,
@@ -8074,7 +6638,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8090,7 +6654,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8106,7 +6670,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8122,7 +6686,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8138,7 +6702,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8154,7 +6718,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8170,7 +6734,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8186,7 +6750,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8202,7 +6766,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8218,7 +6782,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8234,7 +6798,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8250,7 +6814,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8266,7 +6830,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8282,7 +6846,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8298,7 +6862,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8314,7 +6878,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -10634,8 +9198,8 @@
       {
         "code": "ignored_support_bottlenecks",
         "details": {
-          "bottlenecked_components": 4,
-          "bottlenecked_volume_mm3": 0.039908249361148125,
+          "bottlenecked_components": 1,
+          "bottlenecked_volume_mm3": 0.013302749787049376,
           "enclosed_components": 0,
           "policy": "ignore"
         },
@@ -10649,8 +9213,8 @@
       "diagnostic_examples_capped": 128,
       "drainage": {
         "analysis_grid": [
-          188,
-          166,
+          158,
+          157,
           191
         ],
         "analysis_pitch_mm": 0.18806319451591877,
@@ -10662,52 +9226,16 @@
             "component": 2,
             "core_volume_mm3": 0.013302749787049376,
             "seed_zyx": [
-              41,
-              95,
-              51
-            ],
-            "void_class": "support"
-          },
-          {
-            "bottleneck_area_mm2": 0.8862457275390625,
-            "bottleneck_area_upper_mm2": 0.89361572265625,
-            "component": 4,
-            "core_volume_mm3": 0.013302749787049376,
-            "seed_zyx": [
-              173,
-              95,
-              51
-            ],
-            "void_class": "support"
-          },
-          {
-            "bottleneck_area_mm2": 0.8862457275390625,
-            "bottleneck_area_upper_mm2": 0.89361572265625,
-            "component": 3,
-            "core_volume_mm3": 0.006651374893524688,
-            "seed_zyx": [
               42,
-              62,
-              135
-            ],
-            "void_class": "support"
-          },
-          {
-            "bottleneck_area_mm2": 0.8862457275390625,
-            "bottleneck_area_upper_mm2": 0.89361572265625,
-            "component": 5,
-            "core_volume_mm3": 0.006651374893524688,
-            "seed_zyx": [
-              174,
-              62,
-              135
+              94,
+              36
             ],
             "void_class": "support"
           }
         ],
         "bottleneck_volume_definition": "eroded chamber cores; excludes narrow neck and boundary shell",
-        "bottlenecked_components": 4,
-        "bottlenecked_volume_mm3": 0.03990824936114813,
+        "bottlenecked_components": 1,
+        "bottlenecked_volume_mm3": 0.013302749787049376,
         "classification": "model_only_absence",
         "classified": true,
         "clearance_radius_mm": 0.5641895835477563,
@@ -10727,8 +9255,8 @@
         "occupancy_closed": true,
         "sampling": "XY cell centers and Z subsamples; sub-grid walls may be missed",
         "status": "complete",
-        "support_bottlenecked_components": 4,
-        "support_bottlenecked_volume_mm3": 0.039908249361148125,
+        "support_bottlenecked_components": 1,
+        "support_bottlenecked_volume_mm3": 0.013302749787049376,
         "support_enclosed_components": 0,
         "unclosed_rows": 0,
         "unclosed_slices": 0,
@@ -10745,19 +9273,19 @@
         "model_volume_mm3": 0.0,
         "negligible_count": 0,
         "negligible_volume_mm3": 0.0,
-        "nodes": 1364,
+        "nodes": 2153,
         "peak_present_trapped_layer": 699,
-        "peak_present_trapped_volume_mm3": 5926.635572399985,
+        "peak_present_trapped_volume_mm3": 6227.664296400002,
         "support_count": 0,
         "support_volume_mm3": 0.0,
         "volume_mm3": 0.0
       },
-      "exposed_pixels": 535391067,
+      "exposed_pixels": 501347396,
       "growth_decimation": 8,
       "growth_violation_pixels": 0,
       "ignored_support_bottlenecks": {
-        "bottlenecked_components": 4,
-        "bottlenecked_volume_mm3": 0.039908249361148125,
+        "bottlenecked_components": 1,
+        "bottlenecked_volume_mm3": 0.013302749787049376,
         "enclosed_components": 0,
         "policy": "ignore"
       },
@@ -10776,7 +9304,7 @@
         "bottom_layer_top_mm": 0.2,
         "bottom_lift_speed": 0.05,
         "build_z_mm": 165.0,
-        "candidate_triangle_count": 7184,
+        "candidate_triangle_count": 7256,
         "heuristic": "uncalibrated geometry score; not a force or failure prediction",
         "layer_height_mm": 0.05,
         "limitations": [
@@ -10785,68 +9313,68 @@
           "open, duplicate and nonmanifold surfaces require independent validation"
         ],
         "max_angle_deg": 10.0,
-        "maximum_projected_area_mm2": 764.576914682945,
-        "maximum_score": 7.64576914682945,
+        "maximum_projected_area_mm2": 642.101494947874,
+        "maximum_score": 6.4210149494787405,
         "normal_lift_speed": 0.05,
         "reference_lift_speed": 0.05,
         "region_count": 2795,
         "regions": [
           {
-            "area_mm2": 764.576914682945,
+            "area_mm2": 642.101494947874,
             "bottom_layer_intersection": true,
             "bounds": [
               [
-                -17.225000381469727,
-                -14.51791763305664,
+                -14.375,
+                -14.367918014526367,
                 0.0
               ],
               [
-                17.299999237060547,
-                15.775934219360352,
+                14.449999809265137,
+                14.367918014526367,
                 0.0
               ]
             ],
             "lift_speed": 0.05,
             "mean_z_mm": 0.0,
             "normal_layer_intersection": false,
-            "projected_area_mm2": 764.576914682945,
-            "score": 7.64576914682945,
+            "projected_area_mm2": 642.101494947874,
+            "score": 6.4210149494787405,
             "threshold": true,
-            "triangle_count": 54,
+            "triangle_count": 128,
             "z_layer_span": [
               0,
               0
             ]
           },
           {
-            "area_mm2": 432.4731685278772,
+            "area_mm2": 428.1054294811702,
             "bottom_layer_intersection": false,
             "bounds": [
               [
-                -11.988812446594238,
+                -11.98715877532959,
                 -12.0,
                 5.0
               ],
               [
-                11.98486328125,
+                11.983161926269531,
                 12.0,
                 5.0
               ]
             ],
             "lift_speed": 0.05,
-            "mean_z_mm": 5.0000000000000036,
+            "mean_z_mm": 4.999999999999996,
             "normal_layer_intersection": true,
-            "projected_area_mm2": 432.4731685278772,
-            "score": 4.45578416059025,
+            "projected_area_mm2": 428.1054294811702,
+            "score": 4.410783212836298,
             "threshold": true,
-            "triangle_count": 3014,
+            "triangle_count": 3012,
             "z_layer_span": [
               100,
               100
             ]
           },
           {
-            "area_mm2": 233.7297824207078,
+            "area_mm2": 231.95482611500267,
             "bottom_layer_intersection": false,
             "bounds": [
               [
@@ -10861,10 +9389,10 @@
               ]
             ],
             "lift_speed": 0.05,
-            "mean_z_mm": 32.99999999999999,
+            "mean_z_mm": 33.00000000000001,
             "normal_layer_intersection": true,
-            "projected_area_mm2": 233.7297824207078,
-            "score": 2.804757389048494,
+            "projected_area_mm2": 231.95482611500267,
+            "score": 2.783457913380032,
             "threshold": true,
             "triangle_count": 1324,
             "z_layer_span": [
@@ -10875,7 +9403,7 @@
         ],
         "regions_truncated": false,
         "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-        "source_triangle_count": 102458,
+        "source_triangle_count": 96624,
         "status": "complete",
         "threshold_area_mm2": 100.0,
         "threshold_region_count": 3,
@@ -10885,37 +9413,37 @@
         0.018,
         0.018
       ],
-      "raster_volume_mm3": 8673.335285399999,
+      "raster_volume_mm3": 8121.827815199998,
       "reopened": {
         "bounds": [
           [
-            -17.225000381469727,
-            -14.51791763305664,
+            -14.375,
+            -14.367918014526367,
             0.0
           ],
           [
-            17.299999237060547,
-            15.775934219360352,
+            14.449999809265137,
+            14.367918014526367,
             35.0
           ]
         ],
         "crop_origin_px": [
-          3302,
-          1352
+          3460,
+          1360
         ],
         "grid": [
-          1921,
-          1686
+          1604,
+          1600
         ],
         "negative_winding_crossings": 0,
         "open_layers": 0,
         "open_rows": 0,
         "path": "prepared.stl",
-        "sha256": "31bc343689cb263028b92ca757dda2caf3a884b0704cb0135adea9b5e3565da0",
-        "triangles": 102458
+        "sha256": "bc1e2b6b6287e685e2483312fa5937b5b1eae58229234c7ffad18482da5eba5e",
+        "triangles": 96624
       },
       "support_collisions": {
-        "allowance_mm": 2.75,
+        "allowance_mm": 2.6500000000000004,
         "basis": "exact boolean of support solids against each part; graph capsules for support pairs; tip and anchor pieces are expected",
         "expected_pieces": 125,
         "intrusion_volume_mm3": 0.0,
@@ -10939,7 +9467,7 @@
         "allow_part_to_part": true,
         "analysis": {
           "analysis_pitch_mm": 0.15,
-          "columns": 65536,
+          "columns": 64516,
           "enclosed_void_volume_mm3": 0.0,
           "layer_height_mm": 0.05,
           "layers": 700,
@@ -10954,58 +9482,58 @@
           "cell_basis": "center-to-center spacing of adjacent cells",
           "cell_size_mm": 6.0,
           "connected_components": 1,
-          "contact_area_mm2": 764.5769160988453,
-          "convex_envelope_area_mm2": 764.6142764321088,
+          "contact_area_mm2": 642.1014984066138,
+          "convex_envelope_area_mm2": 642.648601139819,
           "does_not_establish": "plate adhesion, removal force, or print stability",
           "establishes": "the shape and size of the base",
           "export_simplification_basis": "one float32 coordinate step; redundant grid edges",
-          "export_simplification_mm": 1.9073486328125e-06,
-          "feet": 122,
+          "export_simplification_mm": 9.5367431640625e-07,
+          "feet": 73,
           "footprint_basis": "union of emitted polygon sections at the plate",
           "grid_candidate_lines": 14,
-          "open_area_fraction": 4.8861673676541024e-05,
-          "open_area_mm2": 0.03736033326345023,
-          "pad_diameter_mm": 5.2,
+          "open_area_fraction": 0.0008513248643735048,
+          "open_area_mm2": 0.547102733205179,
+          "pad_diameter_mm": 4.9,
           "pad_thickness_mm": 1.0,
-          "perimeter_width_mm": 1.2,
+          "perimeter_width_mm": 0.9,
           "removal": "connected grid, perimeter rim and foot tree; vertical openings",
           "rotation_deg": 0.0,
-          "skeleton_edges": 121,
-          "skeleton_length_mm": 221.9635435818622,
+          "skeleton_edges": 72,
+          "skeleton_length_mm": 191.47547631662022,
           "solid": true,
-          "strut_width_mm": 1.2,
+          "strut_width_mm": 0.9,
           "tree_basis": "Euclidean minimum spanning tree; sorted ties",
           "type": "grid",
-          "unique_feet": 122,
-          "volume_mm3": 764.5769160974819
+          "unique_feet": 73,
+          "volume_mm3": 642.1014984110312
         },
         "brace_angle_deg": 45.0,
         "brace_azimuth_deg": 0.0,
         "brace_branches_per_node": 1,
-        "brace_candidates_examined": 345,
-        "brace_destination": "both",
+        "brace_candidates_examined": 156,
+        "brace_destination": "supports",
         "brace_diameter_mm": 0.6,
         "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
         "brace_max_distance_mm": 4.5,
         "brace_max_length_mm": 30.0,
-        "brace_min_height_mm": 0.0,
-        "brace_new_feet": 49,
+        "brace_min_height_mm": 3.0,
+        "brace_new_feet": 0,
         "brace_origins_examined": 73,
-        "brace_pattern": "single",
+        "brace_pattern": "alternating",
         "brace_rejections": {
           "bounds_rejected": 65,
           "collision_rejected": 0,
           "duplicate_rejected": 0,
           "foot_rejected": 0,
           "length_rejected": 0,
-          "no_destination_rejected": 0,
-          "pattern_rejected": 0,
-          "spacing_rejected": 148,
-          "support_collision_rejected": 83,
+          "no_destination_rejected": 50,
+          "pattern_rejected": 71,
+          "spacing_rejected": 19,
+          "support_collision_rejected": 0,
           "ungrounded_rejected": 26
         },
-        "brace_spacing_mm": 15.0,
-        "braces": 61,
+        "brace_spacing_mm": 5.0,
+        "braces": 12,
         "braces_capped": false,
         "braces_collision_rejected": 0,
         "contact_load_limit_mm2": 36.0,
@@ -11271,7 +9799,7 @@
         "small_pillars": 0,
         "spacing_mm": 3.0,
         "suppressed_contacts": 0,
-        "tip_base_diameter_mm": 1.2,
+        "tip_base_diameter_mm": 0.9,
         "tip_length_mm": 2.0,
         "tree": {
           "clusters": 0,
@@ -11280,6 +9808,23 @@
           "kept_independent": 0,
           "trunks": 0
         },
+        "unbraced": {
+          "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are never braced",
+          "model": {
+            "braced_pillars": 0,
+            "max_mm": 24.0,
+            "max_slenderness": 26.67,
+            "median_mm": 24.0,
+            "pillars": 26
+          },
+          "plate": {
+            "braced_pillars": 12,
+            "max_mm": 3.0,
+            "max_slenderness": 3.33,
+            "median_mm": 3.0,
+            "pillars": 73
+          }
+        },
         "uncovered_fraction": 0.0,
         "uncovered_samples": 0,
         "unroutable_positions": []
@@ -11287,7 +9832,7 @@
       "transient_traps": {
         "definition": "empty space enclosed by already-printed material except toward the growth direction",
         "peak_layer": 699,
-        "peak_volume_mm3": 5926.635572399985
+        "peak_volume_mm3": 6227.664296400002
       },
       "unsupported_overhangs": {
         "basis": "downward-face samples at the configured overhang angle, matched to routed contacts by distance; plate-height samples are excluded",

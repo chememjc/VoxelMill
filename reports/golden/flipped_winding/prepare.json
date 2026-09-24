@@ -21,23 +21,23 @@
   "diagnostics": [],
   "export": {
     "path": "prepared.stl",
-    "triangles": 64480,
+    "triangles": 60456,
     "warned": false,
     "written": true
   },
   "passes": [
     {
-      "exported_triangles": 64480,
+      "exported_triangles": 60456,
       "kind": "full_reslice",
       "pass": 1,
       "plate_fit": true,
       "raft": true,
-      "raster_volume_mm3": 8966.150738999999,
+      "raster_volume_mm3": 8766.631328399999,
       "supports": {
         "allow_part_to_part": true,
         "analysis": {
           "analysis_pitch_mm": 0.15,
-          "columns": 52900,
+          "columns": 51984,
           "enclosed_void_volume_mm3": 0.0,
           "layer_height_mm": 0.05,
           "layers": 500,
@@ -52,58 +52,58 @@
           "cell_basis": "center-to-center spacing of adjacent cells",
           "cell_size_mm": 6.0,
           "connected_components": 1,
-          "contact_area_mm2": 693.3690314088739,
-          "convex_envelope_area_mm2": 694.9269970311291,
+          "contact_area_mm2": 602.9081616333224,
+          "convex_envelope_area_mm2": 603.3314837497697,
           "does_not_establish": "plate adhesion, removal force, or print stability",
           "establishes": "the shape and size of the base",
           "export_simplification_basis": "one float32 coordinate step; redundant grid edges",
           "export_simplification_mm": 9.5367431640625e-07,
-          "feet": 98,
+          "feet": 67,
           "footprint_basis": "union of emitted polygon sections at the plate",
           "grid_candidate_lines": 14,
-          "open_area_fraction": 0.0022419126453730527,
-          "open_area_mm2": 1.5579656222552103,
-          "pad_diameter_mm": 5.2,
+          "open_area_fraction": 0.000701641017996233,
+          "open_area_mm2": 0.42332211644736617,
+          "pad_diameter_mm": 4.9,
           "pad_thickness_mm": 1.0,
-          "perimeter_width_mm": 1.2,
+          "perimeter_width_mm": 0.9,
           "removal": "connected grid, perimeter rim and foot tree; vertical openings",
           "rotation_deg": 0.0,
-          "skeleton_edges": 97,
-          "skeleton_length_mm": 199.2331321929918,
+          "skeleton_edges": 66,
+          "skeleton_length_mm": 178.03065202504303,
           "solid": true,
-          "strut_width_mm": 1.2,
+          "strut_width_mm": 0.9,
           "tree_basis": "Euclidean minimum spanning tree; sorted ties",
           "type": "grid",
-          "unique_feet": 98,
-          "volume_mm3": 693.3690314088739
+          "unique_feet": 67,
+          "volume_mm3": 602.9081616333227
         },
         "brace_angle_deg": 45.0,
         "brace_azimuth_deg": 0.0,
         "brace_branches_per_node": 1,
-        "brace_candidates_examined": 245,
-        "brace_destination": "both",
+        "brace_candidates_examined": 126,
+        "brace_destination": "supports",
         "brace_diameter_mm": 0.6,
         "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
         "brace_max_distance_mm": 4.5,
         "brace_max_length_mm": 30.0,
-        "brace_min_height_mm": 0.0,
-        "brace_new_feet": 31,
+        "brace_min_height_mm": 3.0,
+        "brace_new_feet": 0,
         "brace_origins_examined": 67,
-        "brace_pattern": "single",
+        "brace_pattern": "alternating",
         "brace_rejections": {
           "bounds_rejected": 40,
           "collision_rejected": 0,
           "duplicate_rejected": 0,
           "foot_rejected": 0,
           "length_rejected": 0,
-          "no_destination_rejected": 0,
-          "pattern_rejected": 0,
-          "spacing_rejected": 125,
-          "support_collision_rejected": 49,
+          "no_destination_rejected": 31,
+          "pattern_rejected": 56,
+          "spacing_rejected": 30,
+          "support_collision_rejected": 0,
           "ungrounded_rejected": 0
         },
-        "brace_spacing_mm": 15.0,
-        "braces": 49,
+        "brace_spacing_mm": 5.0,
+        "braces": 18,
         "braces_capped": false,
         "braces_collision_rejected": 0,
         "contact_load_limit_mm2": 36.0,
@@ -125,8 +125,8 @@
         "coverage_gap_limit_mm": 3.0,
         "density_exempt_positions": [
           [
-            -0.02499999999999858,
-            -0.02499999999999858,
+            -0.02500000000000213,
+            -0.02500000000000213,
             5.0
           ]
         ],
@@ -186,7 +186,7 @@
         "small_pillars": 0,
         "spacing_mm": 3.0,
         "suppressed_contacts": 0,
-        "tip_base_diameter_mm": 1.2,
+        "tip_base_diameter_mm": 0.9,
         "tip_length_mm": 2.0,
         "tree": {
           "clusters": 0,
@@ -195,23 +195,36 @@
           "kept_independent": 0,
           "trunks": 0
         },
+        "unbraced": {
+          "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are never braced",
+          "model": {
+            "pillars": 0
+          },
+          "plate": {
+            "braced_pillars": 18,
+            "max_mm": 3.0,
+            "max_slenderness": 3.33,
+            "median_mm": 3.0,
+            "pillars": 67
+          }
+        },
         "uncovered_fraction": 0.0,
         "uncovered_samples": 0,
         "unroutable_positions": []
       },
       "union_bounds": [
         [
-          -14.362500190734863,
-          -12.600000381469727,
+          -12.449999809265137,
+          -12.449999809265137,
           0.0
         ],
         [
-          14.362500190734863,
-          12.600000381469727,
+          12.449999809265137,
+          12.449999809265137,
           25.0
         ]
       ],
-      "union_triangles": 64480,
+      "union_triangles": 60456,
       "union_volume_mm3": null,
       "validation": {
         "checks": {
@@ -234,10 +247,10 @@
             "code": "transient_trap",
             "details": {
               "definition": "empty space enclosed by already-printed material except toward the growth direction",
-              "peak_layer": 26,
-              "peak_volume_mm3": 0.00019440000000000036
+              "peak_layer": 23,
+              "peak_volume_mm3": 0.00012960000000000174
             },
-            "layer": 26,
+            "layer": 23,
             "message": "Empty space is enclosed by already-printed material during part of the build",
             "position_mm": null,
             "severity": "warning"
@@ -289,7 +302,7 @@
                 {
                   "name": "supports_and_raft",
                   "orientation": "closed_positive",
-                  "triangles": 64468
+                  "triangles": 60444
                 }
               ],
               "max_displacement_mm": 0.0,
@@ -308,7 +321,7 @@
               "bottom_layer_top_mm": 0.2,
               "bottom_lift_speed": 0.05,
               "build_z_mm": 165.0,
-              "candidate_triangle_count": 4248,
+              "candidate_triangle_count": 3586,
               "heuristic": "uncalibrated geometry score; not a force or failure prediction",
               "layer_height_mm": 0.05,
               "limitations": [
@@ -317,34 +330,34 @@
                 "open, duplicate and nonmanifold surfaces require independent validation"
               ],
               "max_angle_deg": 10.0,
-              "maximum_projected_area_mm2": 693.3690616216168,
-              "maximum_score": 6.933690616216168,
+              "maximum_projected_area_mm2": 602.9081463333504,
+              "maximum_score": 6.029081463333504,
               "normal_lift_speed": 0.05,
               "reference_lift_speed": 0.05,
-              "region_count": 168,
+              "region_count": 137,
               "regions": [
                 {
-                  "area_mm2": 693.3690616216168,
+                  "area_mm2": 602.9081463333504,
                   "bottom_layer_intersection": true,
                   "bounds": [
                     [
-                      -14.362500190734863,
-                      -12.600000381469727,
+                      -12.449999809265137,
+                      -12.449999809265137,
                       0.0
                     ],
                     [
-                      14.362500190734863,
-                      12.600000381469727,
+                      12.449999809265137,
+                      12.449999809265137,
                       0.0
                     ]
                   ],
                   "lift_speed": 0.05,
                   "mean_z_mm": 0.0,
                   "normal_layer_intersection": false,
-                  "projected_area_mm2": 693.3690616216168,
-                  "score": 6.933690616216168,
+                  "projected_area_mm2": 602.9081463333504,
+                  "score": 6.029081463333504,
                   "threshold": true,
-                  "triangle_count": 78,
+                  "triangle_count": 98,
                   "z_layer_span": [
                     0,
                     0
@@ -407,11 +420,11 @@
               ],
               "regions_truncated": false,
               "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-              "source_triangle_count": 64480,
+              "source_triangle_count": 60456,
               "status": "complete",
               "threshold_area_mm2": 100.0,
               "threshold_region_count": 3,
-              "total_region_count": 168
+              "total_region_count": 137
             },
             "layer": null,
             "message": "Large downward surface regions warrant review of orientation and release settings",
@@ -421,7 +434,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -437,7 +450,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -453,7 +466,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -469,7 +482,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -485,7 +498,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -501,7 +514,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -517,7 +530,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -533,7 +546,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -549,7 +562,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -565,7 +578,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -581,7 +594,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -597,7 +610,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -613,7 +626,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -629,7 +642,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -645,7 +658,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -661,7 +674,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -677,7 +690,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -693,7 +706,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -709,7 +722,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -725,7 +738,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -741,7 +754,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -757,7 +770,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -773,7 +786,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -789,7 +802,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -805,7 +818,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -821,7 +834,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -837,7 +850,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -853,7 +866,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -869,7 +882,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -885,7 +898,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -901,7 +914,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -917,7 +930,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -933,7 +946,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -949,7 +962,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -965,7 +978,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -981,7 +994,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -997,7 +1010,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1013,7 +1026,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1029,7 +1042,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1045,7 +1058,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1061,7 +1074,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1077,7 +1090,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1093,7 +1106,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1109,7 +1122,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1125,7 +1138,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1141,7 +1154,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1157,7 +1170,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1173,7 +1186,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1189,7 +1202,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1205,7 +1218,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1221,7 +1234,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1237,7 +1250,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1253,7 +1266,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1269,7 +1282,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1285,7 +1298,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1301,7 +1314,7 @@
           {
             "code": "support_dropped_attached",
             "details": {
-              "attach_reach_mm": 0.8999999999999999,
+              "attach_reach_mm": 0.75,
               "basis": "printer-pitch material one layer below within the attach reach",
               "reason": "near-vertical or already-attached surface"
             },
@@ -1323,12 +1336,12 @@
             "min_void_volume_mm3": 0.0,
             "negligible_count": 0,
             "negligible_volume_mm3": 0.0,
-            "nodes": 672,
-            "peak_present_trapped_layer": 26,
-            "peak_present_trapped_volume_mm3": 0.00019440000000000036,
+            "nodes": 700,
+            "peak_present_trapped_layer": 23,
+            "peak_present_trapped_volume_mm3": 0.00012960000000000174,
             "volume_mm3": 0.0
           },
-          "exposed_pixels": 553466095,
+          "exposed_pixels": 541150082,
           "growth_decimation": 8,
           "growth_violation_pixels": 0,
           "island_components": 0,
@@ -1341,7 +1354,7 @@
             "bottom_layer_top_mm": 0.2,
             "bottom_lift_speed": 0.05,
             "build_z_mm": 165.0,
-            "candidate_triangle_count": 4248,
+            "candidate_triangle_count": 3586,
             "heuristic": "uncalibrated geometry score; not a force or failure prediction",
             "layer_height_mm": 0.05,
             "limitations": [
@@ -1350,34 +1363,34 @@
               "open, duplicate and nonmanifold surfaces require independent validation"
             ],
             "max_angle_deg": 10.0,
-            "maximum_projected_area_mm2": 693.3690616216168,
-            "maximum_score": 6.933690616216168,
+            "maximum_projected_area_mm2": 602.9081463333504,
+            "maximum_score": 6.029081463333504,
             "normal_lift_speed": 0.05,
             "reference_lift_speed": 0.05,
-            "region_count": 168,
+            "region_count": 137,
             "regions": [
               {
-                "area_mm2": 693.3690616216168,
+                "area_mm2": 602.9081463333504,
                 "bottom_layer_intersection": true,
                 "bounds": [
                   [
-                    -14.362500190734863,
-                    -12.600000381469727,
+                    -12.449999809265137,
+                    -12.449999809265137,
                     0.0
                   ],
                   [
-                    14.362500190734863,
-                    12.600000381469727,
+                    12.449999809265137,
+                    12.449999809265137,
                     0.0
                   ]
                 ],
                 "lift_speed": 0.05,
                 "mean_z_mm": 0.0,
                 "normal_layer_intersection": false,
-                "projected_area_mm2": 693.3690616216168,
-                "score": 6.933690616216168,
+                "projected_area_mm2": 602.9081463333504,
+                "score": 6.029081463333504,
                 "threshold": true,
-                "triangle_count": 78,
+                "triangle_count": 98,
                 "z_layer_span": [
                   0,
                   0
@@ -1440,50 +1453,50 @@
             ],
             "regions_truncated": false,
             "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-            "source_triangle_count": 64480,
+            "source_triangle_count": 60456,
             "status": "complete",
             "threshold_area_mm2": 100.0,
             "threshold_region_count": 3,
-            "total_region_count": 168
+            "total_region_count": 137
           },
           "pixel_pitch_mm": [
             0.018,
             0.018
           ],
-          "raster_volume_mm3": 8966.150738999999,
+          "raster_volume_mm3": 8766.631328399999,
           "reopened": {
             "bounds": [
               [
-                -14.362500190734863,
-                -12.600000381469727,
+                -12.449999809265137,
+                -12.449999809265137,
                 0.0
               ],
               [
-                14.362500190734863,
-                12.600000381469727,
+                12.449999809265137,
+                12.449999809265137,
                 25.0
               ]
             ],
             "crop_origin_px": [
-              3461,
-              1458
+              3567,
+              1467
             ],
             "grid": [
-              1598,
-              1404
+              1386,
+              1386
             ],
             "negative_winding_crossings": 0,
             "open_layers": 0,
             "open_rows": 0,
             "path": "prepared.stl",
-            "sha256": "266e876c45368f9b9e5bf132c04a47139fd7a88b34a4a604063bf1042fd5ea9b",
-            "triangles": 64480
+            "sha256": "d1654ab8a91bdef064cb0052e0725f297a6bd4385875cfda2249943110af134e",
+            "triangles": 60456
           },
           "supports": {
             "allow_part_to_part": true,
             "analysis": {
               "analysis_pitch_mm": 0.15,
-              "columns": 52900,
+              "columns": 51984,
               "enclosed_void_volume_mm3": 0.0,
               "layer_height_mm": 0.05,
               "layers": 500,
@@ -1498,58 +1511,58 @@
               "cell_basis": "center-to-center spacing of adjacent cells",
               "cell_size_mm": 6.0,
               "connected_components": 1,
-              "contact_area_mm2": 693.3690314088739,
-              "convex_envelope_area_mm2": 694.9269970311291,
+              "contact_area_mm2": 602.9081616333224,
+              "convex_envelope_area_mm2": 603.3314837497697,
               "does_not_establish": "plate adhesion, removal force, or print stability",
               "establishes": "the shape and size of the base",
               "export_simplification_basis": "one float32 coordinate step; redundant grid edges",
               "export_simplification_mm": 9.5367431640625e-07,
-              "feet": 98,
+              "feet": 67,
               "footprint_basis": "union of emitted polygon sections at the plate",
               "grid_candidate_lines": 14,
-              "open_area_fraction": 0.0022419126453730527,
-              "open_area_mm2": 1.5579656222552103,
-              "pad_diameter_mm": 5.2,
+              "open_area_fraction": 0.000701641017996233,
+              "open_area_mm2": 0.42332211644736617,
+              "pad_diameter_mm": 4.9,
               "pad_thickness_mm": 1.0,
-              "perimeter_width_mm": 1.2,
+              "perimeter_width_mm": 0.9,
               "removal": "connected grid, perimeter rim and foot tree; vertical openings",
               "rotation_deg": 0.0,
-              "skeleton_edges": 97,
-              "skeleton_length_mm": 199.2331321929918,
+              "skeleton_edges": 66,
+              "skeleton_length_mm": 178.03065202504303,
               "solid": true,
-              "strut_width_mm": 1.2,
+              "strut_width_mm": 0.9,
               "tree_basis": "Euclidean minimum spanning tree; sorted ties",
               "type": "grid",
-              "unique_feet": 98,
-              "volume_mm3": 693.3690314088739
+              "unique_feet": 67,
+              "volume_mm3": 602.9081616333227
             },
             "brace_angle_deg": 45.0,
             "brace_azimuth_deg": 0.0,
             "brace_branches_per_node": 1,
-            "brace_candidates_examined": 245,
-            "brace_destination": "both",
+            "brace_candidates_examined": 126,
+            "brace_destination": "supports",
             "brace_diameter_mm": 0.6,
             "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
             "brace_max_distance_mm": 4.5,
             "brace_max_length_mm": 30.0,
-            "brace_min_height_mm": 0.0,
-            "brace_new_feet": 31,
+            "brace_min_height_mm": 3.0,
+            "brace_new_feet": 0,
             "brace_origins_examined": 67,
-            "brace_pattern": "single",
+            "brace_pattern": "alternating",
             "brace_rejections": {
               "bounds_rejected": 40,
               "collision_rejected": 0,
               "duplicate_rejected": 0,
               "foot_rejected": 0,
               "length_rejected": 0,
-              "no_destination_rejected": 0,
-              "pattern_rejected": 0,
-              "spacing_rejected": 125,
-              "support_collision_rejected": 49,
+              "no_destination_rejected": 31,
+              "pattern_rejected": 56,
+              "spacing_rejected": 30,
+              "support_collision_rejected": 0,
               "ungrounded_rejected": 0
             },
-            "brace_spacing_mm": 15.0,
-            "braces": 49,
+            "brace_spacing_mm": 5.0,
+            "braces": 18,
             "braces_capped": false,
             "braces_collision_rejected": 0,
             "contact_load_limit_mm2": 36.0,
@@ -1571,8 +1584,8 @@
             "coverage_gap_limit_mm": 3.0,
             "density_exempt_positions": [
               [
-                -0.02499999999999858,
-                -0.02499999999999858,
+                -0.02500000000000213,
+                -0.02500000000000213,
                 5.0
               ]
             ],
@@ -1632,7 +1645,7 @@
             "small_pillars": 0,
             "spacing_mm": 3.0,
             "suppressed_contacts": 0,
-            "tip_base_diameter_mm": 1.2,
+            "tip_base_diameter_mm": 0.9,
             "tip_length_mm": 2.0,
             "tree": {
               "clusters": 0,
@@ -1641,14 +1654,27 @@
               "kept_independent": 0,
               "trunks": 0
             },
+            "unbraced": {
+              "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are never braced",
+              "model": {
+                "pillars": 0
+              },
+              "plate": {
+                "braced_pillars": 18,
+                "max_mm": 3.0,
+                "max_slenderness": 3.33,
+                "median_mm": 3.0,
+                "pillars": 67
+              }
+            },
             "uncovered_fraction": 0.0,
             "uncovered_samples": 0,
             "unroutable_positions": []
           },
           "transient_traps": {
             "definition": "empty space enclosed by already-printed material except toward the growth direction",
-            "peak_layer": 26,
-            "peak_volume_mm3": 0.00019440000000000036
+            "peak_layer": 23,
+            "peak_volume_mm3": 0.00012960000000000174
           },
           "union_raster_parity": {
             "examples": [],
@@ -1725,10 +1751,10 @@
     "search": {
       "full_resolution_bounds": true,
       "mode": "explicit",
-      "nominal_xy_support_reserve_mm": 2.6,
+      "nominal_xy_support_reserve_mm": 2.45,
       "requires_support_envelope_recheck": true,
       "reserve_relaxed": false,
-      "xy_support_reserve_mm": 2.6
+      "xy_support_reserve_mm": 2.45
     }
   },
   "schema_version": 1,
@@ -1863,15 +1889,15 @@
       "brace_angle_deg": 45.0,
       "brace_azimuth_deg": 0.0,
       "brace_branches_per_node": 1,
-      "brace_destination": "both",
-      "brace_diameter_mm": 0.0,
+      "brace_destination": "supports",
+      "brace_diameter_mm": 0.6,
       "brace_max_distance_mm": 0.0,
       "brace_max_length_mm": 30.0,
-      "brace_min_height_mm": 0.0,
-      "brace_pattern": "single",
-      "brace_spacing_mm": 15.0,
+      "brace_min_height_mm": 3.0,
+      "brace_pattern": "alternating",
+      "brace_spacing_mm": 5.0,
       "break_point_diameter_mm": 0.8,
-      "contact_diameter_mm": 0.4,
+      "contact_diameter_mm": 0.35,
       "contour_supports": false,
       "drop_attached_unroutable": true,
       "max_contact_gap_mm": 0.0,
@@ -1887,9 +1913,9 @@
       "model_anchor_shape": "cone",
       "overhang_angle_deg": 45.0,
       "part_to_part_avoidance": 1.0,
-      "penetration_mm": 0.15,
+      "penetration_mm": 0.2,
       "pillar_angle_deg": 45.0,
-      "pillar_diameter_mm": 1.2,
+      "pillar_diameter_mm": 0.9,
       "raft_expansion_mm": 2.0,
       "raft_slope_deg": 30.0,
       "raft_thickness_mm": 1.0,
@@ -1955,7 +1981,7 @@
         {
           "name": "supports_and_raft",
           "orientation": "closed_positive",
-          "triangles": 64468
+          "triangles": 60444
         }
       ],
       "max_displacement_mm": 0.0,
@@ -1999,8 +2025,8 @@
       "density_g_cm3": null,
       "mass_g": null,
       "source": "raster_volume_mm3",
-      "volume_ml": 8.966150738999998,
-      "volume_mm3": 8966.150738999999
+      "volume_ml": 8.766631328399999,
+      "volume_mm3": 8766.631328399999
     },
     "transform": {
       "mirror": [
@@ -2031,7 +2057,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2047,7 +2073,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2063,7 +2089,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2079,7 +2105,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2095,7 +2121,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2111,7 +2137,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2127,7 +2153,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2143,7 +2169,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2159,7 +2185,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2175,7 +2201,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2191,7 +2217,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2207,7 +2233,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2223,7 +2249,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2239,7 +2265,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2255,7 +2281,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2271,7 +2297,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2287,7 +2313,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2303,7 +2329,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2319,7 +2345,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2335,7 +2361,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2351,7 +2377,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2367,7 +2393,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2383,7 +2409,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2399,7 +2425,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2415,7 +2441,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2431,7 +2457,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2447,7 +2473,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2463,7 +2489,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2479,7 +2505,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2495,7 +2521,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2511,7 +2537,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2527,7 +2553,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2543,7 +2569,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2559,7 +2585,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2575,7 +2601,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2591,7 +2617,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2607,7 +2633,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2623,7 +2649,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2639,7 +2665,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2655,7 +2681,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2671,7 +2697,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2687,7 +2713,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2703,7 +2729,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2719,7 +2745,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2735,7 +2761,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2751,7 +2777,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2767,7 +2793,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2783,7 +2809,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2799,7 +2825,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2815,7 +2841,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2831,7 +2857,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2847,7 +2873,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2863,7 +2889,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2879,7 +2905,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2895,7 +2921,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2911,7 +2937,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -2929,709 +2955,709 @@
       {
         "end": "joint0",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot0"
       },
       {
         "end": "contact0",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint0"
       },
       {
         "end": "joint1",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot1"
       },
       {
         "end": "contact1",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint1"
       },
       {
         "end": "joint2",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot2"
       },
       {
         "end": "contact2",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint2"
       },
       {
         "end": "joint3",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot3"
       },
       {
         "end": "contact3",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint3"
       },
       {
         "end": "joint4",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot4"
       },
       {
         "end": "contact4",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint4"
       },
       {
         "end": "contact5",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint5"
       },
       {
         "end": "joint6",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot6"
       },
       {
         "end": "contact6",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint6"
       },
       {
         "end": "joint7",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot7"
       },
       {
         "end": "contact7",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint7"
       },
       {
         "end": "joint8",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot8"
       },
       {
         "end": "contact8",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint8"
       },
       {
         "end": "contact9",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint9"
       },
       {
         "end": "joint10",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot10"
       },
       {
         "end": "contact10",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint10"
       },
       {
         "end": "contact11",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint11"
       },
       {
         "end": "contact12",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint12"
       },
       {
         "end": "joint13",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot13"
       },
       {
         "end": "contact13",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint13"
       },
       {
         "end": "contact14",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint14"
       },
       {
         "end": "joint15",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot15"
       },
       {
         "end": "contact15",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint15"
       },
       {
         "end": "joint16",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot16"
       },
       {
         "end": "contact16",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint16"
       },
       {
         "end": "joint17",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot17"
       },
       {
         "end": "contact17",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint17"
       },
       {
         "end": "contact18",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint18"
       },
       {
         "end": "joint19",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot19"
       },
       {
         "end": "contact19",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint19"
       },
       {
         "end": "joint20",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot20"
       },
       {
         "end": "contact20",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint20"
       },
       {
         "end": "joint21",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot21"
       },
       {
         "end": "contact21",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint21"
       },
       {
         "end": "joint22",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot22"
       },
       {
         "end": "contact22",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint22"
       },
       {
         "end": "contact23",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint23"
       },
       {
         "end": "joint24",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot24"
       },
       {
         "end": "contact24",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint24"
       },
       {
         "end": "joint25",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot25"
       },
       {
         "end": "contact25",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint25"
       },
       {
         "end": "joint26",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot26"
       },
       {
         "end": "contact26",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint26"
       },
       {
         "end": "contact27",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint27"
       },
       {
         "end": "joint28",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot28"
       },
       {
         "end": "contact28",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint28"
       },
       {
         "end": "joint29",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot29"
       },
       {
         "end": "contact29",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint29"
       },
       {
         "end": "joint30",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot30"
       },
       {
         "end": "contact30",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint30"
       },
       {
         "end": "joint31",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot31"
       },
       {
         "end": "contact31",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint31"
       },
       {
         "end": "contact32",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint32"
       },
       {
         "end": "joint33",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot33"
       },
       {
         "end": "contact33",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint33"
       },
       {
         "end": "joint34",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot34"
       },
       {
         "end": "contact34",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint34"
       },
       {
         "end": "contact35",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint35"
       },
       {
         "end": "joint36",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot36"
       },
       {
         "end": "contact36",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint36"
       },
       {
         "end": "joint37",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot37"
       },
       {
         "end": "contact37",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint37"
       },
       {
         "end": "joint38",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot38"
       },
       {
         "end": "contact38",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint38"
       },
       {
         "end": "joint39",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot39"
       },
       {
         "end": "contact39",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint39"
       },
       {
         "end": "contact40",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint40"
       },
       {
         "end": "joint41",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot41"
       },
       {
         "end": "contact41",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint41"
       },
       {
         "end": "joint42",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot42"
       },
       {
         "end": "contact42",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint42"
       },
       {
         "end": "joint43",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot43"
       },
       {
         "end": "contact43",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint43"
       },
       {
         "end": "contact44",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint44"
       },
       {
         "end": "joint45",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot45"
       },
       {
         "end": "contact45",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint45"
       },
       {
         "end": "joint46",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot46"
       },
       {
         "end": "contact46",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint46"
       },
       {
         "end": "joint47",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot47"
       },
       {
         "end": "contact47",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint47"
       },
       {
         "end": "joint48",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot48"
       },
       {
         "end": "contact48",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint48"
       },
       {
         "end": "contact49",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint49"
       },
       {
         "end": "joint50",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot50"
       },
       {
         "end": "contact50",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint50"
       },
       {
         "end": "joint51",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot51"
       },
       {
         "end": "contact51",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint51"
       },
       {
         "end": "joint52",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot52"
       },
       {
         "end": "contact52",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint52"
       },
       {
         "end": "contact53",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint53"
       },
       {
         "end": "joint54",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot54"
       },
       {
         "end": "contact54",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint54"
       },
       {
         "end": "joint55",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot55"
       },
       {
         "end": "contact55",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint55"
       },
       {
         "end": "joint56",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot56"
       },
       {
         "end": "contact56",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint56"
       },
       {
         "end": "joint57",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot57"
       },
       {
         "end": "contact57",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint57"
       },
       {
         "end": "joint58",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot58"
       },
       {
         "end": "contact58",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint58"
       },
       {
         "end": "joint59",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot59"
       },
       {
         "end": "contact59",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint59"
       },
       {
         "end": "joint60",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot60"
       },
       {
         "end": "contact60",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint60"
       },
       {
         "end": "joint61",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot61"
       },
       {
         "end": "contact61",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint61"
       },
       {
         "end": "joint62",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot62"
       },
       {
         "end": "contact62",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint62"
       },
       {
         "end": "contact63",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint63"
       },
       {
         "end": "contact64",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint64"
       },
       {
         "end": "contact65",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint65"
       },
       {
         "end": "contact66",
         "kind": "tip",
-        "radius_mm": 0.2,
+        "radius_mm": 0.175,
         "start": "joint66"
       },
       {
         "end": "brace_joint201",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot5"
       },
       {
         "end": "joint5",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "brace_joint201"
       },
       {
@@ -3643,13 +3669,13 @@
       {
         "end": "brace_joint202",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot11"
       },
       {
         "end": "joint11",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "brace_joint202"
       },
       {
@@ -3661,13 +3687,13 @@
       {
         "end": "brace_joint203",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot12"
       },
       {
         "end": "joint12",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "brace_joint203"
       },
       {
@@ -3679,13 +3705,13 @@
       {
         "end": "brace_joint204",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot9"
       },
       {
         "end": "joint9",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "brace_joint204"
       },
       {
@@ -3695,628 +3721,256 @@
         "start": "joint4"
       },
       {
-        "end": "brace_landing4",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot4"
-      },
-      {
-        "end": "brace_landing4",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint6"
-      },
-      {
-        "end": "brace_landing5",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot5"
-      },
-      {
-        "end": "brace_landing5",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint7"
-      },
-      {
-        "end": "brace_landing6",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot6"
-      },
-      {
-        "end": "brace_landing6",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint8"
-      },
-      {
-        "end": "brace_joint211",
+        "end": "brace_joint205",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot14"
       },
       {
         "end": "joint14",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
+        "start": "brace_joint205"
+      },
+      {
+        "end": "brace_joint205",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint10"
+      },
+      {
+        "end": "brace_joint206",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot18"
+      },
+      {
+        "end": "joint18",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint206"
+      },
+      {
+        "end": "brace_joint206",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint13"
+      },
+      {
+        "end": "brace_joint207",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot23"
+      },
+      {
+        "end": "joint23",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint207"
+      },
+      {
+        "end": "brace_joint207",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint19"
+      },
+      {
+        "end": "brace_joint208",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot27"
+      },
+      {
+        "end": "joint27",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint208"
+      },
+      {
+        "end": "brace_joint208",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint22"
+      },
+      {
+        "end": "brace_joint209",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot32"
+      },
+      {
+        "end": "joint32",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint209"
+      },
+      {
+        "end": "brace_joint209",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint28"
+      },
+      {
+        "end": "brace_joint210",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot35"
+      },
+      {
+        "end": "joint35",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint210"
+      },
+      {
+        "end": "brace_joint210",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint31"
+      },
+      {
+        "end": "brace_joint211",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot40"
+      },
+      {
+        "end": "joint40",
+        "kind": "vertical",
+        "radius_mm": 0.45,
         "start": "brace_joint211"
       },
       {
         "end": "brace_joint211",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "joint10"
+        "start": "joint36"
       },
       {
         "end": "brace_joint212",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot18"
+        "radius_mm": 0.45,
+        "start": "foot44"
       },
       {
-        "end": "joint18",
+        "end": "joint44",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "brace_joint212"
       },
       {
         "end": "brace_joint212",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "joint13"
-      },
-      {
-        "end": "brace_landing9",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot9"
-      },
-      {
-        "end": "brace_landing9",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint15"
-      },
-      {
-        "end": "brace_landing10",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot10"
-      },
-      {
-        "end": "brace_landing10",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint16"
-      },
-      {
-        "end": "brace_landing11",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot11"
-      },
-      {
-        "end": "brace_landing11",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint17"
-      },
-      {
-        "end": "brace_joint219",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot23"
-      },
-      {
-        "end": "joint23",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint219"
-      },
-      {
-        "end": "brace_joint219",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint19"
-      },
-      {
-        "end": "brace_landing13",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot13"
-      },
-      {
-        "end": "brace_landing13",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint20"
-      },
-      {
-        "end": "brace_landing14",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot14"
-      },
-      {
-        "end": "brace_landing14",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint21"
-      },
-      {
-        "end": "brace_joint224",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot27"
-      },
-      {
-        "end": "joint27",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint224"
-      },
-      {
-        "end": "brace_joint224",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint22"
-      },
-      {
-        "end": "brace_landing16",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot16"
-      },
-      {
-        "end": "brace_landing16",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint24"
-      },
-      {
-        "end": "brace_landing17",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot17"
-      },
-      {
-        "end": "brace_landing17",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint25"
-      },
-      {
-        "end": "brace_landing18",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot18"
-      },
-      {
-        "end": "brace_landing18",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint26"
-      },
-      {
-        "end": "brace_joint231",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot32"
-      },
-      {
-        "end": "joint32",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint231"
-      },
-      {
-        "end": "brace_joint231",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint28"
-      },
-      {
-        "end": "brace_landing20",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot20"
-      },
-      {
-        "end": "brace_landing20",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint29"
-      },
-      {
-        "end": "brace_landing21",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot21"
-      },
-      {
-        "end": "brace_landing21",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint30"
-      },
-      {
-        "end": "brace_joint236",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot35"
-      },
-      {
-        "end": "joint35",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint236"
-      },
-      {
-        "end": "brace_joint236",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint31"
-      },
-      {
-        "end": "brace_landing23",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot23"
-      },
-      {
-        "end": "brace_landing23",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint0"
-      },
-      {
-        "end": "brace_landing24",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot24"
-      },
-      {
-        "end": "brace_landing24",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint33"
-      },
-      {
-        "end": "brace_landing25",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot25"
-      },
-      {
-        "end": "brace_landing25",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint34"
-      },
-      {
-        "end": "brace_joint243",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot40"
-      },
-      {
-        "end": "joint40",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint243"
-      },
-      {
-        "end": "brace_joint243",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint36"
-      },
-      {
-        "end": "brace_landing27",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot27"
-      },
-      {
-        "end": "brace_landing27",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint37"
-      },
-      {
-        "end": "brace_landing28",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot28"
-      },
-      {
-        "end": "brace_landing28",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint38"
-      },
-      {
-        "end": "brace_joint248",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "foot44"
-      },
-      {
-        "end": "joint44",
-        "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint248"
-      },
-      {
-        "end": "brace_joint248",
-        "kind": "brace",
-        "radius_mm": 0.3,
         "start": "joint39"
       },
       {
-        "end": "brace_landing30",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot30"
-      },
-      {
-        "end": "brace_landing30",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint41"
-      },
-      {
-        "end": "brace_landing31",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot31"
-      },
-      {
-        "end": "brace_landing31",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint42"
-      },
-      {
-        "end": "brace_landing32",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot32"
-      },
-      {
-        "end": "brace_landing32",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint43"
-      },
-      {
-        "end": "brace_joint255",
+        "end": "brace_joint213",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot49"
       },
       {
         "end": "joint49",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint255"
+        "radius_mm": 0.45,
+        "start": "brace_joint213"
       },
       {
-        "end": "brace_joint255",
+        "end": "brace_joint213",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint45"
       },
       {
-        "end": "brace_landing34",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot34"
-      },
-      {
-        "end": "brace_landing34",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint46"
-      },
-      {
-        "end": "brace_landing35",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot35"
-      },
-      {
-        "end": "brace_landing35",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint47"
-      },
-      {
-        "end": "brace_joint260",
+        "end": "brace_joint214",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot53"
       },
       {
         "end": "joint53",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint260"
+        "radius_mm": 0.45,
+        "start": "brace_joint214"
       },
       {
-        "end": "brace_joint260",
+        "end": "brace_joint214",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint48"
       },
       {
-        "end": "brace_landing37",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot37"
-      },
-      {
-        "end": "brace_landing37",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint50"
-      },
-      {
-        "end": "brace_landing38",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot38"
-      },
-      {
-        "end": "brace_landing38",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint51"
-      },
-      {
-        "end": "brace_landing39",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot39"
-      },
-      {
-        "end": "brace_landing39",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint52"
-      },
-      {
-        "end": "brace_joint267",
+        "end": "brace_joint215",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot63"
       },
       {
         "end": "joint63",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint267"
+        "radius_mm": 0.45,
+        "start": "brace_joint215"
       },
       {
-        "end": "brace_joint267",
+        "end": "brace_joint215",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint54"
       },
       {
-        "end": "brace_joint268",
+        "end": "brace_joint216",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot64"
       },
       {
         "end": "joint64",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint268"
+        "radius_mm": 0.45,
+        "start": "brace_joint216"
       },
       {
-        "end": "brace_joint268",
+        "end": "brace_joint216",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint55"
       },
       {
-        "end": "brace_joint269",
+        "end": "brace_joint217",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot65"
       },
       {
         "end": "joint65",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint269"
+        "radius_mm": 0.45,
+        "start": "brace_joint217"
       },
       {
-        "end": "brace_joint269",
+        "end": "brace_joint217",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint56"
       },
       {
-        "end": "brace_joint270",
+        "end": "brace_joint218",
         "kind": "vertical",
-        "radius_mm": 0.6,
+        "radius_mm": 0.45,
         "start": "foot66"
       },
       {
         "end": "joint66",
         "kind": "vertical",
-        "radius_mm": 0.6,
-        "start": "brace_joint270"
+        "radius_mm": 0.45,
+        "start": "brace_joint218"
       },
       {
-        "end": "brace_joint270",
+        "end": "brace_joint218",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint57"
-      },
-      {
-        "end": "brace_landing44",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot44"
-      },
-      {
-        "end": "brace_landing44",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint58"
-      },
-      {
-        "end": "brace_landing45",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot45"
-      },
-      {
-        "end": "brace_landing45",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint59"
-      },
-      {
-        "end": "brace_landing46",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot46"
-      },
-      {
-        "end": "brace_landing46",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint60"
-      },
-      {
-        "end": "brace_landing47",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot47"
-      },
-      {
-        "end": "brace_landing47",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint61"
-      },
-      {
-        "end": "brace_landing48",
-        "kind": "brace_foot",
-        "radius_mm": 0.3,
-        "start": "brace_foot48"
-      },
-      {
-        "end": "brace_landing48",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint62"
       }
     ],
     "nodes": [
@@ -4324,8 +3978,8 @@
         "id": "foot0",
         "kind": "foot",
         "position_mm": [
-          -0.02499999999999858,
-          -0.02499999999999858,
+          -0.02500000000000213,
+          -0.02500000000000213,
           0.0
         ]
       },
@@ -4333,8 +3987,8 @@
         "id": "joint0",
         "kind": "junction",
         "position_mm": [
-          -0.02499999999999858,
-          -0.02499999999999858,
+          -0.02500000000000213,
+          -0.02500000000000213,
           3.0
         ]
       },
@@ -4342,8 +3996,8 @@
         "id": "contact0",
         "kind": "contact",
         "position_mm": [
-          -0.02499999999999858,
-          -0.02499999999999858,
+          -0.02500000000000213,
+          -0.02500000000000213,
           5.0
         ]
       },
@@ -6166,64 +5820,64 @@
         ]
       },
       {
-        "id": "brace_foot4",
-        "kind": "foot",
-        "position_mm": [
-          -11.762500000000001,
-          -5.3125,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing4",
+        "id": "brace_joint205",
         "kind": "brace_junction",
         "position_mm": [
-          -11.762500000000001,
-          -5.3125,
-          0.3
+          -5.9375,
+          -10.0,
+          0.3117733540491793
         ]
       },
       {
-        "id": "brace_foot5",
-        "kind": "foot",
-        "position_mm": [
-          -11.762500000000001,
-          3.306546357697854e-16,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing5",
+        "id": "brace_joint206",
         "kind": "brace_junction",
         "position_mm": [
-          -11.762500000000001,
-          3.306546357697854e-16,
-          0.3
+          -5.9375,
+          10.0,
+          0.3117733540491793
         ]
       },
       {
-        "id": "brace_foot6",
-        "kind": "foot",
-        "position_mm": [
-          -11.762500000000001,
-          5.3125,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing6",
+        "id": "brace_joint207",
         "kind": "brace_junction",
         "position_mm": [
-          -11.762500000000001,
-          5.3125,
-          0.3
+          -3.125,
+          -10.0,
+          0.4805444536567034
+        ]
+      },
+      {
+        "id": "brace_joint208",
+        "kind": "brace_junction",
+        "position_mm": [
+          -3.125,
+          10.0,
+          0.4805444536567034
+        ]
+      },
+      {
+        "id": "brace_joint209",
+        "kind": "brace_junction",
+        "position_mm": [
+          0.0,
+          -10.0,
+          0.3117733540491793
+        ]
+      },
+      {
+        "id": "brace_joint210",
+        "kind": "brace_junction",
+        "position_mm": [
+          0.0,
+          10.0,
+          0.3117733540491793
         ]
       },
       {
         "id": "brace_joint211",
         "kind": "brace_junction",
         "position_mm": [
-          -5.9375,
+          3.125,
           -10.0,
           0.3117733540491793
         ]
@@ -6232,391 +5886,13 @@
         "id": "brace_joint212",
         "kind": "brace_junction",
         "position_mm": [
-          -5.9375,
-          10.0,
-          0.3117733540491793
-        ]
-      },
-      {
-        "id": "brace_foot9",
-        "kind": "foot",
-        "position_mm": [
-          -5.9375,
-          -2.6124999999999994,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing9",
-        "kind": "brace_junction",
-        "position_mm": [
-          -5.9375,
-          -2.6124999999999994,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot10",
-        "kind": "foot",
-        "position_mm": [
-          -5.9375,
-          2.7000000000000006,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing10",
-        "kind": "brace_junction",
-        "position_mm": [
-          -5.9375,
-          2.7000000000000006,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot11",
-        "kind": "foot",
-        "position_mm": [
-          -5.9375,
-          8.012500000000001,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing11",
-        "kind": "brace_junction",
-        "position_mm": [
-          -5.9375,
-          8.012500000000001,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint219",
-        "kind": "brace_junction",
-        "position_mm": [
-          -3.125,
-          -10.0,
-          0.4805444536567034
-        ]
-      },
-      {
-        "id": "brace_foot13",
-        "kind": "foot",
-        "position_mm": [
-          -4.375,
-          0.20000000000000062,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing13",
-        "kind": "brace_junction",
-        "position_mm": [
-          -4.375,
-          0.20000000000000062,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot14",
-        "kind": "foot",
-        "position_mm": [
-          -4.375,
-          5.200000000000001,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing14",
-        "kind": "brace_junction",
-        "position_mm": [
-          -4.375,
-          5.200000000000001,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint224",
-        "kind": "brace_junction",
-        "position_mm": [
-          -3.125,
-          10.0,
-          0.4805444536567034
-        ]
-      },
-      {
-        "id": "brace_foot16",
-        "kind": "foot",
-        "position_mm": [
-          -3.125,
-          -2.6124999999999994,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing16",
-        "kind": "brace_junction",
-        "position_mm": [
-          -3.125,
-          -2.6124999999999994,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot17",
-        "kind": "foot",
-        "position_mm": [
-          -3.125,
-          2.7000000000000006,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing17",
-        "kind": "brace_junction",
-        "position_mm": [
-          -3.125,
-          2.7000000000000006,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot18",
-        "kind": "foot",
-        "position_mm": [
-          -3.125,
-          8.012500000000001,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing18",
-        "kind": "brace_junction",
-        "position_mm": [
-          -3.125,
-          8.012500000000001,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint231",
-        "kind": "brace_junction",
-        "position_mm": [
-          0.0,
-          -10.0,
-          0.3117733540491793
-        ]
-      },
-      {
-        "id": "brace_foot20",
-        "kind": "foot",
-        "position_mm": [
-          -1.5624999999999998,
-          0.20000000000000062,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing20",
-        "kind": "brace_junction",
-        "position_mm": [
-          -1.5624999999999998,
-          0.20000000000000062,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot21",
-        "kind": "foot",
-        "position_mm": [
-          -1.5624999999999998,
-          5.200000000000001,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing21",
-        "kind": "brace_junction",
-        "position_mm": [
-          -1.5624999999999998,
-          5.200000000000001,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint236",
-        "kind": "brace_junction",
-        "position_mm": [
-          0.0,
-          10.0,
-          0.3117733540491793
-        ]
-      },
-      {
-        "id": "brace_foot23",
-        "kind": "foot",
-        "position_mm": [
-          -0.024999999999998412,
-          2.675000000000002,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing23",
-        "kind": "brace_junction",
-        "position_mm": [
-          -0.024999999999998412,
-          2.675000000000002,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot24",
-        "kind": "foot",
-        "position_mm": [
-          1.653273178848927e-16,
-          -2.6124999999999994,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing24",
-        "kind": "brace_junction",
-        "position_mm": [
-          1.653273178848927e-16,
-          -2.6124999999999994,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot25",
-        "kind": "foot",
-        "position_mm": [
-          1.653273178848927e-16,
-          8.012500000000001,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing25",
-        "kind": "brace_junction",
-        "position_mm": [
-          1.653273178848927e-16,
-          8.012500000000001,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint243",
-        "kind": "brace_junction",
-        "position_mm": [
-          3.125,
-          -10.0,
-          0.3117733540491793
-        ]
-      },
-      {
-        "id": "brace_foot27",
-        "kind": "foot",
-        "position_mm": [
-          1.5625000000000002,
-          0.20000000000000062,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing27",
-        "kind": "brace_junction",
-        "position_mm": [
-          1.5625000000000002,
-          0.20000000000000062,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot28",
-        "kind": "foot",
-        "position_mm": [
-          1.5625000000000002,
-          5.200000000000001,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing28",
-        "kind": "brace_junction",
-        "position_mm": [
-          1.5625000000000002,
-          5.200000000000001,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint248",
-        "kind": "brace_junction",
-        "position_mm": [
           3.125,
           10.0,
           0.3117733540491793
         ]
       },
       {
-        "id": "brace_foot30",
-        "kind": "foot",
-        "position_mm": [
-          3.125,
-          -2.6124999999999994,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing30",
-        "kind": "brace_junction",
-        "position_mm": [
-          3.125,
-          -2.6124999999999994,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot31",
-        "kind": "foot",
-        "position_mm": [
-          3.125,
-          2.7000000000000006,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing31",
-        "kind": "brace_junction",
-        "position_mm": [
-          3.125,
-          2.7000000000000006,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot32",
-        "kind": "foot",
-        "position_mm": [
-          3.125,
-          8.012500000000001,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing32",
-        "kind": "brace_junction",
-        "position_mm": [
-          3.125,
-          8.012500000000001,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint255",
+        "id": "brace_joint213",
         "kind": "brace_junction",
         "position_mm": [
           5.9375,
@@ -6625,43 +5901,7 @@
         ]
       },
       {
-        "id": "brace_foot34",
-        "kind": "foot",
-        "position_mm": [
-          4.375,
-          0.20000000000000062,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing34",
-        "kind": "brace_junction",
-        "position_mm": [
-          4.375,
-          0.20000000000000062,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot35",
-        "kind": "foot",
-        "position_mm": [
-          4.375,
-          5.200000000000001,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing35",
-        "kind": "brace_junction",
-        "position_mm": [
-          4.375,
-          5.200000000000001,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint260",
+        "id": "brace_joint214",
         "kind": "brace_junction",
         "position_mm": [
           5.9375,
@@ -6670,61 +5910,7 @@
         ]
       },
       {
-        "id": "brace_foot37",
-        "kind": "foot",
-        "position_mm": [
-          5.9375,
-          -2.6124999999999994,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing37",
-        "kind": "brace_junction",
-        "position_mm": [
-          5.9375,
-          -2.6124999999999994,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot38",
-        "kind": "foot",
-        "position_mm": [
-          5.9375,
-          2.7000000000000006,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing38",
-        "kind": "brace_junction",
-        "position_mm": [
-          5.9375,
-          2.7000000000000006,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot39",
-        "kind": "foot",
-        "position_mm": [
-          5.9375,
-          8.012500000000001,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing39",
-        "kind": "brace_junction",
-        "position_mm": [
-          5.9375,
-          8.012500000000001,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_joint267",
+        "id": "brace_joint215",
         "kind": "brace_junction",
         "position_mm": [
           10.0,
@@ -6733,7 +5919,7 @@
         ]
       },
       {
-        "id": "brace_joint268",
+        "id": "brace_joint216",
         "kind": "brace_junction",
         "position_mm": [
           10.0,
@@ -6742,7 +5928,7 @@
         ]
       },
       {
-        "id": "brace_joint269",
+        "id": "brace_joint217",
         "kind": "brace_junction",
         "position_mm": [
           10.0,
@@ -6751,102 +5937,12 @@
         ]
       },
       {
-        "id": "brace_joint270",
+        "id": "brace_joint218",
         "kind": "brace_junction",
         "position_mm": [
           10.0,
           7.8125,
           0.5000000000000003
-        ]
-      },
-      {
-        "id": "brace_foot44",
-        "kind": "foot",
-        "position_mm": [
-          11.762500000000001,
-          -10.0,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing44",
-        "kind": "brace_junction",
-        "position_mm": [
-          11.762500000000001,
-          -10.0,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot45",
-        "kind": "foot",
-        "position_mm": [
-          11.762500000000001,
-          -5.3125,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing45",
-        "kind": "brace_junction",
-        "position_mm": [
-          11.762500000000001,
-          -5.3125,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot46",
-        "kind": "foot",
-        "position_mm": [
-          11.762500000000001,
-          0.0,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing46",
-        "kind": "brace_junction",
-        "position_mm": [
-          11.762500000000001,
-          0.0,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot47",
-        "kind": "foot",
-        "position_mm": [
-          11.762500000000001,
-          5.3125,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing47",
-        "kind": "brace_junction",
-        "position_mm": [
-          11.762500000000001,
-          5.3125,
-          0.3
-        ]
-      },
-      {
-        "id": "brace_foot48",
-        "kind": "foot",
-        "position_mm": [
-          11.762500000000001,
-          10.0,
-          0.0
-        ]
-      },
-      {
-        "id": "brace_landing48",
-        "kind": "brace_junction",
-        "position_mm": [
-          11.762500000000001,
-          10.0,
-          0.3
         ]
       }
     ],
@@ -6875,10 +5971,10 @@
         "code": "transient_trap",
         "details": {
           "definition": "empty space enclosed by already-printed material except toward the growth direction",
-          "peak_layer": 26,
-          "peak_volume_mm3": 0.00019440000000000036
+          "peak_layer": 23,
+          "peak_volume_mm3": 0.00012960000000000174
         },
-        "layer": 26,
+        "layer": 23,
         "message": "Empty space is enclosed by already-printed material during part of the build",
         "position_mm": null,
         "severity": "warning"
@@ -6930,7 +6026,7 @@
             {
               "name": "supports_and_raft",
               "orientation": "closed_positive",
-              "triangles": 64468
+              "triangles": 60444
             }
           ],
           "max_displacement_mm": 0.0,
@@ -6949,7 +6045,7 @@
           "bottom_layer_top_mm": 0.2,
           "bottom_lift_speed": 0.05,
           "build_z_mm": 165.0,
-          "candidate_triangle_count": 4248,
+          "candidate_triangle_count": 3586,
           "heuristic": "uncalibrated geometry score; not a force or failure prediction",
           "layer_height_mm": 0.05,
           "limitations": [
@@ -6958,34 +6054,34 @@
             "open, duplicate and nonmanifold surfaces require independent validation"
           ],
           "max_angle_deg": 10.0,
-          "maximum_projected_area_mm2": 693.3690616216168,
-          "maximum_score": 6.933690616216168,
+          "maximum_projected_area_mm2": 602.9081463333504,
+          "maximum_score": 6.029081463333504,
           "normal_lift_speed": 0.05,
           "reference_lift_speed": 0.05,
-          "region_count": 168,
+          "region_count": 137,
           "regions": [
             {
-              "area_mm2": 693.3690616216168,
+              "area_mm2": 602.9081463333504,
               "bottom_layer_intersection": true,
               "bounds": [
                 [
-                  -14.362500190734863,
-                  -12.600000381469727,
+                  -12.449999809265137,
+                  -12.449999809265137,
                   0.0
                 ],
                 [
-                  14.362500190734863,
-                  12.600000381469727,
+                  12.449999809265137,
+                  12.449999809265137,
                   0.0
                 ]
               ],
               "lift_speed": 0.05,
               "mean_z_mm": 0.0,
               "normal_layer_intersection": false,
-              "projected_area_mm2": 693.3690616216168,
-              "score": 6.933690616216168,
+              "projected_area_mm2": 602.9081463333504,
+              "score": 6.029081463333504,
               "threshold": true,
-              "triangle_count": 78,
+              "triangle_count": 98,
               "z_layer_span": [
                 0,
                 0
@@ -7048,11 +6144,11 @@
           ],
           "regions_truncated": false,
           "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-          "source_triangle_count": 64480,
+          "source_triangle_count": 60456,
           "status": "complete",
           "threshold_area_mm2": 100.0,
           "threshold_region_count": 3,
-          "total_region_count": 168
+          "total_region_count": 137
         },
         "layer": null,
         "message": "Large downward surface regions warrant review of orientation and release settings",
@@ -7062,7 +6158,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7078,7 +6174,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7094,7 +6190,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7110,7 +6206,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7126,7 +6222,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7142,7 +6238,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7158,7 +6254,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7174,7 +6270,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7190,7 +6286,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7206,7 +6302,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7222,7 +6318,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7238,7 +6334,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7254,7 +6350,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7270,7 +6366,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7286,7 +6382,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7302,7 +6398,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7318,7 +6414,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7334,7 +6430,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7350,7 +6446,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7366,7 +6462,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7382,7 +6478,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7398,7 +6494,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7414,7 +6510,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7430,7 +6526,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7446,7 +6542,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7462,7 +6558,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7478,7 +6574,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7494,7 +6590,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7510,7 +6606,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7526,7 +6622,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7542,7 +6638,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7558,7 +6654,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7574,7 +6670,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7590,7 +6686,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7606,7 +6702,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7622,7 +6718,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7638,7 +6734,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7654,7 +6750,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7670,7 +6766,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7686,7 +6782,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7702,7 +6798,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7718,7 +6814,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7734,7 +6830,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7750,7 +6846,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7766,7 +6862,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7782,7 +6878,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7798,7 +6894,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7814,7 +6910,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7830,7 +6926,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7846,7 +6942,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7862,7 +6958,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7878,7 +6974,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7894,7 +6990,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7910,7 +7006,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7926,7 +7022,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -7942,7 +7038,7 @@
       {
         "code": "support_dropped_attached",
         "details": {
-          "attach_reach_mm": 0.8999999999999999,
+          "attach_reach_mm": 0.75,
           "basis": "printer-pitch material one layer below within the attach reach",
           "reason": "near-vertical or already-attached surface"
         },
@@ -8948,7 +8044,7 @@
       {
         "code": "unsupported_overhang",
         "details": {
-          "gap_mm": 20.067982117044057,
+          "gap_mm": 20.067982117044053,
           "sample_count": 8584,
           "samples_truncated": true,
           "spacing_mm": 3.0,
@@ -10264,8 +9360,8 @@
       "diagnostic_examples_capped": 128,
       "drainage": {
         "analysis_grid": [
-          157,
-          138,
+          137,
+          137,
           137
         ],
         "analysis_pitch_mm": 0.18806319451591877,
@@ -10311,14 +9407,14 @@
         "model_volume_mm3": 0.0,
         "negligible_count": 0,
         "negligible_volume_mm3": 0.0,
-        "nodes": 672,
-        "peak_present_trapped_layer": 26,
-        "peak_present_trapped_volume_mm3": 0.00019440000000000036,
+        "nodes": 700,
+        "peak_present_trapped_layer": 23,
+        "peak_present_trapped_volume_mm3": 0.00012960000000000174,
         "support_count": 0,
         "support_volume_mm3": 0.0,
         "volume_mm3": 0.0
       },
-      "exposed_pixels": 553466095,
+      "exposed_pixels": 541150082,
       "growth_decimation": 8,
       "growth_violation_pixels": 0,
       "ignored_support_bottlenecks": {
@@ -10342,7 +9438,7 @@
         "bottom_layer_top_mm": 0.2,
         "bottom_lift_speed": 0.05,
         "build_z_mm": 165.0,
-        "candidate_triangle_count": 4248,
+        "candidate_triangle_count": 3586,
         "heuristic": "uncalibrated geometry score; not a force or failure prediction",
         "layer_height_mm": 0.05,
         "limitations": [
@@ -10351,34 +9447,34 @@
           "open, duplicate and nonmanifold surfaces require independent validation"
         ],
         "max_angle_deg": 10.0,
-        "maximum_projected_area_mm2": 693.3690616216168,
-        "maximum_score": 6.933690616216168,
+        "maximum_projected_area_mm2": 602.9081463333504,
+        "maximum_score": 6.029081463333504,
         "normal_lift_speed": 0.05,
         "reference_lift_speed": 0.05,
-        "region_count": 168,
+        "region_count": 137,
         "regions": [
           {
-            "area_mm2": 693.3690616216168,
+            "area_mm2": 602.9081463333504,
             "bottom_layer_intersection": true,
             "bounds": [
               [
-                -14.362500190734863,
-                -12.600000381469727,
+                -12.449999809265137,
+                -12.449999809265137,
                 0.0
               ],
               [
-                14.362500190734863,
-                12.600000381469727,
+                12.449999809265137,
+                12.449999809265137,
                 0.0
               ]
             ],
             "lift_speed": 0.05,
             "mean_z_mm": 0.0,
             "normal_layer_intersection": false,
-            "projected_area_mm2": 693.3690616216168,
-            "score": 6.933690616216168,
+            "projected_area_mm2": 602.9081463333504,
+            "score": 6.029081463333504,
             "threshold": true,
-            "triangle_count": 78,
+            "triangle_count": 98,
             "z_layer_span": [
               0,
               0
@@ -10441,47 +9537,47 @@
         ],
         "regions_truncated": false,
         "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-        "source_triangle_count": 64480,
+        "source_triangle_count": 60456,
         "status": "complete",
         "threshold_area_mm2": 100.0,
         "threshold_region_count": 3,
-        "total_region_count": 168
+        "total_region_count": 137
       },
       "pixel_pitch_mm": [
         0.018,
         0.018
       ],
-      "raster_volume_mm3": 8966.150738999999,
+      "raster_volume_mm3": 8766.631328399999,
       "reopened": {
         "bounds": [
           [
-            -14.362500190734863,
-            -12.600000381469727,
+            -12.449999809265137,
+            -12.449999809265137,
             0.0
           ],
           [
-            14.362500190734863,
-            12.600000381469727,
+            12.449999809265137,
+            12.449999809265137,
             25.0
           ]
         ],
         "crop_origin_px": [
-          3461,
-          1458
+          3567,
+          1467
         ],
         "grid": [
-          1598,
-          1404
+          1386,
+          1386
         ],
         "negative_winding_crossings": 0,
         "open_layers": 0,
         "open_rows": 0,
         "path": "prepared.stl",
-        "sha256": "266e876c45368f9b9e5bf132c04a47139fd7a88b34a4a604063bf1042fd5ea9b",
-        "triangles": 64480
+        "sha256": "d1654ab8a91bdef064cb0052e0725f297a6bd4385875cfda2249943110af134e",
+        "triangles": 60456
       },
       "support_collisions": {
-        "allowance_mm": 2.75,
+        "allowance_mm": 2.6500000000000004,
         "basis": "exact boolean of support solids against each part; graph capsules for support pairs; tip and anchor pieces are expected",
         "expected_pieces": 0,
         "intrusion_volume_mm3": 0.0,
@@ -10503,7 +9599,7 @@
         "allow_part_to_part": true,
         "analysis": {
           "analysis_pitch_mm": 0.15,
-          "columns": 52900,
+          "columns": 51984,
           "enclosed_void_volume_mm3": 0.0,
           "layer_height_mm": 0.05,
           "layers": 500,
@@ -10518,58 +9614,58 @@
           "cell_basis": "center-to-center spacing of adjacent cells",
           "cell_size_mm": 6.0,
           "connected_components": 1,
-          "contact_area_mm2": 693.3690314088739,
-          "convex_envelope_area_mm2": 694.9269970311291,
+          "contact_area_mm2": 602.9081616333224,
+          "convex_envelope_area_mm2": 603.3314837497697,
           "does_not_establish": "plate adhesion, removal force, or print stability",
           "establishes": "the shape and size of the base",
           "export_simplification_basis": "one float32 coordinate step; redundant grid edges",
           "export_simplification_mm": 9.5367431640625e-07,
-          "feet": 98,
+          "feet": 67,
           "footprint_basis": "union of emitted polygon sections at the plate",
           "grid_candidate_lines": 14,
-          "open_area_fraction": 0.0022419126453730527,
-          "open_area_mm2": 1.5579656222552103,
-          "pad_diameter_mm": 5.2,
+          "open_area_fraction": 0.000701641017996233,
+          "open_area_mm2": 0.42332211644736617,
+          "pad_diameter_mm": 4.9,
           "pad_thickness_mm": 1.0,
-          "perimeter_width_mm": 1.2,
+          "perimeter_width_mm": 0.9,
           "removal": "connected grid, perimeter rim and foot tree; vertical openings",
           "rotation_deg": 0.0,
-          "skeleton_edges": 97,
-          "skeleton_length_mm": 199.2331321929918,
+          "skeleton_edges": 66,
+          "skeleton_length_mm": 178.03065202504303,
           "solid": true,
-          "strut_width_mm": 1.2,
+          "strut_width_mm": 0.9,
           "tree_basis": "Euclidean minimum spanning tree; sorted ties",
           "type": "grid",
-          "unique_feet": 98,
-          "volume_mm3": 693.3690314088739
+          "unique_feet": 67,
+          "volume_mm3": 602.9081616333227
         },
         "brace_angle_deg": 45.0,
         "brace_azimuth_deg": 0.0,
         "brace_branches_per_node": 1,
-        "brace_candidates_examined": 245,
-        "brace_destination": "both",
+        "brace_candidates_examined": 126,
+        "brace_destination": "supports",
         "brace_diameter_mm": 0.6,
         "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
         "brace_max_distance_mm": 4.5,
         "brace_max_length_mm": 30.0,
-        "brace_min_height_mm": 0.0,
-        "brace_new_feet": 31,
+        "brace_min_height_mm": 3.0,
+        "brace_new_feet": 0,
         "brace_origins_examined": 67,
-        "brace_pattern": "single",
+        "brace_pattern": "alternating",
         "brace_rejections": {
           "bounds_rejected": 40,
           "collision_rejected": 0,
           "duplicate_rejected": 0,
           "foot_rejected": 0,
           "length_rejected": 0,
-          "no_destination_rejected": 0,
-          "pattern_rejected": 0,
-          "spacing_rejected": 125,
-          "support_collision_rejected": 49,
+          "no_destination_rejected": 31,
+          "pattern_rejected": 56,
+          "spacing_rejected": 30,
+          "support_collision_rejected": 0,
           "ungrounded_rejected": 0
         },
-        "brace_spacing_mm": 15.0,
-        "braces": 49,
+        "brace_spacing_mm": 5.0,
+        "braces": 18,
         "braces_capped": false,
         "braces_collision_rejected": 0,
         "contact_load_limit_mm2": 36.0,
@@ -10591,8 +9687,8 @@
         "coverage_gap_limit_mm": 3.0,
         "density_exempt_positions": [
           [
-            -0.02499999999999858,
-            -0.02499999999999858,
+            -0.02500000000000213,
+            -0.02500000000000213,
             5.0
           ]
         ],
@@ -10652,7 +9748,7 @@
         "small_pillars": 0,
         "spacing_mm": 3.0,
         "suppressed_contacts": 0,
-        "tip_base_diameter_mm": 1.2,
+        "tip_base_diameter_mm": 0.9,
         "tip_length_mm": 2.0,
         "tree": {
           "clusters": 0,
@@ -10661,14 +9757,27 @@
           "kept_independent": 0,
           "trunks": 0
         },
+        "unbraced": {
+          "basis": "longest vertical run between brace joints, the foot and the top of each pillar; pillars standing on the model are never braced",
+          "model": {
+            "pillars": 0
+          },
+          "plate": {
+            "braced_pillars": 18,
+            "max_mm": 3.0,
+            "max_slenderness": 3.33,
+            "median_mm": 3.0,
+            "pillars": 67
+          }
+        },
         "uncovered_fraction": 0.0,
         "uncovered_samples": 0,
         "unroutable_positions": []
       },
       "transient_traps": {
         "definition": "empty space enclosed by already-printed material except toward the growth direction",
-        "peak_layer": 26,
-        "peak_volume_mm3": 0.00019440000000000036
+        "peak_layer": 23,
+        "peak_volume_mm3": 0.00012960000000000174
       },
       "union_raster_parity": {
         "examples": [],
@@ -11184,7 +10293,7 @@
             ]
           },
           {
-            "gap_mm": 20.067982117044057,
+            "gap_mm": 20.067982117044053,
             "layer": 500,
             "position_mm": [
               -1.5625,
