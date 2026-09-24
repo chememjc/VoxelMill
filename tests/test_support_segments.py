@@ -151,9 +151,9 @@ def test_the_thin_pillar_class_needs_both_halves_or_neither():
 def test_brace_spacing_and_length_are_independent():
     settings = resolve_settings()
     pillar_r = settings['support']['pillar_diameter_mm'] / 2
-    assert brace_geometry(settings, pillar_r) == (15.0, 30.0)
+    assert brace_geometry(settings, pillar_r) == (5.0, 30.0)
     assert brace_geometry(settings_with(brace_spacing_mm=12.0), pillar_r) == (12.0, 30.0)
-    assert brace_geometry(settings_with(brace_max_length_mm=8.0), pillar_r) == (15.0, 8.0)
+    assert brace_geometry(settings_with(brace_max_length_mm=8.0), pillar_r) == (5.0, 8.0)
     with pytest.raises(VoxelMillError):
         settings_with(brace_spacing_mm=0)
 
@@ -161,7 +161,9 @@ def test_brace_spacing_and_length_are_independent():
 def test_smaller_vertical_spacing_produces_more_downward_braces():
     solid = m.Manifold.sphere(4, 48).translate((0, 0, 64))
     triangles, bounds = placed(solid)
-    default, _raft = plan_supports(triangles, bounds, resolve_settings())
+    # Pin the pre-CHITUBOX-Light (looser) brace spacing as the baseline: the
+    # current default (5mm) is already tighter than the 8mm case below.
+    default, _raft = plan_supports(triangles, bounds, settings_with(brace_spacing_mm=15.0))
     close = settings_with(brace_spacing_mm=8.0, brace_max_length_mm=30.0)
     plan, raft = plan_supports(triangles, bounds, close)
     assert plan.metrics['brace_spacing_mm'] == 8.0
@@ -177,7 +179,10 @@ def test_every_base_strategy_builds_what_it_says_and_measures_itself():
     results = {}
     for kind, extra in (('plate', {}), ('none', {}),
                         ('pad', {'base_touch_diameter_mm': 3.0, 'base_thickness_mm': 0.8})):
-        plan, raft = plan_for(solid, settings_with(base_type=kind, auto_bracing=False, **extra))
+        # Pin the pre-CHITUBOX-Light pillar diameter: the bare-feet contact-area
+        # formula below assumes the old 1.2mm/0.6mm-radius pillar.
+        plan, raft = plan_for(solid, settings_with(base_type=kind, auto_bracing=False,
+                                                    pillar_diameter_mm=1.2, **extra))
         results[kind] = (plan.metrics['base'], raft)
 
     plate, plate_raft = results['plate']
@@ -457,7 +462,9 @@ def test_the_support_drainage_bottleneck_belongs_to_the_tip_not_the_base():
             z = z0 + (example['seed_zyx'][0] + 0.5) * pitch
             assert 4.0 < z < 6.0, 'bottleneck is not at the sphere underside near z=5'
     # A tip with no taper (base diameter equal to the contact) leaves no neck.
-    assert bottlenecks({'base_type': 'none',
+    # Pin the pre-CHITUBOX-Light contact diameter so it still equals the tip
+    # base diameter asserted below.
+    assert bottlenecks({'base_type': 'none', 'contact_diameter_mm': 0.4,
                         'tip_base_diameter_mm': 0.4})['bottlenecked_components'] == 0
     # And the model on its own has none at all.
     from voxelmill.geometry import manifold_triangles

@@ -19,9 +19,9 @@ normal_wait_after_lift_s = 0.0
 
 [processes.mars5-ultra.support]
 spacing_mm = 3.0
-contact_diameter_mm = 0.4
-penetration_mm = 0.15
-pillar_diameter_mm = 1.2
+contact_diameter_mm = 0.35
+penetration_mm = 0.2
+pillar_diameter_mm = 0.9
 tip_length_mm = 2.0
 raft_thickness_mm = 1.0
 raft_expansion_mm = 2.0

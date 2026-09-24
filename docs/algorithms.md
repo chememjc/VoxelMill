@@ -446,7 +446,7 @@ notch where an angled or tree shaft meets the horizontal tip base; the blend
 stays within the checked endpoint capsule. Downward brace origins start at the
 full-width shoulder below each
 tip taper and are processed from highest to lowest at `brace_spacing_mm`
-(default 15 mm). Each branch uses `brace_angle_deg` (strictly between 0° and
+(default 5 mm, from 3 mm above the plate). Each branch uses `brace_angle_deg` (strictly between 0° and
 90°, default 45°) and is limited by its complete diagonal
 `brace_max_length_mm` (default 30 mm); the independent
 `brace_max_distance_mm` controls which neighbors are considered. The

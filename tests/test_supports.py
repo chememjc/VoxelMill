@@ -210,11 +210,14 @@ def test_routed_support_dimensions_match_the_configured_segments():
 
 
 def test_brace_interval_and_radius_match_the_derived_spacing():
-    settings = resolve_settings()
+    # Pin brace_diameter_mm to its "derived from destination pillar" sentinel:
+    # the current default is a fixed CHITUBOX-Light diameter, which this
+    # test's derived-thickness assertion does not apply to.
+    settings = resolve_settings(overrides={'support': {'brace_diameter_mm': 0}})
     solid = m.Manifold.sphere(4, 48).translate((0, 0, 64))
     triangles, bounds = placed(solid)
     plan, _raft = plan_supports(triangles, bounds, settings)
-    assert plan.metrics['brace_spacing_mm'] == pytest.approx(15.0)
+    assert plan.metrics['brace_spacing_mm'] == pytest.approx(5.0)
     assert plan.metrics['brace_max_length_mm'] == pytest.approx(30.0)
     nodes = {node.id: np.asarray(node.position_mm) for node in plan.graph.nodes}
     braces = [edge for edge in plan.graph.edges if edge.kind == 'brace']
@@ -231,7 +234,7 @@ def test_twenty_millimetre_lift_gets_downward_braces():
     solid = m.Manifold.sphere(6, 48).translate((0, 0, 26))
     triangles, bounds = placed(solid)
     plan, _raft = plan_supports(triangles, bounds, resolve_settings())
-    assert plan.metrics['brace_spacing_mm'] == pytest.approx(15.0)
+    assert plan.metrics['brace_spacing_mm'] == pytest.approx(5.0)
     assert plan.metrics['braces'] >= 1
 
 

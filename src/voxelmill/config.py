@@ -95,9 +95,9 @@ DEFAULTS = {
         # an available plate route. Intermediate values require a model route
         # to be proportionally shorter: model <= plate * (1 - avoidance).
         'part_to_part_avoidance': 1.0,
-        'spacing_mm': 3.0, 'contact_diameter_mm': 0.4, 'penetration_mm': 0.15,
+        'spacing_mm': 3.0, 'contact_diameter_mm': 0.35, 'penetration_mm': 0.2,
         'tip_shape': 'cone', 'break_point_diameter_mm': 0.8,
-        'pillar_diameter_mm': 1.2, 'tip_length_mm': 2.0,
+        'pillar_diameter_mm': 0.9, 'tip_length_mm': 2.0,
         # Diameter where the tip cone meets the pillar. CHITUBOX calls this
         # "Tip Down Diameter" and keeps it independent of the middle segment's
         # diameter; they merely happen to be equal in the known-good profile.
@@ -129,11 +129,11 @@ DEFAULTS = {
         # between those origins.  brace_max_length_mm is the complete diagonal
         # length limit, while brace_max_distance_mm independently limits the
         # neighboring support search.
-        'brace_spacing_mm': 15.0, 'brace_diameter_mm': 0.0,
+        'brace_spacing_mm': 5.0, 'brace_diameter_mm': 0.6,
         'brace_max_distance_mm': 0.0, 'brace_max_length_mm': 30.0,
-        'brace_destination': 'both', 'brace_pattern': 'single',
+        'brace_destination': 'supports', 'brace_pattern': 'alternating',
         'brace_branches_per_node': 1, 'brace_angle_deg': 45.0,
-        'brace_min_height_mm': 0.0, 'brace_azimuth_deg': 0.0,
+        'brace_min_height_mm': 3.0, 'brace_azimuth_deg': 0.0,
         # What the supports land on. 'grid' is the default: less resin and
         # less suction than a solid slab, still one connected base. 'plate' is
         # the convex hull raft, with a 30 degree outer putty-knife bevel.

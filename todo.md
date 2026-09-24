@@ -17,21 +17,19 @@ here. Keep this file under a screen.
 
 ## In flight
 
-- Phase 0 ledger rewrite (this change); next: Phase 1 VM-090 collision audit + VM-094 tests.
+- Phase 2 defaults (VM-091) are in the working tree with docs and ISSUES updated; test fallout is being fixed in tests only. Next: full suite green, `scripts/equivalence.py --update-golden --jobs 4`, commit code and goldens separately. Then VM-092's remainder (see ISSUES).
+- See `handoff.md` (untracked) for the session state and the CHITUBOX automation recipe.
 
 ## Beta work list
 
-Phase 1 — bugs and the safety net:
-- VM-090 — prove supports never intrude into another part or overlap except at graph junctions — done when: `validation.support_model_intrusion` reports zero unintended intrusion/overlap on the multi-part fixtures — next: implement `support_model_intrusion` in `validation.py`, report under `support.collisions`.
-- VM-094 — cover multi-part branching, schema-bound settings, degenerate meshes, determinism, format round trips — done when: `tests/test_multipart_plates.py` (+ edge-case module) is green locally and in CI — next: draft the fixtures with `scripts/make_test_shapes.py`-style generators.
+Phase 1 — done: VM-095 (defaults pass), VM-090 (collision audit), VM-094 (multi-part and edge-case tests).
 
 Phase 2 — supports like CHITUBOX Light:
-- VM-091 — defaults look like CHITUBOX Light with our own engineered values — done when: `config.DEFAULTS["support"]` matches the Light proportions, presets stay coherent, docs updated — next: export/screenshot the CHITUBOX Light reference, then adjust `DEFAULTS["support"]`.
-- VM-092 — cross bracing matches CHITUBOX's cross structure — done when: `_brace` mirrors Light's diameter/width/Z-spacing/XY-reach/start-height, unbraced-length/slenderness metric reported — next: map the params onto `supports._brace` (~1642).
+- VM-091 — done in the working tree (defaults 0.35/0.9 mm, alternating braces every 5 mm from 3 mm, supports-only).
+- VM-092 — partial — done when: model-standing pillars can be braced (decide), crowded rows get a fallback, and a test holds max slenderness under a target (about 15) on the fixtures — next: `supports._brace` grounding walk (model_anchor exclusion) and the `supports.unbraced` metric.
 
 Phase 3 — stability and release tooling:
-- VM-093 — `release.yml` reruns build only the needed platforms — done when: a `platforms` workflow_dispatch input filters the matrix — next: add the input to `.github/workflows/release.yml`.
-- VM-081 — verify the arm64 DMG actually runs — done when: a `macos-14` smoke job passes `--version` and a cube `prepare` — next: add the smoke job.
+- VM-093 — done. VM-081 — the release smoke on macos-14 already runs prepare/slice/verify; mark done once a 0.5.6 run is green there.
 - VM-083 — memory ceiling works on macOS/Windows — done when: a Windows Job-object commit limit is wired and the macOS budget is marked advisory in the report — next: implement in `resources.py`.
 - VM-014 — CI perf gate beyond local fixtures — done when: an opt-in job does a base-vs-head A/B on the same runner and fails on a >15% regression — next: add the workflow job.
 - B3 — printer database beyond the Mars 5 Ultra — done when: new printers are added with verified specs — next: extract specs from the installed CHITUBOX machine configs and the vendor spec.

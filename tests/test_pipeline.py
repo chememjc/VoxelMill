@@ -97,7 +97,11 @@ def test_support_void_policy_ignore_drops_tip_crevices_but_not_model_cavities(tm
     """Strict policy fails support drainage; ignore (the default) keeps model cavities failing."""
     sphere = tmp_path / 'sphere.stl'
     write_stl(sphere, manifold_triangles(m.Manifold.sphere(6, 64)))
-    supported = resolve_settings(overrides={'support': {'base_type': 'none'},
+    # Pin the pre-CHITUBOX-Light contact/pillar sizing: the current defaults'
+    # slimmer contacts and pillar no longer pinch a drainage route on this
+    # sphere, so the strict-policy assertion below would have nothing to fail.
+    old_tip = {'contact_diameter_mm': 0.4, 'penetration_mm': 0.15, 'pillar_diameter_mm': 1.2}
+    supported = resolve_settings(overrides={'support': {'base_type': 'none', **old_tip},
                                             'repair': {'seal_voids': False,
                                                        'support_void_policy': 'fail'}})
     failed = prepare(sphere, supported, drainage=True, track_voids=False)
@@ -105,7 +109,7 @@ def test_support_void_policy_ignore_drops_tip_crevices_but_not_model_cavities(tm
     assert failed['validation']['metrics']['drainage']['bottlenecked_components'] >= 1
 
     ignored = prepare(sphere, resolve_settings(overrides={
-        'support': {'base_type': 'none'},
+        'support': {'base_type': 'none', **old_tip},
         'repair': {'seal_voids': False, 'support_void_policy': 'ignore'},
     }), drainage=True, track_voids=False)
     assert ignored['validation']['checks']['drainage_bottlenecks'] == 'pass'

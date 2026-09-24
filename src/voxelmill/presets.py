@@ -26,10 +26,10 @@ _PROCESS = 'process'
 _BUILTIN_SUPPORT = {
     # These are geometric starting points.  The remaining support values
     # inherit the defaults when the preset is applied.
-    'light': {'spacing_mm': 5.0, 'pillar_diameter_mm': 0.9},
+    'light': {'spacing_mm': 4.0, 'pillar_diameter_mm': 0.7, 'contact_diameter_mm': 0.3},
     # Medium is the resolved default support configuration.
     'medium': deepcopy(DEFAULTS['support']),
-    'heavy': {'spacing_mm': 2.0, 'pillar_diameter_mm': 1.6},
+    'heavy': {'spacing_mm': 2.5, 'pillar_diameter_mm': 1.3, 'contact_diameter_mm': 0.5},
     # The configuration known to print these parts on this machine, transcribed
     # from CHITUBOX and recorded in docs/support-presets.md. Every value below
     # appears in that table or has an explicit derivation; gaps are called out

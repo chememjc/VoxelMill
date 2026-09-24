@@ -15,7 +15,7 @@ def test_support_defaults_allow_model_anchors_and_use_downward_braces():
     assert support['break_point_diameter_mm'] == 0.8
     assert support['allow_part_to_part'] is True
     assert support['part_to_part_avoidance'] == 1.0
-    assert support['brace_spacing_mm'] == 15.0
+    assert support['brace_spacing_mm'] == 5.0
     assert support['brace_max_length_mm'] == 30.0
     assert 'brace_start_height_mm' not in support
 

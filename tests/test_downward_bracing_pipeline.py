@@ -14,7 +14,10 @@ from voxelmill.project import load_project
 
 @pytest.mark.parametrize('base_type,contacts,options', [
     ('none', [[-3., 0., 20.], [3., 0., 20.]], {}),
-    ('triangle', [[0., 0., 20.]], {}),
+    # A lone contact only grounds a downward brace through a base fan, which
+    # needs the pre-CHITUBOX-Light 'both' destination; the new default
+    # ('supports') only braces between neighboring support columns.
+    ('triangle', [[0., 0., 20.]], {'brace_destination': 'both'}),
     ('none', [[-3., 0., 20.], [3., 0., 20.]], {'brace_pattern': 'x',
         'brace_branches_per_node': 2, 'brace_angle_deg': 60., 'brace_destination': 'supports'}),
     ('none', [[-3., 0., 20.], [3., 0., 20.]], {'brace_pattern': 'alternating',

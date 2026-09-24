@@ -136,7 +136,7 @@ def test_cli_and_legacy_defaults(capsys):
                 'brace_angle_deg', 'brace_min_height_mm', 'brace_azimuth_deg'):
         del settings['support'][key]
     restored = validate_settings(fill_legacy_settings(settings))
-    assert restored['support']['brace_destination'] == 'both'
+    assert restored['support']['brace_destination'] == 'supports'
     assert restored['support']['brace_branches_per_node'] == 1
 
 

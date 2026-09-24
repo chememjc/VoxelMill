@@ -12,7 +12,10 @@ from test_support_policy import field_for
 
 def setup(pillars, **options):
     settings = resolve_settings(overrides={'support': {'brace_spacing_mm': 15,
-        'brace_max_length_mm': 8, 'brace_max_distance_mm': 12, 'base_type': 'none', **options}})
+        'brace_max_length_mm': 8, 'brace_max_distance_mm': 12, 'base_type': 'none',
+        # Pin the pre-CHITUBOX-Light brace defaults these geometry assertions assume.
+        'brace_destination': 'both', 'brace_pattern': 'single', 'brace_min_height_mm': 0,
+        'brace_diameter_mm': 0, **options}})
     graph = SupportGraph()
     for i, (x, y, height) in enumerate(pillars):
         graph.nodes.extend([SupportNode(f'f{i}', [x, y, 0.], 'foot'),

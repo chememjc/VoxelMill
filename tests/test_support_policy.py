@@ -78,7 +78,9 @@ def test_braces_do_not_cut_through_model_even_when_the_centerline_misses():
     obstacle = m.Manifold.cube((1, .25, 2)).translate((-.5, .25, 36.5))
     settings = resolve_settings(overrides={'support': {
         'brace_max_length_mm': 8, 'brace_spacing_mm': 100,
-        'brace_diameter_mm': .8, 'brace_max_distance_mm': 6}})
+        'brace_diameter_mm': .8, 'brace_max_distance_mm': 6,
+        # Pin the pre-CHITUBOX-Light bracing topology this candidate count assumes.
+        'brace_destination': 'both', 'brace_pattern': 'single', 'brace_min_height_mm': 0}})
     field = field_for(obstacle, settings)
     evidence, solids = {}, []
     assert _brace([(-2.5, 0, 40, .6), (2.5, 0, 40, .6)], settings, solids,
@@ -105,7 +107,10 @@ def test_rejected_braces_count_toward_the_work_limit(monkeypatch):
     import voxelmill.supports as supports
     monkeypatch.setattr(supports, '_brace_clear', lambda *args: False)
     settings = resolve_settings(overrides={'support': {
-        'brace_spacing_mm': .1, 'brace_max_length_mm': 8, 'base_type': 'none'}})
+        'brace_spacing_mm': .1, 'brace_max_length_mm': 8, 'base_type': 'none',
+        # Pin the pre-CHITUBOX-Light bracing topology this candidate count assumes.
+        'brace_destination': 'both', 'brace_pattern': 'single', 'brace_min_height_mm': 0,
+        'brace_diameter_mm': 0}})
     evidence = {}
     assert _brace([(0, 0, 15), (3, 0, 15)], settings, [], limit=3,
                   field=object(), evidence=evidence) == 0

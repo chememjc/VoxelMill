@@ -36,7 +36,15 @@ def test_braced_sphere_exports_one_solid_with_brace_feet_inside_the_base(tmp_pat
     source = tmp_path / 'sphere.stl'
     write_stl(source, manifold_triangles(m.Manifold.sphere(6, 48)))
     settings = small(support={'base_type': base_type, 'base_touch_diameter_mm': 2.4,
-                             'base_thickness_mm': .8, 'base_skate_length_mm': 5},
+                             'base_thickness_mm': .8, 'base_skate_length_mm': 5,
+                             # Pin the pre-CHITUBOX-Light contact/pillar sizing and
+                             # bracing defaults this drainage/brace-foot invariant
+                             # assumed ('both' destination is what grounds new feet
+                             # on the base).
+                             'contact_diameter_mm': 0.4, 'penetration_mm': 0.15,
+                             'pillar_diameter_mm': 1.2, 'brace_destination': 'both',
+                             'brace_pattern': 'single', 'brace_min_height_mm': 0,
+                             'brace_spacing_mm': 15, 'brace_diameter_mm': 0},
                      repair={'support_void_policy': 'fail'})
     output = tmp_path / 'braced.stl'
     report = prepare(source, settings, output=output, components=True, drainage=True)

@@ -16,11 +16,12 @@ def test_builtins_are_named_and_independent():
     light = load_preset('light')
     assert light['schema_version'] == 1
     assert light['name'] == 'light'
-    assert light['support'] == {'spacing_mm': 5.0, 'pillar_diameter_mm': 0.9}
+    assert light['support'] == {'spacing_mm': 4.0, 'pillar_diameter_mm': 0.7,
+                                'contact_diameter_mm': 0.3}
     assert load_preset('medium')['support']['spacing_mm'] == 3.0
-    assert load_preset('heavy')['support']['pillar_diameter_mm'] == 1.6
+    assert load_preset('heavy')['support']['pillar_diameter_mm'] == 1.3
     light['support']['spacing_mm'] = 99
-    assert load_preset('light')['support']['spacing_mm'] == 5.0
+    assert load_preset('light')['support']['spacing_mm'] == 4.0
 
 
 def test_apply_overlays_support_and_preserves_other_sections():
@@ -28,8 +29,8 @@ def test_apply_overlays_support_and_preserves_other_sections():
     original = deepcopy(settings)
     applied = apply_preset(settings, 'heavy')
 
-    assert applied['support']['spacing_mm'] == 2.0
-    assert applied['support']['pillar_diameter_mm'] == 1.6
+    assert applied['support']['spacing_mm'] == 2.5
+    assert applied['support']['pillar_diameter_mm'] == 1.3
     assert applied['support']['tip_length_mm'] == original['support']['tip_length_mm']
     assert applied['printer'] == original['printer']
     assert applied['process'] == original['process']
@@ -84,7 +85,7 @@ def test_failed_save_leaves_existing_destination_untouched(tmp_path):
 
 
 def test_embedded_resin_support_preset_overrides_builtin(tmp_path):
-    """A8: resin processes.*.support_presets.NAME wins over builtin light=5."""
+    """A8: resin processes.*.support_presets.NAME wins over builtin light=4."""
     from pathlib import Path
     root = Path(__file__).resolve().parents[1]
     resin = tmp_path / 'embedded.res'
@@ -95,7 +96,7 @@ def test_embedded_resin_support_preset_overrides_builtin(tmp_path):
         '[processes.mars5-ultra.support]\nspacing_mm = 3.0\n'
         '[processes.mars5-ultra.support_presets.light]\nspacing_mm = 9.0\n'
     )
-    assert load_preset('light')['support']['spacing_mm'] == 5.0
+    assert load_preset('light')['support']['spacing_mm'] == 4.0
     settings = resolve_settings(
         root / 'profiles/mars5-ultra.ptr', resin, support_preset='light')
     assert settings['support']['spacing_mm'] == 9.0
@@ -103,7 +104,7 @@ def test_embedded_resin_support_preset_overrides_builtin(tmp_path):
     # Unmatched embedded name still resolves the portable builtin.
     fallback = resolve_settings(
         root / 'profiles/mars5-ultra.ptr', resin, support_preset='heavy')
-    assert fallback['support']['spacing_mm'] == 2.0
+    assert fallback['support']['spacing_mm'] == 2.5
     # JSON path presets still work beside an embedded table.
     custom = tmp_path / 'custom.json'
     save_preset(custom, 'custom', {'spacing_mm': 4.25})

@@ -601,7 +601,7 @@ class CapsuleIndex:
         return [self.capsules[index] for index in sorted(found)]
 
 
-def _hits_occupied(field, start, end, radius):
+def _hits_occupied(field, start, end, radius, clearance=0.0):
     """True when this capsule overlaps an already-routed shaft along its length.
 
     Exact segment distance over the whole length. A pair joined on purpose,
@@ -614,12 +614,12 @@ def _hits_occupied(field, start, end, radius):
     length = math.sqrt(float(axis @ axis))
     if length < 1e-10:
         return False
-    others = field.occupied_capsules.near(np.stack([start, end]), radius)
+    others = field.occupied_capsules.near(np.stack([start, end]), float(radius) + float(clearance))
     if not others:
         return False
     low = np.array([item[0] for item in others], dtype=float)
     high = np.array([item[1] for item in others], dtype=float)
-    limit = float(radius) + np.array([item[2] for item in others], dtype=float)
+    limit = float(radius) + float(clearance) + np.array([item[2] for item in others], dtype=float)
     count = len(others)
     starts, ends = np.broadcast_to(start, (count, 3)), np.broadcast_to(end, (count, 3))
     gaps = segment_distances(starts, ends, low, high)
@@ -867,6 +867,11 @@ def _model_anchor_clear(field, column, x, y, surface_z, length, depth, radius, c
     r0 = max(0, int(math.floor((y - reach - grid.y0) / grid.dy)))
     r1 = min(grid.height, int(math.ceil((y + reach - grid.y0) / grid.dy)))
     last = int(math.ceil((surface_z + length - field.z0) / field.dz - 1e-9))
+    # The landing height was sampled at the centre of the anchor's own cell,
+    # so slopes are measured from there, not from the contact point.
+    home_row, home_col = divmod(int(column), grid.width)
+    home_x = grid.x0 + (home_col + .5) * grid.dx
+    home_y = grid.y0 + (home_row + .5) * grid.dy
     for row in range(r0, r1):
         cancel.check()
         for col in range(c0, c1):
@@ -880,7 +885,8 @@ def _model_anchor_clear(field, column, x, y, surface_z, length, depth, radius, c
             # Column tops are sampled at cell centres, so the slope allowance
             # is measured there; the nearest-point distance still decides
             # whether the connector reaches the cell at all.
-            centre = math.hypot(grid.x0 + (col + .5) * grid.dx - x, grid.y0 + (row + .5) * grid.dy - y)
+            centre = math.hypot(grid.x0 + (col + .5) * grid.dx - home_x,
+                                grid.y0 + (row + .5) * grid.dy - home_y)
             rise = top + 1 + int(math.floor(centre * slope / field.dz + 1e-9))
             for run_lo, run_hi in zip(lows.tolist(), highs.tolist()):
                 if run_lo >= last or run_hi <= top:
@@ -923,7 +929,7 @@ def _plate_route(field, column, contact_index, point, base_z, spec, spacing, cle
     # collision and forces a 45° branch that then fails drainage. The
     # hole-clip case is an angled shaft; those still use _usable_shaft.
     if _free_to_plate(field, column, contact_index, clearance):
-        occupied = _hits_occupied(field, (x, y, 0.0), (x, y, base_z), pillar_r)
+        occupied = _hits_occupied(field, (x, y, 0.0), (x, y, base_z), pillar_r, clearance_mm)
         if occupied and not exempt:
             # A second vertical on top of an existing shaft. Skip it rather
             # than weaving a 45° branch that fails drainage.
@@ -1049,7 +1055,7 @@ def _model_anchor_candidate(field, column, contact_index, point, spec, support, 
                         field, (x, y, middle_lo), (x, y, middle_hi), candidate_r, clearance_mm,
                         cancel, exclude_both))
                     occupied = (middle_hi - middle_lo > 1e-9 and _hits_occupied(
-                        field, (x, y, middle_lo), (x, y, middle_hi), candidate_r))
+                        field, (x, y, middle_lo), (x, y, middle_hi), candidate_r, clearance_mm))
                     if middle_ok and not occupied:
                         model_anchor = (x, y, anchor_z)
                     else:
@@ -1191,7 +1197,7 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                 return True
             if not _shaft_clear(field, start, end, radius, clearance_mm, cancel, exclude):  # noqa: B023
                 return False
-            return not _hits_occupied(field, start, end, radius)
+            return not _hits_occupied(field, start, end, radius, clearance_mm)  # noqa: B023
 
         def _model_shaft_clear(start, end, radius):
             return _shaft_clear(field, start, end, radius, 0.0, cancel, exclude)  # noqa: B023
@@ -1463,6 +1469,7 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         'brace_rejections': {key: value for key, value in brace_evidence.items()
                              if key.endswith('_rejected')},
         'brace_new_feet': brace_evidence.get('new_feet', 0),
+        'unbraced': unbraced_lengths(graph),
         'tip_base_diameter_mm': tip_base_r * 2,
         'pillar_angle_deg': float(support['pillar_angle_deg']),
         'small_pillars': int(small_pillars),
@@ -1628,6 +1635,67 @@ def _emit_tree_supports(jobs, solids, pillars, feet, foot_radii, field, settings
         contacts_in_trees += len(group)
     return {'enabled': True, 'clusters': len(clusters), 'trunks': trunks,
             'contacts_in_trees': contacts_in_trees, 'kept_independent': independent}
+
+
+def unbraced_lengths(graph):
+    """Longest run of each vertical pillar between brace joints, foot and top.
+
+    A pillar's buckling risk grows with the square of its unsupported length
+    over its diameter, so the worst run, and that run over the pillar's
+    diameter (its slenderness), say how well a plate is braced. A pillar is a
+    chain of vertical edges joined end to end at one XY position; one that
+    stands on the model is reported apart, because bracing only grounds
+    through supports that reach the plate.
+    """
+    positions = {node.id: np.asarray(node.position_mm, dtype=float) for node in graph.nodes}
+    kinds = {node.id: node.kind for node in graph.nodes}
+    parent = {}
+
+    def find(name):
+        while parent.setdefault(name, name) != name:
+            parent[name] = parent[parent[name]]
+            name = parent[name]
+        return name
+
+    vertical = []
+    for edge in graph.edges:
+        if edge.kind not in ('vertical', 'branched', 'tree_trunk', 'bottom', 'model_anchor'):
+            continue
+        a, b = positions.get(edge.start), positions.get(edge.end)
+        if a is None or b is None or np.hypot(*(a[:2] - b[:2])) > 1e-6 or abs(a[2] - b[2]) < 1e-9:
+            continue
+        vertical.append(edge)
+        parent[find(edge.start)] = find(edge.end)
+    chains = {}
+    for edge in vertical:
+        chain = chains.setdefault(find(edge.start), {'z': [], 'braced': set(), 'radius': 0.0,
+                                                     'anchored': False})
+        chain['radius'] = max(chain['radius'], float(edge.radius_mm))
+        chain['anchored'] |= edge.kind in ('bottom', 'model_anchor')
+        for name in (edge.start, edge.end):
+            chain['z'].append(float(positions[name][2]))
+            if kinds[name] == 'brace_junction':
+                chain['braced'].add(round(float(positions[name][2]), 6))
+    result = {'basis': 'longest vertical run between brace joints, the foot and the top of each '
+                       'pillar; pillars standing on the model are never braced'}
+    for label, anchored in (('plate', False), ('model', True)):
+        runs = []
+        for chain in chains.values():
+            if chain['anchored'] != anchored:
+                continue
+            stops = sorted({min(chain['z']), max(chain['z']), *chain['braced']})
+            gap = max(upper - lower for lower, upper in zip(stops, stops[1:]))
+            runs.append((gap, gap / (2 * chain['radius']), bool(chain['braced'])))
+        if not runs:
+            result[label] = {'pillars': 0}
+            continue
+        gaps = np.array([run[0] for run in runs])
+        ratios = np.array([run[1] for run in runs])
+        result[label] = {'pillars': len(runs), 'braced_pillars': int(sum(run[2] for run in runs)),
+                         'max_mm': round(float(gaps.max()), 3),
+                         'median_mm': round(float(np.median(gaps)), 3),
+                         'max_slenderness': round(float(ratios.max()), 2)}
+    return result
 
 
 def brace_geometry(settings, pillar_radius):

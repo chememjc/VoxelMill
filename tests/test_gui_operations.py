@@ -50,7 +50,7 @@ def test_operation_arguments_keep_editor_pose_and_explicit_overrides(app, tmp_pa
     assert json.loads(open(args.contacts).read()) == document.manual_contacts
     assert json.loads(open(args.removed_contacts).read()) == document.removed_contacts
     dialog.fields['support_preset'].setText('heavy')
-    assert _settings(build_parser().parse_args(dialog.arguments()))['support']['pillar_diameter_mm'] == 1.6
+    assert _settings(build_parser().parse_args(dialog.arguments()))['support']['pillar_diameter_mm'] == 1.3
     dialog.close()
 
 

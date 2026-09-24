@@ -150,7 +150,10 @@ def test_plate_outer_bevel_keeps_plate_contact_and_insets_the_top():
 
 @pytest.mark.parametrize('changes', [
     {'base_type': 'skate', 'base_skate_length_mm': 1},
-    {'base_type': 'grid', 'base_cell_size_mm': 1},
+    # Pin the pre-CHITUBOX-Light pillar diameter so the derived strut width
+    # (pillar_diameter_mm, since base_strut_width_mm is unset) still exceeds
+    # this cell size and trips the "open lattice" validation being tested.
+    {'base_type': 'grid', 'base_cell_size_mm': 1, 'pillar_diameter_mm': 1.2},
     {'base_type': 'grid', 'base_strut_width_mm': 6},
     {'base_rotation_deg': 361}, {'base_rotation_deg': -361},
     {'base_rotation_deg': float('nan')}, {'base_cell_size_mm': 0},
@@ -179,7 +182,9 @@ def test_base_work_honours_cancellation():
 def test_placement_reserve_covers_large_skate_and_wide_struts():
     assert _reserve(settings_for('skate', base_skate_length_mm=12)) == 6
     assert _reserve(settings_for('skeleton', base_strut_width_mm=8)) == 4
-    assert _reserve(settings_for('plate')) == 2.6
+    # Pin the pre-CHITUBOX-Light pillar diameter: this checks the reserve
+    # formula (pillar radius + raft expansion), not the current default.
+    assert _reserve(settings_for('plate', pillar_diameter_mm=1.2)) == 2.6
 
 
 def test_cli_and_gui_share_choices_and_cli_exports_each_geometry(tmp_path, capsys):

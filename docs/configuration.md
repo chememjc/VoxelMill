@@ -26,7 +26,7 @@ Resolved settings contain `schema_version`, `printer`, `resin`, `process`, `supp
 | `process` elephant foot | `elephant_foot_compensation_mm=0.0` (disabled), `elephant_foot_layers=0` (derives the ramp length from `bottom_layers`) |
 | `process` dimensional | `shrink_percent_xy=0.0`, `shrink_percent_z=0.0`, `tolerance_offset_mm=0.0`, `bottom_tolerance_offset_mm=0.0` (all disabled and uncalibrated) |
 | `process` antialiasing | `antialias_levels=1` (`1`, `2`, or `4`; 1 is binary occupancy, 2 or 4 supersample to coverage grayscale), `antialias_supports=false` (support tips stay binary unless this is set) |
-| `support` | `automatic=true`, `auto_bracing=true`, `allow_part_to_part=true`, `drop_attached_unroutable=true`, `tree_supports=false`, `tree_cluster_mm=0` (derives `2 * spacing_mm`), `contour_supports=false`, `boundary_supports=false`, `part_to_part_avoidance=1`, `spacing_mm=3`, `contact_diameter_mm=0.4`, `penetration_mm=0.15`, `tip_shape="cone"`, `break_point_diameter_mm=0.8`, `pillar_diameter_mm=1.2`, `tip_length_mm=2`, `tip_base_diameter_mm=0` (derives `pillar_diameter_mm`), `model_anchor_shape="cone"`, `model_anchor_length_mm=2`, `model_anchor_diameter_mm=0.4`, `model_anchor_penetration_mm=0.15`, `pillar_angle_deg=45`, `small_pillar_diameter_mm=0`, `small_pillar_max_length_mm=0` (both zero disables the thin-pillar class), `brace_spacing_mm=15`, `brace_diameter_mm=0` (derives from the thinner connected pillar), `brace_max_distance_mm=0` (derives `1.5 * spacing_mm`), `brace_max_length_mm=30` (maximum complete diagonal length), `brace_destination="both"`, `brace_pattern="single"`, `brace_branches_per_node=1` (integer 1–8), `brace_angle_deg=45` (strictly between 0 and 90), `brace_min_height_mm=0`, `brace_azimuth_deg=0`, `base_type="grid"`, `raft_slope_deg=30` (plate outer putty-knife bevel; 0 is a near-vertical rim), `base_edge_slope_deg=0` (inward taper of any added base except `plate`/`none`; 0 is vertical), `base_touch_diameter_mm=0`, `base_thickness_mm=0`, `base_skate_length_mm=0`, `base_rotation_deg=0`, `base_strut_width_mm=0`, `base_cell_size_mm=6`, `min_tip_length_mm=0.3`, `raft_thickness_mm=1`, `raft_expansion_mm=2`, `max_slenderness=40`, `max_span_mm=3`, `min_overlap_pixels=1`, `overhang_angle_deg=45`, `support_clearance_mm=0.3`, `max_island_passes=5` (integer 1–10; caps `prepare`'s and the editor's island-correction loop, see [algorithms.md](algorithms.md#island-correction-passes)), `max_contact_gap_mm=0` (derives `spacing_mm`), `max_contact_load_mm2=0` (derives `4 * spacing_mm^2`) |
+| `support` | `automatic=true`, `auto_bracing=true`, `allow_part_to_part=true`, `drop_attached_unroutable=true`, `tree_supports=false`, `tree_cluster_mm=0` (derives `2 * spacing_mm`), `contour_supports=false`, `boundary_supports=false`, `part_to_part_avoidance=1`, `spacing_mm=3`, `contact_diameter_mm=0.35`, `penetration_mm=0.2`, `tip_shape="cone"`, `break_point_diameter_mm=0.8`, `pillar_diameter_mm=0.9`, `tip_length_mm=2`, `tip_base_diameter_mm=0` (derives `pillar_diameter_mm`), `model_anchor_shape="cone"`, `model_anchor_length_mm=2`, `model_anchor_diameter_mm=0.4`, `model_anchor_penetration_mm=0.15`, `pillar_angle_deg=45`, `small_pillar_diameter_mm=0`, `small_pillar_max_length_mm=0` (both zero disables the thin-pillar class), `brace_spacing_mm=5`, `brace_diameter_mm=0.6` (0 derives from the thinner connected pillar), `brace_max_distance_mm=0` (derives `1.5 * spacing_mm`), `brace_max_length_mm=30` (maximum complete diagonal length), `brace_destination="supports"`, `brace_pattern="alternating"`, `brace_branches_per_node=1` (integer 1–8), `brace_angle_deg=45` (strictly between 0 and 90), `brace_min_height_mm=3`, `brace_azimuth_deg=0`, `base_type="grid"`, `raft_slope_deg=30` (plate outer putty-knife bevel; 0 is a near-vertical rim), `base_edge_slope_deg=0` (inward taper of any added base except `plate`/`none`; 0 is vertical), `base_touch_diameter_mm=0`, `base_thickness_mm=0`, `base_skate_length_mm=0`, `base_rotation_deg=0`, `base_strut_width_mm=0`, `base_cell_size_mm=6`, `min_tip_length_mm=0.3`, `raft_thickness_mm=1`, `raft_expansion_mm=2`, `max_slenderness=40`, `max_span_mm=3`, `min_overlap_pixels=1`, `overhang_angle_deg=45`, `support_clearance_mm=0.3`, `max_island_passes=5` (integer 1–10; caps `prepare`'s and the editor's island-correction loop, see [algorithms.md](algorithms.md#island-correction-passes)), `max_contact_gap_mm=0` (derives `spacing_mm`), `max_contact_load_mm2=0` (derives `4 * spacing_mm^2`) |
 | `repair` | `seal_voids=true`, `min_orifice_area_mm2=1`, `aggressiveness="conservative"`, `max_deviation_mm=0.05`, `remove_tiny_features=false`, `auto_drain_holes=false`, `voxel_size_mm=0` (derived), `smooth_iterations=0`, `min_void_volume_mm3=0`, `support_void_policy="ignore"` (`fail` / `ignore` / `fill`) |
 | `assembly` | `union="auto"` (`auto` or `exact`), `require_raster_parity=true`, `max_parity_examples=16` (integer 0–256), `clip_to_build_volume=false` |
 | `resources` | `memory_gib=32`, `workers=0` (0 derives one per physical core, capped at 8 where the measured speedup plateaus), `worker_policy="performance"` (`performance` / `efficiency` / `all`), `scratch_dir=null` (omit the key in TOML to use its default); `acceleration="auto"` (`auto` / `cpu` / `cuda`), `cuda_device=0`, `post_slice_hook=null`; layer analysis caps worker concurrency against full-panel mask/label/EDT scratch estimates |
@@ -187,7 +187,7 @@ in a project are kept as zeros.
 **Brace controls (0.5.4):** Downward braces begin at the full-width shoulder
 below each tip taper and proceed at `brace_angle_deg` (45° by default) toward a
 grounded support network or a valid plate landing.
-`brace_spacing_mm` is their vertical origin spacing and defaults to 15 mm;
+`brace_spacing_mm` is their vertical origin spacing and defaults to 5 mm;
 it is independent of primary `spacing_mm`. `brace_max_length_mm` limits the
 complete diagonal branch to 30 mm by default. `brace_max_distance_mm` remains
 the separate neighbor search limit and `0` derives `1.5 * spacing_mm`.
@@ -196,13 +196,14 @@ support-only connection, and are omitted when no destination fits the length,
 clearance, or build-volume rules. A model part is never a brace anchor, even
 when `allow_part_to_part=true`; that flag applies only to primary support
 routing. `brace_destination` selects grounded supports, new base feet, or both;
-the default `both` prefers supports. `brace_pattern` selects single diagonals,
+the default `supports` joins neighbouring supports only, like CHITUBOX's cross
+structures, and never lands new feet far from the part. `brace_pattern` selects single diagonals,
 alternating directions by level, or paired X diagonals between reciprocal
 vertical shaft spans. X rejects a pair when either diagonal is unavailable or
 collides; base landings fan in every pattern. `brace_branches_per_node` defaults
 to 1 and allows 1–8 connections per vertical spacing interval;
 shared incoming connections count, and an X pair consumes one neighbor slot.
-`brace_min_height_mm` and `brace_azimuth_deg` default to 0. These values are
+`brace_min_height_mm` defaults to 3 mm (CHITUBOX's initial crossing height) and `brace_azimuth_deg` to 0. The default `alternating` pattern with a 5 mm spacing and a 0.6 mm diameter gives the zigzag between neighbouring pillars that CHITUBOX Light draws; see [reports/beta/chitubox-light.md](../reports/beta/chitubox-light.md). Every plan reports `supports.unbraced`: the longest unbraced vertical run and its slenderness, split into pillars standing on the plate and on the model. These values are
 ordinary `support` keys, reachable through `--set section.key=value`, the
 dedicated brace CLI shortcuts, or the GUI's Bracing tab.
 
@@ -226,7 +227,7 @@ reach the existing failure gates.
 from the thinner of the two connected pillars. `brace_max_distance_mm` limits
 which pillar neighbors can be connected and defaults to `1.5 * spacing_mm`.
 `brace_spacing_mm` and `brace_max_length_mm` are strictly positive; their
-defaults are 15 mm and 30 mm. These brace values are ordinary `support` keys, reachable
+defaults are 5 mm and 30 mm. These brace values are ordinary `support` keys, reachable
 through `--set section.key=value` or the dedicated brace CLI shortcuts (see
 [cli.md](cli.md)), or the GUI's Bracing tab. Before a brace is
 emitted, its capsule is checked against occupied model columns on the support

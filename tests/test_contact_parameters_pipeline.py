@@ -28,7 +28,7 @@ def test_parameters_are_validated_without_mutating_global_settings():
     records = [{'position_mm': [0, 0, 5], 'parameters': {'pillar_diameter_mm': .8}}]
     normalized = normalize_contact_parameters(records, cfg)
     assert parameters_for_contact(normalized, [0, 0, 5]) == records[0]['parameters']
-    assert cfg['support']['pillar_diameter_mm'] == 1.2
+    assert cfg['support']['pillar_diameter_mm'] == 0.9
     records[0]['parameters']['pillar_diameter_mm'] = 2
     assert parameters_for_contact(normalized, [0, 0, 5])['pillar_diameter_mm'] == .8
     for bad in ([{'position_mm': [0, 0, 5], 'parameters': {'automatic': False}}],

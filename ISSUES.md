@@ -67,8 +67,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | B5 | Print-time estimation: physical calibration | Feature | 3 | 5 | 15 | open (hardware) |
 | VM-030 | Slicing cost scaled with the LCD panel, not the part | Perf | 3 | 5 | 15 | done |
 | VM-090 | Multi-part support collision audit | Feature | 3 | 5 | 15 | done |
-| VM-096 | Exact-union exports can hold zero-volume folds | Bug | 2 | 2 | 4 | open |
-| VM-091 | Default supports that look like CHITUBOX Light | Feature | 3 | 5 | 15 | open |
+| VM-091 | Default supports that look like CHITUBOX Light | Feature | 3 | 5 | 15 | done |
 | VM-093 | `release.yml` platform selector | Release | 5 | 3 | 15 | done |
 | D4 | Raft adhesion / removal-force calibration | Feature | 4 | 3 | 12 | open (hardware) |
 | G2 | Fuzzy, mode-aware settings search | Feature | 4 | 3 | 12 | partial |
@@ -82,7 +81,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-023 | Cheap boolean pre-checks for added models | Perf | 5 | 2 | 10 | done |
 | VM-064 | Goldens for the invalid-mesh fixtures | Test/CI | 5 | 2 | 10 | done |
 | VM-041 | One versioned envelope and migration registry for every file format | Arch | 2 | 5 | 10 | partial |
-| VM-092 | CHITUBOX-style cross bracing | Feature | 2 | 5 | 10 | open |
+| VM-092 | CHITUBOX-style cross bracing | Feature | 2 | 5 | 10 | partial |
 | A4 | Profile inheritance with delta storage | Feature | 3 | 3 | 9 | deferred (post-beta) |
 | A5 | Profile compatibility conditions | Feature | 3 | 3 | 9 | deferred (post-beta) |
 | B2 | CTB v4/v5 reader | Feature | 3 | 3 | 9 | deferred (decision) |
@@ -131,6 +130,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-062 | Shared `tests/conftest.py` | Test/CI | 5 | 1 | 5 | done |
 | VM-070 | Docstrings for the largest undocumented functions | Docs | 5 | 1 | 5 | done |
 | VM-040 | Typed settings model as the single source of truth | Arch | 1 | 5 | 5 | partial |
+| VM-096 | Exact-union exports can hold zero-volume folds | Bug | 2 | 2 | 4 | open |
 | VM-012 | Stop re-sampling downward faces for the overhang check | Perf | 4 | 1 | 4 | won't fix (measured) |
 | VM-071 | Section-aware help for repeated field names | Docs | 4 | 1 | 4 | done |
 | VM-084 | Windows topology on real hybrid hardware | Release | 4 | 1 | 4 | open |
@@ -756,7 +756,7 @@ joints exempt. The multi-part plate tests are VM-094.
 
 ### VM-091 — Default supports that look like CHITUBOX Light
 
-Ease 3 · Benefit 5 · Confidence: sure · Status: open
+Ease 3 · Benefit 5 · Confidence: sure · Status: done
 
 **Problem.** Our current support defaults are our own engineered values, not matched against any
 reference look. The reference is CHITUBOX Light (0.3/0.8 mm tip, 0.8 mm pillar, skate base), already
@@ -770,9 +770,17 @@ base with a slope. Keep `medium`/`heavy`/`light` presets coherent. Update `setti
 **Where.** `src/voxelmill/config.py` (`DEFAULTS["support"]`), `src/voxelmill/presets.py`,
 `docs/support-presets.md`, `docs/configuration.md`
 
+**Done (2026-09-24).** CHITUBOX Basic 2.3 was run on the bracket with Light, and the export was measured
+(`reports/beta/chitubox-light.md`): 0.8 mm pillars, 0.8 mm cross braces between neighbouring pillars
+only, about three per pillar from 3.8 mm up, and a 1 mm cross-grid raft. The defaults now use a 0.35 mm
+contact, 0.2 mm penetration and 0.9 mm pillars. Braces go between supports only, alternating every
+5 mm from 3 mm up, and are 0.6 mm thick. The `light` and `heavy` presets were rescaled around them.
+Shafts must also keep `support_clearance_mm` from each other, which broke up a fused comb of branched
+pillars 0.9 mm apart along the bracket's side.
+
 ### VM-092 — CHITUBOX-style cross bracing
 
-Ease 2 · Benefit 5 · Confidence: likely · Status: open
+Ease 2 · Benefit 5 · Confidence: likely · Status: partial
 
 **Problem.** The user is unsure pillars are braced enough. CHITUBOX Light's cross-bracing parameters
 are enabled, diameter 0.8 mm, width 4.0, min Z spacing 2.0 mm, max XY spacing 30 mm, start height
@@ -784,6 +792,15 @@ zig-zag layout differs from `single`/`alternating`/`x`. Add a report metric for 
 pillar length and its slenderness, so the user can judge bracing.
 
 **Where.** `src/voxelmill/supports.py` (`_brace`, ~1642)
+
+**Progress (2026-09-24).** The defaults now reproduce the Light pattern (see VM-091), and every plan
+reports `supports.unbraced`: the longest unbraced run and its slenderness, for plate-standing and
+model-standing pillars separately. On the default fixtures the median unbraced run is 3 mm. Still open:
+(1) pillars standing on the model are never braced, because grounding requires a support-only path to
+the plate; on the bracket they reach 22.6 mm unbraced (slenderness 25). (2) A few tall plate pillars in
+dense rows stay unbraced when every candidate diagonal fails clearance (25.9 mm on the bracket). Decide
+whether braces may join model-standing pillars, add a fallback for crowded rows, and set a slenderness
+target (for example 15) with a test.
 
 ### VM-093 — `release.yml` platform selector
 

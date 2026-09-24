@@ -8,10 +8,17 @@ The built-in names are:
 
 | Name | Starting points |
 | --- | --- |
-| `light` | `spacing_mm = 5.0`, `pillar_diameter_mm = 0.9` |
+| `light` | `spacing_mm = 4.0`, `pillar_diameter_mm = 0.7`, `contact_diameter_mm = 0.3` |
 | `medium` | The default support values from `voxelmill.config` |
-| `heavy` | `spacing_mm = 2.0`, `pillar_diameter_mm = 1.6` |
+| `heavy` | `spacing_mm = 2.5`, `pillar_diameter_mm = 1.3`, `contact_diameter_mm = 0.5` |
 | `chitubox-mars5` | The [reference CHITUBOX configuration](#the-reference-chitubox-configuration) below |
+
+The defaults (`medium`) take their look from CHITUBOX Light: a 0.35 mm contact
+on a 2 mm cone, 0.9 mm pillars, and 0.6 mm cross braces zigzagging between
+neighbouring pillars from 3 mm up. The values are VoxelMill's own and a little
+heavier than Light's 0.3 / 0.8 / 0.8 mm; the measured reference is in
+[reports/beta/chitubox-light.md](../reports/beta/chitubox-light.md), and the
+exact Light transcription is the `chitubox-mars5` preset.
 
 Light and heavy are geometric starting points. They are not printer or resin
 calibration claims. Values not present in light or heavy inherit the normal
@@ -52,11 +59,11 @@ starting point. The independent anchor and whole small-pillar geometry can be
 configured completely without claiming to reconstruct those missing values.
 
 The support section also includes `allow_part_to_part` and
-`part_to_part_avoidance`. The boolean defaults to false and permits model
+`part_to_part_avoidance`. The boolean defaults to true and permits model
 anchors for primary supports when enabled; avoidance `0`
 lets model and plate routes compete by length, while `1` keeps the historical
 plate preference and intermediate values require a proportionally shorter
-model route. `brace_spacing_mm` (15 mm by default) sets vertical origin
+model route. `brace_spacing_mm` (5 mm by default) sets vertical origin
 spacing below each shoulder, `brace_max_length_mm` (30 mm by default) limits
 the complete branch, and `brace_diameter_mm` and `brace_max_distance_mm`
 independently control brace thickness and neighbor reach. **New in 0.5.4:**
