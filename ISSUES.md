@@ -59,7 +59,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-080 | Release the line-actor fix | Release | 5 | 4 | 20 | done |
 | N12 | Resolve GOO mirroring against both references | Feature | 4 | 5 | 20 | open (hardware) |
 | VM-060 | CI workflow that runs the tests | Test/CI | 4 | 5 | 20 | done |
-| B3 | Printer database beyond the Mars 5 Ultra | Feature | 4 | 4 | 16 | open |
+| B3 | Printer database beyond the Mars 5 Ultra | Feature | 4 | 4 | 16 | deferred (post-beta) |
 | VM-011 | Release builds ship without TBB (confirmed) | Perf | 4 | 4 | 16 | done |
 | VM-003 | Editor leaks a scratch directory on every reload | Bug | 5 | 3 | 15 | done |
 | VM-004 | Wall-thickness analysis could refine past the memory budget | Bug | 5 | 3 | 15 | done |
@@ -70,14 +70,14 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-091 | Default supports that look like CHITUBOX Light | Feature | 3 | 5 | 15 | done |
 | VM-093 | `release.yml` platform selector | Release | 5 | 3 | 15 | done |
 | D4 | Raft adhesion / removal-force calibration | Feature | 4 | 3 | 12 | open (hardware) |
-| G2 | Fuzzy, mode-aware settings search | Feature | 4 | 3 | 12 | partial |
+| G2 | Fuzzy, mode-aware settings search | Feature | 4 | 3 | 12 | done |
 | VM-061 | Lint and type-check configuration | Test/CI | 4 | 3 | 12 | done |
-| A7 | GUI profile manager: dirty-state save/discard | Feature | 3 | 4 | 12 | partial |
+| A7 | GUI profile manager: dirty-state save/discard | Feature | 3 | 4 | 12 | done |
 | E7 | TSMC: define, validate and document all 18 motion fields | Feature | 3 | 4 | 12 | partial |
-| VM-014 | Retry/hollow benchmark fixture and CI perf gate | Perf | 3 | 4 | 12 | partial |
+| VM-014 | Retry/hollow benchmark fixture and CI perf gate | Perf | 3 | 4 | 12 | deferred (post-beta) |
 | VM-049 | Public-contract freeze checklist for 1.0 | Arch | 3 | 4 | 12 | partial |
 | VM-094 | Edge-case test matrix | Test/CI | 3 | 4 | 12 | done |
-| A8 | Presets embedded in profiles | Feature | 5 | 2 | 10 | partial |
+| A8 | Presets embedded in profiles | Feature | 5 | 2 | 10 | deferred (post-beta) |
 | VM-023 | Cheap boolean pre-checks for added models | Perf | 5 | 2 | 10 | done |
 | VM-064 | Goldens for the invalid-mesh fixtures | Test/CI | 5 | 2 | 10 | done |
 | VM-041 | One versioned envelope and migration registry for every file format | Arch | 2 | 5 | 10 | partial |
@@ -86,11 +86,11 @@ Sorted from easiest and most significant to hardest and least valuable.
 | A5 | Profile compatibility conditions | Feature | 3 | 3 | 9 | deferred (post-beta) |
 | B2 | CTB v4/v5 reader | Feature | 3 | 3 | 9 | deferred (decision) |
 | B8 | 3MF / OBJ / PLY import | Feature | 3 | 3 | 9 | deferred (post-beta) |
-| C10 | Orientation weight calibration + real per-candidate support volume | Feature | 3 | 3 | 9 | partial |
+| C10 | Orientation weight calibration + real per-candidate support volume | Feature | 3 | 3 | 9 | deferred (post-beta) |
 | F6 | Disk-backed tiled layer records | Feature | 3 | 3 | 9 | won't fix (measured) |
-| G12 | Layer viewer: pixel inspection, A/B layer diff | Feature | 3 | 3 | 9 | partial |
+| G12 | Layer viewer: pixel inspection, A/B layer diff | Feature | 3 | 3 | 9 | deferred (post-beta) |
 | H4 | SDCP upload and print-control acceptance | Feature | 3 | 3 | 9 | open (hardware) |
-| I1 | Persist and replay analysis artifacts | Feature | 3 | 3 | 9 | open |
+| I1 | Persist and replay analysis artifacts | Feature | 3 | 3 | 9 | deferred (post-beta) |
 | VM-013 | Spatial index for routed-capsule collision checks | Perf | 3 | 3 | 9 | done |
 | VM-016 | Keep VTK actors and update their input | Perf | 3 | 3 | 9 | done |
 | VM-017 | Optional single-raster fast path for `slice` | Perf | 3 | 3 | 9 | won't fix (measured) |
@@ -99,28 +99,28 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-029 | Island scan grows faster than the geometry braces add | Perf | 3 | 3 | 9 | explained (not a defect) |
 | VM-044 | Output-format registry | Arch | 3 | 3 | 9 | done |
 | VM-081 | Test the Apple Silicon build | Release | 3 | 3 | 9 | done |
-| G8 | Keyboard shortcut editor (theme shipped) | Feature | 4 | 2 | 8 | partial |
+| G8 | Keyboard shortcut editor (theme shipped) | Feature | 4 | 2 | 8 | done |
 | I3 | Print-time auto-calibration from measured prints | Feature | 4 | 2 | 8 | open (hardware) |
 | VM-020 | Cache the support KD-tree across island passes | Perf | 4 | 2 | 8 | won't fix (measured) |
 | VM-022 | Cheaper per-override setting validation | Perf | 4 | 2 | 8 | done |
 | VM-065 | Platform-honest affinity tests | Test/CI | 4 | 2 | 8 | done |
-| C8 | Cap non-planar open cuts | Feature | 2 | 4 | 8 | open |
+| C8 | Cap non-planar open cuts | Feature | 2 | 4 | 8 | deferred (post-beta) |
 | G3 | Typed settings pages replace the raw JSON box | Feature | 2 | 4 | 8 | partial |
 | E2 | Per-Z-band / per-object slice overrides | Feature | 3 | 2 | 6 | deferred (post-beta) |
-| E3 | Cross-sectional-area-driven exposure | Feature | 3 | 2 | 6 | open |
+| E3 | Cross-sectional-area-driven exposure | Feature | 3 | 2 | 6 | deferred (post-beta) |
 | E6 | LED uniformity mask compensation | Feature | 3 | 2 | 6 | deferred (post-beta) |
 | F5 | SIMD in the rasterizer inner loop | Feature | 3 | 2 | 6 | won't fix (measured) |
 | VM-021 | Vectorize contour/boundary sampling | Perf | 3 | 2 | 6 | done |
 | VM-024 | Only one of the three `analyze_layers` calls in `prepare` can be shared | Perf | 3 | 2 | 6 | deferred (decision) |
 | VM-025 | Fold `UnionLayerStream` per-group slices into one native call | Perf | 3 | 2 | 6 | done (earlier) |
 | VM-063 | Direct tests for `gui/services.py` and camera math | Test/CI | 3 | 2 | 6 | done |
-| VM-083 | Memory ceiling on macOS and Windows | Release | 3 | 2 | 6 | open |
+| VM-083 | Memory ceiling on macOS and Windows | Release | 3 | 2 | 6 | deferred (post-beta) |
 | VM-085 | PyPI wheels / Flatpak (H5) | Release | 3 | 2 | 6 | deferred (post-beta) |
 | A10 | Per-Z-band overrides (per-object support overrides shipped) | Feature | 2 | 3 | 6 | deferred (post-beta) |
 | C5 | Suction-cup / peel force calibration | Feature | 2 | 3 | 6 | open (hardware) |
-| F4 | Incremental re-slice after a local edit | Feature | 2 | 3 | 6 | open |
-| G13 | Direct-manipulation gizmos for supports, holes and cut planes | Feature | 2 | 3 | 6 | partial |
-| VM-043 | Break up the god functions in routing and orchestration | Arch | 2 | 3 | 6 | partial |
+| F4 | Incremental re-slice after a local edit | Feature | 2 | 3 | 6 | deferred (post-beta) |
+| G13 | Direct-manipulation gizmos for supports, holes and cut planes | Feature | 2 | 3 | 6 | deferred (post-beta) |
+| VM-043 | Break up the god functions in routing and orchestration | Arch | 2 | 3 | 6 | deferred (post-beta) |
 | VM-045 | Strategy registry for bases, tips and anchors | Arch | 2 | 3 | 6 | done |
 | VM-082 | macOS signing and notarization | Release | 2 | 3 | 6 | deferred (post-beta) |
 | VM-026 | Link-time optimization for `_native` | Perf | 5 | 1 | 5 | won't fix (measured) |
@@ -137,13 +137,13 @@ Sorted from easiest and most significant to hardest and least valuable.
 | F7 | GPU orientation search (CPU fallback mandatory) | Feature | 2 | 2 | 4 | deferred (post-beta) |
 | VM-027 | x86-64-v3 kernels with runtime dispatch | Perf | 2 | 2 | 4 | won't fix (measured) |
 | B1 | Encrypted CTB writer | Feature | 1 | 4 | 4 | deferred (decision) |
-| VM-015 | Incremental island-guard passes | Perf | 1 | 4 | 4 | partial |
-| VM-042 | Split `gui/window.py` (3,874 lines) into controllers | Arch | 1 | 4 | 4 | open |
+| VM-015 | Incremental island-guard passes | Perf | 1 | 4 | 4 | deferred (post-beta) |
+| VM-042 | Split `gui/window.py` (3,874 lines) into controllers | Arch | 1 | 4 | 4 | deferred (post-beta) |
 | A9 | Import CHITUBOX / Lychee profiles | Feature | 3 | 1 | 3 | deferred (post-beta) |
 | C11 | Text / serial embossing | Feature | 3 | 1 | 3 | deferred (post-beta) |
 | VM-028 | Minor: CUDA morphology allocation, MST, lock polling, undo copies | Perf | 3 | 1 | 3 | won't fix (measured) |
 | VM-072 | The historical `part-to-part` support example routes nothing | Docs | 3 | 1 | 3 | done |
-| D1 | Joint support type | Feature | 1 | 3 | 3 | partial |
+| D1 | Joint support type | Feature | 1 | 3 | 3 | deferred (post-beta) |
 | D6 | Support mechanics calibration; promote anchor-load warn→fail | Feature | 1 | 3 | 3 | open (hardware) |
 
 ## Bugs
@@ -238,7 +238,7 @@ Ease 3 · Benefit 3 · Confidence: sure · Status: done
 
 ### VM-014 — Retry/hollow benchmark fixture and CI perf gate
 
-Ease 3 · Benefit 4 · Confidence: sure · Status: partial
+Ease 3 · Benefit 4 · Confidence: sure · Status: deferred (post-beta)
 
 **Problem.** The canonical bracket benchmark converges in one island pass and never hollows, so VM-010, VM-013, VM-015 and VM-020 cannot be measured. The benchmark harness exists (F10), but nothing runs it automatically.
 
@@ -250,7 +250,7 @@ Ease 3 · Benefit 4 · Confidence: sure · Status: partial
 
 ### VM-015 — Incremental island-guard passes
 
-Ease 1 · Benefit 4 · Confidence: sure · Status: partial
+Ease 1 · Benefit 4 · Confidence: sure · Status: deferred (post-beta)
 
 **Problem.** Each island-guard pass re-runs `replan` over all contacts (full routing) and a full Manifold `assemble` of every support solid. Only the raster scan is cropped. On plates that retry, this is passes × (routing + boolean union). `point not in extra` is also a list scan.
 
@@ -471,7 +471,7 @@ Ease 2 · Benefit 5 · Confidence: sure · Status: partial
 
 ### VM-042 — Split `gui/window.py` (3,874 lines) into controllers
 
-Ease 1 · Benefit 4 · Confidence: sure · Status: open
+Ease 1 · Benefit 4 · Confidence: sure · Status: deferred (post-beta)
 
 **Problem.** One class owns menu construction, the Setup form, pose editing, paint, orientation candidates, island/print checks, project I/O, export and every job-completion handler. Adding a panel or tool means touching scattered dock and tab indices.
 
@@ -481,7 +481,7 @@ Ease 1 · Benefit 4 · Confidence: sure · Status: open
 
 ### VM-043 — Break up the god functions in routing and orchestration
 
-Ease 2 · Benefit 3 · Confidence: sure · Status: partial
+Ease 2 · Benefit 3 · Confidence: sure · Status: deferred (post-beta)
 
 **Problem.** `supports.route_contacts` is 515 lines, with around 15 `global_*` shadow variables saved and restored around a per-contact loop. `supports._brace` is 425 lines, `pipeline.prepare` 391, and `bases.build_base` 150. They are hard to test piecemeal and hard to extend.
 
@@ -698,7 +698,7 @@ Ease 2 · Benefit 3 · Confidence: sure · Status: deferred (post-beta)
 
 ### VM-083 — Memory ceiling on macOS and Windows
 
-Ease 3 · Benefit 2 · Confidence: sure · Status: open
+Ease 3 · Benefit 2 · Confidence: sure · Status: deferred (post-beta)
 
 **Problem.** `RLIMIT_AS` does not exist there. Windows could use a Job-object commit limit, which is not wired; macOS has no equivalent.
 
@@ -730,12 +730,12 @@ Ease 3 · Benefit 2 · Confidence: sure · Status: deferred (post-beta)
 
 ## Beta readiness
 
-Items opened for the v0.5.6 beta push: closing the multi-part collision gap, matching CHITUBOX Light's
+Items opened for the v0.6.0 beta push: closing the multi-part collision gap, matching CHITUBOX Light's
 support look and bracing, and the release/test hardening needed before tagging.
 
 ### VM-090 — Multi-part support collision audit
 
-Ease 3 · Benefit 5 · Confidence: sure · Status: open
+Ease 3 · Benefit 5 · Confidence: sure · Status: done
 
 **Problem.** There is no explicit measure proving supports do not intrude into any part beyond the
 tip/anchor penetration, or overlap each other except at graph junctions. Multi-part plates are merged
@@ -861,7 +861,7 @@ checked a hollowed multi-part plate against the parts as they were before hollow
 
 ### VM-095 — Default settings fail validation on simple shapes
 
-Ease 4 · Benefit 5 · Confidence: sure · Status: open
+Ease 4 · Benefit 5 · Confidence: sure · Status: done
 
 **Problem.** With default settings, 14 of the 18 golden fixtures fail validation, which withholds the
 export. A new user's first print would be blocked. The failures come in four kinds:
@@ -917,39 +917,39 @@ the code on 2026-09-23. Items marked `open (hardware)` cannot close without phys
 | ID | Item | Old scores | Status | Note |
 | --- | --- | --- | --- | --- |
 | N12 | Resolve GOO mirroring against both references | Diff 16 · Imp 78 | open (hardware) | Measured against both references, and the result was inconclusive. It ships as a per-export warning. A test print with an asymmetric glyph settles it. |
-| B3 | Printer database beyond the Mars 5 Ultra | Diff 16 · Imp 62 | open | This is a data change. Add only machines with verified specs. |
+| B3 | Printer database beyond the Mars 5 Ultra | Diff 16 · Imp 62 | deferred (post-beta) | This is a data change. Add only machines with verified specs. |
 | B5 | Print-time estimation: physical calibration | Diff 26 · Imp 76 | open (hardware) | The schedule math is shipped. It needs E7 semantics and measured prints. |
 | D4 | Raft adhesion / removal-force calibration | Diff 24 · Imp 48 | open (hardware) | Eight base strategies shipped. Adhesion is unquantified. |
-| G2 | Fuzzy, mode-aware settings search | Diff 20 · Imp 56 | partial | The current search is a substring filter on the JSON box. |
-| A7 | GUI profile manager: dirty-state save/discard | Diff 30 · Imp 62 | partial | `ProfileLibraryDialog` exists. Confirm the remaining scope (dirty tracking, discard prompts). |
+| G2 | Fuzzy, mode-aware settings search | Diff 20 · Imp 56 | done | Ranked fuzzy search over every setting's path, label, CLI flag and help text; filters the typed pages, highlights the best match, offers a tier switch when matches are hidden. |
+| A7 | GUI profile manager: dirty-state save/discard | Diff 30 · Imp 62 | done | Applying a profile asks Save/Discard/Cancel when the editor has unsaved changes; saving over an existing profile asks first; the dialog shows a modified marker. |
 | E7 | TSMC: define, validate and document all 18 motion fields | Diff 30 · Imp 66 | partial | The retract-sum validation shipped. Units and semantics are still unverified on hardware. |
-| A8 | Presets embedded in profiles | Diff 14 · Imp 44 | partial | Support and process presets shipped as standalone files. |
+| A8 | Presets embedded in profiles | Diff 14 · Imp 44 | deferred (post-beta) | Resins can embed support presets (resolver shipped). Saving presets into profiles from the GUI and process-preset embedding are post-beta. |
 | A4 | Profile inheritance with delta storage | Diff 30 · Imp 55 | deferred (post-beta) | Not started. Design it inside VM-041. |
 | A5 | Profile compatibility conditions | Diff 26 · Imp 48 | deferred (post-beta) | Not started. |
 | B2 | CTB v4/v5 reader | Diff 34 · Imp 55 | deferred (decision) | v3 shipped. v4/v5 are rejected by current decision. |
 | B8 | 3MF / OBJ / PLY import | Diff 30 · Imp 46 | deferred (post-beta) | Use the `importers.py` interface. Needs an MIT-compatible parser (stdlib zip+xml for 3MF). |
-| C10 | Orientation weight calibration + real per-candidate support volume | Diff 34 · Imp 58 | partial | The ranking UI shipped (2026-09-08). The weights are uncalibrated guesses. |
+| C10 | Orientation weight calibration + real per-candidate support volume | Diff 34 · Imp 58 | deferred (post-beta) | The ranking UI shipped (2026-09-08). The weights are uncalibrated guesses. |
 | F6 | Disk-backed tiled layer records | Diff 30 · Imp 46 | won't fix (measured) | Only if VM-019 shows memory pressure. |
-| G12 | Layer viewer: pixel inspection, A/B layer diff | Diff 26 · Imp 48 | partial | The issue strip and overlays shipped. Confirm the remainder. |
+| G12 | Layer viewer: pixel inspection, A/B layer diff | Diff 26 · Imp 48 | deferred (post-beta) | Hovering shows pixel coordinates, mm position, value and issue codes. A/B layer diff is deferred post-beta. |
 | H4 | SDCP upload and print-control acceptance | Diff 30 · Imp 50 | open (hardware) | Discovery, status, telemetry, history and time-lapse are verified. Upload, print and motion commands have never been sent. |
-| I1 | Persist and replay analysis artifacts | Diff 26 · Imp 52 | open | Skip the re-slice on threshold-only edits. |
-| G8 | Keyboard shortcut editor (theme shipped) | Diff 22 · Imp 34 | partial |  |
+| I1 | Persist and replay analysis artifacts | Diff 26 · Imp 52 | deferred (post-beta) | Skip the re-slice on threshold-only edits. |
+| G8 | Keyboard shortcut editor (theme shipped) | Diff 22 · Imp 34 | done | Configuration > Shortcuts edits action shortcuts with conflict checks and reset; overrides persist in editor preferences. Theme shipped earlier. |
 | I3 | Print-time auto-calibration from measured prints | Diff 22 · Imp 36 | open (hardware) | Needs B5 data. |
-| C8 | Cap non-planar open cuts | Diff 40 · Imp 72 | open | `voxelmill cap` handles near-planar loops only and refuses the rest. |
-| G3 | Typed settings pages replace the raw JSON box | Diff 40 · Imp 70 | partial | The descriptor table and tooltips (G4) shipped, but `settings_json` is still the catch-all editor. Generate the remaining pages from VM-040. |
+| C8 | Cap non-planar open cuts | Diff 40 · Imp 72 | deferred (post-beta) | `voxelmill cap` handles near-planar loops only and refuses the rest. |
+| G3 | Typed settings pages replace the raw JSON box | Diff 40 · Imp 70 | partial | Typed pages now cover every section (hollow, peel, assembly and resources added); the JSON box remains as an Expert fallback. Retiring it is post-beta. |
 | E2 | Per-Z-band / per-object slice overrides | Diff 34 · Imp 44 | deferred (post-beta) | Needs A10. |
-| E3 | Cross-sectional-area-driven exposure | Diff 30 · Imp 30 | open | Build the mechanism with the policy off by default. |
+| E3 | Cross-sectional-area-driven exposure | Diff 30 · Imp 30 | deferred (post-beta) | Build the mechanism with the policy off by default. |
 | E6 | LED uniformity mask compensation | Diff 34 · Imp 34 | deferred (post-beta) | Needs a measured uniformity map. |
 | F5 | SIMD in the rasterizer inner loop | Diff 26 · Imp 32 | won't fix (measured) | Deprioritized, because the rasterizer is memory-bound. See VM-027. |
 | A10 | Per-Z-band overrides (per-object support overrides shipped) | Diff 42 · Imp 50 | deferred (post-beta) | Depends on E2. |
 | C5 | Suction-cup / peel force calibration | Diff 44 · Imp 58 | open (hardware) | The advisory shipped. Force and tilt calibration need prints. |
-| F4 | Incremental re-slice after a local edit | Diff 40 · Imp 54 | open | Pairs with VM-015 and I1. |
-| G13 | Direct-manipulation gizmos for supports, holes and cut planes | Diff 40 · Imp 54 | partial | The part transform gizmo shipped. Supports, holes and cut planes remain. |
+| F4 | Incremental re-slice after a local edit | Diff 40 · Imp 54 | deferred (post-beta) | Pairs with VM-015 and I1. |
+| G13 | Direct-manipulation gizmos for supports, holes and cut planes | Diff 40 · Imp 54 | deferred (post-beta) | The part transform gizmo shipped. Supports, holes and cut planes remain. |
 | F7 | GPU orientation search (CPU fallback mandatory) | Diff 44 · Imp 34 | deferred (post-beta) | The one GPU workload the research supports. |
 | B1 | Encrypted CTB writer | Diff 62 · Imp 70 | deferred (decision) | Unencrypted v3 shipped. Encrypted variants are rejected by current decision. |
 | A9 | Import CHITUBOX / Lychee profiles | Diff 34 · Imp 20 | deferred (post-beta) | Deliberately low priority. |
 | C11 | Text / serial embossing | Diff 30 · Imp 26 | deferred (post-beta) |  |
-| D1 | Joint support type | Diff 52 · Imp 55 | partial | Branch, tree, contour, face and boundary are implemented. Joint is not. |
+| D1 | Joint support type | Diff 52 · Imp 55 | deferred (post-beta) | Branch, tree, contour, face and boundary are implemented. Joint is not. |
 | D6 | Support mechanics calibration; promote anchor-load warn→fail | Diff 55 · Imp 58 | open (hardware) | Deferred to the hardware campaign. |
 
 ## Appendix A — closed, retired or verified during consolidation
