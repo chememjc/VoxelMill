@@ -992,14 +992,57 @@ def test_the_editor_island_scan_matches_the_islands_command(application, source,
 
 @pytest.mark.gui
 def test_the_badge_is_earned_again_after_every_rebuild(application, source):
+    """With the toggle explicitly on, every rebuild re-earns the badge."""
     window = MainWindow(small_settings(), source, headless=True)
-    assert window.auto_island_check
+    assert not window.auto_island_check  # off by default; this test opts in
+    window.auto_island_check = True
     drain(window, application)
     settle(window, application, lambda: window.island_summary is not None)
     assert not window.island_stale
     assert window.island_badge.text().startswith('islands: ')
     window.rebuild()
     assert window.island_stale
+    settle(window, application, lambda: not window.island_stale)
+    window.close()
+
+
+@pytest.mark.gui
+def test_a_plain_rebuild_leaves_the_stale_badge_alone_by_default(application, source):
+    """auto_island_check defaults to off: reassembling an unchanged support
+    plan must not spend a scan re-earning the badge on its own."""
+    window = MainWindow(small_settings(), source, headless=True)
+    assert not window.auto_island_check
+    drain(window, application)
+    settle(window, application, lambda: window.island_summary is not None)
+    assert not window.island_stale
+    checked = []
+    window.check_islands = lambda *args, **kwargs: checked.append(True)
+    window.rebuild()
+    assert window.island_stale
+    # rebuild() with an unchanged plan goes straight to _assemble(): only a
+    # fresh 'union' stage runs, never 'supports'.
+    drain(window, application, stages=('union',))
+    assert window.island_stale
+    assert checked == []
+    window.close()
+
+
+@pytest.mark.gui
+def test_support_generation_earns_the_badge_back_even_with_the_toggle_off(application, source):
+    """_finish_supports sets a one-shot flag that _finish_union still honors
+    even though auto_island_check stays off, so fresh support geometry is
+    never left unscanned just because the toggle is off."""
+    window = MainWindow(small_settings(), source, headless=True)
+    assert not window.auto_island_check
+    drain(window, application)
+    settle(window, application, lambda: window.island_summary is not None)
+    assert not window.island_stale
+    # A manual contact invalidates the support plan, so rebuild() must
+    # resubmit the 'supports' job rather than reassembling the old one.
+    window.document.add_contact([0.0, 0.0, 5.0])
+    window.rebuild()
+    assert window.island_stale
+    drain(window, application, stages=('supports', 'union'))
     settle(window, application, lambda: not window.island_stale)
     window.close()
 

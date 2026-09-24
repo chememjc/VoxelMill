@@ -202,10 +202,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.visibility_tier = 'simple'
         self.theme_name = 'system'
         self.notifications = NotificationCenter(self)
-        # D5: the island scan is cheap next to a full validation, so it runs
-        # after every rebuild by default; the toggle exists for parts where
-        # even a connectivity pass over every layer is slow.
-        self.auto_island_check = True
+        # D5: an automatic scan after every ordinary edit was cheap next to a
+        # full validation but annoying on parts where even a connectivity
+        # pass over every layer is slow, so it is opt-in via Verification ->
+        # "Re-check islands after every edit". Support generation still earns
+        # the badge back on its own -- see _island_check_after_supports.
+        self.auto_island_check = False
+        # One-shot: set when a support-generation job (build_supports /
+        # route_attachments) actually completes, so the union that follows
+        # runs the scan once even though auto_island_check is off. Cleared
+        # after that union runs the check, or if the supports/union job that
+        # was meant to consume it fails or is canceled outright.
+        self._island_check_after_supports = False
         self.island_summary = None
         self.island_stale = False
         self._autosave_timer = QtCore.QTimer(self)
@@ -502,6 +510,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().addPermanentWidget(self.progress)
         self._set_island_badge(None)
         self._build_actions()
+        # Snapshot the built-in shortcut every action started with, before any
+        # stored override is applied, so Reset/Reset all in the shortcuts
+        # editor always has the original to go back to.
+        self._default_shortcuts = {name: QtGui.QKeySequence(action.shortcut())
+                                   for name, action in self.actions_map.items()}
+        self._apply_shortcut_overrides()
         self.resize(1400, 900)
 
     #: Compact Setup control -> (section, key, CLI flag or None).  This is the
@@ -847,6 +861,22 @@ class MainWindow(QtWidgets.QMainWindow):
             sections=('repair',), tier='expert')
         self.repair_expert_table.setObjectName('repair_expert_table')
         form.addRow('repair voxels / expert', self.repair_expert_table)
+        self.hollow_table = SettingsTableWidget(
+            sections=('hollow',), tier='advanced')
+        self.hollow_table.setObjectName('hollow_settings_table')
+        form.addRow('hollow', self.hollow_table)
+        self.peel_table = SettingsTableWidget(
+            sections=('peel',), tier='advanced')
+        self.peel_table.setObjectName('peel_settings_table')
+        form.addRow('peel analysis', self.peel_table)
+        self.assembly_table = SettingsTableWidget(
+            sections=('assembly',), tier='advanced')
+        self.assembly_table.setObjectName('assembly_settings_table')
+        form.addRow('assembly', self.assembly_table)
+        self.resources_table = SettingsTableWidget(
+            sections=('resources',), tier='advanced')
+        self.resources_table.setObjectName('resources_settings_table')
+        form.addRow('resources', self.resources_table)
         self.orientation_weights = OrientationWeightsWidget()
         form.addRow('orientation weights', self.orientation_weights)
 
@@ -858,12 +888,26 @@ class MainWindow(QtWidgets.QMainWindow):
             'table when a control exists; validation happens before a rebuild.')
         self.settings_search = QtWidgets.QLineEdit()
         self.settings_search.setObjectName('settings_search')
-        self.settings_search.setPlaceholderText('search settings keys…')
-        self.settings_search.setToolTip('Filters the resolved JSON box to matching keys. Case-insensitive substring.')
-        self.settings_search.textChanged.connect(self._filter_settings_json)
+        self.settings_search.setPlaceholderText('search settings: label, path, help text or --flag…')
+        self.settings_search.setToolTip(
+            'Fuzzy search across every setting\'s path, label, help text and CLI flag. '
+            'Matches rank exact and prefix hits first, then word and typo matches. '
+            'In Expert mode this also jumps the JSON box to the first hit.')
+        self.settings_search.textChanged.connect(self._on_settings_search)
+        self.settings_match_label = QtWidgets.QLabel('')
+        self.settings_match_label.setObjectName('settings_match_count')
+        self.settings_match_label.setVisible(False)
+        self.settings_tier_note = QtWidgets.QLabel('')
+        self.settings_tier_note.setObjectName('settings_tier_note')
+        self.settings_tier_note.setTextFormat(QtCore.Qt.RichText)
+        self.settings_tier_note.linkActivated.connect(self._on_settings_tier_note_clicked)
+        self.settings_tier_note.setVisible(False)
         self._json_search_label = QtWidgets.QLabel('settings search')
         self._json_label = QtWidgets.QLabel('All resolved settings (JSON, expert)')
-        form.addRow(self._json_search_label, self.settings_search)
+        # Search heads the page: the tables it filters sit far down a long form.
+        form.insertRow(0, self._json_search_label, self.settings_search)
+        form.insertRow(1, '', self.settings_match_label)
+        form.insertRow(2, '', self.settings_tier_note)
         form.addRow(self._json_label, self.settings_json)
         self.apply_json_button = QtWidgets.QPushButton('Apply complete settings JSON and rebuild')
         self.apply_json_button.clicked.connect(self.apply_settings)
@@ -876,6 +920,7 @@ class MainWindow(QtWidgets.QMainWindow):
         scroll = QtWidgets.QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(page)
+        self.setup_scroll_area = scroll
         return scroll
 
     @staticmethod
@@ -1668,6 +1713,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self.motion_table.load_settings(settings)
         if getattr(self, 'repair_expert_table', None) is not None:
             self.repair_expert_table.load_settings(settings)
+        if getattr(self, 'hollow_table', None) is not None:
+            self.hollow_table.load_settings(settings)
+        if getattr(self, 'peel_table', None) is not None:
+            self.peel_table.load_settings(settings)
+        if getattr(self, 'assembly_table', None) is not None:
+            self.assembly_table.load_settings(settings)
+        if getattr(self, 'resources_table', None) is not None:
+            self.resources_table.load_settings(settings)
         self._refresh_modified_markers()
         self._sync_orientation_controls(automatic)
         self.object_panel.set_limits(settings['printer']['build_mm'])
@@ -2346,6 +2399,14 @@ class MainWindow(QtWidgets.QMainWindow):
         return True
 
     def _filter_settings_json(self, text):
+        """Jump the raw JSON box to the first substring hit, Expert tier only.
+
+        The box itself is only visible in Expert (see ``_apply_visibility_tier``);
+        the ranked search below covers every tier through the typed pages, so
+        this stays a plain, cheap substring jump for the one surface it owns.
+        """
+        if self.visibility_tier != 'expert':
+            return
         needle = (text or '').strip()
         if not needle:
             return
@@ -2357,6 +2418,138 @@ class MainWindow(QtWidgets.QMainWindow):
         cursor.setPosition(index)
         cursor.setPosition(index + len(needle), QtGui.QTextCursor.KeepAnchor)
         self.settings_json.setTextCursor(cursor)
+
+    def _generated_settings_tables(self):
+        """Every generated typed page, for the search box to filter as one set."""
+        names = ('settings_table', 'motion_table', 'repair_expert_table',
+                 'hollow_table', 'peel_table', 'assembly_table', 'resources_table')
+        return [table for table in (getattr(self, name, None) for name in names)
+                if table is not None]
+
+    def _on_settings_search(self, text):
+        self._filter_settings_json(text)
+        self._apply_settings_search(text)
+
+    def _find_setting(self, path, tables):
+        """(table, widget) for the first generated page with a row for ``path``.
+
+        ``(None, None)`` when no generated page covers it at all -- a few
+        fields (``printer.id``, ``resin.name``, ...) only ever have a
+        dedicated-dialog editor, never a typed Setup row.
+        """
+        for table in tables:
+            widget = table.widget_for(path)
+            if widget is not None:
+                return table, widget
+        return None, None
+
+    @staticmethod
+    def _revealed_at(table, descriptor_tier, tier):
+        """Would tier ``tier`` show a row of ``descriptor_tier`` on ``table``?
+
+        Mirrors ``_apply_visibility_tier``'s own per-page policy: the
+        process/support page is visible from Advanced up but its own internal
+        tier never passes 'advanced' (every Simple field there already has a
+        compact row of its own); the motion and repair-expert overflow pages
+        are Expert-only regardless of a row's own declared tier; the other
+        generated pages (hollow, peel, assembly, resources) track the real
+        window tier once they are visible at all, from Advanced up.
+        """
+        from .settings_table import TIER_RANK
+        show_advanced = tier in ('advanced', 'expert')
+        show_expert = tier == 'expert'
+        name = table.objectName()
+        if name in ('motion_settings_table', 'repair_expert_table'):
+            return show_expert
+        if name == 'generated_settings_table':
+            return show_advanced and TIER_RANK[descriptor_tier] <= TIER_RANK['advanced']
+        return show_advanced and TIER_RANK[descriptor_tier] <= TIER_RANK[tier]
+
+    def _switch_target_tier(self, unreachable, tables):
+        """The tier to offer, and how many ``unreachable`` matches it helps.
+
+        Tries every tier other than the current one and counts how many
+        matches a typed row would reveal there; ties break on tier order
+        (Advanced before Expert). If nothing to switch to would reveal an
+        actual typed row -- true today only for a handful of process fields
+        capped out of their own generated page -- Expert is still offered,
+        since the JSON box and its plain-substring jump reach every key.
+        """
+        from .settings_table import TIERS
+        candidates = [tier for tier in TIERS if tier != self.visibility_tier]
+        located = [(self._find_setting(match.descriptor.path, tables), match) for match in unreachable]
+        best_tier, best_count = candidates[0], -1
+        for tier in candidates:
+            count = sum(1 for (table, _widget), match in located
+                       if table is not None and self._revealed_at(table, match.descriptor.tier, tier))
+            if count > best_count:
+                best_tier, best_count = tier, count
+        if best_count <= 0:
+            return 'expert', len(unreachable)
+        return best_tier, best_count
+
+    def _apply_settings_search(self, text):
+        """Fuzzy-filter the generated pages; report the count and, when the
+        best matches sit above the current tier, offer to switch instead of
+        silently finding nothing.
+
+        "Reachable" is checked with ``isVisibleTo(self)`` rather than by
+        comparing the descriptor's own declared tier to the window's tier:
+        a page can be visible-in-principle at this tier and still hide a row
+        for other reasons (the process/support page only ever shows up to its
+        own advanced cap), and only the widget itself knows the difference.
+        """
+        from .settings_search import rank_settings
+        from .settings_table import SETTINGS_DESCRIPTORS
+        tables = self._generated_settings_tables()
+        query = (text or '').strip()
+        if not query:
+            for table in tables:
+                table.set_search(None)
+            self.settings_match_label.setVisible(False)
+            self.settings_tier_note.setVisible(False)
+            return
+        matches = rank_settings(query, SETTINGS_DESCRIPTORS)
+        matched_paths = {match.descriptor.path for match in matches}
+        for table in tables:
+            table.set_search(matched_paths)
+        count = len(matches)
+        self.settings_match_label.setText(
+            f'{count} setting{"" if count == 1 else "s"} match' if count else 'no settings match')
+        self.settings_match_label.setVisible(True)
+        reachable, unreachable = [], []
+        for match in matches:
+            _table, widget = self._find_setting(match.descriptor.path, tables)
+            (reachable if widget is not None and widget.isVisibleTo(self) else unreachable).append(match)
+        if reachable:
+            self.settings_tier_note.setVisible(False)
+            best_path = reachable[0].descriptor.path
+            for table in tables:
+                widget = table.highlight_path(best_path)
+                if widget is not None:
+                    self._scroll_setup_to(widget)
+        elif unreachable:
+            for table in tables:
+                table.highlight_path(None)
+            best_tier, hidden_count = self._switch_target_tier(unreachable, tables)
+            self.settings_tier_note.setText(
+                f'{hidden_count} match{"" if hidden_count == 1 else "es"} not shown at this tier '
+                f'&mdash; switch to <a href="{best_tier}">{best_tier.capitalize()}</a>')
+            self.settings_tier_note.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
+            self.settings_tier_note.setVisible(True)
+        else:
+            for table in tables:
+                table.highlight_path(None)
+            self.settings_tier_note.setVisible(False)
+
+    def _scroll_setup_to(self, widget):
+        scroll = getattr(self, 'setup_scroll_area', None)
+        if scroll is not None:
+            scroll.ensureWidgetVisible(widget)
+
+    def _on_settings_tier_note_clicked(self, tier):
+        self._apply_visibility_tier(tier)
+        self._apply_settings_search(self.settings_search.text())
 
     def _sync_measurement(self):
         """Show the size the current pose produces, and the source size it came from.
@@ -2464,15 +2657,29 @@ class MainWindow(QtWidgets.QMainWindow):
         if getattr(self, 'repair_expert_table', None) is not None:
             self.repair_expert_table.set_tier('expert')
             self.repair_expert_table.setVisible(show_expert)
+        for table_name in ('hollow_table', 'peel_table', 'assembly_table', 'resources_table'):
+            table = getattr(self, table_name, None)
+            if table is not None:
+                # These sections mix simple/advanced/expert fields (unlike the
+                # process/support table, which is capped at advanced because
+                # every simple field there already has a compact row), so the
+                # generated page tracks the real tier and can surface its own
+                # expert leaves once the window reaches Expert.
+                table.set_tier(tier)
+                table.setVisible(show_advanced)
         if getattr(self, 'orientation_weights', None) is not None:
             self.orientation_weights.setVisible(show_expert)
+        # The JSON box is the Expert-only escape hatch, but the search box
+        # above it ranks matches across every tier's typed pages, so it (and
+        # its row label) stay visible throughout -- only the raw-JSON surfaces
+        # are gated to Expert.
         for widget in (getattr(self, 'settings_json', None),
-                       getattr(self, 'settings_search', None),
                        getattr(self, 'apply_json_button', None),
-                       getattr(self, '_json_label', None),
-                       getattr(self, '_json_search_label', None)):
+                       getattr(self, '_json_label', None)):
             if widget is not None:
                 widget.setVisible(show_expert)
+        if getattr(self, 'settings_search', None) is not None:
+            self._apply_settings_search(self.settings_search.text())
 
     def set_theme(self, name: str):
         name = name if name in THEMES else 'system'
@@ -2503,39 +2710,205 @@ class MainWindow(QtWidgets.QMainWindow):
         app.setPalette(app.style().standardPalette())
         app.setStyleSheet('')
 
+    def _default_shortcut_text(self, name):
+        """The built-in (pre-override) shortcut for ``name``, in portable text."""
+        sequence = self._default_shortcuts.get(name)
+        return sequence.toString(QtGui.QKeySequence.PortableText) if sequence else ''
+
+    def _apply_shortcut_overrides(self):
+        """Apply persisted shortcut overrides after ``_build_actions`` runs.
+
+        A stored name that no longer matches an action -- a renamed or
+        removed action from an older preferences file -- is dropped rather
+        than applied or raised; a stored ``view_*`` entry is dropped too,
+        since those mirror the nav cube's fixed keys and must never be
+        remapped. The dropped entries leave the in-memory preferences, so the
+        next save the user makes removes them; opening a window never writes
+        the file itself, which keeps headless runs such as ``--screenshot``
+        read-only.
+        """
+        overrides = self.editor_preferences.get('shortcuts') or {}
+        applied = {}
+        for name, text in overrides.items():
+            action = self.actions_map.get(name)
+            if action is None or name.startswith('view_'):
+                continue
+            action.setShortcut(QtGui.QKeySequence(text, QtGui.QKeySequence.PortableText)
+                               if text else QtGui.QKeySequence())
+            applied[name] = text
+        self.editor_preferences['shortcuts'] = applied
+
     def shortcuts_dialog(self):
+        """Shortcut editor over ``actions_map``.
+
+        Every action with a shortcut today gets an editable row, except
+        ``view_*`` actions, which -- like the static camera ``SHORTCUTS`` also
+        listed here -- mirror the nav cube's fixed keys and stay read-only and
+        visibly so (grayed "(fixed)", no edit widget). Editing checks for a
+        conflict against every other pending value and every fixed key; a
+        conflict is refused inline (the edit reverts and a label explains why)
+        rather than through a blocking dialog, so this stays safe to drive
+        from a headless test. OK applies and persists only the rows that still
+        differ from their built-in default; Cancel (or closing the dialog
+        without accepting) touches neither the actions nor the preferences.
+        """
         dialog = QtWidgets.QDialog(self)
         dialog.setWindowTitle('Shortcuts')
         dialog.setObjectName('shortcuts_dialog')
         layout = QtWidgets.QVBoxLayout(dialog)
-        table = QtWidgets.QTableWidget(0, 2)
+
+        table = QtWidgets.QTableWidget(0, 4)
         table.setObjectName('shortcuts_table')
-        table.setHorizontalHeaderLabels(['Action', 'Shortcut'])
+        table.setHorizontalHeaderLabels(['Action', 'Shortcut', 'New shortcut', ''])
         table.horizontalHeader().setStretchLastSection(True)
-        rows = []
+
+        editable = []
         for name, action in self.actions_map.items():
-            sequence = action.shortcut().toString() if action.shortcut() else ''
-            if sequence:
-                rows.append((action.text() or name, sequence))
+            if name.startswith('view_'):
+                continue
+            text = action.shortcut().toString(QtGui.QKeySequence.PortableText) if action.shortcut() else ''
+            if text:
+                editable.append((name, action.text() or name, text))
+
+        fixed = []
+        for name, action in self.actions_map.items():
+            if not name.startswith('view_'):
+                continue
+            text = action.shortcut().toString(QtGui.QKeySequence.PortableText) if action.shortcut() else ''
+            if text:
+                fixed.append((action.text() or name, text))
         for view, key in SHORTCUTS.items():
-            rows.append((f'View {view}', key))
-        # Deduplicate while preserving order.
+            fixed.append((f'View {view}', key))
+        # Deduplicate while preserving order (the nav-cube menu actions and
+        # the static SHORTCUTS map name the same keys under different labels).
         seen = set()
-        unique = []
-        for row in rows:
+        unique_fixed = []
+        for row in fixed:
             if row in seen:
                 continue
             seen.add(row)
-            unique.append(row)
-        table.setRowCount(len(unique))
-        for index, (label, shortcut) in enumerate(unique):
-            table.setItem(index, 0, QtWidgets.QTableWidgetItem(label))
-            table.setItem(index, 1, QtWidgets.QTableWidgetItem(shortcut))
+            unique_fixed.append(row)
+
+        # Uncommitted edits, keyed by action name; the source of truth until
+        # OK is pressed. Row widgets are patched in place rather than the
+        # table being rebuilt on every edit.
+        pending = {name: text for name, _label, text in editable}
+        row_widgets = {}
+
+        conflict_label = QtWidgets.QLabel('')
+        conflict_label.setObjectName('shortcuts_conflict_label')
+        conflict_label.setStyleSheet('color: #b00020;')
+        conflict_label.setWordWrap(True)
+
+        def fixed_conflict(text):
+            return next((label for label, key in unique_fixed if key == text), None)
+
+        def other_conflict(name, text):
+            for other, value in pending.items():
+                if other != name and value == text:
+                    return self.actions_map[other].text() or other
+            return None
+
+        def refresh_row(name):
+            item, edit = row_widgets[name]
+            item.setText(pending[name])
+            edit.blockSignals(True)
+            edit.setKeySequence(QtGui.QKeySequence(pending[name], QtGui.QKeySequence.PortableText))
+            edit.blockSignals(False)
+
+        def on_edited(name):
+            def handler():
+                item, edit = row_widgets[name]
+                text = edit.keySequence().toString(QtGui.QKeySequence.PortableText)
+                if text == pending[name]:
+                    return
+                conflict = (fixed_conflict(text) or other_conflict(name, text)) if text else None
+                if conflict:
+                    conflict_label.setText(
+                        f'"{text}" is already used by {conflict}; keeping the previous shortcut.')
+                    refresh_row(name)
+                    return
+                conflict_label.setText('')
+                pending[name] = text
+                item.setText(text)
+            return handler
+
+        def reset_row(name):
+            def handler():
+                conflict_label.setText('')
+                pending[name] = self._default_shortcut_text(name)
+                refresh_row(name)
+            return handler
+
+        table.setRowCount(len(editable) + len(unique_fixed))
+        row_index = 0
+        for name, label, text in editable:
+            table.setItem(row_index, 0, QtWidgets.QTableWidgetItem(label))
+            item = QtWidgets.QTableWidgetItem(text)
+            item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+            table.setItem(row_index, 1, item)
+            edit = QtWidgets.QKeySequenceEdit(QtGui.QKeySequence(text, QtGui.QKeySequence.PortableText))
+            edit.editingFinished.connect(on_edited(name))
+            table.setCellWidget(row_index, 2, edit)
+            reset_button = QtWidgets.QPushButton('Reset')
+            reset_button.clicked.connect(reset_row(name))
+            table.setCellWidget(row_index, 3, reset_button)
+            row_widgets[name] = (item, edit)
+            row_index += 1
+        for label, text in unique_fixed:
+            table.setItem(row_index, 0, QtWidgets.QTableWidgetItem(label))
+            fixed_item = QtWidgets.QTableWidgetItem(text)
+            fixed_item.setFlags(fixed_item.flags() & ~QtCore.Qt.ItemIsEditable)
+            fixed_item.setToolTip('Fixed: viewport navigation shortcuts cannot be remapped.')
+            table.setItem(row_index, 1, fixed_item)
+            fixed_label = QtWidgets.QLabel('(fixed)')
+            fixed_label.setStyleSheet('color: #888888;')
+            table.setCellWidget(row_index, 2, fixed_label)
+            row_index += 1
         table.resizeColumnsToContents()
         layout.addWidget(table)
-        close = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Close)
-        close.rejected.connect(dialog.reject)
-        layout.addWidget(close)
+        layout.addWidget(conflict_label)
+
+        reset_all = QtWidgets.QPushButton('Reset all')
+
+        def reset_all_handler():
+            conflict_label.setText('')
+            for name, _label, _text in editable:
+                pending[name] = self._default_shortcut_text(name)
+                refresh_row(name)
+        reset_all.clicked.connect(reset_all_handler)
+        layout.addWidget(reset_all)
+
+        buttons = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+
+        def commit():
+            overrides = {}
+            for name, _label, _text in editable:
+                current = pending[name]
+                if current != self._default_shortcut_text(name):
+                    overrides[name] = current
+            for name, _label, _text in editable:
+                text = overrides.get(name, self._default_shortcut_text(name))
+                self.actions_map[name].setShortcut(
+                    QtGui.QKeySequence(text, QtGui.QKeySequence.PortableText) if text else QtGui.QKeySequence())
+            self.editor_preferences['shortcuts'] = overrides
+            save_preferences(self.editor_preferences)
+
+        buttons.accepted.connect(commit)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        # Exposed for headless tests: no real modal loop is ever entered, so
+        # driving the dialog means calling these directly.
+        dialog.shortcuts_table = table
+        dialog.shortcuts_pending = pending
+        dialog.shortcuts_row_widgets = row_widgets
+        dialog.shortcuts_conflict_label = conflict_label
+        dialog.shortcuts_reset_all = reset_all
+        dialog.shortcuts_buttons = buttons
+
         if self.headless:
             dialog.show()
         else:
@@ -2675,6 +3048,11 @@ class MainWindow(QtWidgets.QMainWindow):
             return self._report_error({'code': 'invalid_settings_json', 'message': str(error), 'details': {}})
         if self.visibility_tier in ('advanced', 'expert') and getattr(self, 'settings_table', None):
             settings = self.settings_table.apply_to_settings(settings)
+        if self.visibility_tier in ('advanced', 'expert'):
+            for table_name in ('hollow_table', 'peel_table', 'assembly_table', 'resources_table'):
+                table = getattr(self, table_name, None)
+                if table is not None:
+                    settings = table.apply_to_settings(settings)
         if self.visibility_tier == 'expert':
             if getattr(self, 'motion_table', None):
                 settings = self.motion_table.apply_to_settings(settings)
@@ -3117,9 +3495,16 @@ class MainWindow(QtWidgets.QMainWindow):
         if result.canceled:
             if result.name in ('validate', 'goo'):
                 self._discard_validation_path()
+            if result.name in ('supports', 'union'):
+                # A one-shot set by _finish_supports must not survive a
+                # canceled supports/union job to fire on some later,
+                # unrelated rebuild.
+                self._island_check_after_supports = False
             self.statusBar().showMessage(f'{result.name} canceled', 4000)
             return
         if result.error:
+            if result.name in ('supports', 'union'):
+                self._island_check_after_supports = False
             return self._report_error(result.error, result.name)
         handler = getattr(self, f'_finish_{result.name}', None)
         if handler:
@@ -3280,6 +3665,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage(
             f"{value['plan'].metrics['contacts_routed']} contacts routed, "
             f"{value['plan'].metrics['contacts_failed']} unroutable", 8000)
+        # Support geometry just changed regardless of auto_island_check, so
+        # the union this triggers should earn the badge back once; consumed
+        # (and cleared on failure) around _finish_union / _on_completed.
+        self._island_check_after_supports = True
         self._assemble()
 
     def _finish_union(self, value):
@@ -3296,9 +3685,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self.faults.set_range(layer_count)
         self._sync_z_extent()
         self.statusBar().showMessage(f'assembled {value.num_tri()} triangles', 6000)
-        # D5: the badge is re-earned after every edit rather than left showing
-        # a result that describes geometry the user has since changed.
-        if self.auto_island_check and self._pending_export is None:
+        # D5: the badge is re-earned after every edit when the toggle is on,
+        # and always once right after support generation even when it is
+        # off -- a plain reassembly with no new supports otherwise leaves a
+        # stale badge alone rather than showing a result that no longer
+        # describes geometry the user has since changed.
+        run_island_check = self.auto_island_check or self._island_check_after_supports
+        self._island_check_after_supports = False
+        if run_island_check and self._pending_export is None:
             self.check_islands(show_report=False)
         if self._pending_export is not None:
             self.validate()

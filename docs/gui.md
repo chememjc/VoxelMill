@@ -71,6 +71,39 @@ computed by the same `layer_exposure`: bottom layers, the transition ramp,
 and the first normal value, then an ellipsis. Transition values are
 intermediate and exclude both endpoints.
 
+Below the exposure schedule, the **visibility tier** combo (Simple / Advanced
+/ Expert) does not gate the compact controls above it — those always show —
+it gates how much of the *generated* settings table appears beneath them.
+Every leaf of `config.DEFAULTS` has a typed row somewhere, built from
+`settings_schema.FIELDS` by `gui/settings_table.py`, so its tooltip, unit,
+numeric range and dropdown choices always agree with the CLI's own validator:
+`process` and `support` share one page (Advanced and up); `hollow`, `peel`,
+`assembly` and `resources` each have their own page (also Advanced and up,
+and following the window into Expert for their own expert-tier fields, such
+as `hollow.voxel_size_mm` or `resources.post_slice_hook`); and `printer.motion`
+(all eighteen uncalibrated reference values) and the handful of `repair`
+fields not already on a compact control are two Expert-only overflow pages.
+Editing a typed row and pressing **Apply and rebuild** reaches
+`Document.settings` the same way a compact control does — before the raw
+JSON box's own text is even parsed, so the JSON box is never the source of
+truth for a value that has its own row. `printer` (outside `printer.motion`)
+and `resin` have no typed Setup row; open their Configuration dialogs
+instead.
+
+The **search settings** box above the JSON box ranks every setting — across
+its dotted path, its label, its help text, and its CLI flag — and filters the
+generated pages down to the matches, highlighting and scrolling to the best
+one; a **N settings match** label reports the count. Matching is fuzzy and
+ranked, in this order: an exact or whole-word hit, then a prefix, then a
+substring, then every word of a multi-word query present in any order, then a
+looser subsequence, and finally typo tolerance, so a misspelled or partial
+query such as "brase spacing" still finds `support.brace_spacing_mm`. The box
+works in every tier, not only Expert — when the best matches live on a page
+hidden at the current tier, the count label still reports them honestly and a
+clickable note offers to switch tier, rather than the query silently finding
+nothing. In Expert mode the box also jumps the raw JSON text to the first
+plain-substring hit, as it always has.
+
 The automatic controls are deliberate choices, never hidden fallbacks:
 
 | Decision | Automatic mode | Manual mode |
@@ -739,6 +772,31 @@ almost-but-not-quite square on. `MainWindow.set_view` raises
 The `voxelmill gui --view {front,back,left,right,top,bottom,iso}` option sets
 the initial view on startup; see [cli.md](cli.md).
 
+## Keyboard shortcuts
+
+**Configuration → Shortcuts...** opens an editor over every action that has a
+shortcut, one row per action, with the current key sequence and a
+`QKeySequenceEdit` field to type a new one. The `View` menu's camera keys
+(the table above) and the navigation cube's own bindings stay fixed and are
+shown grayed out with "(fixed)" instead of an edit field — remapping them
+would desync the cube's printed labels from what pressing them actually
+does. Typing a sequence already used by another action, or by one of those
+fixed camera keys, is refused inline (a red label explains why and the field
+reverts) rather than through a blocking confirmation, so the dialog can be
+driven from a script or a test without a real event loop. Each row has its
+own **Reset**, and **Reset all** reverts every row in one click; either only
+ever restores the action's built-in default, never another action's current
+value. **OK** applies every changed row to the live menu and toolbar actions
+and writes only the rows that still differ from their built-in default to
+`shortcuts` in `~/.config/voxelmill/editor.json`, next to the window layout
+and motion mode preferences; **Cancel** (or closing the dialog any other
+way) leaves both the actions and the file untouched. On the next launch,
+`MainWindow._apply_shortcut_overrides` re-applies the stored overrides right
+after the menus are built; an override naming an action that no longer
+exists, or a fixed `view_*` action from an older preferences file, is
+dropped rather than applied, and that drop is saved back immediately so it
+does not reappear.
+
 ## Window layout
 
 The window's geometry (position and size) and its dock/toolbar layout persist
@@ -861,11 +919,17 @@ badge out and appends `(stale)` rather than continuing to show a result that
 now describes geometry the user has since changed. The grayed color applies
 whether the badge is showing `not checked` or a stale count. Once the new
 assembly finishes building, `_finish_union` re-earns the badge automatically
-when **Re-check islands after every edit** (Verification menu, on by default) is
-checked and no export is pending; the toggle can be turned off to scan only
-on demand. **Check islands now** (Verification menu, Ctrl+I) runs the scan
-immediately, in the background like every other expensive stage, and shows
-a status-bar message naming the checks it did not examine when it finishes.
+when **Re-check islands after every edit** (Verification menu, off by
+default) is checked and no export is pending; leave it off to scan only on
+demand with **Check islands now** (Verification menu, Ctrl+I), which runs the
+scan immediately, in the background like every other expensive stage, and
+shows a status-bar message naming the checks it did not examine when it
+finishes. Support generation earns the badge back on its own either way: a
+plain edit that only reassembles an unchanged support plan leaves a stale
+badge alone, but the union that follows a fresh `build_supports` always
+re-checks once, off a one-shot flag (`_island_check_after_supports`) rather
+than the toggle. **Compute attachments** updates the badge directly from its
+own island-guard scan and never needs that flag at all.
 This badge and the **Verification → Islands** menu item run the same
 underlying scan; the badge always covers the whole build (it has no
 correction loop of its own), while Verification reads the assembly exactly as

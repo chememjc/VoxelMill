@@ -230,6 +230,9 @@ class SettingsTableWidget(QtWidgets.QWidget):
         self._widgets: dict[str, QtWidgets.QWidget] = {}
         self._labels: dict[str, QtWidgets.QLabel] = {}
         self._rows: dict[str, QtWidgets.QWidget] = {}
+        self._label_styles: dict[str, str] = {}
+        self._search_paths: set[str] | None = None
+        self._highlighted: str | None = None
         self._form = QtWidgets.QFormLayout(self)
         self._form.setFieldGrowthPolicy(QtWidgets.QFormLayout.ExpandingFieldsGrow)
         self._rebuild()
@@ -255,14 +258,19 @@ class SettingsTableWidget(QtWidgets.QWidget):
         self._widgets.clear()
         self._labels.clear()
         self._rows.clear()
+        self._label_styles.clear()
+        self._search_paths = None
+        self._highlighted = None
         for descriptor in SETTINGS_DESCRIPTORS:
             if not self._include(descriptor):
                 continue
             widget = self._make_widget(descriptor)
             label = QtWidgets.QLabel(self._row_label(descriptor))
             color = RISK_COLORS.get(descriptor.risk, '')
-            if color:
-                label.setStyleSheet(f'color: {color};')
+            style = f'color: {color};' if color else ''
+            self._label_styles[descriptor.path] = style
+            if style:
+                label.setStyleSheet(style)
             label.setToolTip(descriptor.tooltip)
             widget.setToolTip(descriptor.tooltip)
             widget.setObjectName(f'setting_{descriptor.path.replace(".", "_")}')
@@ -311,9 +319,55 @@ class SettingsTableWidget(QtWidgets.QWidget):
         rank = TIER_RANK[self._tier]
         for path, widget in self._widgets.items():
             descriptor = next(d for d in SETTINGS_DESCRIPTORS if d.path == path)
-            visible = self._include(descriptor) and TIER_RANK[descriptor.tier] <= rank
+            visible = (self._include(descriptor) and TIER_RANK[descriptor.tier] <= rank
+                       and (self._search_paths is None or path in self._search_paths))
             self._labels[path].setVisible(visible)
             widget.setVisible(visible)
+
+    def widget_for(self, path: str):
+        """This page's control for ``path``, or ``None`` if it has no such row.
+
+        A read-only lookup so a caller (the search box's mode-aware note) can
+        ask whether a match actually lands on this page -- with
+        ``widget.isVisibleTo(top_level_ancestor)`` -- without reaching into
+        ``_widgets`` directly.
+        """
+        return self._widgets.get(path)
+
+    def set_search(self, paths):
+        """Show only rows whose path is in ``paths``; ``None`` shows every row.
+
+        The search box drives this across every generated page at once, on
+        top of (not instead of) the tier filter: a row still needs its tier
+        to be visible, and now also needs to be one of the ranked matches.
+        """
+        self._search_paths = set(paths) if paths is not None else None
+        if self._search_paths is None:
+            self.clear_highlight()
+        self._apply_visibility()
+
+    def highlight_path(self, path: str | None):
+        """Mark ``path``'s row as the best search match; return its widget.
+
+        Returns ``None`` when this table has no such row, so a caller
+        searching several tables can move on to the next one.
+        """
+        self.clear_highlight()
+        if path is None:
+            return None
+        widget = self._widgets.get(path)
+        if widget is None:
+            return None
+        label = self._labels[path]
+        base = self._label_styles.get(path, '')
+        label.setStyleSheet(f'{base} font-weight: bold; background-color: rgba(255, 202, 40, 90);')
+        self._highlighted = path
+        return widget
+
+    def clear_highlight(self):
+        if self._highlighted is not None and self._highlighted in self._labels:
+            self._labels[self._highlighted].setStyleSheet(self._label_styles.get(self._highlighted, ''))
+        self._highlighted = None
 
     def load_settings(self, settings: dict):
         for path, widget in self._widgets.items():
@@ -324,13 +378,20 @@ class SettingsTableWidget(QtWidgets.QWidget):
             self._set_widget(widget, value)
 
     def apply_to_settings(self, settings: dict) -> dict:
-        """Write visible typed fields into a deep copy of ``settings``."""
+        """Write visible typed fields into a deep copy of ``settings``.
+
+        ``isVisibleTo(self)`` rather than ``isVisible()``: the latter also
+        asks whether the top-level window has ever been shown, which is false
+        in every headless test and made this a silent no-op there. Tier
+        visibility is a property of this widget's own row flags, not of
+        whether the window happens to be mapped to a screen.
+        """
         from copy import deepcopy
         target = deepcopy(settings)
         rank = TIER_RANK[self._tier]
         for descriptor in SETTINGS_DESCRIPTORS:
             widget = self._widgets.get(descriptor.path)
-            if widget is None or not widget.isVisible():
+            if widget is None or not widget.isVisibleTo(self):
                 continue
             if TIER_RANK[descriptor.tier] > rank:
                 continue

@@ -180,3 +180,148 @@ def test_every_generated_control_offers_only_values_validation_accepts():
         assert (low > field.minimum) if field.positive else (low >= field.minimum), descriptor.path
         assert field.maximum is None or high <= field.maximum, descriptor.path
         assert field.below is None or high < field.below, descriptor.path
+
+
+# ---------------------------------------------------------------------------
+# G3: typed pages for hollow, peel, assembly and resources
+# ---------------------------------------------------------------------------
+
+NEW_TYPED_PAGES = {
+    'hollow_table': ('hollow', 'wall_thickness_mm', 3.5),
+    'peel_table': ('peel', 'area_threshold_mm2', 12.5),
+    'assembly_table': ('assembly', 'max_parity_examples', 9),
+    'resources_table': ('resources', 'memory_gib', 3.5),
+}
+
+
+@pytest.mark.parametrize('table_name', sorted(NEW_TYPED_PAGES))
+def test_each_new_typed_page_exists(application, table_name):
+    window = MainWindow(small_settings(), None, headless=True)
+    table = getattr(window, table_name, None)
+    assert table is not None
+    section, key, _value = NEW_TYPED_PAGES[table_name]
+    assert table.widget_for(f'{section}.{key}') is not None
+    window.close()
+
+
+@pytest.mark.parametrize('table_name', sorted(NEW_TYPED_PAGES))
+def test_a_value_edit_on_each_new_page_reaches_document_settings(application, table_name):
+    window = MainWindow(small_settings(), None, headless=True)
+    window._apply_visibility_tier('advanced')
+    section, key, value = NEW_TYPED_PAGES[table_name]
+    table = getattr(window, table_name)
+    widget = table.widget_for(f'{section}.{key}')
+    if isinstance(widget, QtWidgets.QSpinBox):
+        widget.setValue(int(value))
+    else:
+        widget.setValue(float(value))
+    window.apply_settings()
+    assert window.document.settings[section][key] == pytest.approx(value)
+    window.close()
+
+
+@pytest.mark.parametrize('table_name,expert_path', [
+    ('hollow_table', 'hollow.voxel_size_mm'),
+    ('peel_table', 'peel.reference_lift_speed'),
+    ('assembly_table', 'assembly.require_raster_parity'),
+    ('resources_table', 'resources.scratch_dir'),
+])
+def test_new_typed_pages_tier_filter_expert_fields(application, table_name, expert_path):
+    window = MainWindow(small_settings(), None, headless=True)
+    table = getattr(window, table_name)
+    widget = table.widget_for(expert_path)
+    assert widget is not None
+
+    window._apply_visibility_tier('simple')
+    assert table.isHidden()
+    assert widget.isHidden()
+
+    window._apply_visibility_tier('advanced')
+    assert not table.isHidden()
+    assert widget.isHidden(), 'an expert-tier field must stay hidden in Advanced'
+
+    window._apply_visibility_tier('expert')
+    assert not table.isHidden()
+    assert not widget.isHidden()
+    window.close()
+
+
+def test_new_typed_pages_round_trip_without_the_json_box_as_source_of_truth(application):
+    """Editing a typed row must win even though the JSON box is the apply-time base.
+
+    ``apply_settings`` starts from ``json.loads(settings_json)``, but the box
+    is kept in sync with the document on every ``_sync_widgets_from_document``
+    call, and each generated table overlays its own *current* widget values on
+    top of that base -- so a typed edit always reaches the document, not
+    whatever the JSON text happened to say.
+    """
+    window = MainWindow(small_settings(), None, headless=True)
+    window._apply_visibility_tier('advanced')
+    widget = window.hollow_table.widget_for('hollow.wall_thickness_mm')
+    widget.setValue(4.25)
+    # The JSON box still shows the old value; apply_settings must not defer to it.
+    assert '4.25' not in window.settings_json.toPlainText()
+    window.apply_settings()
+    assert window.document.settings['hollow']['wall_thickness_mm'] == pytest.approx(4.25)
+    window.close()
+
+
+# ---------------------------------------------------------------------------
+# G2: fuzzy, mode-aware settings search
+# ---------------------------------------------------------------------------
+
+def test_search_box_is_usable_outside_expert_tier(application):
+    """The old substring filter only ever touched the JSON box, invisible
+    outside Expert; the ranked search must work in every tier."""
+    window = MainWindow(small_settings(), None, headless=True)
+    assert window.visibility_tier == 'simple'
+    assert not window.settings_search.isHidden()
+    assert window.settings_json.isHidden()
+    window.close()
+
+
+def test_search_filters_rows_and_reports_a_match_count(application):
+    window = MainWindow(small_settings(), None, headless=True)
+    window._apply_visibility_tier('advanced')
+    window.settings_search.setText('overhang')
+    assert 'match' in window.settings_match_label.text()
+    assert not window.settings_match_label.isHidden()
+    overhang = window.settings_table.widget_for('support.overhang_angle_deg')
+    assert not overhang.isHidden()
+    other = window.settings_table.widget_for('support.spacing_mm')
+    assert other.isHidden(), 'a non-matching row must be filtered out'
+
+    window.settings_search.setText('')
+    assert window.settings_match_label.isHidden()
+    assert not other.isHidden(), 'clearing the query restores every row'
+    window.close()
+
+
+def test_search_tolerates_a_typo_and_highlights_the_best_match(application):
+    window = MainWindow(small_settings(), None, headless=True)
+    window._apply_visibility_tier('advanced')
+    window.settings_search.setText('brase spacing')
+    widget = window.settings_table.widget_for('support.brace_spacing_mm')
+    assert not widget.isHidden()
+    label = window.settings_table._labels['support.brace_spacing_mm']
+    assert 'font-weight: bold' in label.styleSheet()
+    window.close()
+
+
+def test_search_offers_a_tier_switch_instead_of_finding_nothing(application):
+    """A match that exists only above the current tier is not a silent miss:
+    the count label still counts it, and a clickable note offers to switch."""
+    window = MainWindow(small_settings(), None, headless=True)
+    assert window.visibility_tier == 'simple'
+    window.settings_search.setText('--scratch-dir')  # resources.scratch_dir, expert-tier, unique
+    assert not window.settings_match_label.isHidden()
+    assert '1 setting' in window.settings_match_label.text()
+    assert not window.settings_tier_note.isHidden()
+    assert 'href="expert"' in window.settings_tier_note.text()
+
+    window._on_settings_tier_note_clicked('expert')
+    assert window.visibility_tier == 'expert'
+    assert window.settings_tier_note.isHidden()
+    widget = window.resources_table.widget_for('resources.scratch_dir')
+    assert not widget.isHidden()
+    window.close()

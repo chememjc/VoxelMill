@@ -49,11 +49,34 @@ DEFAULTS = {'snap_angle_deg': DEFAULT_SNAP_ANGLE_DEG, 'motion_mode': DEFAULT_MOT
            'tooltip_delay_ms': DEFAULT_TOOLTIP_DELAY_MS,
            'window_geometry': None, 'window_state': None,
            # Empty means unset; FreeCAD is only needed for STEP import.
-           'freecad_path': ''}
+           'freecad_path': '',
+           # Action name -> QKeySequence.PortableText override. Only rows that
+           # differ from the action's built-in default are ever stored; an
+           # action name the editor no longer has is dropped on load rather
+           # than kept around inert. See MainWindow._apply_shortcut_overrides.
+           'shortcuts': {}}
 
 
 def preferences_path():
     return config_dir() / 'editor.json'
+
+
+def _valid_shortcut_text(value):
+    """Whether ``value`` is storable as one action's shortcut override.
+
+    Empty means "no shortcut" and is valid on purpose -- the shortcut editor
+    lets a built-in shortcut be cleared, not just reassigned. Anything else
+    must round-trip through :class:`QKeySequence`'s portable format into at
+    least one real key; a hand-edited or stale entry that does not is dropped
+    rather than applied to whatever action its name still matches.
+    """
+    if not isinstance(value, str):
+        return False
+    if value == '':
+        return True
+    from PySide6 import QtGui
+    sequence = QtGui.QKeySequence(value, QtGui.QKeySequence.PortableText)
+    return not sequence.isEmpty() and sequence.toString(QtGui.QKeySequence.PortableText) == value
 
 
 def _valid_base64_text(value):
@@ -79,6 +102,7 @@ def load_preferences() -> dict:
     """
     path = preferences_path()
     values = dict(DEFAULTS)
+    values['shortcuts'] = dict(DEFAULTS['shortcuts'])  # DEFAULTS' only mutable value
     if not path.exists():
         return values
     try:
@@ -118,6 +142,10 @@ def load_preferences() -> dict:
     freecad = data.get('freecad_path')
     if isinstance(freecad, str) and freecad:
         values['freecad_path'] = freecad
+    shortcuts = data.get('shortcuts')
+    if isinstance(shortcuts, dict):
+        values['shortcuts'] = {name: text for name, text in shortcuts.items()
+                               if isinstance(name, str) and name and _valid_shortcut_text(text)}
     return values
 
 
