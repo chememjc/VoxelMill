@@ -97,48 +97,17 @@ def _overrides(args):
         if value is not None:
             changes.setdefault(section, {})[key] = value
 
-    put('support', 'spacing_mm', args.support_spacing_mm)
-    put('support', 'automatic', args.auto_supports)
-    put('support', 'auto_bracing', args.auto_bracing)
-    put('support', 'brace_spacing_mm', args.brace_spacing_mm)
-    put('support', 'brace_diameter_mm', args.brace_diameter_mm)
-    put('support', 'brace_max_distance_mm', args.brace_max_distance_mm)
-    put('support', 'brace_max_length_mm', args.brace_max_length_mm)
-    for key in ('brace_destination', 'brace_pattern', 'brace_branches_per_node',
-                'brace_angle_deg', 'brace_min_height_mm', 'brace_azimuth_deg'):
-        put('support', key, getattr(args, key))
-    put('support', 'allow_part_to_part', args.part_to_part_supports)
-    put('support', 'part_to_part_avoidance', args.part_to_part_avoidance)
-    put('support', 'overhang_angle_deg', args.overhang_angle_deg)
-    put('support', 'pillar_angle_deg', args.pillar_angle_deg)
-    put('support', 'base_type', args.base_type)
-    put('support', 'model_anchor_shape', args.model_anchor_shape)
-    put('support', 'small_pillar_mode', args.small_pillar_mode)
-    put('support', 'small_pillar_shape', args.small_pillar_shape)
-    put('support', 'tip_shape', args.tip_shape)
-    put('support', 'break_point_diameter_mm', args.break_point_diameter_mm)
-    put('support', 'drop_attached_unroutable', args.drop_attached_unroutable)
-    put('support', 'tree_supports', args.tree_supports)
-    put('support', 'contour_supports', getattr(args, 'contour_supports', None))
-    put('support', 'boundary_supports', getattr(args, 'boundary_supports', None))
-    put('repair', 'support_void_policy', args.support_void_policy)
-    put('peel', 'enabled', args.peel_analysis)
-    put('repair', 'min_orifice_area_mm2', args.min_orifice_area_mm2)
-    put('repair', 'max_deviation_mm', args.max_deviation_mm)
-    put('repair', 'voxel_size_mm', args.repair_voxel_mm)
-    put('repair', 'aggressiveness', args.repair)
-    put('assembly', 'clip_to_build_volume', args.clip_to_build_volume)
-    put('resources', 'worker_policy', getattr(args, 'worker_policy', None))
-    put('process', 'layer_height_mm', args.layer_height_mm)
-    put('process', 'elephant_foot_compensation_mm', args.elephant_foot_mm)
-    put('process', 'elephant_foot_layers', args.elephant_foot_layers)
-    put('resources', 'memory_gib', args.memory_gib)
-    put('resources', 'workers', _workers(args.workers))
-    put('resources', 'scratch_dir', args.scratch_dir)
-    put('resources', 'acceleration', getattr(args, 'acceleration', None))
-    put('resources', 'cuda_device', getattr(args, 'cuda_device', None))
-    if args.seal_voids is not None:
-        put('repair', 'seal_voids', args.seal_voids)
+    # Every dedicated setting flag is declared on its field; argparse derives
+    # the destination from the flag, and a None value means "not given".
+    from .settings_schema import FIELDS
+    for path, field in FIELDS.items():
+        if field.flag is None:
+            continue
+        value = getattr(args, field.flag[2:].replace('-', '_'), None)
+        if path == 'resources.workers':
+            value = _workers(value)
+        section, key = path.split('.', 1)
+        put(section, key, value)
     for item in args.set or ():
         if '=' not in item:
             raise VoxelMillError('invalid_option', f'--set expects section.key=value, got {item!r}')

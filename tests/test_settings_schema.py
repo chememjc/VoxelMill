@@ -45,3 +45,24 @@ def test_every_declared_flag_exists_on_the_command_line():
 
 def test_every_field_is_explained():
     assert [path for path, field in FIELDS.items() if not field.help] == []
+
+
+def test_every_dedicated_flag_sets_its_own_setting():
+    from voxelmill.cli import _overrides
+    parser = build_parser()
+    for path, field in FIELDS.items():
+        if not field.flag:
+            continue
+        section, key = path.split('.', 1)
+        if field.kind == 'bool':
+            argv, expected = [field.flag], True
+        elif field.kind == 'choice':
+            argv, expected = [field.flag, str(field.choices[-1])], field.choices[-1]
+        elif field.kind == 'optional_text':
+            argv, expected = [field.flag, '/tmp/somewhere'], '/tmp/somewhere'
+        elif field.kind == 'int':
+            argv, expected = [field.flag, '3'], 3
+        else:
+            argv, expected = [field.flag, '1.5'], 1.5
+        args = parser.parse_args(['prepare', 'part.stl', *argv])
+        assert _overrides(args)[section][key] == expected, (path, argv)
