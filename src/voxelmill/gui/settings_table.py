@@ -1,162 +1,23 @@
 """Declarative settings descriptors and a generated typed settings form.
 
-One descriptor per leaf in ``config.DEFAULTS``. The Setup page renders from
-this table so CLI ``--set`` paths, tooltips and visibility tiers stay aligned.
+One descriptor per leaf in ``config.DEFAULTS``, presented as declared in
+``settings_schema.FIELDS``. The Setup page renders from this table so CLI
+``--set`` paths, tooltips, choices and visibility tiers stay aligned with the
+validator.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from PySide6 import QtCore, QtWidgets
 
 from .helptext import help_for
-from ..config import (
-    BRACE_DESTINATIONS, BRACE_PATTERNS, BASE_TYPES, DEFAULTS, MODEL_ANCHOR_SHAPES, SMALL_PILLAR_MODES,
-    SMALL_PILLAR_SHAPES, SUPPORT_VOID_POLICIES, TIP_SHAPES,
-)
+from ..config import DEFAULTS
+from ..settings_schema import FIELDS
 
 TIERS = ('simple', 'advanced', 'expert')
 TIER_RANK = {name: index for index, name in enumerate(TIERS)}
 RISKS = ('normal', 'caution', 'uncalibrated')
-
-# Compact Setup controls that belong on the Simple surface.
-SIMPLE_PATHS = {
-    'process.layer_height_mm',
-    'process.bottom_exposure_s',
-    'process.normal_exposure_s',
-    'process.bottom_layers',
-    'process.transition_layers',
-    'support.spacing_mm',
-    'support.overhang_angle_deg',
-    'support.base_type',
-    'support.automatic',
-    'repair.aggressiveness',
-    'repair.seal_voids',
-    'repair.min_orifice_area_mm2',
-    'assembly.clip_to_build_volume',
-}
-
-# Dedicated CLI flags mirrored from MainWindow.SETTING_KEYS.
-CLI_FLAGS = {
-    'support.brace_azimuth_deg': '--brace-azimuth-deg',
-    'support.brace_min_height_mm': '--brace-min-height-mm',
-    'support.brace_angle_deg': '--brace-angle-deg',
-    'support.brace_branches_per_node': '--brace-branches-per-node',
-    'support.brace_pattern': '--brace-pattern',
-    'support.brace_destination': '--brace-destination',
-    'process.layer_height_mm': '--layer-height-mm',
-    'support.spacing_mm': '--support-spacing-mm',
-    'support.brace_spacing_mm': '--brace-spacing-mm',
-    'support.brace_diameter_mm': '--brace-diameter-mm',
-    'support.brace_max_distance_mm': '--brace-max-distance-mm',
-    'support.brace_max_length_mm': '--brace-max-length-mm',
-    'support.overhang_angle_deg': '--overhang-angle-deg',
-    'support.base_type': '--base-type',
-    'support.automatic': '--auto-supports',
-    'support.tree_supports': '--tree-supports',
-    'support.contour_supports': '--contour-supports',
-    'support.boundary_supports': '--boundary-supports',
-    'repair.aggressiveness': '--repair',
-    'repair.seal_voids': '--seal-voids',
-    'repair.min_orifice_area_mm2': '--min-orifice-area-mm2',
-    'assembly.clip_to_build_volume': '--clip-to-build-volume',
-}
-
-ENUM_CHOICES = {
-    'support.brace_destination': BRACE_DESTINATIONS,
-    'support.brace_pattern': BRACE_PATTERNS,
-    'support.base_type': BASE_TYPES,
-    'support.tip_shape': TIP_SHAPES,
-    'support.model_anchor_shape': MODEL_ANCHOR_SHAPES,
-    'support.small_pillar_mode': SMALL_PILLAR_MODES,
-    'support.small_pillar_shape': SMALL_PILLAR_SHAPES,
-    'repair.aggressiveness': ('none', 'conservative', 'aggressive'),
-    'repair.support_void_policy': SUPPORT_VOID_POLICIES,
-    'assembly.union': ('auto', 'exact', 'raster'),
-    'resources.acceleration': ('auto', 'cpu', 'cuda'),
-    'resources.worker_policy': ('performance', 'efficiency', 'all'),
-    'hollow.mode': ('inner', 'outer'),
-    'hollow.infill': ('none', 'gyroid', 'grid'),
-}
-
-# Explicit tier / risk / unit / range overrides. Unlisted leaves default to
-# advanced/normal with a range inferred from the default value.
-OVERRIDES: dict[str, dict[str, Any]] = {
-    **{path: {'tier': 'simple'} for path in SIMPLE_PATHS},
-    'printer.id': {'tier': 'expert', 'risk': 'caution'},
-    'printer.name': {'tier': 'expert'},
-    'printer.build_mm': {'tier': 'expert', 'risk': 'caution', 'unit': 'mm'},
-    'printer.pixels': {'tier': 'expert', 'risk': 'caution'},
-    'printer.pixel_pitch_mm': {'tier': 'expert', 'risk': 'caution', 'unit': 'mm'},
-    'printer.edge_clearance_mm': {'tier': 'advanced', 'unit': 'mm', 'range': (0.0, 50.0)},
-    'printer.image_mirror_x': {'tier': 'expert', 'risk': 'caution'},
-    'printer.image_mirror_y': {'tier': 'expert', 'risk': 'caution'},
-    'printer.image_mirror_verified': {'tier': 'expert', 'risk': 'caution'},
-    'printer.layer_height_range_mm': {'tier': 'expert', 'unit': 'mm'},
-    'printer.output_formats': {'tier': 'expert'},
-    'resin.id': {'tier': 'advanced'},
-    'resin.name': {'tier': 'advanced'},
-    'resin.density_g_cm3': {'tier': 'advanced', 'unit': 'g/cm³', 'range': (0.0, 5.0)},
-    'resin.cost_per_liter': {'tier': 'advanced', 'range': (0.0, 1e6)},
-    'resin.currency': {'tier': 'advanced'},
-    'process.layer_height_mm': {'tier': 'simple', 'unit': 'mm', 'range': (0.001, 1.0)},
-    'process.bottom_exposure_s': {'tier': 'simple', 'unit': 's', 'range': (0.01, 300.0)},
-    'process.normal_exposure_s': {'tier': 'simple', 'unit': 's', 'range': (0.01, 300.0)},
-    'process.bottom_layers': {'tier': 'simple', 'range': (0, 1000)},
-    'process.transition_layers': {'tier': 'simple', 'range': (0, 1000)},
-    'process.elephant_foot_compensation_mm': {'tier': 'advanced', 'unit': 'mm', 'risk': 'caution'},
-    'process.shrink_percent_xy': {'tier': 'expert', 'unit': '%', 'risk': 'uncalibrated'},
-    'process.shrink_percent_z': {'tier': 'expert', 'unit': '%', 'risk': 'uncalibrated'},
-    'process.tolerance_offset_mm': {'tier': 'expert', 'unit': 'mm', 'risk': 'uncalibrated'},
-    'process.bottom_tolerance_offset_mm': {'tier': 'expert', 'unit': 'mm', 'risk': 'uncalibrated'},
-    'support.spacing_mm': {'tier': 'simple', 'unit': 'mm', 'range': (0.2, 50.0)},
-    'support.brace_spacing_mm': {'tier': 'simple', 'unit': 'mm', 'range': (0.1, 200.0),
-                                 'risk': 'caution'},
-    'support.brace_diameter_mm': {'tier': 'advanced', 'unit': 'mm', 'range': (0.0, 20.0),
-                                  'risk': 'caution'},
-    'support.brace_max_distance_mm': {'tier': 'simple', 'unit': 'mm', 'range': (0.0, 200.0),
-                                      'risk': 'caution'},
-    'support.brace_max_length_mm': {'tier': 'simple', 'unit': 'mm', 'range': (0.1, 200.0),
-                                    'risk': 'caution'},
-    'support.auto_bracing': {'tier': 'simple', 'label': 'Enable bracing'},
-    'support.brace_destination': {'tier': 'simple', 'label': 'Brace destinations (supports / base / both)'},
-    'support.brace_pattern': {'tier': 'simple', 'label': 'Bracing pattern'},
-    'support.brace_branches_per_node': {'tier': 'simple', 'range': (1, 8), 'label': 'Brace connections per node'},
-    'support.brace_angle_deg': {'tier': 'simple', 'unit': 'deg', 'range': (0.1, 89.9)},
-    'support.brace_min_height_mm': {'tier': 'advanced', 'unit': 'mm', 'range': (0.0, 200.0)},
-    'support.brace_azimuth_deg': {'tier': 'advanced', 'unit': 'deg', 'range': (-360.0, 360.0)},
-    'support.allow_part_to_part': {'tier': 'advanced', 'risk': 'caution'},
-    'support.overhang_angle_deg': {'tier': 'simple', 'unit': 'deg', 'range': (1.0, 89.0)},
-    'support.part_to_part_avoidance': {'tier': 'advanced', 'risk': 'caution', 'range': (0.0, 1.0)},
-    'support.tree_supports': {'tier': 'advanced', 'risk': 'caution'},
-    'support.contour_supports': {'tier': 'advanced', 'risk': 'caution'},
-    'support.boundary_supports': {'tier': 'advanced', 'risk': 'caution'},
-    'peel.enabled': {'tier': 'advanced', 'risk': 'uncalibrated'},
-    'peel.max_angle_deg': {'tier': 'advanced', 'risk': 'uncalibrated', 'unit': 'deg'},
-    'peel.area_threshold_mm2': {'tier': 'advanced', 'risk': 'uncalibrated', 'unit': 'mm²'},
-    'peel.reference_lift_speed': {'tier': 'expert', 'risk': 'uncalibrated'},
-    'repair.aggressiveness': {'tier': 'simple'},
-    'repair.seal_voids': {'tier': 'simple'},
-    'repair.min_orifice_area_mm2': {'tier': 'simple', 'unit': 'mm²', 'range': (0.0, 100.0)},
-    'repair.voxel_size_mm': {'tier': 'expert', 'unit': 'mm', 'risk': 'caution', 'range': (0.0, 5.0)},
-    'repair.smooth_iterations': {'tier': 'expert', 'risk': 'caution', 'range': (0, 50)},
-    'repair.min_void_volume_mm3': {'tier': 'expert', 'unit': 'mm³', 'risk': 'caution'},
-    'repair.remove_tiny_features': {'tier': 'expert', 'risk': 'caution'},
-    'repair.weld_tolerance_mm': {'tier': 'expert', 'unit': 'mm', 'risk': 'caution', 'range': (0.0, 0.05)},
-    'assembly.clip_to_build_volume': {'tier': 'simple', 'risk': 'caution'},
-    'assembly.require_raster_parity': {'tier': 'expert', 'risk': 'caution'},
-    'resources.memory_gib': {'tier': 'advanced', 'unit': 'GiB', 'range': (0.25, 1024.0)},
-    'resources.workers': {'tier': 'advanced', 'range': (0, 32)},
-    'resources.acceleration': {'tier': 'advanced'},
-    'resources.worker_policy': {'tier': 'advanced'},
-    'resources.cuda_device': {'tier': 'advanced', 'range': (0, 16)},
-    'resources.post_slice_hook': {'tier': 'expert', 'risk': 'caution'},
-    'resources.scratch_dir': {'tier': 'expert'},
-    'hollow.enabled': {'tier': 'advanced', 'risk': 'caution'},
-    'hollow.voxel_size_mm': {'tier': 'expert', 'unit': 'mm', 'risk': 'caution'},
-    'schema_version': {'tier': 'expert', 'risk': 'caution'},
-}
 
 # Orientation ranking weights live in geometry.py, not DEFAULTS. Expert mode
 # surfaces them as read-only guidance so the uncalibrated claim is visible.
@@ -219,6 +80,25 @@ def _default_range(value_type: str, value) -> tuple[float, float] | None:
     return None
 
 
+def _field_range(field, value_type: str, value) -> tuple[float, float] | None:
+    """Slider bounds the validator accepts, when no explicit range is declared.
+
+    The generic fallback offered negative diameters and zero angles that
+    validation then refused; bounds now come from the field's own rule.
+    """
+    fallback = _default_range(value_type, value)
+    if field is None or fallback is None or field.kind not in ('number', 'int') or field.count:
+        return fallback
+    step = 1 if value_type == 'int' else 0.001
+    low = field.minimum + step if field.positive else field.minimum
+    high = fallback[1]
+    if field.maximum is not None:
+        high = min(high, field.maximum)
+    if field.below is not None:
+        high = min(high, field.below - step)
+    return (type(fallback[0])(low), type(fallback[1])(high))
+
+
 def _tooltip(path: str, label: str, risk: str, flag: str | None) -> str:
     """Hover text for one generated row.
 
@@ -256,24 +136,35 @@ def build_descriptors(defaults=None) -> tuple[SettingDescriptor, ...]:
     source = defaults if defaults is not None else DEFAULTS
     rows = []
     for path, value in _walk(source):
+        field = FIELDS.get(path)
         if path.startswith('printer.motion.'):
             override = {
                 'tier': 'expert',
                 'risk': 'uncalibrated',
                 'label': _humanise(path.split('.')[-1]),
             }
+        elif field is not None:
+            override = {name: getattr(field, name)
+                        for name in ('tier', 'risk', 'unit', 'label', 'value_type', 'range')
+                        if getattr(field, name) is not None}
+        elif path == 'schema_version':
+            # Not a setting a user edits; shown only in expert mode.
+            override = {'tier': 'expert', 'risk': 'caution'}
         else:
-            override = dict(OVERRIDES.get(path, {}))
+            override = {}
         value_type = override.get('value_type') or _infer_type(value)
-        if path in ENUM_CHOICES:
+        # Text choices become dropdowns, from the same list the validator uses.
+        # Integer choices (antialias levels) stay spin boxes.
+        choices = (field.choices if field is not None and field.kind == 'choice'
+                   and all(isinstance(c, str) for c in field.choices) else None)
+        if choices is not None:
             value_type = 'enum'
         tier = override.get('tier', 'advanced')
         risk = override.get('risk', 'normal')
         unit = override.get('unit')
-        span = override.get('range', _default_range(value_type, value))
+        span = override.get('range', _field_range(field, value_type, value))
         label = override.get('label') or _humanise(path.split('.')[-1])
-        choices = ENUM_CHOICES.get(path)
-        flag = CLI_FLAGS.get(path)
+        flag = field.flag if field is not None else None
         tip = _tooltip(path, label, risk, flag)
         rows.append(SettingDescriptor(
             path=path,

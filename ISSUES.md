@@ -122,9 +122,9 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-048 | Consistent dtype contract at the pybind boundary | Arch | 5 | 1 | 5 | done |
 | VM-062 | Shared `tests/conftest.py` | Test/CI | 5 | 1 | 5 | done |
 | VM-070 | Docstrings for the largest undocumented functions | Docs | 5 | 1 | 5 | done |
-| VM-040 | Typed settings model as the single source of truth | Arch | 1 | 5 | 5 | open |
+| VM-040 | Typed settings model as the single source of truth | Arch | 1 | 5 | 5 | partial |
 | VM-012 | Stop re-sampling downward faces for the overhang check | Perf | 4 | 1 | 4 | won't fix (measured) |
-| VM-071 | Section-aware help for repeated field names | Docs | 4 | 1 | 4 | open |
+| VM-071 | Section-aware help for repeated field names | Docs | 4 | 1 | 4 | done |
 | VM-084 | Windows topology on real hybrid hardware | Release | 4 | 1 | 4 | open |
 | F7 | GPU orientation search (CPU fallback mandatory) | Feature | 2 | 2 | 4 | open |
 | VM-027 | x86-64-v3 kernels with runtime dispatch | Perf | 2 | 2 | 4 | won't fix (measured) |
@@ -439,13 +439,15 @@ Ease 3 · Benefit 1 · Confidence: sure · Status: won't fix (measured)
 
 ### VM-040 — Typed settings model as the single source of truth
 
-Ease 1 · Benefit 5 · Confidence: sure · Status: open
+Ease 1 · Benefit 5 · Confidence: sure · Status: partial
 
 **Problem.** Settings are a nested dict. Defaults live in `config.DEFAULTS`, and rules live in a 249-line procedural `validate_settings`. There are 157 `settings['section']['key']` accesses and separate descriptor tables for GUI help, CLI flags and legacy fill. Adding a setting touches 3–5 places, and nothing checks key names statically.
 
 **Fix.** One frozen dataclass per section (`PrinterSettings`, `ProcessSettings`, `SupportSettings`, …). Each field carries its default, units, bounds, help text, CLI flag, GUI tier and a `validate()` for cross-field rules. Generate DEFAULTS, the JSON schema, `--set` parsing, the GUI descriptor table, shell completion and `docs/configuration.md` from it. Use the standard library (dataclasses) with no new dependency. Migrate module by module behind a `Settings.from_dict()` adapter.
 
 **Where.** `src/voxelmill/config.py:26-550`, `src/voxelmill/gui/settings_table.py`
+
+**Progress (2026-09-23).** `voxelmill/settings_schema.py` declares all 130 settings once: validation rule, presentation (tier, risk, unit, range, label), CLI flag and help. `validate_settings` checks every field through `check_field` and keeps only the rules that relate fields to each other. The editor's descriptors and help read the same table. Old and new validators agree on 5,289 mutated inputs, except that a whitespace-only `scratch_dir` is now refused, and error precedence changed when two rules fail at once. Consolidating exposed real drift: the editor offered `assembly.union=raster` and `hollow.mode=outer` (both rejected by validation) and lacked `hollow.infill=hex`, and 57 generated controls allowed values validation refused. All are fixed, and tests keep the table, `DEFAULTS`, the editor ranges and the CLI flags consistent. Still open: dedicated CLI flags are defined by hand in `cli.py` (the table only names them), and code reads settings as nested dicts rather than typed objects.
 
 ### VM-041 — One versioned envelope and migration registry for every file format
 
@@ -625,13 +627,15 @@ Ease 5 · Benefit 1 · Confidence: sure · Status: done
 
 ### VM-071 — Section-aware help for repeated field names
 
-Ease 4 · Benefit 1 · Confidence: sure · Status: open
+Ease 4 · Benefit 1 · Confidence: sure · Status: done
 
 **Problem.** `id`, `name`, `enabled` and `voxel_size_mm` repeat across settings sections, and the help table keys them by path rather than being section-aware. This resolves itself with VM-040.
 
 **Fix.** Fold into VM-040.
 
 **Where.** `src/voxelmill/gui/helptext.py`
+
+**Done (2026-09-23).** Help is now keyed by full path in `settings_schema.FIELDS` (VM-040), so repeated field names each carry their own text.
 
 ### VM-072 — The historical `part-to-part` support example routes nothing
 

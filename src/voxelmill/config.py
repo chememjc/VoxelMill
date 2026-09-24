@@ -13,14 +13,11 @@ except ImportError:  # Python 3.10
 from .contracts import VoxelMillError
 from .versioning import CURRENT_VERSIONS, upgrade
 
-BASE_TYPES = ('plate', 'none', 'pad', 'skate', 'skeleton', 'grid', 'hex', 'triangle')
-MODEL_ANCHOR_SHAPES = ('cone', 'cylinder')
-SMALL_PILLAR_MODES = ('middle', 'model')
-SMALL_PILLAR_SHAPES = ('cone', 'cylinder')
-TIP_SHAPES = ('cone', 'cylinder')
-BRACE_DESTINATIONS = ('supports', 'base', 'both')
-BRACE_PATTERNS = ('single', 'alternating', 'x')
-SUPPORT_VOID_POLICIES = ('fail', 'ignore', 'fill')
+# Choice lists live with the field declarations; re-exported for callers.
+from .settings_schema import (BASE_TYPES, BRACE_DESTINATIONS, BRACE_PATTERNS,  # noqa: E402,F401
+                              FIELDS, MODEL_ANCHOR_SHAPES, SMALL_PILLAR_MODES,
+                              SMALL_PILLAR_SHAPES, SUPPORT_VOID_POLICIES, TIP_SHAPES,
+                              _number, check_field)
 #: Layouts of the illustrative support fixture. Here rather than in
 #: ``support_example`` so the CLI can offer them without importing the router.
 EXAMPLE_LAYOUTS = ('array', 'part-to-part', 'showcase')
@@ -294,15 +291,12 @@ def _read(path):
     return upgrade('profile', data, code='invalid_profile')
 
 
-def _number(value, name, minimum=0, positive=False):
-    if type(value) not in (int, float) or not math.isfinite(value):
-        _error(f'{name} must be a finite number')
-    if value < minimum or (positive and value == minimum):
-        _error(f'{name} must be {">" if positive else ">="} {minimum}')
-
-
 def validate_settings(settings):
-    """Validate a fully resolved dictionary; return it unchanged."""
+    """Validate a fully resolved dictionary; return it unchanged.
+
+    Every field is checked against its declaration in
+    :data:`settings_schema.FIELDS`; the rules below relate fields to each other.
+    """
     _keys(settings, DEFAULTS, 'settings')
     if set(settings) != set(DEFAULTS):
         _error('Resolved settings require all sections and schema_version 1')
@@ -311,123 +305,24 @@ def validate_settings(settings):
         _keys(settings[section], DEFAULTS[section], section)
         if set(settings[section]) != set(DEFAULTS[section]):
             _error(f'Incomplete resolved {section} settings')
+    for path, field in FIELDS.items():
+        section, key = path.split('.', 1)
+        check_field(path, settings[section][key], field)
     p = settings['printer']
-    for section in ('printer', 'resin'):
-        for key in ('id', 'name'):
-            if not isinstance(settings[section][key], str) or not settings[section][key].strip():
-                _error(f'{section}.{key} must be a nonempty string')
-    resin = settings['resin']
-    for key in ('density_g_cm3', 'cost_per_liter'):
-        # Zero means "not supplied"; usage figures derived from it are null.
-        _number(resin[key], f'resin.{key}')
-    currency = resin['currency']
-    if not isinstance(currency, str) or not currency.strip():
-        _error('resin.currency must be a nonempty string')
-    # The GOO header stores the currency in an 8-byte ASCII field, so a value
-    # that cannot be written there is rejected when it is set rather than at
-    # export time.
-    try:
-        encoded = currency.encode('ascii', 'strict')
-    except UnicodeError:
-        _error('resin.currency must be ASCII; the GOO header field is 8 ASCII bytes')
-    if len(encoded) > 8:
-        _error('resin.currency must be at most 8 ASCII bytes')
-    for key, count in (('build_mm', 3), ('pixels', 2), ('pixel_pitch_mm', 2), ('layer_height_range_mm', 2)):
-        if not isinstance(p[key], list) or len(p[key]) != count:
-            _error(f'printer.{key} must contain {count} values')
-        for value in p[key]:
-            _number(value, f'printer.{key}', positive=True)
-            if key == 'pixels' and type(value) is not int:
-                _error('Pixel dimensions must be integers')
     for axis in range(2):
         if not math.isclose(p['pixels'][axis] * p['pixel_pitch_mm'][axis], p['build_mm'][axis], rel_tol=1e-6, abs_tol=1e-6):
             _error('Build dimensions must match pixel dimensions times pixel pitch')
-    _number(p['edge_clearance_mm'], 'printer.edge_clearance_mm')
     if 2 * p['edge_clearance_mm'] >= min(p['build_mm'][:2]):
         _error('Plate edge clearance leaves no usable build area')
-    for key in ('image_mirror_x', 'image_mirror_y', 'image_mirror_verified'):
-        if type(p[key]) is not bool:
-            _error(f'printer.{key} must be boolean')
-    if not isinstance(p['output_formats'], list) or not p['output_formats'] or not all(isinstance(x, str) and x for x in p['output_formats']):
-        _error('printer.output_formats must be a nonempty list of strings')
     _merge({'motion': {}}, {'motion': p['motion']}, 'printer')
     _validate_motion(p['motion'])
-    for key, value in settings['process'].items():
-        if key in ('antialias_levels', 'antialias_supports'):
-            continue
-        if key in ('shrink_percent_xy', 'shrink_percent_z', 'tolerance_offset_mm',
-                   'bottom_tolerance_offset_mm'):
-            _number(value, f'process.{key}', minimum=-2.0)
-            continue
-        _number(value, f'process.{key}', positive=key in ('layer_height_mm', 'bottom_exposure_s', 'normal_exposure_s'))
-        if key in ('bottom_layers', 'transition_layers', 'elephant_foot_layers') \
-                and type(value) is not int:
-            _error(f'process.{key} must be an integer')
     # A compensation wider than a bottom layer's own footprint would erase it.
     if settings['process']['elephant_foot_compensation_mm'] > 1.0:
         _error('process.elephant_foot_compensation_mm above 1.0 mm would erase bottom '
                'geometry rather than compensate it')
-    if type(settings['process']['antialias_supports']) is not bool:
-        _error('process.antialias_supports must be boolean')
-    if type(settings['process']['antialias_levels']) is not int \
-            or settings['process']['antialias_levels'] not in (1, 2, 4):
-        _error('process.antialias_levels must be 1, 2 or 4')
     lo, hi = p['layer_height_range_mm']
     if not lo <= settings['process']['layer_height_mm'] <= hi:
         _error('Layer height outside printer layer range')
-    for key, value in settings['support'].items():
-        if key in ('automatic', 'auto_bracing', 'allow_part_to_part',
-                   'drop_attached_unroutable', 'tree_supports',
-                   'contour_supports', 'boundary_supports'):
-            if type(value) is not bool:
-                _error(f'support.{key} must be boolean')
-            continue
-        if key in ('brace_destination', 'brace_pattern'):
-            choices = BRACE_DESTINATIONS if key == 'brace_destination' else BRACE_PATTERNS
-            if value not in choices:
-                _error(f'support.{key} must be one of {", ".join(choices)}')
-            continue
-        if key == 'brace_branches_per_node':
-            if type(value) is not int or not 1 <= value <= 8:
-                _error('support.brace_branches_per_node must be an integer from 1 to 8')
-            continue
-        if key == 'base_type':
-            # An enum needs its own branch; the catch-all below requires a
-            # positive finite number and would reject any string.
-            if value not in BASE_TYPES:
-                _error(f'support.base_type must be one of {", ".join(BASE_TYPES)}')
-            continue
-        if key == 'tip_shape':
-            if value not in TIP_SHAPES:
-                _error(f'support.tip_shape must be one of {", ".join(TIP_SHAPES)}')
-            continue
-        if key == 'model_anchor_shape':
-            if value not in MODEL_ANCHOR_SHAPES:
-                _error(f'support.model_anchor_shape must be one of {", ".join(MODEL_ANCHOR_SHAPES)}')
-            continue
-        if key in ('small_pillar_mode', 'small_pillar_shape'):
-            choices = SMALL_PILLAR_MODES if key == 'small_pillar_mode' else SMALL_PILLAR_SHAPES
-            if value not in choices:
-                _error(f'support.{key} must be one of {", ".join(choices)}')
-            continue
-        if key == 'max_island_passes':
-            if type(value) is not int or not 1 <= value <= 10:
-                _error('support.max_island_passes must be an integer from 1 to 10')
-            continue
-        if key in ('base_rotation_deg', 'brace_azimuth_deg'):
-            _number(value, f'support.{key}', minimum=-360)
-            if value > 360:
-                _error(f'support.{key} must be between -360 and 360')
-            continue
-        _number(value, f'support.{key}', positive=key not in (
-            'penetration_mm', 'raft_expansion_mm', 'max_contact_gap_mm', 'max_contact_load_mm2',
-            'tip_base_diameter_mm', 'small_pillar_diameter_mm', 'small_pillar_max_length_mm',
-            'model_anchor_length_mm', 'model_anchor_diameter_mm', 'model_anchor_penetration_mm',
-            'small_pillar_upper_depth_mm', 'small_pillar_lower_depth_mm',
-            'brace_diameter_mm', 'brace_max_distance_mm', 'brace_min_height_mm', 'part_to_part_avoidance',
-            'base_touch_diameter_mm', 'base_thickness_mm', 'break_point_diameter_mm',
-            'base_skate_length_mm', 'base_strut_width_mm', 'base_edge_slope_deg',
-            'raft_slope_deg', 'tree_cluster_mm'))
     s = settings['support']
     if s['break_point_diameter_mm'] and s['break_point_diameter_mm'] < s['contact_diameter_mm']:
         _error('support.break_point_diameter_mm must be at least contact_diameter_mm when enabled')
@@ -478,8 +373,6 @@ def validate_settings(settings):
         width = s['base_strut_width_mm'] or s['pillar_diameter_mm']
         if width >= s['base_cell_size_mm']:
             _error('support.base_strut_width_mm must be less than base_cell_size_mm for an open lattice')
-    if type(s['min_overlap_pixels']) is not int:
-        _error('support.min_overlap_pixels must be an integer')
     if s['contact_diameter_mm'] > s['pillar_diameter_mm'] or s['penetration_mm'] >= s['tip_length_mm']:
         _error('Contact must fit pillar; penetration must be shorter than tip')
     if not s['penetration_mm'] < s['min_tip_length_mm'] <= s['tip_length_mm']:
@@ -487,67 +380,7 @@ def validate_settings(settings):
     r = settings['repair']
     if r['remove_tiny_features'] or r['auto_drain_holes']:
         _error('Tiny-feature removal and drilled drains are not implemented; these options must remain false')
-    for key in ('seal_voids', 'remove_tiny_features', 'auto_drain_holes'):
-        if type(r[key]) is not bool:
-            _error(f'repair.{key} must be boolean')
-    if r['aggressiveness'] not in ('none', 'conservative', 'aggressive'):
-        _error('repair.aggressiveness must be none, conservative, or aggressive')
-    if r['support_void_policy'] not in SUPPORT_VOID_POLICIES:
-        _error('repair.support_void_policy must be fail, ignore, or fill')
-    _number(r['min_orifice_area_mm2'], 'repair.min_orifice_area_mm2')
-    _number(r['max_deviation_mm'], 'repair.max_deviation_mm')
-    # Zero means "derive the voxel pitch from repair.max_deviation_mm".
-    _number(r['voxel_size_mm'], 'repair.voxel_size_mm')
-    _number(r['min_void_volume_mm3'], 'repair.min_void_volume_mm3')
-    _number(r['step_linear_deflection_mm'], 'repair.step_linear_deflection_mm', positive=True)
-    _number(r['weld_tolerance_mm'], 'repair.weld_tolerance_mm')
-    if r['weld_tolerance_mm'] > 0.05:
-        _error('repair.weld_tolerance_mm must be <= 0.05')
-    if type(r['smooth_iterations']) is not int or not 0 <= r['smooth_iterations'] <= 64:
-        _error('repair.smooth_iterations must be an integer from 0 to 64')
-    peel = settings['peel']
-    if type(peel['enabled']) is not bool:
-        _error('peel.enabled must be boolean')
-    _number(peel['max_angle_deg'], 'peel.max_angle_deg')
-    if not peel['max_angle_deg'] < 90:
-        _error('peel.max_angle_deg must be less than 90')
-    _number(peel['area_threshold_mm2'], 'peel.area_threshold_mm2', positive=True)
-    _number(peel['reference_lift_speed'], 'peel.reference_lift_speed', positive=True)
-    a = settings['assembly']
-    if a['union'] not in ('auto', 'exact'):
-        _error('assembly.union must be auto or exact')
-    if type(a['require_raster_parity']) is not bool:
-        _error('assembly.require_raster_parity must be boolean')
-    if type(a['max_parity_examples']) is not int or not 0 <= a['max_parity_examples'] <= 256:
-        _error('assembly.max_parity_examples must be an integer from 0 to 256')
-    if type(a['clip_to_build_volume']) is not bool:
-        _error('assembly.clip_to_build_volume must be boolean')
-    resources = settings['resources']
-    _number(resources['memory_gib'], 'resources.memory_gib', minimum=0.25)
-    if type(resources['workers']) is not int or not 0 <= resources['workers'] <= 32:
-        _error('resources.workers must be an integer from 0 to 32, where 0 derives it from the machine')
-    if resources['worker_policy'] not in ('performance', 'efficiency', 'all'):
-        _error('resources.worker_policy must be performance, efficiency, or all')
-    if resources['acceleration'] not in ('auto', 'cpu', 'cuda'):
-        _error('resources.acceleration must be auto, cpu, or cuda')
-    if type(resources['cuda_device']) is not int or resources['cuda_device'] < 0:
-        _error('resources.cuda_device must be a nonnegative integer')
-    if resources['scratch_dir'] is not None and (not isinstance(resources['scratch_dir'], str) or not resources['scratch_dir']):
-        _error('resources.scratch_dir must be null or a nonempty path string')
-    hook = resources['post_slice_hook']
-    if hook is not None and (not isinstance(hook, str) or not hook.strip()):
-        _error('resources.post_slice_hook must be null or a nonempty command string')
     hollow = settings['hollow']
-    if type(hollow['enabled']) is not bool:
-        _error('hollow.enabled must be boolean')
-    if hollow['mode'] not in ('inner', 'bottom_open'):
-        _error('hollow.mode must be inner or bottom_open')
-    if hollow['infill'] not in ('none', 'grid', 'hex', 'gyroid'):
-        _error('hollow.infill must be none, grid, hex or gyroid')
-    for key in ('wall_thickness_mm', 'min_wall_thickness_mm', 'drain_diameter_mm',
-                'vent_diameter_mm', 'infill_pitch_mm'):
-        _number(hollow[key], f'hollow.{key}', positive=True)
-    _number(hollow['voxel_size_mm'], 'hollow.voxel_size_mm')
     if hollow['min_wall_thickness_mm'] > hollow['wall_thickness_mm']:
         _error('hollow.min_wall_thickness_mm cannot exceed hollow.wall_thickness_mm')
     return settings

@@ -167,3 +167,16 @@ def test_support_anchor_fields_say_what_they_measure():
         explanation = help_for(f'support.{key}')
         assert explanation and len(explanation) > 40, key
         assert 'surface' in explanation or 'length' in explanation or 'diameter' in explanation
+
+
+def test_every_generated_control_offers_only_values_validation_accepts():
+    from voxelmill.gui.settings_table import SETTINGS_DESCRIPTORS
+    from voxelmill.settings_schema import FIELDS
+    for descriptor in SETTINGS_DESCRIPTORS:
+        field = FIELDS.get(descriptor.path)
+        if field is None or descriptor.range is None or field.kind not in ('number', 'int') or field.count:
+            continue
+        low, high = descriptor.range
+        assert (low > field.minimum) if field.positive else (low >= field.minimum), descriptor.path
+        assert field.maximum is None or high <= field.maximum, descriptor.path
+        assert field.below is None or high < field.below, descriptor.path
