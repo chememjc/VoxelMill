@@ -10,6 +10,7 @@
 // evidence of compatibility rather than of hardware behavior.
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
@@ -56,6 +57,50 @@ void emit_run(std::vector<uint8_t> &out, int value, uint32_t stride, int previou
  else if (form == 3) { out.push_back(uint8_t((stride >> 20) & 0xff)); out.push_back(uint8_t((stride >> 12) & 0xff)); out.push_back(uint8_t((stride >> 4) & 0xff)); }
 }
 
+// End of the run of `value` starting at `index`, eight bytes at a time where
+// possible. Layers are mostly long dark runs, so this is the encoder's hot loop.
+inline size_t run_end(const uint8_t *pixels, size_t index, size_t total, uint8_t value) {
+ const uint64_t pattern = 0x0101010101010101ull * value;
+ while (index + 8 <= total) {
+  uint64_t word;
+  std::memcpy(&word, pixels + index, 8);
+  if (word != pattern) break;
+  index += 8;
+ }
+ while (index < total && pixels[index] == value) ++index;
+ return index;
+}
+
+// Accumulates (value, length) pieces, merging equal neighbours, and emits
+// merged runs exactly as a pixel-by-pixel scan of the same frame would.
+struct RunEmitter {
+ std::vector<uint8_t> &out;
+ int previous = 0;
+ int value = -1;
+ size_t length = 0;
+ void push(uint8_t v, size_t n) {
+  if (!n) return;
+  if (int(v) == value) { length += n; return; }
+  flush();
+  value = v;
+  length = n;
+ }
+ void flush() {
+  while (length) {
+   const uint32_t stride = uint32_t(length < MAX_RUN ? length : MAX_RUN);
+   emit_run(out, value, stride, previous);
+   previous = value;
+   length -= stride;
+  }
+ }
+};
+
+void finish_blob(std::vector<uint8_t> &out) {
+ uint8_t sum = 0;
+ for (size_t i = 1; i < out.size(); ++i) sum = uint8_t(sum + out[i]);
+ out.push_back(uint8_t(~sum));
+}
+
 py::bytes encode_layer(py::array_t<uint8_t, py::array::c_style | py::array::forcecast> image) {
  auto info = image.request();
  if (info.ndim != 2) throw std::invalid_argument("layer image must be two dimensional");
@@ -70,84 +115,184 @@ py::bytes encode_layer(py::array_t<uint8_t, py::array::c_style | py::array::forc
  out.push_back(LAYER_MAGIC);
  {
   py::gil_scoped_release release;
+  RunEmitter runs{out};
   size_t index = 0;
-  int previous = 0;
   while (index < total) {
    const uint8_t value = pixels[index];
-   size_t end = index;
-   while (end < total && pixels[end] == value) ++end;
-   size_t run = end - index;
-   while (run) {
-    const uint32_t stride = uint32_t(run < MAX_RUN ? run : MAX_RUN);
-    emit_run(out, value, stride, previous);
-    previous = value;
-    run -= stride;
-   }
+   const size_t end = run_end(pixels, index, total, value);
+   runs.push(value, end - index);
    index = end;
   }
-  uint8_t sum = 0;
-  for (size_t i = 1; i < out.size(); ++i) sum = uint8_t(sum + out[i]);
-  out.push_back(uint8_t(~sum));
+  runs.flush();
+  finish_blob(out);
  }
  return py::bytes(reinterpret_cast<const char *>(out.data()), out.size());
 }
 
-py::array_t<uint8_t> decode_layer(py::buffer blob, int width, int height) {
- py::buffer_info info = blob.request();
- if (info.ndim != 1 || info.itemsize != 1 || info.strides[0] != 1)
-  throw std::invalid_argument("layer blob must be a contiguous flat byte buffer");
- const size_t total = checked_pixels(width, height);
- const size_t size = size_t(info.size);
- const uint8_t *data = static_cast<const uint8_t *>(info.ptr);
+struct Placement {
+ const uint8_t *pixels;  // C-contiguous crop, already at LCD intensity
+ size_t rows, columns, row, column, width, height;
+};
+
+Placement placement(const py::buffer_info &crop, int row, int column, int width, int height) {
+ if (crop.ndim != 2) throw std::invalid_argument("layer crop must be two dimensional");
+ checked_pixels(width, height);
+ Placement p{static_cast<const uint8_t *>(crop.ptr), size_t(crop.shape[0]), size_t(crop.shape[1]),
+             size_t(row), size_t(column), size_t(width), size_t(height)};
+ if (row < 0 || column < 0 || p.row + p.rows > p.height || p.column + p.columns > p.width)
+  throw std::invalid_argument("layer crop falls outside the frame");
+ return p;
+}
+
+// Byte-identical to encode_layer on the full frame with `crop` pasted at
+// (row, column) and every other pixel dark, without building that frame.
+py::bytes encode_placed(py::array_t<uint8_t, py::array::c_style | py::array::forcecast> crop,
+                        int row, int column, int width, int height) {
+ const Placement p = placement(crop.request(), row, column, width, height);
+ std::vector<uint8_t> out;
+ out.reserve(p.rows * p.columns / 16 + 256);
+ out.push_back(LAYER_MAGIC);
+ {
+  py::gil_scoped_release release;
+  RunEmitter runs{out};
+  const size_t total = p.width * p.height;
+  if (!p.rows || !p.columns) {
+   runs.push(0, total);
+  } else {
+   runs.push(0, p.row * p.width + p.column);
+   const size_t after = p.width - (p.column + p.columns);
+   for (size_t r = 0; r < p.rows; ++r) {
+    const uint8_t *line = p.pixels + r * p.columns;
+    size_t index = 0;
+    while (index < p.columns) {
+     const uint8_t value = line[index];
+     const size_t end = run_end(line, index, p.columns, value);
+     runs.push(value, end - index);
+     index = end;
+    }
+    runs.push(0, after + (r + 1 < p.rows ? p.column : (p.height - p.row - p.rows) * p.width));
+   }
+  }
+  runs.flush();
+  finish_blob(out);
+ }
+ return py::bytes(reinterpret_cast<const char *>(out.data()), out.size());
+}
+
+// Walks a layer blob's chunk stream, validating framing and checksum exactly
+// as the decoder always has, and hands each run to `sink(color, pixel, stride)`.
+template<class Sink>
+void walk_layer(const uint8_t *data, size_t size, size_t total, Sink &&sink) {
  if (size < 3) throw std::invalid_argument("layer blob is truncated");
  if (data[0] != LAYER_MAGIC) throw std::invalid_argument("layer blob does not start with 0x55");
  const size_t last = size - 1;
+ uint8_t sum = 0;
+ for (size_t i = 1; i < last; ++i) sum = uint8_t(sum + data[i]);
+ if (uint8_t(~sum) != data[last]) throw std::invalid_argument("layer checksum mismatch");
+ size_t pixel = 0, i = 1;
+ int color = 0;
+ while (i < last) {
+  const uint8_t head = data[i];
+  const int type = head >> 6;
+  uint64_t stride = 0;
+  size_t base = i;
+  if (type == 0) color = 0x00;
+  else if (type == 1) {
+   if (++i >= last) throw std::invalid_argument("gray chunk truncated");
+   color = data[i];
+   base = i;
+  } else if (type == 2) {
+   const int mode = (head >> 4) & 0x3;
+   const int delta = head & 0x0f;
+   color = (mode == 0 || mode == 1) ? ((color + delta) & 0xff) : ((color - delta) & 0xff);
+   if (mode == 1 || mode == 3) {
+    if (++i >= last) throw std::invalid_argument("difference chunk truncated");
+    stride = data[i];
+   } else stride = 1;
+  } else color = 0xff;
+  if (type != 2) {
+   const int form = (head >> 4) & 0x3;
+   if (base + size_t(form) >= last) throw std::invalid_argument("run-length chunk truncated");
+   if (form == 0) stride = head & 0x0f;
+   else if (form == 1) { stride = (uint64_t(data[base + 1]) << 4) | (head & 0x0f); i = base + 1; }
+   else if (form == 2) { stride = (uint64_t(data[base + 1]) << 12) | (uint64_t(data[base + 2]) << 4) | (head & 0x0f); i = base + 2; }
+   else { stride = (uint64_t(data[base + 1]) << 20) | (uint64_t(data[base + 2]) << 12) | (uint64_t(data[base + 3]) << 4) | (head & 0x0f); i = base + 3; }
+  }
+  if (!stride) throw std::invalid_argument("zero-length run");
+  if (pixel + stride > total) throw std::invalid_argument("run overflows the image");
+  sink(uint8_t(color), pixel, size_t(stride));
+  pixel += size_t(stride);
+  ++i;
+ }
+ if (i != last) throw std::invalid_argument("chunk stream did not end on the checksum byte");
+ if (pixel != total) throw std::invalid_argument("decoded pixel count differs from the image size");
+}
+
+py::buffer_info flat_blob(py::buffer &blob) {
+ py::buffer_info info = blob.request();
+ if (info.ndim != 1 || info.itemsize != 1 || info.strides[0] != 1)
+  throw std::invalid_argument("layer blob must be a contiguous flat byte buffer");
+ return info;
+}
+
+py::array_t<uint8_t> decode_layer(py::buffer blob, int width, int height) {
+ py::buffer_info info = flat_blob(blob);
+ const size_t total = checked_pixels(width, height);
+ const uint8_t *data = static_cast<const uint8_t *>(info.ptr);
+ const size_t size = size_t(info.size);
+ if (size < 3) throw std::invalid_argument("layer blob is truncated");
+ if (data[0] != LAYER_MAGIC) throw std::invalid_argument("layer blob does not start with 0x55");
  py::array_t<uint8_t> image({py::ssize_t(height), py::ssize_t(width)});
  uint8_t *out = image.mutable_data();
  {
   py::gil_scoped_release release;
-  uint8_t sum = 0;
-  for (size_t i = 1; i < last; ++i) sum = uint8_t(sum + data[i]);
-  if (uint8_t(~sum) != data[last]) throw std::invalid_argument("layer checksum mismatch");
-  size_t pixel = 0, i = 1;
-  int color = 0;
-  while (i < last) {
-   const uint8_t head = data[i];
-   const int type = head >> 6;
-   uint64_t stride = 0;
-   size_t base = i;
-   if (type == 0) color = 0x00;
-   else if (type == 1) {
-    if (++i >= last) throw std::invalid_argument("gray chunk truncated");
-    color = data[i];
-    base = i;
-   } else if (type == 2) {
-    const int mode = (head >> 4) & 0x3;
-    const int delta = head & 0x0f;
-    color = (mode == 0 || mode == 1) ? ((color + delta) & 0xff) : ((color - delta) & 0xff);
-    if (mode == 1 || mode == 3) {
-     if (++i >= last) throw std::invalid_argument("difference chunk truncated");
-     stride = data[i];
-    } else stride = 1;
-   } else color = 0xff;
-   if (type != 2) {
-    const int form = (head >> 4) & 0x3;
-    if (base + size_t(form) >= last) throw std::invalid_argument("run-length chunk truncated");
-    if (form == 0) stride = head & 0x0f;
-    else if (form == 1) { stride = (uint64_t(data[base + 1]) << 4) | (head & 0x0f); i = base + 1; }
-    else if (form == 2) { stride = (uint64_t(data[base + 1]) << 12) | (uint64_t(data[base + 2]) << 4) | (head & 0x0f); i = base + 2; }
-    else { stride = (uint64_t(data[base + 1]) << 20) | (uint64_t(data[base + 2]) << 12) | (uint64_t(data[base + 3]) << 4) | (head & 0x0f); i = base + 3; }
-   }
-   if (!stride) throw std::invalid_argument("zero-length run");
-   if (pixel + stride > total) throw std::invalid_argument("run overflows the image");
-   std::memset(out + pixel, color, size_t(stride));
-   pixel += size_t(stride);
-   ++i;
-  }
-  if (i != last) throw std::invalid_argument("chunk stream did not end on the checksum byte");
-  if (pixel != total) throw std::invalid_argument("decoded pixel count differs from the image size");
+  walk_layer(data, size, total, [&](uint8_t color, size_t pixel, size_t stride) {
+   std::memset(out + pixel, color, stride);
+  });
  }
  return image;
+}
+
+// Decodes a blob and counts pixels that differ by more than `atol` from the
+// frame `crop` pasted at (row, column) on a dark panel, without materializing
+// either frame. Every framing and checksum error raises, as in decode_layer.
+size_t verify_placed(py::buffer blob, py::array_t<uint8_t, py::array::c_style | py::array::forcecast> crop,
+                     int row, int column, int width, int height, int atol) {
+ if (atol < 0 || atol > 255) throw std::invalid_argument("atol must be 0..255");
+ py::buffer_info info = flat_blob(blob);
+ const Placement p = placement(crop.request(), row, column, width, height);
+ const size_t total = p.width * p.height;
+ const uint8_t *data = static_cast<const uint8_t *>(info.ptr);
+ size_t mismatches = 0;
+ {
+  py::gil_scoped_release release;
+  walk_layer(data, size_t(info.size), total, [&](uint8_t color, size_t pixel, size_t stride) {
+   size_t end = pixel + stride;
+   while (pixel < end) {
+    const size_t y = pixel / p.width, x = pixel % p.width;
+    const size_t line_end = std::min(end, (y + 1) * p.width);
+    const size_t span = line_end - pixel;
+    const bool lit = int(color) > atol;  // differs from a dark expected pixel
+    if (y < p.row || y >= p.row + p.rows) {
+     if (lit) mismatches += span;
+    } else {
+     // Dark columns either side of the crop, then the crop itself.
+     const size_t x_end = x + span;
+     const size_t lo = std::max(x, p.column), hi = std::min(x_end, p.column + p.columns);
+     if (lit) mismatches += span - (hi > lo ? hi - lo : 0);
+     if (hi > lo) {
+      const uint8_t *line = p.pixels + (y - p.row) * p.columns;
+      for (size_t c = lo; c < hi; ++c) {
+       const int difference = int(line[c - p.column]) - int(color);
+       mismatches += (difference < 0 ? -difference : difference) > atol;
+      }
+     }
+    }
+    pixel = line_end;
+   }
+  });
+ }
+ return mismatches;
 }
 }
 void bind_goo(py::module_ &m) {
@@ -155,4 +300,12 @@ void bind_goo(py::module_ &m) {
        "Encode an (h,w) uint8 image as a GOO v3 layer blob including magic and checksum");
  m.def("goo_decode_layer", &decode_layer, py::arg("blob"), py::arg("width"), py::arg("height"),
        "Decode a GOO v3 layer blob; every framing and checksum error raises");
+ m.def("goo_encode_placed", &encode_placed, py::arg("crop"), py::arg("row"), py::arg("column"),
+       py::arg("width"), py::arg("height"),
+       "Encode a (width,height) layer that is dark except `crop` at (row, column); "
+       "byte-identical to goo_encode_layer on that full frame");
+ m.def("goo_verify_placed", &verify_placed, py::arg("blob"), py::arg("crop"), py::arg("row"),
+       py::arg("column"), py::arg("width"), py::arg("height"), py::arg("atol") = 0,
+       "Decode a GOO v3 layer blob and count pixels that differ by more than atol from `crop` "
+       "at (row, column) on a dark frame; every framing and checksum error raises");
 }

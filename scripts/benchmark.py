@@ -40,6 +40,9 @@ SCRATCH = Path(os.environ.get('VOXELMILL_BENCH_DIR', '/tmp/voxelmill-bench'))
 def scenarios(work):
     small = FIXTURES / 'sphere.stl'
     bracket = FIXTURES / 'overhang_bracket.stl'
+    # The bracket converges in one island pass; pin_array needs four, so it is
+    # the scenario that exercises the island-guard retry loop.
+    retry = FIXTURES / 'pin_array.stl'
     return {
         'inspect_small': ([
             'inspect', str(small), '--report', str(work / 'inspect.json')], False),
@@ -49,6 +52,16 @@ def scenarios(work):
         'prepare_bracket': ([
             'prepare', str(bracket), '--max-passes', '1', '--allow-unresolved',
             '--output', str(work / 'bracket.stl'), '--report', str(work / 'bracket.json')], False),
+        'prepare_retry': ([
+            'prepare', str(retry), '--allow-unresolved',
+            '--output', str(work / 'retry.stl'), '--report', str(work / 'retry.json')], False),
+        # Hollowing with a 1 mm wall (0.25 mm derived voxels) and the hex
+        # lattice: the voxel loops, EDT and surface extraction under load.
+        'hollow_cube': ([
+            'hollow', str(FIXTURES / 'cube.stl'), '--output', str(work / 'hollow.stl'),
+            '--report', str(work / 'hollow.json'), '--set', 'hollow.infill="hex"',
+            '--set', 'hollow.voxel_size_mm=0', '--set', 'hollow.wall_thickness_mm=1.0',
+            '--set', 'hollow.min_wall_thickness_mm=0.5'], False),
         'validate_small': ([
             'validate', str(work / 'small.stl'), '--report', str(work / 'validate.json')], False),
         'slice_small': ([
@@ -68,7 +81,7 @@ def scenarios(work):
 
 #: Ordering matters: some scenarios consume what an earlier one wrote.
 ORDER = ('inspect_small', 'prepare_small', 'validate_small', 'slice_small', 'verify_small',
-         'prepare_bracket', 'prepare_nut', 'place_temporal_bone')
+         'prepare_bracket', 'prepare_retry', 'hollow_cube', 'prepare_nut', 'place_temporal_bone')
 
 
 def run_child(argv):

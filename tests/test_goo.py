@@ -492,3 +492,52 @@ def test_float32_header_rounding_is_not_a_settings_mismatch(tmp_path):
     other = deepcopy(settings)
     other['printer']['build_mm'] = [3.2, 2.4, 12.0]
     assert 'printer.build_mm' in verify_goo(path, other)['settings_mismatches']
+
+
+def _placed_frame(rng, kind):
+    w, h = int(rng.integers(1, 60)), int(rng.integers(1, 40))
+    fw, fh = int(rng.integers(w, w + 30)), int(rng.integers(h, h + 30))
+    r, c = int(rng.integers(0, fh - h + 1)), int(rng.integers(0, fw - w + 1))
+    if kind == 0:
+        crop = (rng.random((h, w)) < 0.5).astype(np.uint8) * 255   # binary exposure
+    elif kind == 1:
+        crop = rng.integers(0, 256, (h, w), dtype=np.uint8)          # grayscale, delta chunks
+    else:
+        crop = np.zeros((h, w), dtype=np.uint8)                     # a dark layer
+    frame = np.zeros((fh, fw), dtype=np.uint8)
+    frame[r:r + h, c:c + w] = crop
+    return crop, r, c, fw, fh, frame
+
+
+def test_placed_encoding_is_byte_identical_to_the_full_frame():
+    rng = np.random.default_rng(3)
+    for trial in range(200):
+        crop, r, c, fw, fh, frame = _placed_frame(rng, trial % 3)
+        assert _native.goo_encode_placed(crop, r, c, fw, fh) == _native.goo_encode_layer(frame)
+
+
+def test_placed_verification_counts_every_corrupted_pixel():
+    """It decodes the file's own chunks: a pixel wrong anywhere on the panel counts."""
+    rng = np.random.default_rng(4)
+    for trial in range(200):
+        crop, r, c, fw, fh, frame = _placed_frame(rng, trial % 3)
+        blob = np.frombuffer(_native.goo_encode_layer(frame), dtype=np.uint8)
+        assert _native.goo_verify_placed(blob, crop, r, c, fw, fh) == 0
+        corrupt = frame.copy()
+        where = rng.integers(0, fw * fh, int(rng.integers(1, 20)))
+        corrupt.reshape(-1)[where] = rng.integers(0, 256, len(where), dtype=np.uint8)
+        blob = np.frombuffer(_native.goo_encode_layer(corrupt), dtype=np.uint8)
+        assert (_native.goo_verify_placed(blob, crop, r, c, fw, fh)
+                == int(np.count_nonzero(corrupt != frame)))
+        difference = np.abs(corrupt.astype(np.int16) - frame.astype(np.int16))
+        for atol in (1, 7):
+            assert (_native.goo_verify_placed(blob, crop, r, c, fw, fh, atol)
+                    == int(np.count_nonzero(difference > atol)))
+
+
+def test_placed_verification_rejects_a_damaged_blob():
+    crop = np.full((3, 4), 255, dtype=np.uint8)
+    blob = bytearray(_native.goo_encode_placed(crop, 2, 2, 10, 8))
+    blob[1] ^= 0x01                                       # breaks the checksum
+    with pytest.raises(ValueError, match='checksum'):
+        _native.goo_verify_placed(np.frombuffer(bytes(blob), dtype=np.uint8), crop, 2, 2, 10, 8)

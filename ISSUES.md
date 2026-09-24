@@ -63,13 +63,14 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-004 | Wall-thickness analysis could refine past the memory budget | Bug | 5 | 3 | 15 | done |
 | VM-010 | Vectorize `hollow._bottom_open` | Perf | 5 | 3 | 15 | done |
 | B5 | Print-time estimation: physical calibration | Feature | 3 | 5 | 15 | open (hardware) |
+| VM-030 | Slicing cost scaled with the LCD panel, not the part | Perf | 3 | 5 | 15 | done |
 | D4 | Raft adhesion / removal-force calibration | Feature | 4 | 3 | 12 | open (hardware) |
 | G2 | Fuzzy, mode-aware settings search | Feature | 4 | 3 | 12 | partial |
 | VM-061 | Lint and type-check configuration | Test/CI | 4 | 3 | 12 | done |
 | A7 | GUI profile manager: dirty-state save/discard | Feature | 3 | 4 | 12 | partial |
 | E7 | TSMC: define, validate and document all 18 motion fields | Feature | 3 | 4 | 12 | partial |
 | VM-013 | Spatial index for routed-capsule collision checks | Perf | 3 | 4 | 12 | open |
-| VM-014 | Retry/hollow benchmark fixture and CI perf gate | Perf | 3 | 4 | 12 | open |
+| VM-014 | Retry/hollow benchmark fixture and CI perf gate | Perf | 3 | 4 | 12 | partial |
 | VM-049 | Public-contract freeze checklist for 1.0 | Arch | 3 | 4 | 12 | open |
 | A8 | Presets embedded in profiles | Feature | 5 | 2 | 10 | partial |
 | VM-023 | Cheap boolean pre-checks for added models | Perf | 5 | 2 | 10 | done |
@@ -225,13 +226,15 @@ Ease 3 · Benefit 4 · Confidence: sure · Status: open
 
 ### VM-014 — Retry/hollow benchmark fixture and CI perf gate
 
-Ease 3 · Benefit 4 · Confidence: sure · Status: open
+Ease 3 · Benefit 4 · Confidence: sure · Status: partial
 
 **Problem.** The canonical bracket benchmark converges in one island pass and never hollows, so VM-010, VM-013, VM-015 and VM-020 cannot be measured. The benchmark harness exists (F10), but nothing runs it automatically.
 
 **Fix.** Add fixtures that need ≥3 island passes and a hollow run to `scripts/benchmark.py`. Record the baselines in `reports/bench/`. Add an opt-in CI job that fails on a >15 % regression against the stored baseline.
 
 **Where.** `scripts/benchmark.py`, `reports/bench/baseline.json`, `docs/performance.md`
+
+**Progress (2026-09-23).** Done: `prepare_retry` (pin_array, 4 island passes) and `hollow_cube` (hex infill, 1 mm wall) are in `scripts/benchmark.py`, and the local baseline was re-recorded. The old one dated from v0.1.0. Open: a CI gate. The baseline is machine-specific and gitignored, so a runner needs an A/B of base against head on the same machine, not a stored file.
 
 ### VM-015 — Incremental island-guard passes
 
@@ -253,6 +256,16 @@ Ease 3 · Benefit 3 · Confidence: sure · Status: open
 
 **Where.** `src/voxelmill/island_guard.py`, `src/voxelmill/validation.py`, `native/raster.cpp`
 
+### VM-030 — Slicing cost scaled with the LCD panel, not the part
+
+Ease 3 · Benefit 5 · Confidence: sure · Status: done
+
+**Problem.** Found while re-recording the benchmark baseline (VM-014). `slice` of a small sphere took 24.6 s against 1.6 s for `prepare`: every layer built, scaled, mirrored, encoded, decoded and compared full 8520×4320 frames, about eight 36.8 MB passes per layer for a part covering a small crop. Mirrored printers paid a further full-frame copy (37.7 s). With 4-level antialiasing the box average ran as a float64 reduction over two short strided axes (151 s).
+
+**Fix.** `goo_encode_placed` writes the layer from the crop and its placement, deriving dark runs arithmetically and scanning 8 bytes at a time. `goo_verify_placed` decodes the written chunk stream (sharing one bounds-checked walker with `goo_decode_layer`) and counts mismatches against the crop without materializing a frame. Mirroring moves the crop's offset instead of flipping a frame. The box average uses strided integer adds and a lookup table built with the same `rint` formula. Written layers are byte-identical in six configurations (default, each mirror, both, elephant-foot, 4-level AA), and fuzz tests pin encode identity and mismatch counts. Results: default 24.6 → 1.3 s, mirrored 37.7 → 1.6 s, elephant-foot 26.6 → 3.5 s, AA 151 → 13.2 s.
+
+**Where.** `native/goo.cpp`, `src/voxelmill/goo.py` (`_frame_placement`, `_frame_mismatch`, `GooWriter.add_placed_layer`), `src/voxelmill/raster.py`
+
 ### VM-016 — Keep VTK actors and update their input
 
 Ease 3 · Benefit 3 · Confidence: likely · Status: open
@@ -272,6 +285,8 @@ Ease 3 · Benefit 3 · Confidence: sure · Status: open
 **Fix.** Keep the default. Add `--verify=independent|reuse` (in config: `slice.verification`), where `reuse` writes from the validation raster and still decodes and verifies the written file. The report must record the mode.
 
 **Where.** `src/voxelmill/goo.py:1193` (`slice_stl`)
+
+**Update (2026-09-23).** VM-030 removed the full-frame work, which was most of the cost. Slicing the small sphere now takes 1.3 s, so the value of skipping the independent raster passes is much lower. Re-measure at 16K (VM-019) before building this.
 
 ### VM-018 — Persist the rasterizer Z-interval structure across passes (F3)
 

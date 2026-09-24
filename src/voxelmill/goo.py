@@ -454,10 +454,15 @@ def export_mask(mask, settings, index, grid=None):
     return mask, dimensional, elephant, erased
 
 
-def _full_frame(mask, grid, printer):
-    """Place a cropped mask into the full LCD frame at its physical position."""
+def _frame_placement(mask, grid, printer):
+    """Where a cropped mask lands in the full LCD frame, ready to paste.
+
+    Returns ``(row, column, pixels)``: the crop already scaled to LCD intensity
+    and mirrored, at the offset it occupies in the mirrored frame. Everything
+    outside it is dark. Working on the crop keeps every per-layer pass
+    proportional to the part, not to the 36.8 Mpx panel.
+    """
     width, height = printer['pixels']
-    frame = np.zeros((height, width), dtype=np.uint8)
     row, column = grid.row_offset, grid.column_offset
     rows, columns = mask.shape
     if row < 0 or column < 0 or row + rows > height or column + columns > width:
@@ -467,17 +472,39 @@ def _full_frame(mask, grid, printer):
     mask = np.asarray(mask)
     if mask.dtype != np.uint8:
         raise VoxelMillError('goo_frame', 'Raster mask must use uint8 pixels')
-    frame[row:row + rows, column:column + columns] = mask
     # Geometry raster masks are occupancy (0/1). GOO binary exposure requires
     # full 8-bit LCD intensity (0/255); preserving values above one leaves the
     # door open for a separately validated grayscale/AA path.
-    if not mask.size or int(mask.max()) <= 1:
-        frame *= np.uint8(255)
+    pixels = mask * np.uint8(255) if not mask.size or int(mask.max()) <= 1 else mask
     if printer['image_mirror_x']:
-        frame = frame[:, ::-1]
+        pixels, column = pixels[:, ::-1], width - (column + columns)
     if printer['image_mirror_y']:
-        frame = frame[::-1, :]
-    return np.ascontiguousarray(frame)
+        pixels, row = pixels[::-1, :], height - (row + rows)
+    return row, column, pixels
+
+
+def _full_frame(mask, grid, printer):
+    """Place a cropped mask into the full LCD frame at its physical position."""
+    width, height = printer['pixels']
+    row, column, pixels = _frame_placement(mask, grid, printer)
+    frame = np.zeros((height, width), dtype=np.uint8)
+    frame[row:row + pixels.shape[0], column:column + pixels.shape[1]] = pixels
+    return frame
+
+
+def _frame_mismatch(reader, index, mask, grid, printer, atol):
+    """Pixels where a written layer differs from the expected exposure by more than ``atol``.
+
+    The layer is decoded from the file's own chunk stream and compared run by
+    run against the placed crop, so neither frame is ever materialized; the
+    decoder applies every framing and checksum check.
+    """
+    from . import _native
+    row, column, pixels = _frame_placement(mask, grid, printer)
+    height, width = reader.shape
+    return int(_native.goo_verify_placed(np.frombuffer(reader.blob(index), dtype=np.uint8),
+                                         np.ascontiguousarray(pixels), int(row), int(column),
+                                         int(width), int(height), int(atol)))
 
 
 class GooWriter:
@@ -548,7 +575,33 @@ class GooWriter:
                             {'z_mm': z_mm, 'machine_z_mm': self.header['machine_z']})
         if self.written and z_mm <= self._last_z:
             raise VoxelMillError('goo_layer_z', 'Layer Z values must increase strictly')
-        blob = self._native.goo_encode_layer(np.ascontiguousarray(mask))
+        return self._write_blob(self._native.goo_encode_layer(np.ascontiguousarray(mask)), z_mm, exposure_s)
+
+    def add_placed_layer(self, row, column, pixels, z_mm, *, exposure_s=None):
+        """Add a layer that is dark except ``pixels`` at ``(row, column)``.
+
+        Byte-identical to :meth:`add_layer` on the full frame, without building
+        it: the encoder derives the dark runs from the placement.
+        """
+        self.cancel.check()
+        if self.written >= self.layer_count:
+            raise VoxelMillError('goo_layers', 'More layers were written than the header declares')
+        pixels = np.asarray(pixels)
+        if pixels.dtype != np.uint8 or pixels.ndim != 2:
+            raise VoxelMillError('goo_layer_shape', 'Layer crop must be a 2-D uint8 image',
+                            {'dtype': str(pixels.dtype), 'ndim': int(pixels.ndim)})
+        z_mm = float(z_mm)
+        if not math.isfinite(z_mm) or not 0 < z_mm <= self.header['machine_z']:
+            raise VoxelMillError('goo_layer_z', 'Layer Z must be finite, above the plate, and inside machine Z travel',
+                            {'z_mm': z_mm, 'machine_z_mm': self.header['machine_z']})
+        if self.written and z_mm <= self._last_z:
+            raise VoxelMillError('goo_layer_z', 'Layer Z values must increase strictly')
+        height, width = self.shape
+        blob = self._native.goo_encode_placed(np.ascontiguousarray(pixels), int(row), int(column),
+                                              int(width), int(height))
+        return self._write_blob(blob, z_mm, exposure_s)
+
+    def _write_blob(self, blob, z_mm, exposure_s):
         record = bytearray(LAYER_DEF_BYTES)
         values = _layer_values(self.header, self.settings, self.written, z_mm,
                                exposure_s=exposure_s)
@@ -1396,7 +1449,8 @@ def slice_stl(source, output, settings, *, allow_unresolved=False, cancel=None,
                             'goo_compensation',
                             'Compensation removed an entire layer; reduce shrink or tolerance',
                             {'layer': layer.index})
-                    writer.add_layer(_full_frame(mask, stream.grid, settings['printer']), layer.z_mm)
+                    writer.add_placed_layer(*_frame_placement(mask, stream.grid, settings['printer']),
+                                            layer.z_mm)
             encoded_blob_sha256 = writer.layer_digest.hexdigest()
 
         # Pass three is intentionally independent of the emitted buffers.
@@ -1416,16 +1470,13 @@ def slice_stl(source, output, settings, *, allow_unresolved=False, cancel=None,
                 pixel_atol = 0 if antialias_levels <= 1 else 1
                 for layer in stream:
                     cancel.check()
-                    decoded = reopened.decode(layer.index)
                     expected_mask, _, _, _ = export_mask(
                         layer.mask, settings, layer.index, grid=stream.grid)
-                    expected = _full_frame(expected_mask, stream.grid, settings['printer'])
-                    if pixel_atol == 0:
-                        mismatch = decoded != expected
-                    else:
-                        mismatch = np.abs(decoded.astype(np.int16) - expected.astype(np.int16)) > pixel_atol
-                    if np.any(mismatch):
-                        differences = int(np.count_nonzero(mismatch))
+                    differences = _frame_mismatch(reopened, layer.index, expected_mask, stream.grid,
+                                                  settings['printer'], pixel_atol)
+                    if differences:
+                        decoded = reopened.decode(layer.index)
+                        expected = _full_frame(expected_mask, stream.grid, settings['printer'])
                         raise VoxelMillError('goo_verify_pixels', 'Decoded GOO pixels differ from the source raster',
                                         {'layer': layer.index, 'different_pixels': differences,
                                          'antialias_levels': antialias_levels, 'atol': pixel_atol,

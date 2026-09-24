@@ -39,6 +39,19 @@ actually retries or hollows before you claim a win there.
 
 Record a new row after every performance change so the curve stays visible.
 
+## Slicing (2026-09-23)
+
+`slice` of the benchmark sphere at 9K (`voxelmill slice small.stl`), wall seconds:
+
+| Configuration | Before | After | What changed |
+| --- | --- | --- | --- |
+| default | 24.6 | 1.3 | layers encoded and verified from the part's crop, not the 36.8 Mpx panel |
+| `image_mirror_x` | 37.7 | 1.6 | mirroring moves the crop's offset instead of copying a flipped frame |
+| elephant-foot 0.1 mm | 26.6 | 3.5 | same |
+| `antialias_levels=4` | 151 | 13.2 | box average via strided integer adds; tolerant verify in run space |
+
+Written layer bytes (`layer_blob_sha256`) are identical before and after in all six measured configurations. The remaining AA time is the 16× supersampled raster itself. A native box-average kernel was tried and measured no faster than NumPy (4.9 against 4.7 ms per 15.8 Mpx layer), because the pass is bound by memory reads.
+
 ## Where the time actually goes — re-measured 2026-09-17 after the 2.74x
 
 The v0.1.0 profile that used to sit here was stale and was steering decisions

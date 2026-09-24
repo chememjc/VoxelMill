@@ -80,11 +80,25 @@ def box_average_coverage(fine_mask, levels):
         raise VoxelMillError('antialias_shape',
                         'Supersampled mask is not an exact levels×levels multiple',
                         {'shape': [height, width], 'levels': levels})
-    blocks = fine.reshape(height // levels, levels, width // levels, levels)
-    occupied = blocks != 0
+    occupied = (fine != 0).view(np.uint8)
+    # Count each block with strided adds (at most levels**2 = 16, so uint8 is
+    # enough) rather than a reduction over two short, strided axes.
+    rows = occupied[0::levels].copy()
+    for offset in range(1, levels):
+        rows += occupied[offset::levels]
+    counts = rows[:, 0::levels].copy()
+    for offset in range(1, levels):
+        counts += rows[:, offset::levels]
+    return _coverage_table(levels)[counts]
+
+
+def _coverage_table(levels):
+    """uint8 coverage for 0..levels**2 occupied samples, as rint(k * 255 / total).
+
+    Round half-up via rint so full coverage is exactly 255.
+    """
     total = float(levels * levels)
-    # Round half-up via rint so full coverage is exactly 255.
-    return np.rint(occupied.sum(axis=(1, 3), dtype=np.float64) * (255.0 / total)).astype(np.uint8)
+    return np.rint(np.arange(levels * levels + 1, dtype=np.float64) * (255.0 / total)).astype(np.uint8)
 
 
 def require_supersample_buffer(budget, grid, levels, operation='antialias supersample buffer'):
