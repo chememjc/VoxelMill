@@ -180,19 +180,21 @@ the equivalent drainage case — see
 [drainage_bottlenecks: fail](troubleshooting.md)).
 
 Drainage follows the same shape: `prepare` records the nut's one support-tip
-crevice (~0.0067 mm3) and the cover's twenty-three (~0.17 mm3) as
+crevice (~0.0067 mm3) and the cover's sixteen (~0.12 mm3) as
 `ignored_support_bottlenecks`, so `drainage_bottlenecks` passes there too.
 `slice`, unable to attribute them, warns on the same components
 (`unattributed_drainage_bottleneck`); the cover's four sealed chambers are
 each a single drainage-grid cell, which no model cavity can be.
 Support routing itself is clean on both parts under current defaults —
-`contacts_failed` is `0` for both. Of the sampled contacts, the nut routes 105
-of 221 (71 dropped as already attached one layer below, 45 skipped by the
-density cap) and the cover routes 445 of 824 (255 dropped as attached, 124
-skipped by the density cap). The cover additionally warns
-`support_collisions` (seven graph capsules overlap without the graph joining
-them) and `support_anchor_load` (some contacts carry more downward area than
-`max_contact_load_mm2`) — both warnings, not export gates.
+`contacts_failed` is `0` for both. Of the sampled contacts, the nut routes 104
+of 221 (72 dropped as already attached one layer below, 45 skipped by the
+density cap) and the cover routes 441 of 824 (259 dropped as attached, 124
+skipped by the density cap). `support_collisions` passes on the cover (no
+overlapping capsules, no intrusions); it still warns `support_anchor_load` (some contacts carry more downward area than
+`max_contact_load_mm2`), a warning, not an export gate. `stages.resin_usage`
+splits the nut's 4.39 mL into 3.03 mL of model and 1.36 mL of supports, and
+the cover's 13.75 mL into 8.51 and 5.24 mL; with no `--resin`, grams stay
+null and `note` says to set a density.
 
 This run establishes that the chain works end to end on real, defective
 geometry, on both the raster and exact assembly paths, and that the file it

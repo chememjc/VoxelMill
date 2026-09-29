@@ -54,9 +54,13 @@ Supports land on a selectable base —
 default porous `grid`, the original convex `plate`, bare `none` feet, per-foot
 `pad` or `skate` shapes, a spanning-tree `skeleton`, or a `hex` lattice,
 optionally tapered inward from the plate — and each reports its own measured
-contact area, open area and resin volume. All settings and file operations are
-also available from the CLI; `voxelmill support-example --output example.stl`
-exports the same illustrative array. See [GUI workflows](docs/gui.md) and
+contact area, open area and resin volume. Tree supports can stand on a trunk
+thicker than their branches (`support.trunk_diameter_mm`, 1.2 mm by default).
+The `prepare` report splits cured resin into model, supports and total, in mL,
+and in grams when the resin profile sets a density (`slice` gives the total).
+All settings and file operations are also available from the CLI;
+`voxelmill support-example --output example.stl` exports the same illustrative
+array. See [GUI workflows](docs/gui.md) and
 [CLI options](docs/cli.md).
 
 Development setup (Python 3.10+, CMake, C++17 compiler):
@@ -124,7 +128,8 @@ None of them exports anything, changes a setting or contacts a printer.
 | Script | Question it answers |
 | --- | --- |
 | `scripts/benchmark.py` | Runtime and peak RSS per scenario, each in a fresh process; `--baseline` is the regression gate. |
-| `scripts/routing_probe.py` | Why `route_contacts` rejected each contact, and what a candidate fix would recover. |
+| `scripts/routing_probe.py` | Why `route_contacts` rejected each contact, and what a candidate fix would recover. Takes an STL or a `.voxmil` project. |
+| `scripts/resize_benchmark.py` | How long a dock-separator drag takes in the real editor and how many VTK renders it costs; see [performance.md](docs/performance.md#dock-separator-drags-2026-09-28). |
 | `scripts/ingestion_probe.py` | Tier 0 ingestion prerequisites on a real part, with no repair or export. |
 | `scripts/goo_orientation_check.py` | Which axis flip of our own raster matches a reference GOO's stored pixels. |
 | `scripts/inventory.py`, `scripts/sample_placements.py` | Mesh inventory and placement results over the immutable originals. |

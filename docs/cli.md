@@ -64,6 +64,8 @@ These are accepted by every command except `info`.
 | `--acceleration {auto,cpu,cuda}` | Raster morphology backend. `auto` (default) uses CUDA after a successful runtime and device probe, otherwise CPU. `cuda` is refused when no device is available rather than silently falling back. |
 | `--cuda-device N` | Zero-based CUDA device used when acceleration selects CUDA. |
 | `--report PATH`, `--progress` | Report destination, and progress on stderr. |
+| `--timing` | Print a per-stage wall-time table to stderr. `prepare` records the same map in `report['timing']` either way. |
+| `--freecad PATH` | FreeCAD binary, AppImage, or macOS `.app` used for STEP import; sets `VOXELMILL_FREECAD` for this run. |
 
 The destination, pattern, per-node limit, angle, minimum-height, and azimuth
 brace options are additions in **0.5.4**. The 0.5.3 release record covers the
@@ -182,7 +184,10 @@ for the mirror/winding correctness argument and the scale guardrails.
 whether an export followed.
 
 `stages.resin_usage` is also always present: the output of
-`config.resin_usage(settings, raster_volume_mm3)`, where `raster_volume_mm3`
+`config.resin_usage_from_metrics(settings, validation.metrics)`, which calls
+`config.resin_usage` with `raster_volume_mm3` and, when present, the
+model/support split from `raster_volume_by_group` when that counted the same
+pixels (`total_pixels == exposed_pixels`). `raster_volume_mm3`
 is the cured-volume figure the reslice's raster analysis measured (total
 filled pixels times pixel area times layer height), which already includes
 supports and any raft, not a mesh's signed volume. A soup assembly (the
@@ -190,7 +195,7 @@ raster-path fallback; see `assembly.union`) has no meaningful signed volume
 at all, so the raster figure is the only physically grounded source
 regardless of which assembly path ran. `resin_usage` reports `volume_mm3`,
 `volume_ml`, `mass_g`, `cost`, `currency`, `density_g_cm3`, `cost_per_liter`,
-and `source`; `mass_g`/`cost` (and the density/price fields that produced
+`source`, `note` and `breakdown`; `mass_g`/`cost` (and the density/price fields that produced
 them) are `null` when the resin profile leaves `density_g_cm3`/
 `cost_per_liter` at `0.0`, meaning "not supplied" — see
 [configuration.md](configuration.md). An unset density never fails the run:
@@ -751,7 +756,10 @@ summary instead of that line.
 Renders a previously written JSON report (`prepare`, `slice`, `validate`,
 `verify`, or any other command's `--report` output) as a static, readable
 HTML page: a pass/fail banner, then diagnostics grouped by severity
-(`error`, `warning`, `info`, `debug`). It reads no mesh and touches no
+(`error`, `warning`, `info`, `debug`), a **Resin usage** table (total, model
+and supports in mL and grams, cost when priced, the density, and why the split
+is unavailable when it is) wherever the report keeps a `resin_usage`, then the
+scalar metrics. It reads no mesh and touches no
 project state — a report-to-report transform for skimming a result without
 a JSON viewer. `--output` is required.
 

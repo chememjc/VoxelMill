@@ -94,6 +94,16 @@ line so the image does not carry the CUDA Toolkit EULA.
   `VOXELMILL_FREECAD`; do not assume the Linux AppImage candidates exist.
 - **Wheels.** Confirm `manifold3d==3.3.2` and `vtk>=9.3,<10` publish macOS
   arm64 wheels for the target CPython before promising an arm64 editor image.
+- **VTK renders stay out of `paintEvent` on Darwin.** A synchronous render
+  inside Cocoa's `CATransaction` commit hung the Intel iMac, so
+  `viewport.defers_paint_renders()` is true only on macOS: a paint starts one
+  single-shot timer and the scene renders at most once per 40 ms, plus once
+  after the last paint. The Layers canvas caches its image and rebuilds only
+  after a resize has held 80 ms (all platforms). The support editor's splitter
+  is not opaque on macOS (`editors.opaque_splitter_resize()`): it shows a
+  rubber band and resizes once on release. `scripts/resize_benchmark.py`
+  (`--defer on` forces the macOS path on Linux) measures all three; see
+  [performance.md](performance.md#dock-separator-drags-2026-09-28).
 
 ## Windows notes
 

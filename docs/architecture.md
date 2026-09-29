@@ -17,14 +17,15 @@ VoxelMill is a Linux single-part resin 3D-print preparation tool that transforms
 | `src/voxelmill/contracts.py` | Core data types: `VoxelMillError`, `CancellationToken`, `ValidationReport`, `Placement`, `SupportGraph`, `Diagnostic` |
 | `src/voxelmill/mesh.py` | STL I/O: binary and ASCII parsing with memory mapping; full-resolution mesh inspection via native module |
 | `src/voxelmill/geometry.py` | Rigid placement, orientation search, manifold construction; convex hull and coarse occupancy assessment |
-| `src/voxelmill/supports.py` | Support detection and routing: column-field analysis, downward-face sampling, island birth detection, pillar routing |
+| `src/voxelmill/supports.py` | Support detection and routing: column-field analysis, downward-face sampling, island birth detection, pillar routing, model stubs for knife-edge islands, tip capsule reservations, and the `reason`/`suggest` explanation of every unroutable contact |
 | `src/voxelmill/island_guard.py` | `route_without_islands`: the shared route → assemble → scan → add-contacts-under-islands loop used by both `pipeline.prepare` and the editor's Compute attachments, so the two cannot settle for different plates. See [algorithms.md](algorithms.md#island-correction-passes) |
 | `src/voxelmill/overhangs.py` | `unsupported_overhangs`: matches downward-face samples against routed contacts by `support.spacing_mm`, an advisory (warning-only) check. See [algorithms.md](algorithms.md#unsupported-overhangs) |
 | `src/voxelmill/support_example.py` | Small fixed-contact fixture built by the production router for CLI illustration export and GUI parameter previews; no print validation |
 | `src/voxelmill/raster.py` | Pixel-center scan conversion via native module; layer streaming with even/odd closure checks |
 | `src/voxelmill/validation.py` | Layer connectivity, empty-space and drainage analysis; void tracking across the build |
 | `src/voxelmill/repair.py` | Occupancy voxel repair: grid selection, well-composedness, surface extraction, deviation verification |
-| `src/voxelmill/assembly.py` | Shared CLI/GUI model policy, exact/raster assembly, grouped layer stream and reopened-STL parity |
+| `src/voxelmill/assembly.py` | Shared CLI/GUI model policy, exact/raster assembly, grouped layer stream and reopened-STL parity; `volume_tap`/`GroupVolumeTap` count model pixels inside the resliced union for the resin breakdown |
+| `src/voxelmill/collisions.py` | Independent audit of routed supports: `support_model_intrusion` (support solids against each part) and `support_overlaps` (graph capsules that overlap without a joint, with plain-language `description` and `position_mm`); `edge_kind_name` names edge kinds for messages |
 | `src/voxelmill/pipeline.py` | End-to-end orchestration: placement → ingestion/repair → exact or raster union → export → reslice → validation |
 | `src/voxelmill/project.py` | Project file I/O and metadata persistence |
 | `src/voxelmill/printer.py` | Printer discovery, connection, status/attributes telemetry, print history and time-lapse downloads, camera URL access, upload and printer state machine |
@@ -38,7 +39,7 @@ VoxelMill is a Linux single-part resin 3D-print preparation tool that transforms
 | `src/voxelmill/gui/editors.py` | Dedicated printer, resin/process and support draft editors; shared validation and portable saves, undoable Apply, cancellable VTK support examples |
 | `src/voxelmill/gui/objects.py` | Object panel: the plate's part list and per-part move/rotate/scale/mirror controls with multi-select and arrow-key nudge (`ObjectPanel`), per-part attachment overrides (`AttachmentSettings`), and the 3D-view tool strip for Select/Add point/Remove point/Paint enforced/Paint blocked (`ToolSelector`) |
 | `src/voxelmill/gui/gizmo.py` | `TransformGizmo`: the FreeCAD-style translate/rotate manipulator (axis arrows, rotation rings) built from plain VTK actors, replacing `vtkBoxWidget`; pick/drag math is free functions testable without a render window |
-| `src/voxelmill/gui/appprefs.py` | Editor-only preferences that change nothing about the output — the rotation snap increment, the arrow-key translate step, motion mode (relative/absolute), and the remembered window geometry/dock layout — persisted to `~/.config/voxelmill/editor.json`, never to a printer profile or a `.voxmil` project |
+| `src/voxelmill/gui/appprefs.py` | Editor-only preferences that change nothing about the output — the rotation snap increment, the arrow-key translate step, motion mode (relative/absolute, which changes only what the Move/Rotate fields display), and the remembered window geometry/dock layout — persisted to `~/.config/voxelmill/editor.json`, never to a printer profile or a `.voxmil` project |
 | `src/voxelmill/gui/settings_table.py` | One typed Setup-page row per leaf of `config.DEFAULTS`, built from `settings_schema.FIELDS`: tooltip, unit, numeric range and dropdown choices, grouped into per-section pages gated by visibility tier (Simple/Advanced/Expert) |
 | `src/voxelmill/gui/settings_search.py` | Fuzzy, ranked search over every setting's dotted path, label, help text and CLI flag for the Setup tab's search box; pure and Qt-free, unit tested without a display |
 | `native/mesh.cpp` | Exact-coordinate topology: triangle welding, edge manifold inspection |
@@ -61,7 +62,7 @@ The `voxelmill prepare` command follows this sequence:
 4. **Support**: `supports.plan_supports()` builds a column-field raster, samples downward faces, routes contacts to the plate or model via `supports.route_contacts()`, generating a support graph and optional raft.
 5. **Union**: `assembly.assemble()` tries a Manifold boolean union, or retains independent model and generated-support/raft groups for occupancy OR. GUI services call the same implementation.
 6. **Stage**: `mesh.write_stl()` streams exact triangles or a sequence of soup groups to a **scratch** path, never to the caller's destination. Nothing the user already has is touched yet.
-7. **Reslice**: On the raster path, `RasterParity` compares fresh grouped occupancy with the reopened carrier on its exact grid. `pipeline._reslice()` reopens that staged STL and validates it independently — `validation.analyze_layers()` for layer connectivity and island births, `validation.analyze_drainage()` for void escape — so the checks run against the written bytes rather than the in-memory solid.
+7. **Reslice**: On the raster path, `RasterParity` compares fresh grouped occupancy with the reopened carrier on its exact grid. For a grouped assembly, `assembly.volume_tap` wraps the same layer stream and records `metrics.raster_volume_by_group`, the model/support pixel split behind `resin_usage.breakdown`. `pipeline._reslice()` reopens that staged STL and validates it independently — `validation.analyze_layers()` for layer connectivity and island births, `validation.analyze_drainage()` for void escape — so the checks run against the written bytes rather than the in-memory solid.
 8. **Correction**: When automatic contacts are enabled, `island_guard.route_without_islands` (shared with the editor's Compute attachments) repeats steps 4 to 7: route, assemble, scan for islands, and if any are found, add contacts under them and route again — up to `max_passes` (`support.max_island_passes`, default 5) and stopping early on success or on no progress. See [algorithms.md](algorithms.md#island-correction-passes).
 9. **Publish**: Only a passing validation, or an explicit `--allow-unresolved`, copies the staged file to the destination with `atomic_copy`. Otherwise the geometry is withheld and `export.written` is `false` with the failed check names. **A failing run never overwrites or deletes an existing output file.**
 10. **Report**: The evidence JSON is written either way. The report is the product; the STL is the by-product. `prepare` always records a per-stage wall-time map in `report['timing']`; CLI `--timing` prints that table to stderr. Equivalence treats `timing` as volatile (alongside `seconds` and similar run-cost fields), so golden diffs stay geometry-focused.
@@ -95,6 +96,8 @@ Profile loading, settings merging, and validation.
 | `resolve_settings(printer_path=None, resin_path=None, overrides=None)` | Paths to printer/resin TOML files, dict of overrides | `dict` | Merge defaults, profiles, and CLI overrides into final settings |
 | `validate_settings(settings)` | `dict` settings | None or raises | Check all required keys, bounds, and consistency |
 | `layer_exposure(settings, index)` | Settings, layer index | `float` | Interpolate exposure time for a given layer (bottom vs. normal) |
+| `resin_usage(settings, volume_mm3, *, model_mm3=None, supports_mm3=None, breakdown_unavailable=None)` | Settings, cured volumes | `dict` | Totals in mL, grams and cost (grams/cost `null` without density/price), `note`, and `breakdown` into `total`/`model`/`supports` |
+| `resin_usage_from_metrics(settings, metrics, *, breakdown_unavailable=None)` | Settings, validation metrics | `dict` | `resin_usage` from `raster_volume_mm3`, split by `raster_volume_by_group` when it counted the same pixels |
 
 ### contracts.py
 Core data types and exceptions.
@@ -107,8 +110,8 @@ Core data types and exceptions.
 | `MeshAsset(path, sha256, triangle_count, bounds, ...)` | Input file metadata |
 | `Placement(matrix, rotation_deg, center_offset_mm, model_lift_mm, bounds, search, scale=[1,1,1], mirror=[False,False,False])` | Affine placement plus search metadata. `scale`/`mirror` are the resolved per-axis factors and flips; defaulting to the identity keeps every pre-existing caller and archive resolving unchanged |
 | `ValidationReport(diagnostics, checks, metrics, ...)` | Evidence summary; `.passed` property checks all checks are run and none failed |
-| `SupportNode(id, position_mm, kind)` | Support graph vertex (foot, junction, contact, elbow, model_anchor, brace_junction) |
-| `SupportEdge(start, end, radius_mm, kind)` | Support graph edge (pillar, branched, tip, model_anchor, tree_trunk, tree_branch, brace, brace_foot) |
+| `SupportNode(id, position_mm, kind)` | Support graph vertex (foot, junction, contact, elbow, model_anchor, anchor_junction, brace_junction) |
+| `SupportEdge(start, end, radius_mm, kind)` | Support graph edge (default `pillar`; the router writes vertical, branched, model_anchor, tip, bottom, small_model, model_stub, tree_trunk, tree_branch, brace, brace_foot) |
 | `SupportGraph(nodes, edges, overrides, diagnostics)` | Support tree and rejection list |
 | `Diagnostic(code, message, severity, layer, position_mm, details)` | Single evidence finding |
 
@@ -140,7 +143,8 @@ Full-resolution placement search, orientation ranking, and manifold construction
 | `auto_placement(triangles, settings, center_offset=(0,0), lift_mm=5.0, cancel=None, directions=192, spins=12, refinements=3, assess=True, finalists=5, min_separation_deg=20.0, max_verifications=128, progress=None)` | Triangles, settings, offset, lift, cancel, plus search tuning | `Placement` or raises | Multi-resolution search over 192 directions × 12 spins, refined 3×, re-ranked on coarse grid. Does not accept scale/mirror; the search always ranks the unscaled, unmirrored part |
 | `scale_matrix(scale=(1,1,1), mirror=(False,False,False))` | Per-axis scale, per-axis mirror flags | `(matrix, factors, flips)` | Linear part of the transform, mirror folded in as a negative factor; rejects a nonpositive or out-of-`[MIN_SCALE, MAX_SCALE]` factor |
 | `scale_note(factors, flips)` | Resolved scale factors, mirror flags | `str` or `None` | One-line hazard summary for reports/banners; `None` at the identity |
-| `matrix_to_euler_deg(rotation)` | `(3, 3)` rotation matrix | List of 3 degrees | Extrinsic X, Y, Z angles for matrix built as Rz @ Ry @ Rx |
+| `matrix_to_euler_deg(rotation)` | `(3, 3)` rotation matrix | List of 3 degrees | Extrinsic X, Y, Z angles for matrix built as Rz @ Ry @ Rx; exact inverse of `rotation_matrix`, including at Y = ±90° |
+| `compose_rotation_deg(delta_deg, rotation_deg)` | World-axis delta, current pose | List of 3 degrees | Pose after turning by `delta_deg` about the fixed world axes: `R(delta) @ R(rotation)`, wrapped to (-180, 180]. Used by the gizmo and multi-select rotation edits; a zero delta leaves the pose untouched |
 | `_rank_finalists(triangles, accepted, settings, assess, cancel, progress)` | Triangles, feasible placements, settings, bool, cancel, progress | `Placement` | Order finalists by void terms and accessibility from coarse occupancy grid; returns best |
 | `_attach_assessment(triangles, placement, settings, cancel, progress)` | Triangles, placement, settings, cancel, progress | `dict` or None | Perform occupancy-grid assessment of one placement; internal |
 | `mesh_to_manifold(triangles, budget=None, repair=None, cancel=None)` | Triangles, optional budget/repair dict/cancel | `(solid, report)` tuple | Exact vertex dedup only; rejects invalid topology; raises on zero-area or self-intersections |
@@ -162,10 +166,13 @@ Support detection, routing, and geometry.
 | `ColumnField.top_below(column, index)` | Column, layer index | Layer index or None | Highest run top at or below index; None if free to plate |
 | `build_column_field(triangles, bounds, settings, pitch_mm=None, budget=None, cancel=None, progress=no_progress)` | Triangles, bounds, settings, optional pitch, budget/cancel/progress | `ColumnField` | Raster the placed model once; extract per-column occupancy and islands |
 | `downward_contacts(triangles, settings, cancel=None, progress=no_progress, max_lattice_faces=200000)` | Triangles, settings, optional cancel/progress/lattice limit | `(points, area)` tuple | Sample downward faces; optional contour perimeter and open-boundary edges |
-| `select_contacts(triangles, field, settings, cancel=None, progress=no_progress, extra_contacts=(), removed_contacts=(), removal_radius_mm=None, object_groups=None)` | Triangles, column field, settings, optional lists/groups, cancel/progress | `(contacts, metrics)` tuple | Choose contact points from downward faces and raster islands; thin by spacing; apply removals; optional per-object overlays |
+| `select_contacts(triangles, field, settings, *, cancel=None, progress=no_progress, extra_contacts=(), removed_contacts=(), removal_radius_mm=None, paint=None, object_groups=None)` | Triangles, column field, settings, optional lists/paint/groups, cancel/progress | `(contacts, metrics)` tuple | Choose contact points from downward faces and raster islands; thin by spacing; apply removals; optional per-object overlays |
 | `contact_coverage(samples, contacts, settings, downward_area_mm2)` | Sample points, contact points, settings, total area | `dict` | Measure distance from every sampled point to nearest contact; check load limits |
-| `route_contacts(contacts, field, settings, cancel=None, branch_attempts=8, max_diagnostics=256)` | Contacts array, column field, settings, optional params | `(SupportPlan, raft_or_None)` tuple | Route each contact to plate, angled branch, or model anchor; build solids and graph |
-| `plan_supports(triangles, bounds, settings, field=None, budget=None, cancel=None, progress=no_progress, extra_contacts=(), removed_contacts=(), branch_attempts=8, max_diagnostics=256)` | Triangles, bounds, settings, optional field/budget/cancel/progress/lists/params | `(SupportPlan, raft_or_None)` tuple | Convenience: builds field if needed, then calls select and route |
+| `route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8, max_diagnostics=256, contact_parameters=(), density_exempt=())` | Contacts array, column field, settings, optional params | `(SupportPlan, raft_or_None)` tuple | Route each contact to plate, angled branch, or model anchor, else (island and manual contacts) a model stub or a joint on an existing shaft; each routed tip's capsule is reserved so later routes cannot cross it. Builds solids and graph |
+| `explain_unroutable(evidence, support, *, policy_refused=False, fit_failed=False)` | Routing evidence, support settings | `(reason, message, details)` | Why a contact has no route: `tip_blocked`, `policy_blocked`, `tip_no_fit`, `anchor_rejected:<why>`, `plate_blocked` or `branch_exhausted`, with `suggest` settings in `details` |
+| `stub_reach_mm(spec, field)` | Resolved tip spec, column field | `float` | Farthest a model stub may reach: the gap a tip-and-anchor pair could not span |
+| `stub_solid(foot, contact, top, radius, segments=24)` | Three points, radius | manifold3d solid | Hull of three horizontal discs forming one stub rod |
+| `plan_supports(triangles, bounds, settings, *, field=None, budget=None, cancel=None, progress=no_progress, extra_contacts=(), removed_contacts=(), branch_attempts=8, max_diagnostics=256, contact_parameters=(), paint=None, object_groups=None)` | Triangles, bounds, settings, optional field/budget/cancel/progress/lists/params | `(SupportPlan, raft_or_None)` tuple | Convenience: builds field if needed, then calls select and route |
 | `apply_support_validation(report, plan, settings)` | ValidationReport, SupportPlan, settings | ValidationReport | Merge support routing evidence into validation checks |
 | `SupportPlan` | — | Class | Result: graph, feet, solids, diagnostics, metrics |
 
@@ -292,6 +299,18 @@ markers, document state and undo, background jobs, and `services.py`'s
 Qt-free wrappers around the same core the CLI calls (including
 `run_print_checks` behind the Verification menu and `route_attachments` behind
 Parts → Compute attachments).
+
+`MainWindow._open_or_add` is the one route by which Open STL, Import STEP, Add
+model and drops reach the plate: STEP files are tessellated first, a loaded
+plate gains every file and is re-arranged, and an empty editor opens the first
+file and adds the rest once its placement lands (Open STL alone replaces a
+loaded plate). The gizmo's rotation commits go through
+`geometry.compose_rotation_deg`, so a ring drag turns the part about the world
+axis from its current pose; only the drag delta is snapped. After Compute
+attachments, the Report tab lists the router's own support diagnostics
+(`_report_island_guard`). On macOS, `viewport.defers_paint_renders()` keeps VTK
+renders out of `paintEvent` and coalesces them to one per 40 ms; see
+[platforms.md](platforms.md#macos-notes).
 
 `viewport.line_actors` is the only way lines are drawn: one actor per
 *segment*, each a two-point cell, because under a virtual machine's generic

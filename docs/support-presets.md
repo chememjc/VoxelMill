@@ -10,7 +10,7 @@ The built-in names are:
 | --- | --- |
 | `light` | `spacing_mm = 4.0`, `pillar_diameter_mm = 0.7`, `contact_diameter_mm = 0.3` |
 | `medium` | The default support values from `voxelmill.config` |
-| `heavy` | `spacing_mm = 2.5`, `pillar_diameter_mm = 1.3`, `contact_diameter_mm = 0.5` |
+| `heavy` | `spacing_mm = 2.5`, `pillar_diameter_mm = 1.3`, `contact_diameter_mm = 0.5`, `trunk_diameter_mm = 1.8` |
 | `chitubox-mars5` | The [reference CHITUBOX configuration](#the-reference-chitubox-configuration) below |
 
 The defaults (`medium`) take their look from CHITUBOX Light: a 0.35 mm contact
@@ -22,7 +22,10 @@ exact Light transcription is the `chitubox-mars5` preset.
 
 Light and heavy are geometric starting points. They are not printer or resin
 calibration claims. Values not present in light or heavy inherit the normal
-settings when the preset is applied.
+settings when the preset is applied. Heavy sets its own tree trunk because a
+trunk thinner than the pillars is raised to the pillar diameter: the default
+1.2 mm trunk would give heavy's 1.3 mm branches no thicker trunk at all, and
+1.8 mm keeps the default's 1.2 / 0.9 trunk-to-pillar ratio.
 
 `chitubox-mars5` is a partial transcription of the reference configuration,
 not a claim of equivalent geometry or print results. `presets.CHITUBOX_UNSET`

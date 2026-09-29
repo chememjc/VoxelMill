@@ -298,9 +298,9 @@ Run `scripts/routing_probe.py SOURCE --output REPORT.json` to classify why each
 contact failed. SOURCE may be an STL (default settings) or a `.voxmil` project,
 which is probed with its own settings, pose and edits and through the same
 island-correction loop `prepare` runs. Each failed contact carries the router's
-own `reason`, message and details next to the probe's reconstruction of the
-decision (gap to material below, tip length required, branch search radius,
-nearest free neighbour). It exports nothing and changes nothing.
+own `router_reason`, `router_message` and `router_details` next to the probe's
+reconstruction of the decision (gap to material below, tip length required,
+branch search radius, nearest free neighbour). It exports nothing and changes nothing.
 
 ## `support_overlap` and `support_model_intrusion`
 
