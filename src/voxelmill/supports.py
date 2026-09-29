@@ -601,20 +601,25 @@ class CapsuleIndex:
         return [self.capsules[index] for index in sorted(found)]
 
 
-def _hits_occupied(field, start, end, radius, clearance=0.0):
+def _hits_occupied(field, start, end, radius, clearance=0.0, skip=(), index=None):
     """True when this capsule overlaps an already-routed shaft along its length.
 
     Exact segment distance over the whole length. A pair joined on purpose,
     a T-joint or a shared foot, has an endpoint of one lying on the other's
     axis, and is not an overlap. Parallel shafts that share a run are
-    overlaps wherever they meet, including near an elbow.
+    overlaps wherever they meet, including near an elbow. Capsules in
+    ``skip`` (compared by identity) are ones the caller joins on purpose.
+    ``index`` replaces the field's own shaft index.
     """
     start, end = np.asarray(start, dtype=float), np.asarray(end, dtype=float)
     axis = end - start
     length = math.sqrt(float(axis @ axis))
     if length < 1e-10:
         return False
-    others = field.occupied_capsules.near(np.stack([start, end]), float(radius) + float(clearance))
+    index = field.occupied_capsules if index is None else index
+    others = index.near(np.stack([start, end]), float(radius) + float(clearance))
+    if skip:
+        others = [item for item in others if not any(item is other for other in skip)]
     if not others:
         return False
     low = np.array([item[0] for item in others], dtype=float)
@@ -769,6 +774,15 @@ def select_contacts(triangles, field, settings, *, cancel=None, progress=no_prog
         candidates, mandatory = np.empty((0, 3)), []
     mandatory.extend(np.asarray(point, dtype=float) for point in extra_contacts)
     mandatory.extend(np.asarray(point, dtype=float) for point in enforced)
+    # The same island found by two scans differs only in float noise; one
+    # contact is enough, and two would route (or fail) twice.
+    unique, seen = [], set()
+    for point in mandatory:
+        key = contact_key(point)
+        if key not in seen:
+            seen.add(key)
+            unique.append(point)
+    mandatory = unique
     contacts = _thin(candidates, mandatory, spacing, contact_reach_mm(settings))
     removed = np.asarray(list(removed_contacts), dtype=float).reshape(-1, 3)
     kept = np.asarray(list(extra_contacts), dtype=float).reshape(-1, 3)
@@ -907,7 +921,7 @@ def _model_anchor_clear(field, column, x, y, surface_z, length, depth, radius, c
 
 
 def _plate_route(field, column, contact_index, point, base_z, spec, spacing, clearance_mm,
-                 branch_attempts, usable_shaft, exempt, model_shaft_clear=None):
+                 branch_attempts, usable_shaft, exempt, model_shaft_clear=None, evidence=None):
     """A route from one contact's tip base to the plate.
 
     Returns ``(kind, anchor, elbow, skipped)``: kind is ``'vertical'`` (a free
@@ -915,9 +929,15 @@ def _plate_route(field, column, contact_index, point, base_z, spec, spacing, cle
     ``support.pillar_angle_deg``), or None when neither exists. ``skipped``
     means the free column already carries a shaft, so a density-exempt-free
     contact is dropped rather than woven around it.
+
+    ``evidence``, when given, is filled with what decided the route: why the
+    contact's own column was not a vertical (``plate``) and how far the branch
+    search got (``branch``). It is what an unroutable diagnostic explains.
     """
     x, y, _z = point
     pillar_r, clearance = spec.pillar_r, spec.clearance
+    if evidence is None:
+        evidence = {}
     if model_shaft_clear is None:
         def model_shaft_clear(start, end, radius):
             return True
@@ -940,9 +960,25 @@ def _plate_route(field, column, contact_index, point, base_z, spec, spacing, cle
         # tip (excluded around it) still allows a vertical.
         if model_shaft_clear((x, y, 0.0), (x, y, base_z), pillar_r):
             plate_kind, plate_anchor = 'vertical', (x, y, 0.0)
+        else:
+            evidence['plate'] = {'blocked_by': 'wall_beside_pillar',
+                                 'pillar_diameter_mm': 2 * pillar_r}
+    else:
+        row, col = divmod(int(column), field.grid.width)
+        below = field.top_below(column, contact_index)
+        plate = {'blocked_by': 'model_below' if below is not None else 'contact_inside_material',
+                 'material_from_z_mm': round(field.z_of(int(field.first_material[row, col])), 4)}
+        if below is not None:
+            plate['material_top_z_mm'] = round(field.z_of(below), 4)
+        evidence['plate'] = plate
     if plate_kind is None:
         best = None
         radius = max(1, int(math.ceil(min(2 * spacing, max(0.0, base_z)) / field.grid.dx)))
+        branch = evidence['branch'] = {
+            'tip_base_z_mm': round(base_z, 4),
+            'search_radius_mm': round(min(2 * spacing, max(0.0, base_z)), 4),
+            'free_columns': 0, 'within_angle': 0, 'tested': 0,
+            'blocked_near_elbow': 0, 'shaft_blocked': 0}
         row, col = divmod(column, field.grid.width)
         r0, r1 = max(0, row - radius), min(field.grid.height, row + radius + 1)
         c0, c1 = max(0, col - radius), min(field.grid.width, col + radius + 1)
@@ -958,6 +994,8 @@ def _plate_route(field, column, contact_index, point, base_z, spec, spacing, cle
             # distance; a steeper angle buys stiffness and costs reach.
             drop = lateral * branch_tangent
             usable = (lateral > 1e-9) & (lateral <= 2 * spacing) & (drop < base_z)
+            branch['free_columns'] = int(np.count_nonzero((lateral > 1e-9) & (lateral <= 2 * spacing)))
+            branch['within_angle'] = int(np.count_nonzero(usable))
             tested = 0
             limit = max(int(branch_attempts) * 8, 256)
             # Stable: equal distances (symmetric cells) must resolve the same way
@@ -978,6 +1016,7 @@ def _plate_route(field, column, contact_index, point, base_z, spec, spacing, cle
                     rr0, rr1 = max(0, br - reach_cells), min(field.grid.height, br + reach_cells + 1)
                     cc0, cc1 = max(0, bc - reach_cells), min(field.grid.width, bc + reach_cells + 1)
                     if np.any(field.first_material[rr0:rr1, cc0:cc1] < elbow_index):
+                        branch['blocked_near_elbow'] += 1
                         continue
                 tested += 1
                 angled = ((nx, ny, elbow_z), (x, y, base_z))
@@ -986,6 +1025,8 @@ def _plate_route(field, column, contact_index, point, base_z, spec, spacing, cle
                         and (elbow_z <= 1e-9 or _usable_shaft(*vertical, pillar_r))):
                     best = (distance, nx, ny, elbow_z)
                     break
+                branch['shaft_blocked'] += 1
+            branch['tested'] = tested
         if best is not None:
             plate_kind = 'branched'
             plate_anchor = (best[1], best[2], 0.0)
@@ -994,13 +1035,18 @@ def _plate_route(field, column, contact_index, point, base_z, spec, spacing, cle
 
 
 def _model_anchor_candidate(field, column, contact_index, point, spec, support, clearance_mm,
-                            grid_pad, exclude, cancel):
+                            grid_pad, exclude, cancel, *, info=None):
     """A route down to model material directly below the contact.
 
     Returns ``(anchor, small, rejected)``: ``anchor`` is the surface point to
     land on, or None; ``small`` says it is a small model-to-model pillar;
     ``rejected`` says a candidate existed but did not fit or collided.
+
+    ``info``, when given, records why: ``why`` names the failed test and
+    ``gap_mm`` / ``surface_z_mm`` the material below.
     """
+    if info is None:
+        info = {}
     x, y, z = point
     small_mode, small_r, small_limit = spec.small_mode, spec.small_r, spec.small_limit
     tip, min_tip, pillar_r, contact_r = spec.tip, spec.min_tip, spec.pillar_r, spec.contact_r
@@ -1009,62 +1055,398 @@ def _model_anchor_candidate(field, column, contact_index, point, spec, support, 
     below = field.top_below(column, contact_index)
     model_anchor = None
     candidate_small = False
-    if below is not None:
-        anchor_z = field.z_of(below)
-        gap = z - anchor_z
-        candidate_small = small_mode == 'model' and small_r > 0 and 1e-9 < gap <= small_limit
-        min_anchor_gap = (2 * min_tip) if anchor_length else min_tip
-        if candidate_small:
-            low_runs, high_runs = field.runs(column)
-            at_top = int(np.searchsorted(high_runs, field.layer_of(z), side='right'))
-            upper_fits = (at_top < len(low_runs) and field.z_of(low_runs[at_top]) <= z + 1e-9 and
-                          z + support['small_pillar_upper_depth_mm'] <= field.z_of(high_runs[at_top]) + 1e-9)
-            if upper_fits and _model_anchor_clear(field, column, x, y, anchor_z, gap,
-                    support['small_pillar_lower_depth_mm'], small_r,
-                    support['support_clearance_mm'], cancel):
-                model_anchor = (x, y, anchor_z)
+    if below is None:
+        info['why'] = 'no_material_below'
+        return model_anchor, candidate_small, rejected
+    anchor_z = field.z_of(below)
+    gap = z - anchor_z
+    info['gap_mm'] = round(gap, 4)
+    info['surface_z_mm'] = round(anchor_z, 4)
+    candidate_small = small_mode == 'model' and small_r > 0 and 1e-9 < gap <= small_limit
+    min_anchor_gap = (2 * min_tip) if anchor_length else min_tip
+    info['min_gap_mm'] = round(min_anchor_gap, 4)
+    if candidate_small:
+        low_runs, high_runs = field.runs(column)
+        at_top = int(np.searchsorted(high_runs, field.layer_of(z), side='right'))
+        upper_fits = (at_top < len(low_runs) and field.z_of(low_runs[at_top]) <= z + 1e-9 and
+                      z + support['small_pillar_upper_depth_mm'] <= field.z_of(high_runs[at_top]) + 1e-9)
+        if upper_fits and _model_anchor_clear(field, column, x, y, anchor_z, gap,
+                support['small_pillar_lower_depth_mm'], small_r,
+                support['support_clearance_mm'], cancel):
+            model_anchor = (x, y, anchor_z)
+        else:
+            rejected = True
+            info['why'] = 'small_pillar_no_fit'
+    elif gap >= min_anchor_gap:
+        fitted = (_fit_anchor_tips(gap, tip, anchor_length, min_tip, pillar_r)
+                  if anchor_length else (min(tip, gap), 0.0, True))
+        if fitted is None:
+            rejected = True
+            info['why'] = 'tip_no_fit'
+        else:
+            fit_tip, fit_bottom, fit_full = fitted
+            candidate_run = max(0., gap - fit_tip - fit_bottom)
+            if not fit_full:
+                candidate_r = small_r if small_r > 0 else contact_r
+            elif small_mode == 'middle' and small_r > 0 and candidate_run <= small_limit:
+                candidate_r = small_r
             else:
-                rejected = True
-        elif gap >= min_anchor_gap:
-            fitted = (_fit_anchor_tips(gap, tip, anchor_length, min_tip, pillar_r)
-                      if anchor_length else (min(tip, gap), 0.0, True))
-            if fitted is None:
-                rejected = True
-            else:
-                fit_tip, fit_bottom, fit_full = fitted
-                candidate_run = max(0., gap - fit_tip - fit_bottom)
-                if not fit_full:
-                    candidate_r = small_r if small_r > 0 else contact_r
-                elif small_mode == 'middle' and small_r > 0 and candidate_run <= small_limit:
-                    candidate_r = small_r
-                else:
-                    candidate_r = pillar_r
-                bottom_r = float(support['model_anchor_diameter_mm']) / 2 or candidate_r
-                # Only the new connector is examined here; the historical
-                # direct attachment remains unchanged when both dimensions are 0.
-                if (not (fit_bottom or anchor_depth) or _model_anchor_clear(
-                        field, column, x, y, anchor_z, fit_bottom, anchor_depth,
-                        bottom_r, support['support_clearance_mm'], cancel,
-                        top_radius=candidate_r)):
-                    middle_lo, middle_hi = anchor_z + fit_bottom, z - fit_tip
-                    extra_exclude = [((x, y, anchor_z),
-                                      max(anchor_depth, support['break_point_diameter_mm'] / 2,
-                                          candidate_r + clearance_mm + grid_pad))]
-                    exclude_both = exclude + extra_exclude
-                    middle_ok = (middle_hi - middle_lo <= 1e-9 or _shaft_clear(
-                        field, (x, y, middle_lo), (x, y, middle_hi), candidate_r, clearance_mm,
-                        cancel, exclude_both))
-                    occupied = (middle_hi - middle_lo > 1e-9 and _hits_occupied(
-                        field, (x, y, middle_lo), (x, y, middle_hi), candidate_r, clearance_mm))
-                    if middle_ok and not occupied:
-                        model_anchor = (x, y, anchor_z)
-                    else:
-                        rejected = True
+                candidate_r = pillar_r
+            bottom_r = float(support['model_anchor_diameter_mm']) / 2 or candidate_r
+            # Only the new connector is examined here; the historical
+            # direct attachment remains unchanged when both dimensions are 0.
+            if (not (fit_bottom or anchor_depth) or _model_anchor_clear(
+                    field, column, x, y, anchor_z, fit_bottom, anchor_depth,
+                    bottom_r, support['support_clearance_mm'], cancel,
+                    top_radius=candidate_r)):
+                middle_lo, middle_hi = anchor_z + fit_bottom, z - fit_tip
+                extra_exclude = [((x, y, anchor_z),
+                                  max(anchor_depth, support['break_point_diameter_mm'] / 2,
+                                      candidate_r + clearance_mm + grid_pad))]
+                exclude_both = exclude + extra_exclude
+                middle_ok = (middle_hi - middle_lo <= 1e-9 or _shaft_clear(
+                    field, (x, y, middle_lo), (x, y, middle_hi), candidate_r, clearance_mm,
+                    cancel, exclude_both))
+                occupied = (middle_hi - middle_lo > 1e-9 and _hits_occupied(
+                    field, (x, y, middle_lo), (x, y, middle_hi), candidate_r, clearance_mm))
+                if middle_ok and not occupied:
+                    model_anchor = (x, y, anchor_z)
                 else:
                     rejected = True
-        elif anchor_length:
-            rejected = True
+                    info['why'] = 'shaft_blocked' if not middle_ok else 'existing_support'
+            else:
+                rejected = True
+                info['why'] = _anchor_connector_why(field, column, anchor_z, anchor_depth)
+    else:
+        info['why'] = 'gap_too_short'
+        rejected = bool(anchor_length)
     return model_anchor, candidate_small, rejected
+
+
+def _anchor_connector_why(field, column, surface_z, depth):
+    """Name why ``_model_anchor_clear`` refused a bottom connector."""
+    low, high = field.runs(column)
+    top = int(round((surface_z - field.z0) / field.dz))
+    position = int(np.searchsorted(high, top, side='right')) - 1
+    if position < 0 or surface_z - depth < field.z_of(low[position]) - 1e-9:
+        return 'penetration_exceeds_material'
+    return 'connector_blocked'
+
+
+def stub_reach_mm(spec, field):
+    """How far a stub may reach: no farther than a tip-and-anchor pair could not.
+
+    A model anchor needs ``2 * min_tip_length_mm`` of gap (``min_tip`` with no
+    bottom connector); a stub serves only material closer than that. The
+    floor of two analysis-cell diagonals keeps the cells next to the
+    contact's own within reach on a coarse grid.
+    """
+    need = 2 * spec.min_tip if spec.anchor_length else spec.min_tip
+    return max(need, 2 * math.hypot(field.grid.dx, field.grid.dy))
+
+
+def _model_stub(field, column, contact_index, point, spec, tips=None):
+    """A thin rod from the contact into the nearest material printed before it.
+
+    For island births and manual or correction contacts only, after every
+    plate route and model anchor failed. On a sloped or near-vertical edge
+    that is not aligned with the pixel grid, the printer raster can leave a
+    one-pixel island that touches the layer below only at a corner. Its
+    material below or beside is closer than a tip can span, so no pillar or
+    anchor fits, and without the stub the island stays unsupported.
+
+    Candidate targets are analysis cells within :func:`stub_reach_mm` of the
+    contact whose column is solid on a layer below the contact's; the nearest
+    wins, the contact's own column on a tie. The rod has the contact diameter,
+    runs from ``penetration_mm`` above the contact to the target cell's centre
+    sunk ``max(model_anchor_penetration_mm, penetration_mm)`` into that
+    material, and that lower end must stay inside the same run. It must not
+    overlap another routed shaft. ``support_clearance_mm`` is not added: the
+    stub is shorter than a tip and fused to the part along its length, so
+    there is no shaft to cut free beside it, and neighbouring islands on one
+    edge sit closer together than two clearances. ``tips`` (a
+    :class:`CapsuleIndex` of routed tips at their base radius) is avoided too.
+
+    Returns ``(stub, why)``: ``stub`` is a dict or None, ``why`` says what
+    refused it.
+    """
+    x, y, z = point
+    grid = field.grid
+    reach = stub_reach_mm(spec, field)
+    depth = max(spec.anchor_depth, spec.penetration)
+    row, col = divmod(int(column), grid.width)
+    span = int(math.ceil(reach / min(grid.dx, grid.dy))) + 1
+    candidates = []
+    for r in range(max(0, row - span), min(grid.height, row + span + 1)):
+        for c in range(max(0, col - span), min(grid.width, col + span + 1)):
+            cx, cy = grid.x0 + (c + .5) * grid.dx, grid.y0 + (r + .5) * grid.dy
+            lateral = 0.0 if (r, c) == (row, col) else math.hypot(cx - x, cy - y)
+            if lateral > reach:
+                continue
+            lows, highs = field.runs(field.column(r, c))
+            # The highest solid layer below the contact's own layer.
+            position = int(np.searchsorted(lows, contact_index, side='left')) - 1
+            if position < 0:
+                continue
+            top = min(int(highs[position]), contact_index)
+            surface = field.z_of(top)
+            distance = math.hypot(lateral, max(0.0, z - surface))
+            if distance > reach:
+                continue
+            candidates.append((distance, (r, c) != (row, col), r, c, cx, cy, surface,
+                               field.z_of(int(lows[position]))))
+    if not candidates:
+        return None, 'no_material_within_reach'
+    why = 'stub_depth'
+    for distance, _other, r, c, cx, cy, surface, run_bottom in sorted(candidates):
+        if (r, c) == (row, col):
+            cx, cy = x, y
+        bottom = surface - depth
+        if bottom < run_bottom - 1e-9:
+            continue
+        foot, top_point = (cx, cy, bottom), (x, y, z + spec.penetration)
+        if _stub_hits(field, foot, (x, y, z), top_point, spec.contact_r, tips=tips):
+            why = 'stub_crosses_support'
+            continue
+        return {'foot': foot, 'surface': (cx, cy, surface), 'top': top_point,
+                'radius_mm': spec.contact_r,
+                'length_mm': math.dist(foot, (x, y, z)) + spec.penetration,
+                'reach_mm': distance}, None
+    return None, why
+
+
+def stub_solid(foot, contact, top, radius, segments=24):
+    """The hull of three horizontal discs: at the foot, the contact and above it.
+
+    The rod must hold the contact at the contact's own layer, not only near
+    its top, so it runs foot to contact and then straight up by the
+    penetration. Horizontal caps matter: a tilted round cylinder's lowest
+    layer is a sliver at one side of its end cap, which can sit outside the
+    material the stub was sunk into and print as a new island. With flat caps
+    the lowest layer is the whole foot disc around the sampled solid point,
+    and each layer above overlaps the one below.
+    """
+    import manifold3d as m
+    angles = np.linspace(0.0, 2 * math.pi, int(segments), endpoint=False)
+    ring = np.stack([np.cos(angles), np.sin(angles), np.zeros_like(angles)], axis=1) * float(radius)
+    points = np.concatenate([ring + np.asarray(center, dtype=float)
+                             for center in (foot, contact, top)])
+    return m.Manifold.hull_points(points.tolist())
+
+
+def _stub_hits(field, foot, contact, top, radius, skip=(), tips=None):
+    """Whether a stub's two axis segments overlap a routed shaft or tip (no clearance)."""
+    indexes = [field.occupied_capsules] + ([tips] if tips is not None else [])
+    return any(_hits_occupied(field, start, end, radius, 0.0, skip=skip, index=index)
+               for index in indexes for start, end in ((foot, contact), (contact, top)))
+
+
+def _emit_stub(stub, order, point, graph, solids, field, records, local_parameters):
+    """Add one stub's rod, graph nodes and edges, and reserve its capsule."""
+    head = f'contact{order}'
+    if local_parameters:
+        graph.overrides.append({'contact': head, 'reason': 'effective_parameters',
+                                'parameters': dict(local_parameters)})
+    solids.append(stub_solid(stub['foot'], point, stub['top'], stub['radius_mm']))
+    joined = stub.get('joins')
+    if joined is None:
+        foot = f'foot{order}'
+        graph.nodes.extend([SupportNode(foot, list(stub['surface']), 'model_anchor'),
+                            SupportNode(head, list(point), 'contact')])
+    else:
+        # Split the earlier stub at the junction, so the graph says the two
+        # meet there on purpose. It may already be split; pick the piece
+        # that holds the junction.
+        foot = f'stub_joint{order}'
+        junction_z = stub['foot'][2]
+        graph.nodes.extend([SupportNode(foot, list(stub['foot']), 'junction'),
+                            SupportNode(head, list(point), 'contact')])
+        where = {node.id: node.position_mm for node in graph.nodes}
+
+        def miss(item):
+            low, high = sorted((where[item.start][2], where[item.end][2]))
+            return abs(min(max(junction_z, low), high) - junction_z)
+
+        old_edge = min(joined['edges'], key=miss)
+        lower = SupportEdge(old_edge.start, foot, old_edge.radius_mm, old_edge.kind)
+        upper = SupportEdge(foot, old_edge.end, old_edge.radius_mm, old_edge.kind)
+        graph.edges[graph.edges.index(old_edge)] = lower
+        graph.edges.append(upper)
+        joined['edges'][joined['edges'].index(old_edge)] = lower
+        joined['edges'].append(upper)
+    edge = SupportEdge(foot, head, stub['radius_mm'], 'model_stub')
+    graph.edges.append(edge)
+    _mark_occupied(field, stub['foot'], point, stub['radius_mm'])
+    _mark_occupied(field, point, stub['top'], stub['radius_mm'])
+    capsules = field.occupied_capsules.capsules[-2:]
+    # Stubs joined to one another are one lump fused to the part; a later
+    # stub joining any of them may touch all of them.
+    group = joined['group'] if joined is not None else []
+    group.extend(capsules)
+    records.append({'segments': ((stub['foot'], tuple(point)), (tuple(point), stub['top'])),
+                    'edges': [edge], 'group': group})
+
+
+def _join_stub(field, point, spec, stubs, tips=None):
+    """A stub that joins an earlier stub or a routed tip instead of the model.
+
+    Islands along one stepped edge can sit closer together than two stub
+    radii, so the second stub would overlap the first; an island can also
+    sit beside another contact's tip. A stub may then end on that support's
+    axis, below the contact (printed before it) and within
+    :func:`stub_reach_mm`, provided it overlaps nothing outside the group it
+    joins. Returns ``(record, junction)``, or ``(None, None)``.
+    """
+    x, y, z = point
+    reach = stub_reach_mm(spec, field)
+    here = np.array([x, y, z], dtype=float)
+    top = (x, y, z + spec.penetration)
+    best = None
+    for record in stubs:
+        for low, high in record['segments']:
+            low, high = np.asarray(low, dtype=float), np.asarray(high, dtype=float)
+            axis = high - low
+            length2 = float(axis @ axis)
+            t = 0.0 if length2 < 1e-12 else float(np.clip((here - low) @ axis / length2, 0.0, 1.0))
+            junction = low + axis * t
+            # Printed before the contact: strictly below its layer.
+            if junction[2] > z - field.dz / 2:
+                if abs(axis[2]) < 1e-12:
+                    continue
+                t = min(t, (z - field.dz / 2 - low[2]) / axis[2])
+                if t < 0:
+                    continue
+                junction = low + axis * t
+            distance = float(np.linalg.norm(junction - here))
+            if distance > reach or (best is not None and distance >= best[0]):
+                continue
+            if _stub_hits(field, tuple(junction), (x, y, z), top, spec.contact_r,
+                          skip=record['group'], tips=tips):
+                continue
+            best = (distance, record, tuple(float(v) for v in junction))
+    return (None, None) if best is None else (best[1], best[2])
+
+
+#: What each unroutable reason asks the user to try, as ``support`` keys.
+UNROUTABLE_SUGGESTIONS = {
+    'policy_blocked': ('allow_part_to_part',),
+    'tip_no_fit': ('min_tip_length_mm', 'model_anchor_length_mm', 'tip_length_mm'),
+    'anchor_rejected:gap_too_short': ('min_tip_length_mm', 'model_anchor_length_mm'),
+    'anchor_rejected:tip_no_fit': ('min_tip_length_mm', 'model_anchor_length_mm', 'tip_length_mm'),
+    'anchor_rejected:connector_blocked': ('model_anchor_diameter_mm', 'model_anchor_length_mm',
+                                          'support_clearance_mm'),
+    'anchor_rejected:penetration_exceeds_material': ('model_anchor_penetration_mm',),
+    'anchor_rejected:shaft_blocked': ('support_clearance_mm', 'pillar_diameter_mm',
+                                      'small_pillar_diameter_mm'),
+    'anchor_rejected:existing_support': ('spacing_mm', 'support_clearance_mm'),
+    'anchor_rejected:small_pillar_no_fit': ('small_pillar_upper_depth_mm',
+                                            'small_pillar_lower_depth_mm',
+                                            'small_pillar_diameter_mm', 'small_pillar_mode'),
+    'plate_blocked': ('spacing_mm', 'pillar_angle_deg', 'allow_part_to_part'),
+    'branch_exhausted': ('pillar_angle_deg', 'support_clearance_mm', 'spacing_mm',
+                         'allow_part_to_part'),
+}
+
+_ANCHOR_WHY_TEXT = {
+    'gap_too_short': ('model material {gap:.2f} mm below (surface at Z {surface:.2f}) is closer '
+                      'than the {need:.2f} mm a tip and a bottom connector need'),
+    'tip_no_fit': ('the {gap:.2f} mm gap to the material at Z {surface:.2f} cannot hold both '
+                   'tips at their minimum length'),
+    'connector_blocked': ('the bottom connector onto the material at Z {surface:.2f} would hit '
+                          'a wall beside it'),
+    'penetration_exceeds_material': ('the bottom connector would sink through the material at '
+                                     'Z {surface:.2f}, which is thinner than '
+                                     'model_anchor_penetration_mm'),
+    'shaft_blocked': 'the shaft down to the material at Z {surface:.2f} would pass through the model',
+    'existing_support': ('the shaft down to the material at Z {surface:.2f} would cross a '
+                         'support already routed there'),
+    'small_pillar_no_fit': ('the small model pillar down to Z {surface:.2f} does not fit its '
+                            'configured depths or clearance'),
+}
+
+
+_STUB_WHY_TEXT = {
+    'no_material_within_reach': 'no material printed before it lies within {reach:.2f} mm to fuse a stub to',
+    'stub_depth': 'the material within {reach:.2f} mm is too thin to sink a stub into',
+    'stub_crosses_support': 'a stub to the material within {reach:.2f} mm would cross another support',
+}
+
+
+def explain_unroutable(evidence, support, *, policy_refused=False, fit_failed=False):
+    """Name why a contact has no route, in words and as data.
+
+    Returns ``(reason, message, details)``. ``reason`` is one of
+    ``policy_blocked``, ``tip_no_fit``, ``anchor_rejected:<why>``,
+    ``plate_blocked`` or ``branch_exhausted``; ``details`` carries the plate,
+    branch and anchor evidence, the obstructing height where there is one, and
+    ``suggest``, the support settings worth changing.
+    """
+    plate = dict(evidence.get('plate') or {})
+    branch = dict(evidence.get('branch') or {})
+    anchor = {key: value for key, value in (evidence.get('anchor') or {}).items() if key != 'stub'}
+    why = anchor.get('why')
+    radius = branch.get('search_radius_mm', 0.0)
+    if plate.get('blocked_by') == 'model_below':
+        plate_text = (f"model material under it from Z {plate['material_from_z_mm']:.2f} "
+                      f"to Z {plate['material_top_z_mm']:.2f} blocks a vertical pillar")
+    elif plate.get('blocked_by') == 'contact_inside_material':
+        plate_text = ('its analysis-grid cell is already solid at the contact height (it sits on a '
+                      f"wall or edge), with material down to Z {plate['material_from_z_mm']:.2f}")
+    elif plate.get('blocked_by') == 'wall_beside_pillar':
+        plate_text = 'a vertical pillar would stand inside the wall beside the contact'
+    else:
+        plate_text = 'no vertical pillar fits'
+    if not branch.get('free_columns'):
+        branch_text = f'no column within {radius:.1f} mm is free down to the plate'
+    elif not branch.get('within_angle'):
+        branch_text = (f"{branch['free_columns']} free column(s) within {radius:.1f} mm, but none "
+                       'reachable at pillar_angle_deg before the plate')
+    elif (plate.get('material_top_z_mm') is not None
+          and plate['material_top_z_mm'] > branch.get('tip_base_z_mm', math.inf)):
+        branch_text = (f"every angled branch would start at the tip base (Z "
+                       f"{branch['tip_base_z_mm']:.2f}, one tip_length_mm below the contact), "
+                       'which is inside that material')
+    else:
+        branch_text = (f"all {branch['within_angle']} angled branch(es) within {radius:.1f} mm "
+                       'hit the model or another support')
+    if policy_refused:
+        reason = 'policy_blocked'
+        headline = ('only a support standing on the model below fits here, and '
+                    'allow_part_to_part is off')
+    elif fit_failed:
+        reason = 'tip_no_fit'
+        headline = (f"the {anchor.get('gap_mm', 0.0):.2f} mm gap to the material below cannot hold "
+                    'a top tip and a bottom connector at their minimum lengths')
+    elif why and why != 'no_material_below':
+        reason = f'anchor_rejected:{why}'
+        headline = _ANCHOR_WHY_TEXT.get(why, 'the support onto the model below was rejected').format(
+            gap=anchor.get('gap_mm', 0.0), surface=anchor.get('surface_z_mm', 0.0),
+            need=anchor.get('min_gap_mm', 0.0))
+    elif branch.get('within_angle'):
+        reason = 'branch_exhausted'
+        headline = branch_text
+    else:
+        reason = 'plate_blocked'
+        headline = plate_text
+    parts = [headline]
+    for text in (plate_text, branch_text):
+        if text != headline:
+            parts.append(text)
+    stub = dict(evidence.get('stub') or {})
+    if stub:
+        parts.append(_STUB_WHY_TEXT.get(stub.get('why'), 'no stub fits').format(
+            reach=stub.get('reach_mm', 0.0)))
+    message = 'No route: ' + '; '.join(parts) + '.'
+    suggest = [key for key in UNROUTABLE_SUGGESTIONS.get(reason, ())
+               if key in support and not (key == 'allow_part_to_part' and support[key])]
+    details = {'reason': reason, 'plate': plate, 'branch': branch, 'anchor': anchor,
+               'suggest': suggest}
+    if stub:
+        details['stub'] = stub
+    obstruction = anchor.get('surface_z_mm', plate.get('material_top_z_mm'))
+    if obstruction is not None:
+        details['obstruction_z_mm'] = obstruction
+    return reason, message, details
 
 
 @dataclass(frozen=True)
@@ -1131,13 +1513,41 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
     heights = []
     tips_used = []
     anchor_rejected = 0
+    anchor_rejections = {}
     anchor_examples = []
     small_models = 0
+    stubs = 0
+    stub_records = []
+    tip_index = CapsuleIndex(spacing)
+    duplicates = 0
+    failure_reasons = {}
+    seen_keys = set()
     matched_override_keys = set()
+    deferred_stubs = []
+
+    def record_failure(position, evidence, support, *, policy_refused=False, fit_failed=False):
+        # Internal overhangs inside a porous part are genuinely unreachable;
+        # they are counted in full and sampled in the diagnostics.
+        nonlocal failures
+        reason, message, details = explain_unroutable(
+            evidence, support, policy_refused=policy_refused, fit_failed=fit_failed)
+        failure_reasons[reason] = failure_reasons.get(reason, 0) + 1
+        unroutable_positions.append(list(position))
+        if len(diagnostics) < max_diagnostics:
+            diagnostics.append(Diagnostic('support_unroutable', message, severity='warning',
+                                          position_mm=list(position), details=details))
+        failures += 1
+
     for order, point in enumerate(contacts):
         cancel.check()
-        local_parameters = parameters_for_contact(normalized_parameters, point)
         key = contact_key(point)
+        if key in seen_keys:
+            # The same point twice (an island the correction loop found again
+            # on a second scan) would route twice, or fail twice.
+            duplicates += 1
+            continue
+        seen_keys.add(key)
+        local_parameters = parameters_for_contact(normalized_parameters, point)
         if key in normalized_parameters.by_position:
             matched_override_keys.add(key)
         support = dict(global_support)
@@ -1202,9 +1612,10 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         def _model_shaft_clear(start, end, radius):
             return _shaft_clear(field, start, end, radius, 0.0, cancel, exclude)  # noqa: B023
 
+        evidence = {}
         plate_kind, plate_anchor, plate_elbow, skipped = _plate_route(
             field, column, contact_index, (x, y, z), base_z, spec, spacing, clearance_mm,
-            branch_attempts, _usable_shaft, exempt, _model_shaft_clear)
+            branch_attempts, _usable_shaft, exempt, _model_shaft_clear, evidence)
         if skipped:
             density_skipped += 1
             continue
@@ -1215,14 +1626,20 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         # the historical plate-first order is preserved exactly. A plate
         # candidate whose capsule hit the model or an existing shaft already
         # fell through, so this is "the other of plate vs model".
+        anchor_info = evidence['anchor'] = {}
         model_anchor, candidate_small, rejected = _model_anchor_candidate(
             field, column, contact_index, (x, y, z), spec, support, clearance_mm, grid_pad,
-            exclude, cancel)
+            exclude, cancel, info=anchor_info)
         anchor_rejected += int(rejected)
+        if rejected:
+            why = anchor_info.get('why', 'rejected')
+            anchor_rejections[why] = anchor_rejections.get(why, 0) + 1
+        policy_refused = False
         if model_anchor is not None:
             if not support['allow_part_to_part']:
                 if kind is None:
                     policy_blocked += 1
+                    policy_refused = True
             else:
                 plate_length = (math.inf if kind is None else
                                 (elbow[2] + math.dist(elbow, (x, y, base_z)) + tip
@@ -1246,15 +1663,17 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                     elif not is_small_model and gap <= tip:
                         tip_used, base_z = gap, anchor[2]
                         shortened += 1
+        if kind is None and exempt and model_anchor is None:
+            # An island (or a manual/correction contact) may never be dropped.
+            # When nothing else fits it is fused to the material beside or
+            # below it, after every other contact, lowest first, so a stub
+            # never has to cross one placed above it.
+            deferred_stubs.append((z, order, (x, y, z), column, contact_index, spec, support,
+                                   local_parameters, evidence))
+            continue
         if kind is None:
-            # Internal overhangs inside a porous part are genuinely unreachable;
-            # they are counted in full and sampled in the diagnostics.
-            unroutable_positions.append([x, y, z])
-            if len(diagnostics) < max_diagnostics:
-                diagnostics.append(Diagnostic('support_unroutable',
-                                              'No permitted collision-free route to plate or model',
-                                              severity='warning', position_mm=[x, y, z]))
-            failures += 1
+            record_failure((x, y, z), evidence, support, policy_refused=policy_refused,
+                           fit_failed=model_anchor is not None and not policy_refused)
             continue
         routed[kind] += 1
         if is_small_model:
@@ -1319,7 +1738,8 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         else:
             graph.edges.extend([SupportEdge(middle_start, f'elbow{order}', run_r, kind),
                                 SupportEdge(f'elbow{order}', junction, run_r, kind)])
-        graph.edges.append(SupportEdge(junction, head, contact_r, 'tip'))
+        tip_edge = SupportEdge(junction, head, contact_r, 'tip')
+        graph.edges.append(tip_edge)
         from .support_segments import tip_segment, elbow_sphere
         if elbow is not None:
             graph.nodes.append(SupportNode(f'elbow{order}', list(elbow), 'elbow'))
@@ -1367,6 +1787,9 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                     # Reserve the vertical: it is what a tree falls back to,
                     # and later routes must not be woven through it.
                     _mark_occupied(field, (x, y, middle_z), (x, y, base_z), run_r)
+                    # The tree that replaces it must not collide with its own
+                    # reservation, only with everything else.
+                    tree_jobs[-1]['capsule'] = field.occupied_capsules.capsules[-1]
                 else:
                     solids.append(cylinder_between((x, y, middle_z), (x, y, base_z), run_r))
                     _mark_occupied(field, (x, y, middle_z), (x, y, base_z), run_r)
@@ -1380,6 +1803,11 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         top_base = run_r if (kind == 'model_anchor' and not full_middle) else tip_base_r
         solids.append(tip_segment((x, y, base_z), (x, y, z + penetration), top_base, contact_r,
                                   support['tip_shape'], top_ball))
+        # Tips are not shafts, so routing never avoided them; the stub phase
+        # must, at the tip's widest radius, or join one on purpose.
+        tip_index.add((x, y, base_z), (x, y, z + penetration), max(top_base, contact_r))
+        stub_records.append({'segments': (((x, y, base_z), (x, y, z)),), 'edges': [tip_edge],
+                             'group': [tip_index.capsules[-1]]})
         if elbow is not None:
             from .support_segments import shoulder_joint
             solids.append(shoulder_joint((x, y, base_z), run_r, min(top_base, contact_r), tip_span))
@@ -1399,6 +1827,36 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                                               details={'slenderness': slenderness,
                                                        'limit': float(support['max_slenderness'])}))
             graph.overrides.append({'contact': head, 'reason': 'slenderness', 'value': slenderness})
+
+    for _z, order, point, column, contact_index, spec, support, local_parameters, evidence in sorted(
+            deferred_stubs, key=lambda item: item[:2]):
+        cancel.check()
+        stub, why = _model_stub(field, column, contact_index, point, spec, tips=tip_index)
+        if stub is None:
+            joined, junction = _join_stub(field, point, spec, stub_records, tips=tip_index)
+            if joined is not None:
+                top_point = (point[0], point[1], point[2] + spec.penetration)
+                stub = {'foot': junction, 'surface': junction, 'top': top_point,
+                        'radius_mm': spec.contact_r,
+                        'length_mm': math.dist(junction, point) + spec.penetration,
+                        'joins': joined}
+        if stub is None:
+            evidence['stub'] = {'why': why, 'reach_mm': round(stub_reach_mm(spec, field), 4)}
+            record_failure(point, evidence, support)
+            continue
+        if not support['allow_part_to_part']:
+            policy_blocked += 1
+            record_failure(point, evidence, support, policy_refused=True)
+            continue
+        routed['model_anchor'] += 1
+        stubs += 1
+        _emit_stub(stub, order, point, graph, solids, field, stub_records, local_parameters)
+        heights.append(stub['length_mm'])
+        if len(anchor_examples) < max_diagnostics:
+            anchor_examples.append({'contact': f'contact{order}', 'surface_z_mm': stub['surface'][2],
+                                    'bottom_z_mm': stub['foot'][2], 'junction_z_mm': point[2],
+                                    'diameter_mm': 2 * stub['radius_mm'], 'stub': True,
+                                    'length_mm': round(stub['length_mm'], 4)})
 
     # Everything below describes the run as configured, not the last contact:
     # per-contact overrides applied only inside the loop.
@@ -1431,6 +1889,8 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         'contacts_routed': int(sum(routed.values())),
         'contacts_failed': failures,
         'unroutable_positions': unroutable_positions,
+        'unroutable_reasons': dict(sorted(failure_reasons.items())),
+        'contacts_duplicate': duplicates,
         'contacts_dropped_attached': 0,
         'tree': tree_metrics,
         'contacts_in_sealed_cavities': sealed,
@@ -1445,7 +1905,13 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                          'length_mm': anchor_length, 'penetration_mm': anchor_depth,
                          'diameter_mm': float(support['model_anchor_diameter_mm']),
                          'diameter_basis': 'configured endpoint diameter; 0 derives the chosen middle diameter',
-                         'candidates_rejected': anchor_rejected, 'examples': anchor_examples,
+                         'candidates_rejected': anchor_rejected,
+                         'rejections': dict(sorted(anchor_rejections.items())),
+                         'stubs': stubs,
+                         'stub_basis': ('island, manual or correction contacts with no other route, '
+                                        'fused by one rod of contact diameter to material printed '
+                                        'before them within a tip-and-anchor gap'),
+                         'examples': anchor_examples,
                          'examples_capped_at': max_diagnostics,
                          'clearance_basis': 'column-grid footprint and central-column penetration; not exact surface clearance'},
         'contacts_skipped_density': int(density_skipped),
@@ -1511,7 +1977,9 @@ def _emit_tree_supports(jobs, solids, pillars, feet, foot_radii, field, settings
             feet.append((job['x'], job['y']))
             foot_radii.append(job['run_r'])
         return {'enabled': bool(support.get('tree_supports')), 'clusters': 0,
-                'trunks': 0, 'contacts_in_trees': 0, 'kept_independent': len(jobs)}
+                'trunks': 0, 'contacts_in_trees': 0, 'kept_independent': len(jobs),
+                'trunk_diameter_mm': float(support.get('trunk_diameter_mm', 0.0)),
+                'fallbacks': {}, 'trunk_limited_clusters': 0}
     spacing = float(support['spacing_mm'])
     radius = float(support['tree_cluster_mm']) or 2 * spacing
     points = np.array([[job['x'], job['y']] for job in jobs], dtype=float)
@@ -1531,8 +1999,11 @@ def _emit_tree_supports(jobs, solids, pillars, feet, foot_radii, field, settings
         clusters.append([member for member in members if assigned[member] == label])
     trunks = independent = 0
     contacts_in_trees = 0
+    fallbacks = {}
+    trunk_limited = 0
     clearance_mm = float(support['support_clearance_mm'])
     branch_tangent = math.tan(math.radians(float(support['pillar_angle_deg'])))
+    trunk_setting_r = float(support.get('trunk_diameter_mm', 0.0)) / 2
     # Shafts a new tree must not touch: every other contact's vertical run
     # (routing already cleared those against each other) and the trees
     # accepted so far. A tree is new geometry the router never saw.
@@ -1541,67 +2012,89 @@ def _emit_tree_supports(jobs, solids, pillars, feet, foot_radii, field, settings
     accepted = []
 
     def tree_hits(segments, members):
+        """Whether a tree comes within clearance of another shaft or tree."""
         others = [capsule for index, capsule in enumerate(verticals) if index not in members]
         others += accepted
-        if not others:
-            return False
-        low = np.array([capsule[0] for capsule in others], dtype=float)
-        high = np.array([capsule[1] for capsule in others], dtype=float)
-        radii = np.array([capsule[2] for capsule in others], dtype=float)
-        for start, end, r in segments:
-            count = len(others)
-            gaps = segment_distances(np.broadcast_to(np.asarray(start, dtype=float), (count, 3)),
-                                     np.broadcast_to(np.asarray(end, dtype=float), (count, 3)),
-                                     low, high)
-            if np.any(gaps < radii + r - 1e-9):
-                return True
-        return False
+        if others:
+            low = np.array([capsule[0] for capsule in others], dtype=float)
+            high = np.array([capsule[1] for capsule in others], dtype=float)
+            radii = np.array([capsule[2] for capsule in others], dtype=float)
+            for start, end, r in segments:
+                count = len(others)
+                gaps = segment_distances(np.broadcast_to(np.asarray(start, dtype=float), (count, 3)),
+                                         np.broadcast_to(np.asarray(end, dtype=float), (count, 3)),
+                                         low, high)
+                if np.any(gaps < radii + r + clearance_mm - 1e-9):
+                    return True
+        # Every other routed shaft: angled branches, model anchors, stubs.
+        # The members' own reserved verticals are what the tree replaces.
+        skip = [jobs[index]['capsule'] for index in members if jobs[index].get('capsule') is not None]
+        return any(_hits_occupied(field, start, end, r, clearance_mm, skip=skip)
+                   for start, end, r in segments)
 
-    for members in clusters:
-        group = [jobs[i] for i in members]
-        if len(group) < 2:
-            job = group[0]
+    def trunk_blocked(tx, ty, trunk_top, trunk_r):
+        """Why a trunk of this radius does not fit, or None."""
+        if trunk_top <= trunk_r:
+            return 'trunk_too_short'
+        if field.index_of(tx, ty) is None:
+            return 'trunk_outside_field'
+        if not _brace_clear(field, (tx, ty, 0.0), (tx, ty, trunk_top), trunk_r, clearance_mm, cancel):
+            return 'trunk_hits_model'
+        return None
+
+    def keep_independent(group, reason):
+        nonlocal independent
+        if reason is not None:
+            fallbacks[reason] = fallbacks.get(reason, 0) + len(group)
+        for job in group:
             solids.append(cylinder_between((job['x'], job['y'], job['middle_z']),
                                            (job['x'], job['y'], job['base_z']), job['run_r']))
             pillars.append((job['x'], job['y'], job['base_z'], job['run_r']))
             feet.append((job['x'], job['y']))
             foot_radii.append(job['run_r'])
             independent += 1
+
+    for members in clusters:
+        group = [jobs[i] for i in members]
+        if len(group) < 2:
+            keep_independent(group, None)    # nothing to cluster with
             continue
         tx, ty = float(np.mean([job['x'] for job in group])), float(np.mean([job['y'] for job in group]))
         # Leave enough rise for every branch to meet the configured angle.
         trunk_top = min(job['base_z'] - math.hypot(job['x'] - tx, job['y'] - ty)
                         * branch_tangent for job in group)
-        run_r = max(job['run_r'] for job in group)
-        column = field.index_of(tx, ty)
-        free = (trunk_top > run_r and column is not None
-                and _brace_clear(field, (tx, ty, 0.0), (tx, ty, trunk_top),
-                                 run_r, clearance_mm, cancel))
-        branches_clear = free
-        if free:
+        branch_r = max(job['run_r'] for job in group)
+        # support.trunk_diameter_mm, never thinner than the branches it carries.
+        run_r = max(trunk_setting_r, branch_r)
+        reason = trunk_blocked(tx, ty, trunk_top, run_r)
+        if reason is None:
             for job in group:
                 if not _brace_clear(field, (tx, ty, trunk_top),
                                     (job['x'], job['y'], job['base_z']),
                                     job['run_r'], clearance_mm, cancel):
-                    branches_clear = False
+                    reason = 'branch_hits_model'
                     break
-        if branches_clear:
-            tree_segments = [((tx, ty, 0.0), (tx, ty, trunk_top), run_r)] + [
-                ((tx, ty, trunk_top), (job['x'], job['y'], job['base_z']), job['run_r'])
-                for job in group]
-            if tree_hits(tree_segments, set(members)):
-                branches_clear = False
-            else:
-                accepted.extend(tree_segments)
-        if not branches_clear:
-            for job in group:
-                solids.append(cylinder_between((job['x'], job['y'], job['middle_z']),
-                                               (job['x'], job['y'], job['base_z']), job['run_r']))
-                pillars.append((job['x'], job['y'], job['base_z'], job['run_r']))
-                feet.append((job['x'], job['y']))
-                foot_radii.append(job['run_r'])
-                independent += 1
+        tree_segments = [((tx, ty, 0.0), (tx, ty, trunk_top), run_r)] + [
+            ((tx, ty, trunk_top), (job['x'], job['y'], job['base_z']), job['run_r'])
+            for job in group]
+        if reason is None and tree_hits(tree_segments, set(members)):
+            reason = 'hits_support'
+        if reason is not None:
+            # Say when only the thicker trunk was in the way, so the report
+            # points at trunk_diameter_mm rather than at the geometry.
+            if run_r > branch_r + 1e-12 and reason in ('trunk_too_short', 'trunk_hits_model',
+                                                       'hits_support'):
+                thin = [((tx, ty, 0.0), (tx, ty, trunk_top), branch_r)] + tree_segments[1:]
+                if (trunk_blocked(tx, ty, trunk_top, branch_r) is None
+                        and not tree_hits(thin, set(members))
+                        and all(_brace_clear(field, (tx, ty, trunk_top),
+                                             (job['x'], job['y'], job['base_z']),
+                                             job['run_r'], clearance_mm, cancel) for job in group)):
+                    reason = 'trunk_diameter'
+                    trunk_limited += 1
+            keep_independent(group, reason)
             continue
+        accepted.extend(tree_segments)
         solids.append(cylinder_between((tx, ty, 0.0), (tx, ty, trunk_top), run_r))
         pillars.append((tx, ty, trunk_top, run_r))
         feet.append((tx, ty))
@@ -1634,7 +2127,14 @@ def _emit_tree_supports(jobs, solids, pillars, feet, foot_radii, field, settings
         trunks += 1
         contacts_in_trees += len(group)
     return {'enabled': True, 'clusters': len(clusters), 'trunks': trunks,
-            'contacts_in_trees': contacts_in_trees, 'kept_independent': independent}
+            'contacts_in_trees': contacts_in_trees, 'kept_independent': independent,
+            'trunk_diameter_mm': 2 * trunk_setting_r,
+            'trunk_basis': 'max(trunk_diameter_mm, the thickest branch diameter) per tree',
+            'fallbacks': dict(sorted(fallbacks.items())),
+            'fallback_basis': ('contacts kept on independent pillars, by why their cluster did not '
+                               'become a tree; trunk_diameter means a trunk as thick as its '
+                               'branches would have fitted'),
+            'trunk_limited_clusters': trunk_limited}
 
 
 def unbraced_lengths(graph):
@@ -2569,6 +3069,25 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
     return added
 
 
+#: Unroutable positions listed in the ``incomplete_support_routes`` diagnostic.
+INCOMPLETE_EXAMPLES = 16
+
+
+def _reasons_after_drops(plan):
+    """Unroutable counts by reason for the contacts still failed after drops."""
+    reasons = {}
+    for diagnostic in plan.diagnostics:
+        if diagnostic.code == 'support_unroutable':
+            reason = (diagnostic.details or {}).get('reason', 'unknown')
+            reasons[reason] = reasons.get(reason, 0) + 1
+    # Diagnostics are capped; the metric counted every failure before drops.
+    failed = int(plan.metrics.get('contacts_failed', 0) or 0)
+    listed = sum(reasons.values())
+    if failed > listed:
+        reasons['not_itemized'] = failed - listed
+    return dict(sorted(reasons.items()))
+
+
 def apply_support_validation(report, plan, settings):
     """Carry routing evidence into export decisions, including capped failures.
 
@@ -2581,9 +3100,23 @@ def apply_support_validation(report, plan, settings):
     report.checks['support_routes'] = 'fail' if failed or sealed else 'pass'
     report.metrics['supports'] = plan.metrics
     if failed or sealed:
+        positions = list(plan.metrics.get('unroutable_positions') or [])
+        reasons = _reasons_after_drops(plan)
+        summary = ', '.join(f'{count} {reason}' for reason, count in
+                            sorted(reasons.items(), key=lambda item: (-item[1], item[0])))
+        parts = []
+        if failed:
+            parts.append(f'{failed} contact(s) have no route' + (f' ({summary})' if summary else ''))
+        if sealed:
+            parts.append(f'{sealed} lie in sealed cavities')
         report.diagnostics.append(Diagnostic(
-            'incomplete_support_routes', 'Some requested contacts could not be routed or removed',
-            details={'unroutable': failed, 'sealed': sealed}))
+            'incomplete_support_routes',
+            'Some requested contacts could not be routed or removed: ' + '; '.join(parts),
+            position_mm=[float(v) for v in positions[0]] if positions else None,
+            details={'unroutable': failed, 'sealed': sealed, 'by_reason': reasons,
+                     'positions_mm': [[round(float(v), 4) for v in point]
+                                      for point in positions[:INCOMPLETE_EXAMPLES]],
+                     'positions_truncated': len(positions) > INCOMPLETE_EXAMPLES}))
     slender = any(d.code == 'support_slenderness' for d in plan.diagnostics)
     report.checks['support_slenderness'] = 'warn' if slender else 'pass'
     coverage = plan.metrics.get('coverage', 'not_run')

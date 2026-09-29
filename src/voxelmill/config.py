@@ -91,6 +91,10 @@ DEFAULTS = {
         'boundary_supports': False,
         # 0 clusters vertical plate supports within 2 * spacing_mm.
         'tree_cluster_mm': 0.0,
+        # Diameter of the shared trunk a tree stands on. A value below the
+        # branch (pillar) diameter is raised to it, so 0 means "as thick as
+        # its branches", which is what trees were before this key existed.
+        'trunk_diameter_mm': 1.2,
         # 0 scores model and plate routes by length equally. 1 always chooses
         # an available plate route. Intermediate values require a model route
         # to be proportionally shorter: model <= plate * (1 - avoidance).
@@ -218,6 +222,8 @@ _LEGACY_SUPPORT_OFF = {
     'model_anchor_length_mm': 0.0,
     'model_anchor_diameter_mm': 0.0,
     'model_anchor_penetration_mm': 0.0,
+    # Trees used to stand on a trunk as thick as their thickest branch.
+    'trunk_diameter_mm': 0.0,
 }
 
 
@@ -373,14 +379,25 @@ def validate_settings(settings):
     diameter = s['base_touch_diameter_mm'] or s['pillar_diameter_mm'] + 2 * s['raft_expansion_mm']
     if s['base_type'] not in ('plate', 'none') and diameter <= s['pillar_diameter_mm']:
         _error('support.base_touch_diameter_mm must exceed the pillar diameter')
+    # A tree trunk below the pillar diameter is raised to it, so only a
+    # thicker trunk can outgrow the foot it stands on.
+    trunk = max(s['trunk_diameter_mm'], s['pillar_diameter_mm'])
+    if s['tree_supports'] and s['base_type'] not in ('plate', 'none') and diameter <= trunk:
+        _error(f'support.base_touch_diameter_mm (resolved {diameter:g} mm) must exceed the tree trunk '
+               f'diameter ({trunk:g} mm); lower trunk_diameter_mm or raise base_touch_diameter_mm')
     if s['base_type'] == 'skate' and s['base_skate_length_mm'] and s['base_skate_length_mm'] < diameter:
         _error('support.base_skate_length_mm must be at least the resolved touch diameter')
     if s['base_type'] in ('grid', 'hex'):
         width = s['base_strut_width_mm'] or s['pillar_diameter_mm']
         if width >= s['base_cell_size_mm']:
             _error('support.base_strut_width_mm must be less than base_cell_size_mm for an open lattice')
-    if s['contact_diameter_mm'] > s['pillar_diameter_mm'] or s['penetration_mm'] >= s['tip_length_mm']:
-        _error('Contact must fit pillar; penetration must be shorter than tip')
+    if s['contact_diameter_mm'] > s['pillar_diameter_mm']:
+        _error(f"support.contact_diameter_mm ({s['contact_diameter_mm']:g} mm) must not exceed "
+               f"pillar_diameter_mm ({s['pillar_diameter_mm']:g} mm): the tip narrows from the pillar "
+               'to the contact')
+    if s['penetration_mm'] >= s['tip_length_mm']:
+        _error(f"support.penetration_mm ({s['penetration_mm']:g} mm) must be shorter than "
+               f"tip_length_mm ({s['tip_length_mm']:g} mm): the tip would be buried whole in the model")
     if not s['penetration_mm'] < s['min_tip_length_mm'] <= s['tip_length_mm']:
         _error('support.min_tip_length_mm must be longer than penetration and no longer than tip_length_mm')
     r = settings['repair']
@@ -530,16 +547,6 @@ def resin_usage(settings, volume_mm3, *, model_mm3=None, supports_mm3=None,
     resin = settings['resin']
     density = float(resin['density_g_cm3'])
     price = float(resin['cost_per_liter'])
-    return {
-        **total,
-        'currency': resin['currency'],
-        # Unchanged from before the breakdown: no volume, no derived figures.
-        'density_g_cm3': density if density > 0 and volume_mm3 is not None else None,
-        'cost_per_liter': price if price > 0 and volume_mm3 is not None else None,
-        'source': 'raster_volume_mm3' if volume_mm3 is not None else 'unavailable',
-        'note': DENSITY_UNSET_NOTE if density <= 0 else None,
-        'breakdown': breakdown,
-    }
     if volume_mm3 is not None:
         _number(volume_mm3, 'volume_mm3')
     split = volume_mm3 is not None and model_mm3 is not None and supports_mm3 is not None
@@ -559,6 +566,16 @@ def resin_usage(settings, volume_mm3, *, model_mm3=None, supports_mm3=None,
         'supports': _resin_amount(supports_mm3 if split else None, density, price),
         'method': BREAKDOWN_METHOD if split else None,
         'unavailable_reason': reason,
+    }
+    return {
+        **total,
+        'currency': resin['currency'],
+        # Unchanged from before the breakdown: no volume, no derived figures.
+        'density_g_cm3': density if density > 0 and volume_mm3 is not None else None,
+        'cost_per_liter': price if price > 0 and volume_mm3 is not None else None,
+        'source': 'raster_volume_mm3' if volume_mm3 is not None else 'unavailable',
+        'note': DENSITY_UNSET_NOTE if density <= 0 else None,
+        'breakdown': breakdown,
     }
 
 

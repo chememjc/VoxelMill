@@ -779,10 +779,16 @@ def _collision_audit(run):
             details={key: intrusion[key] for key in ('intrusions', 'intrusion_volume_mm3', 'worst',
                                                      'allowance_mm')}))
     if overlaps['overlaps']:
+        first = overlaps['examples'][0] if overlaps['examples'] else None
+        message = 'Two supports overlap where the support graph does not join them'
+        if first is not None:
+            message = (f"{message}: {first['description']}"
+                       + (f" ({overlaps['overlaps'] - 1} more)" if overlaps['overlaps'] > 1 else ''))
         validation.diagnostics.append(Diagnostic(
-            'support_overlap', 'Two supports overlap where the support graph does not join them',
-            severity='warning', details={'overlaps': overlaps['overlaps'],
-                                         'examples': overlaps['examples'][:8]}))
+            'support_overlap', message, severity='warning',
+            position_mm=first['position_mm'] if first is not None else None,
+            details={'overlaps': overlaps['overlaps'], 'examples': overlaps['examples'][:8],
+                     'suggest': ['support_clearance_mm', 'spacing_mm']}))
 
 
 def _publish(run, output, allow_unresolved, components):

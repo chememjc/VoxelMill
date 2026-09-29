@@ -19,6 +19,7 @@ import time
 import numpy as np
 
 from .assembly import UnionLayerStream, assemble
+from .contact_parameters import contact_key
 from .contracts import CancellationToken, ResourceBudget, no_progress
 from .raster import RasterGrid
 from .validation import analyze_layers
@@ -174,7 +175,15 @@ def route_without_islands(model, settings, *, replan, budget=None, cancel=None,
             record['stopped'] = 'no_progress'
             break
         previous[record['scan']] = record['islands']
-        added = [point for point in record['positions'] if point not in extra]
+        # Two scans of the same island differ in float noise (a crop moves
+        # the grid origin), so compare at the contact-key resolution.
+        known = {contact_key(point) for point in extra}
+        added = []
+        for point in record['positions']:
+            key = contact_key(point)
+            if key not in known:
+                known.add(key)
+                added.append(point)
         record['contacts_added'] = len(added)
         extra.extend(added)
     else:

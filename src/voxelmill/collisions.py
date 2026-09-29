@@ -126,12 +126,66 @@ def segment_distances(p0, p1, q0, q1):
     return np.linalg.norm(delta, axis=1)
 
 
+#: Plain names for support graph edge kinds, for messages people read.
+EDGE_KIND_NAMES = {
+    'tip': 'contact tip',
+    'vertical': 'vertical pillar',
+    'branched': 'angled branch',
+    'model_anchor': 'pillar standing on the model',
+    'bottom': 'bottom connector on the model',
+    'small_model': 'small model-to-model pillar',
+    'model_stub': 'stub on the model',
+    'tree_trunk': 'tree trunk',
+    'tree_branch': 'tree branch',
+    'brace': 'brace',
+    'brace_foot': 'brace foot',
+}
+
+
+def edge_kind_name(kind):
+    """Plain-language name for a support graph edge kind."""
+    return EDGE_KIND_NAMES.get(kind, str(kind).replace('_', ' '))
+
+
+def _closest_points(p0, p1, q0, q1):
+    """Closest points of two segments (single pair)."""
+    d1, d2, r = p1 - p0, q1 - q0, p0 - q0
+    a, e, f = float(d1 @ d1), float(d2 @ d2), float(d2 @ r)
+    if a <= 1e-12 and e <= 1e-12:
+        return p0, q0
+    if a <= 1e-12:
+        return p0, q0 + d2 * min(max(f / e, 0.0), 1.0)
+    c = float(d1 @ r)
+    if e <= 1e-12:
+        return p0 + d1 * min(max(-c / a, 0.0), 1.0), q0
+    b = float(d1 @ d2)
+    denom = a * e - b * b
+    if denom > 1e-12 * a * e:
+        s = min(max((b * f - c * e) / denom, 0.0), 1.0)
+    else:
+        # Parallel: every point of the shared run is closest, so report the
+        # middle of that run rather than an arbitrary end of it.
+        ends = sorted((float((q0 - p0) @ d1) / a, float((q1 - p0) @ d1) / a))
+        low, high = max(ends[0], 0.0), min(ends[1], 1.0)
+        s = (low + high) / 2 if low <= high else (0.0 if ends[1] < 0 else 1.0)
+    t = (b * s + f) / e
+    if t < 0:
+        t, s = 0.0, min(max(-c / a, 0.0), 1.0)
+    elif t > 1:
+        t, s = 1.0, min(max((b - c) / a, 0.0), 1.0)
+    return p0 + d1 * s, q0 + d2 * t
+
+
 def support_overlaps(graph, *, tolerance_mm=1e-3, limit=32):
     """Pairs of graph edges whose capsules overlap without a shared node.
 
     Edges meeting at a node, one edge apart through a shared neighbour, or at
-    nodes that coincide in space, are joined on purpose. Everything else that overlaps is a collision between two
-    supports the router believed were apart.
+    nodes that coincide in space, are joined on purpose. So are edges that
+    touch the same cluster of ``model_stub`` edges: the router fuses stubs on
+    one stepped edge into a single lump on the part, joining each new stub to
+    an earlier one (or to a tip) at a graph junction, so members of a cluster
+    can overlap several edges apart. Everything else that overlaps is a
+    collision between two supports the router believed were apart.
     """
     from scipy.spatial import cKDTree
     positions = {node.id: np.asarray(node.position_mm, dtype=float) for node in graph.nodes}
@@ -146,6 +200,22 @@ def support_overlaps(graph, *, tolerance_mm=1e-3, limit=32):
     for edge in edges:
         neighbours.setdefault(edge.start, set()).add(edge.end)
         neighbours.setdefault(edge.end, set()).add(edge.start)
+    cluster = {}
+
+    def find(name):
+        while cluster.setdefault(name, name) != name:
+            cluster[name] = cluster[cluster[name]]
+            name = cluster[name]
+        return name
+
+    for edge in edges:
+        if edge.kind == 'model_stub':
+            cluster[find(edge.start)] = find(edge.end)
+    stub_nodes = {name for edge in edges if edge.kind == 'model_stub' for name in (edge.start, edge.end)}
+
+    def clusters_of(edge):
+        return {find(name) for name in (edge.start, edge.end) if name in stub_nodes}
+
     starts = np.array([positions[edge.start] for edge in edges])
     ends = np.array([positions[edge.end] for edge in edges])
     radii = np.array([float(edge.radius_mm) for edge in edges])
@@ -170,10 +240,20 @@ def support_overlaps(graph, *, tolerance_mm=1e-3, limit=32):
             continue
         if any(np.linalg.norm(x - y) <= tolerance_mm for x in ends_a for y in ends_b):
             continue
+        if clusters_of(first) & clusters_of(second):
+            continue
         result['overlaps'] += 1
         if len(result['examples']) < limit:
+            near_a, near_b = _closest_points(starts[a], ends[a], starts[b], ends[b])
+            needed = float(radii[a] + radii[b])
+            names = [edge_kind_name(first.kind), edge_kind_name(second.kind)]
             result['examples'].append({
                 'edges': [[first.start, first.end, first.kind], [second.start, second.end, second.kind]],
+                'kinds': names,
+                'position_mm': [round(float(v), 4) for v in (near_a + near_b) / 2],
                 'distance_mm': round(float(gap), 4),
-                'radii_mm': [round(float(radii[a]), 4), round(float(radii[b]), 4)]})
+                'radii_mm': [round(float(radii[a]), 4), round(float(radii[b]), 4)],
+                'description': (f'a {names[0]} ({first.start} to {first.end}) and a {names[1]} '
+                                 f'({second.start} to {second.end}) have axes {float(gap):.3f} mm '
+                                 f'apart, but their radii need {needed:.3f} mm')})
     return result

@@ -512,6 +512,44 @@ never dropped. A true free overhang that will not fit still fails. Coverage
 is left against the original selection so the drop does not invent uncovered
 samples. This does not certify that the wall will not sag.
 
+Every `support_unroutable` diagnostic names the decision that ended its
+search (`details.reason`: `plate_blocked`, `branch_exhausted`,
+`anchor_rejected:<why>`, `tip_no_fit` or `policy_blocked`), with the evidence
+each strategy left behind: why the contact's own column was not a vertical
+(material below it and its Z range, or the cell already solid at the contact),
+how far the branch search got (free columns, those reachable at
+`pillar_angle_deg`, those tested, and the tip base the branches start from),
+and why the model anchor was refused. `details.suggest` lists `support` keys
+worth changing. `metrics.unroutable_reasons` counts every failure by reason and
+`model_anchor.rejections` counts anchor refusals by cause. A contact whose
+rounded plate coordinates repeat an earlier one is routed once
+(`contacts_duplicate`).
+
+**Stubs (0.6.1).** Island births, manual contacts and correction contacts are
+never dropped, so when every route above fails for one of them, it gets a stub
+after all other contacts have routed, lowest first. The stub is one rod of
+`contact_diameter_mm` into the nearest material printed before the contact:
+analysis cells within `max(2 * min_tip_length_mm, two cell diagonals)` (just
+`min_tip_length_mm` with no bottom connector) whose column is solid on a layer
+below the contact's; the contact's own column wins a tie. It is the hull of
+three horizontal discs — at the target cell sunk
+`max(model_anchor_penetration_mm, penetration_mm)` into that material (the run
+must be that deep), at the contact, and `penetration_mm` above it. Horizontal
+caps matter: a tilted round cylinder's lowest layer is a sliver at one side of
+its end cap, which can sit outside the wall and print as a new island. A stub
+is tested against routed shafts and tips for overlap without
+`support_clearance_mm`: it is shorter than a tip and fused to the part along
+its length, and islands on one stepped edge can sit 0.15–0.2 mm apart. When a
+stub would overlap an earlier stub or a routed tip it joins that support on its
+axis, below the contact, at a `junction` node that splits the joined edge, and
+the collision audit treats edges touching one connected cluster of `model_stub`
+edges as joined. `allow_part_to_part` gates stubs like any model anchor.
+The geometry that needs them is a slightly overhanging wall meeting a sloped
+face at an edge not aligned with the pixel grid: the raster leaves one-pixel
+islands that touch the layer below only at a corner, with material a fraction
+of a millimetre below or beside them, so a tip's base would already be inside
+the part and no anchor gap fits.
+
 When a model anchor is available, `allow_part_to_part` (default on) gates it.
 An anchor may land on a slope up to 60°: material that rises from the landing
 point no faster than that is the surface the anchor embeds in, as a tip does,
@@ -756,11 +794,24 @@ contacts that came from that part.
 
 `support.tree_supports` groups nearby plate routes into a shared trunk. The
 trunk junction is lowered so every branch rises at least `pillar_angle_deg`
-from horizontal. Trunk and branch capsules include their emitted radii plus
-`support_clearance_mm` when checking the occupancy field. Insufficient height
-or obstructed capsules retain the original independent routes. The exported
-support graph records the actual shared foot, trunk and branches. These are
-conservative analysis-grid checks, not a calibrated strength result.
+from horizontal. The trunk's radius is
+`max(trunk_diameter_mm / 2, the thickest branch radius)`, so a thicker trunk
+carries thinner branches and a smaller setting is raised to the branches; the
+`tree_trunk` edge, the trunk solid, its top sphere, its foot radius (which the
+base sizes from) and the brace candidate all carry that radius. Trunk and
+branch capsules include their emitted radii plus `support_clearance_mm` when
+checking the model field, the other contacts' vertical runs and the trees
+already accepted, and the tree is also tested with clearance against every
+other routed shaft in the occupancy index (angled branches, model anchors,
+stubs); only its members' own reserved verticals, which the tree replaces, are
+exempt. Insufficient height or an obstructed capsule keeps the original
+independent routes, and `tree.fallbacks` counts those contacts by reason
+(`trunk_too_short`, `trunk_outside_field`, `trunk_hits_model`,
+`branch_hits_model`, `hits_support`, or `trunk_diameter` when a trunk only as
+thick as its branches would have fitted; `trunk_limited_clusters` counts those
+clusters). The exported support graph records the actual shared foot, trunk and
+branches. These are conservative analysis-grid checks, not a calibrated
+strength result.
 
 ## Island correction passes
 
@@ -784,6 +835,11 @@ word: the verdict (`islands_remaining`, `resolved`) always comes from a full
 scan. If a cropped pass happens to find nothing, one more whole-build scan
 confirms that before the loop reports success, rather than trusting a scan
 that only looked at part of the geometry.
+
+Island positions are compared at the contact-key resolution (rounded to a
+micrometre): two scans of one island differ in float noise when a crop moves the
+grid origin, and comparing them exactly added and routed the same island once
+per pass.
 
 The loop stops early, before `max_passes`, the moment a pass makes no
 progress — its island count (compared against the last scan of the same

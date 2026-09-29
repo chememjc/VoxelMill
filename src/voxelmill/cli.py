@@ -975,6 +975,9 @@ def build_parser():
                              'island and manual contacts are never dropped')
     common.add_argument('--tree-supports', action=argparse.BooleanOptionalAction, default=None,
                         help='cluster nearby vertical plate supports onto one trunk with branches')
+    common.add_argument('--trunk-diameter-mm', type=float,
+                        help='tree trunk diameter (default 1.2); a value below the pillar diameter '
+                             'is raised to it, so 0 matches the branches')
     common.add_argument('--contour-supports', action=argparse.BooleanOptionalAction, default=None,
                         help='also sample the outer perimeter of downward-face clusters')
     common.add_argument('--boundary-supports', action=argparse.BooleanOptionalAction, default=None,

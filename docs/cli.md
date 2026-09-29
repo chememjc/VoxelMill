@@ -35,6 +35,7 @@ These are accepted by every command except `info`.
 | `--support-void-policy {fail,ignore,fill}` | `fail` keeps support-generated voids as export failures. `ignore` (default) records support-class voids without failing; model-class still fails. `fill` seals enclosed shells after an exact union. |
 | `--auto-supports` / `--no-auto-supports` | Automatic contact selection. Turning it off leaves only manual contacts; it does not disable supports. |
 | `--tree-supports` / `--no-tree-supports` | Cluster nearby vertical plate supports onto one trunk. Off by default. |
+| `--trunk-diameter-mm` | Tree trunk diameter (`support.trunk_diameter_mm`, default 1.2). A value below the pillar diameter is raised to it; `0` matches the branches. |
 | `--contour-supports` / `--no-contour-supports` | Also sample the outer perimeter of downward-face clusters. Off by default. |
 | `--boundary-supports` / `--no-boundary-supports` | Also sample open mesh boundary edges (crop cuts). Closed solids add none. Off by default. |
 | `--auto-bracing` / `--no-auto-bracing` | Automatic bracing, switched independently of contacts. |

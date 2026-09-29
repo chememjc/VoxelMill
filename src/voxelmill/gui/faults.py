@@ -29,6 +29,9 @@ FAULT_COLORS = {
     'contact_parameters_unmatched': (250, 190, 190),
     'open_contours': (0, 128, 128),
     'transient_trap': (220, 190, 255),
+    'support_overlap': (170, 110, 40),
+    'support_model_intrusion': (128, 0, 0),
+    'incomplete_support_routes': (0, 90, 140),
 }
 
 DEFAULT_FAULT_COLOR = (128, 128, 128)
@@ -151,6 +154,13 @@ def fault_overlay(report, plan=None, *, bounds=None):
                 span = region.get('z_layer_span') or []
                 layer = int(span[0]) if span else data.get('layer')
                 add(code, position, layer)
+        elif code == 'support_overlap':
+            for example in details.get('examples') or []:
+                if isinstance(example, dict):
+                    add(code, example.get('position_mm'), data.get('layer'))
+        elif code == 'incomplete_support_routes':
+            for position in details.get('positions_mm') or []:
+                add(code, position, data.get('layer'))
         elif code == 'enclosed_voids':
             for example in details.get('examples') or []:
                 if not isinstance(example, dict):

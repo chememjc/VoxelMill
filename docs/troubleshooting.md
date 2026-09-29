@@ -225,30 +225,93 @@ Do not widen the threshold to obtain a pass.
 `support_unroutable` is the diagnostic on one contact `route_contacts` could
 not route; `incomplete_support_routes` is the export-blocking summary
 (`support_routes: fail`) once any contact failed or landed in a sealed cavity.
-A contact now anchors on already-printed model material through a shortened
-tip whenever the gap to the material below it is at least
-`support.min_tip_length_mm` (default 0.30 mm), which is what routes most of
-what previously failed on the float-valve parts — see
+The summary's message counts the failures by reason, its `details.by_reason`
+holds those counts, `details.positions_mm` lists the first 16 positions, and
+its `position_mm` is the first one, so the Faults view can jump to it.
+
+Each `support_unroutable` says in its message why the contact has no route,
+and `details` carries the same as data:
+
+- `reason` — the decision that ended the search (table below).
+- `plate` — why the contact's own column was not a vertical pillar:
+  `model_below` (with `material_from_z_mm` and `material_top_z_mm`),
+  `contact_inside_material` (the 0.15 mm analysis cell is already solid at the
+  contact's height: it sits on a wall or edge), or `wall_beside_pillar`.
+- `branch` — the angled search: `tip_base_z_mm` (where a branch would start,
+  one `tip_length_mm` below the contact), `search_radius_mm` (twice
+  `spacing_mm`), how many columns were free to the plate, how many were
+  reachable at `pillar_angle_deg`, and how many were tested and blocked.
+- `anchor` — the model-anchor attempt: `gap_mm` and `surface_z_mm` of the
+  material below, `min_gap_mm`, and `why` it was refused.
+- `stub` — for island births and manual or correction contacts only, why no
+  stub fitted (see below).
+- `obstruction_z_mm` — the top of the material that blocked the contact.
+- `suggest` — `support` settings worth changing, in order.
+
+| `reason` | What it means | Try |
+| --- | --- | --- |
+| `plate_blocked` | No vertical pillar fits and no free column lies within the branch search. | `spacing_mm` (widens the search), `pillar_angle_deg`, rotate the part |
+| `branch_exhausted` | Free columns exist, but every angled branch hits the model or another support; often the tip base is already inside the part. | `pillar_angle_deg`, `support_clearance_mm`, `spacing_mm` |
+| `anchor_rejected:gap_too_short` | Material below is closer than a top tip plus a bottom connector need (`2 * min_tip_length_mm`, or `min_tip_length_mm` with `model_anchor_length_mm = 0`). | `min_tip_length_mm`, `model_anchor_length_mm` |
+| `anchor_rejected:tip_no_fit` / `tip_no_fit` | The gap cannot hold both tips at their minimum length. | `min_tip_length_mm`, `model_anchor_length_mm`, `tip_length_mm` |
+| `anchor_rejected:connector_blocked` | The bottom connector would hit a wall beside the landing. | `model_anchor_diameter_mm`, `model_anchor_length_mm`, `support_clearance_mm` |
+| `anchor_rejected:penetration_exceeds_material` | The material below is thinner than `model_anchor_penetration_mm`. | `model_anchor_penetration_mm` |
+| `anchor_rejected:shaft_blocked` | The shaft down to the material below passes through the model. | `support_clearance_mm`, `pillar_diameter_mm`, `small_pillar_diameter_mm` |
+| `anchor_rejected:existing_support` | That shaft would cross a support already routed. | `spacing_mm`, `support_clearance_mm` |
+| `anchor_rejected:small_pillar_no_fit` | The small model pillar does not fit its depths or clearance. | `small_pillar_*` |
+| `policy_blocked` | Only a support standing on the model fits, and `allow_part_to_part` is off. | `allow_part_to_part` |
+
+A contact anchors on already-printed model material through a shortened tip
+whenever the gap to the material below allows it, which is what routes most of
+what used to fail on the float-valve parts — see
 [algorithms.md](algorithms.md#supports) for the measured before/after counts.
 
-The failures that remain are a different class: the contact lands in a column
-the 0.15 mm analysis grid reports as solid at that layer, so there is neither a
-vertical route nor material below to anchor on. Widening the branch search does
-not recover these — measured at zero recovered contacts across all three
-float-valve parts when the search was widened from 8 to 64 candidates.
+**Knife-edge islands and stubs.** Where a slightly overhanging wall meets a
+sloped face at an edge that is not aligned with the pixel grid, the printer
+raster can leave a one-pixel island that touches the layer below only at a
+corner. `raster_connectivity` rightly calls it unsupported, but material lies
+beside it or a fraction of a millimetre below: the tip base would be inside the
+part (`branch_exhausted`) and the gap is too short for an anchor
+(`anchor_rejected:gap_too_short`). Island births, manual contacts and
+correction contacts that nothing else can route therefore get a **stub**: one
+rod of `contact_diameter_mm` from inside the nearest material printed before the
+contact, through the contact, up by `penetration_mm`. It reaches no farther
+than a tip-and-anchor gap (`2 * min_tip_length_mm`, at least two analysis
+cells), is sunk `max(model_anchor_penetration_mm, penetration_mm)` into that
+material, and obeys `allow_part_to_part`. Stubs are counted in
+`metrics.supports.model_anchor.stubs` and appear in the support graph as
+`model_stub` edges; a stub that would overlap an earlier stub or another
+contact's tip joins it at a graph junction instead. A stub leaves a small nub on
+the part's edge, like a tip. When none fits, `details.stub.why` says
+`no_material_within_reach`, `stub_depth` or `stub_crosses_support`.
 
-At printer pitch those contacts turn out to be attached anyway: nearly every one
-has occupied material within its own 3x3 pixel neighbourhood one layer below.
-They are samples on near-vertical walls, not free-floating overhangs, and
-whether such a face needs a support is a mechanical question this program does
-not answer. `--exact-attachment` on the probe reports the counts. Nothing is
-dropped from the coverage basis on that evidence.
+Face-sampled contacts on near-vertical walls that fail are a different class:
+the contact lands in a column the 0.15 mm analysis grid reports as solid at that
+layer. At printer pitch nearly every one has material within its own 3x3 pixel
+neighbourhood one layer below, and `support.drop_attached_unroutable` drops
+those as `support_dropped_attached`. Island births and manual contacts are never
+dropped.
 
 Run `scripts/routing_probe.py SOURCE --output REPORT.json` to classify why each
-contact failed. It reproduces `route_contacts`'s own decision sequence per
-contact and records the deciding quantity (gap to material below, tip length
-required, branch search radius, nearest free neighbour), and its routed/failed
-counts match the router exactly. It exports nothing and changes nothing.
+contact failed. SOURCE may be an STL (default settings) or a `.voxmil` project,
+which is probed with its own settings, pose and edits and through the same
+island-correction loop `prepare` runs. Each failed contact carries the router's
+own `reason`, message and details next to the probe's reconstruction of the
+decision (gap to material below, tip length required, branch search radius,
+nearest free neighbour). It exports nothing and changes nothing.
+
+## `support_overlap` and `support_model_intrusion`
+
+Both are warnings from the collision audit (`support_collisions: warn`); they
+do not block an export. `support_overlap` means two support graph edges come
+closer than their radii without the graph joining them. Its message names the
+two kinds in plain words (for example "a contact tip … and a vertical pillar"),
+`position_mm` is the midpoint of their closest approach, and each example in
+`details.examples` carries `kinds`, `position_mm`, `distance_mm`, `radii_mm` and
+a `description`. Raising `support_clearance_mm` or changing `spacing_mm` moves
+the routes apart. `support_model_intrusion` is support material inside a part
+away from any tip or anchor; its `position_mm` is the worst piece's centre. The
+Faults view colours both.
 
 ## `support_coverage: fail`
 

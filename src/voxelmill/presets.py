@@ -29,7 +29,11 @@ _BUILTIN_SUPPORT = {
     'light': {'spacing_mm': 4.0, 'pillar_diameter_mm': 0.7, 'contact_diameter_mm': 0.3},
     # Medium is the resolved default support configuration.
     'medium': deepcopy(DEFAULTS['support']),
-    'heavy': {'spacing_mm': 2.5, 'pillar_diameter_mm': 1.3, 'contact_diameter_mm': 0.5},
+    # A tree trunk below the pillar diameter is raised to it, so the default
+    # 1.2 mm trunk would carry heavy's 1.3 mm branches with no thickening at
+    # all. 1.8 keeps the default's trunk-to-pillar ratio (1.2 / 0.9).
+    'heavy': {'spacing_mm': 2.5, 'pillar_diameter_mm': 1.3, 'contact_diameter_mm': 0.5,
+              'trunk_diameter_mm': 1.8},
     # The configuration known to print these parts on this machine, transcribed
     # from CHITUBOX and recorded in docs/support-presets.md. Every value below
     # appears in that table or has an explicit derivation; gaps are called out

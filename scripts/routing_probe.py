@@ -12,6 +12,14 @@ neighbouring column that is free to the plate.
 
 It changes nothing and exports nothing. Run with
 ``.venv/bin/python scripts/routing_probe.py SOURCE --output REPORT.json``.
+
+SOURCE may be an STL (default settings, unrotated at ``--lift-mm``) or a
+``.voxmil`` project, which is probed with the project's own settings, pose
+(rotation, lift, scale, mirror, centre offset) and edits (manual and removed
+contacts, per-contact parameters, paint). A project with automatic supports
+runs the same island-correction loop ``prepare`` does, so the island contacts
+it adds are probed too. Every failed contact also carries the router's own
+explanation (``router_reason``, from ``support_unroutable.details``).
 """
 from __future__ import annotations
 
@@ -26,15 +34,21 @@ import time
 import numpy as np
 
 from voxelmill.config import resolve_settings
+from voxelmill.contact_parameters import contact_key
 from voxelmill.geometry import (iter_transformed_triangles, placement_for_triangles,
                                triangle_bounds)
 from voxelmill.mesh import open_stl
 from voxelmill.supports import (_free_to_plate, _segment_clear, build_column_field,
-                               route_contacts, select_contacts)
+                               plan_supports, route_contacts, select_contacts)
 
 
-def classify(contact, field, settings, branch_attempts=8):
-    """Re-run the router's decisions for one contact, keeping the numbers."""
+def classify(contact, field, settings, branch_attempts=8, stubbed=False):
+    """Re-run the router's decisions for one contact, keeping the numbers.
+
+    ``stubbed`` says the router gave this contact a stub (an island or manual
+    contact over material too close for a tip); the probe does not repeat the
+    stub's own tests.
+    """
     support = settings['support']
     spacing = float(support['spacing_mm'])
     tip = float(support['tip_length_mm'])
@@ -92,17 +106,22 @@ def classify(contact, field, settings, branch_attempts=8):
 
     min_tip = float(support['min_tip_length_mm'])
     record['min_tip_length_mm'] = min_tip
+    # A bottom connector needs its own minimum tip too (_model_anchor_candidate).
+    min_gap = 2 * min_tip if float(support['model_anchor_length_mm']) else min_tip
+    record['min_anchor_gap_mm'] = min_gap
     if below is not None and gap > tip:
         return {**record, 'outcome': 'model_anchor'}
-    if below is not None and gap >= min_tip:
+    if below is not None and gap >= min_gap:
         return {**record, 'outcome': 'model_anchor_shortened_tip', 'tip_used_mm': gap}
+    if stubbed:
+        return {**record, 'outcome': 'model_stub'}
 
     # Nothing worked. Name the binding constraint rather than the symptom.
     if below is None:
         reason = 'no material below and no vertical route: first_material disagrees with the contact'
     elif base_z <= 0:
         reason = 'contact sits below one tip length, so no branch and no anchor can fit'
-    elif gap < min_tip:
+    elif gap < min_gap:
         reason = 'material below is closer than the shortest permitted tip'
     elif record['neighbours_under_45_deg'] == 0:
         reason = 'no free neighbouring column within 2x spacing and under 45 degrees'
@@ -225,6 +244,81 @@ def exact_attachment(triangles, contacts, settings, cancel_check=lambda: None):
     return results
 
 
+def load_source(source, lift_mm):
+    """Placed, repaired triangles, settings and edits for an STL or a .voxmil."""
+    from copy import deepcopy
+    import tempfile
+
+    from voxelmill.assembly import prepare_model
+    from voxelmill.config import fill_legacy_settings, validate_settings
+    from voxelmill.contact_parameters import normalize_contact_parameters
+
+    edits, state = {}, None
+    with tempfile.TemporaryDirectory(prefix='voxelmill-probe-') as scratch:
+        if source.suffix.lower() == '.voxmil':
+            from voxelmill.project import load_project
+            state = load_project(source, scratch)
+            settings = validate_settings(fill_legacy_settings(deepcopy(state['settings'])))
+            path = state['source']['extracted_path']
+            edits = state.get('edits') or {}
+            pose = {'rotate': state.get('rotation_deg') or (0.0, 0.0, 0.0),
+                    'center_offset': tuple(state.get('center_offset_mm') or (0.0, 0.0)),
+                    'lift_mm': state.get('model_lift_mm', lift_mm),
+                    'scale': tuple(state.get('scale_factors') or (1.0, 1.0, 1.0)),
+                    'mirror': tuple(state.get('mirror_axes') or (False, False, False))}
+            if edits.get('extra_models'):
+                print('warning: the probe routes the primary part only; added parts are ignored')
+        else:
+            settings = resolve_settings()
+            path = source
+            pose = {'rotate': (0.0, 0.0, 0.0), 'center_offset': (0.0, 0.0), 'lift_mm': lift_mm,
+                    'scale': (1.0, 1.0, 1.0), 'mirror': (False, False, False)}
+        with open_stl(path) as mesh:
+            source_hash = mesh.asset.sha256
+            placement = placement_for_triangles(
+                mesh.triangles, settings, pose['rotate'], pose['center_offset'], pose['lift_mm'],
+                None, pose['scale'], pose['mirror'])
+            placed = np.concatenate(list(iter_transformed_triangles(
+                mesh.triangles, np.asarray(placement.matrix)))).astype(np.float32)
+    model = prepare_model(placed, settings)
+    paint = edits.get('paint')
+    if isinstance(paint, (list, tuple)):
+        from voxelmill.paint import normalize_object_paint, to_plate
+        paint = to_plate(normalize_object_paint(paint, 1), [np.asarray(placement.matrix, dtype=float)])
+    return {'model': model, 'triangles': np.asarray(model.triangles, dtype=np.float32),
+            'settings': settings, 'placement': placement, 'source_sha256': source_hash,
+            'manual_contacts': list(edits.get('manual_contacts') or ()),
+            'removed_contacts': list(edits.get('removed_contacts') or ()),
+            'contact_parameters': normalize_contact_parameters(
+                edits.get('contact_parameters') or (), settings),
+            'paint': paint, 'project': state is not None}
+
+
+def route_like_prepare(loaded, field):
+    """Route as ``prepare`` does, island-correction loop included when automatic."""
+    settings = loaded['settings']
+    triangles = loaded['triangles']
+    bounds = triangle_bounds(triangles)
+    captured = {}
+
+    def replan(extra_contacts):
+        plan, raft = plan_supports(triangles, bounds, settings, field=field,
+                                   extra_contacts=extra_contacts,
+                                   removed_contacts=loaded['removed_contacts'],
+                                   contact_parameters=loaded['contact_parameters'],
+                                   paint=loaded['paint'])
+        captured['contacts'] = plan.metrics.get('density_exempt_positions')
+        return plan, raft
+
+    if not settings['support']['automatic'] or not loaded['project']:
+        plan, _raft = replan(loaded['manual_contacts'])
+        return plan, None
+    from voxelmill.island_guard import route_without_islands
+    guard = route_without_islands(loaded['model'], settings, replan=replan,
+                                  extra_contacts=loaded['manual_contacts'])
+    return guard['plan'], {key: guard[key] for key in ('passes', 'islands_remaining', 'resolved')}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('source', type=Path)
@@ -239,19 +333,37 @@ def main():
                         help='also ask, at printer pitch, whether each failed contact already '
                              'rests on material printed one layer below it')
     args = parser.parse_args()
-    settings = resolve_settings()
     started = time.monotonic()
-    with open_stl(args.source) as mesh:
-        source_hash = mesh.asset.sha256
-        placement = placement_for_triangles(mesh.triangles, settings, lift_mm=args.lift_mm)
-        triangles = np.concatenate(list(iter_transformed_triangles(
-            mesh.triangles, np.asarray(placement.matrix)))).astype(np.float32)
+    loaded = load_source(args.source, args.lift_mm)
+    settings, triangles = loaded['settings'], loaded['triangles']
+    source_hash, placement = loaded['source_sha256'], loaded['placement']
     bounds = triangle_bounds(triangles)
     field = build_column_field(triangles, bounds, settings)
-    contacts, selection = select_contacts(triangles, field, settings)
-    plan, _raft = route_contacts(contacts, field, settings)
+    if loaded['project']:
+        plan, guard = route_like_prepare(loaded, field)
+        contacts = np.asarray([node.position_mm for node in plan.graph.nodes
+                               if node.kind == 'contact'] + list(plan.metrics['unroutable_positions']),
+                              dtype=float).reshape(-1, 3)
+        selection = {key: plan.metrics.get(key) for key in (
+            'downward_samples', 'manual_contacts', 'coverage', 'max_contact_gap_mm')}
+    else:
+        guard = None
+        contacts, selection = select_contacts(triangles, field, settings)
+        plan, _raft = route_contacts(contacts, field, settings)
+    explained = {contact_key(d.position_mm): d for d in plan.diagnostics
+                 if d.code == 'support_unroutable' and d.position_mm is not None}
 
-    records = [classify(contact, field, settings) for contact in contacts]
+    positions = {node.id: node.position_mm for node in plan.graph.nodes}
+    stubbed = {contact_key(positions[edge.end]) for edge in plan.graph.edges
+               if edge.kind == 'model_stub' and edge.end in positions}
+    records = [classify(contact, field, settings, stubbed=contact_key(contact) in stubbed)
+               for contact in contacts]
+    for record, contact in zip(records, contacts):
+        diagnostic = explained.get(contact_key(contact))
+        if diagnostic is not None:
+            record['router_reason'] = diagnostic.details.get('reason')
+            record['router_message'] = diagnostic.message
+            record['router_details'] = diagnostic.details
     outcomes = Counter(record['outcome'] for record in records)
     constraints = Counter(record.get('binding_constraint') for record in records
                           if record['outcome'] == 'failed')
@@ -299,11 +411,15 @@ def main():
         'placement': asdict(placement), 'settings': settings,
         'field': field.metrics, 'selection': selection,
         'router_metrics': plan.metrics,
+        'router_unroutable_reasons': plan.metrics.get('unroutable_reasons'),
+        'island_correction': guard,
+        'router_failures': [{'position_mm': d.position_mm, 'message': d.message, **d.details}
+                            for d in explained.values()],
         'reclassified': dict(outcomes),
         'agrees_with_router': {
             'router_routed': plan.metrics['contacts_routed'],
             'probe_routed': (outcomes['vertical'] + outcomes['branched'] + outcomes['model_anchor']
-                             + outcomes['model_anchor_shortened_tip']),
+                             + outcomes['model_anchor_shortened_tip'] + outcomes['model_stub']),
             'router_failed': plan.metrics['contacts_failed'],
             'probe_failed': outcomes['failed'] + outcomes['outside_analysis'],
         },
@@ -335,6 +451,8 @@ def main():
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, default=str) + '\n')
     print(json.dumps({'outcomes': dict(outcomes), 'constraints': dict(constraints),
+                      'router_reasons': plan.metrics.get('unroutable_reasons'),
+                      'router_failures': [d.message for d in explained.values()],
                       'agrees': payload['agrees_with_router'],
                       'what_if': payload['what_if'],
                       'exact_attachment': payload['exact_attachment']}, indent=2))
