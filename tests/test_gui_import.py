@@ -182,3 +182,33 @@ def _drop(mime):
     from PySide6 import QtGui
     return QtGui.QDropEvent(QtCore.QPointF(10, 10), QtCore.Qt.CopyAction, mime,
                             QtCore.Qt.LeftButton, QtCore.Qt.NoModifier)
+
+
+def test_gui_argument_that_is_a_project_opens_as_a_project(application, monkeypatch):
+    # `voxelmill gui part.voxmil` used to read the archive as an STL.
+    from types import SimpleNamespace
+    from voxelmill.gui import window as window_module
+    calls = []
+
+    class FakeWindow:
+        viewport = None
+
+        def __init__(self, settings, source):
+            calls.append(('source', source))
+
+        def show(self):
+            pass
+
+        def open_project(self, path):
+            calls.append(('project', path))
+
+        def complete_startup(self):
+            calls.append(('startup', None))
+
+    monkeypatch.setattr(window_module, 'MainWindow', FakeWindow)
+    monkeypatch.setattr(type(application), 'exec', lambda self: 0)
+    window_module.run({}, SimpleNamespace(input='/plates/part.VOXMIL'))
+    assert calls == [('source', None), ('project', '/plates/part.VOXMIL'), ('startup', None)]
+    calls.clear()
+    window_module.run({}, SimpleNamespace(input='/plates/part.stl'))
+    assert calls == [('source', '/plates/part.stl'), ('startup', None)]

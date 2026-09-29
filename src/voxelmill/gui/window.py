@@ -4503,7 +4503,11 @@ def run(settings, args):
     # Hover text is the editor's field documentation, so its delay is a real
     # preference. Qt only reads it from the style, hence a proxy style here.
     install_hover_delay(application)
-    window = MainWindow(settings, getattr(args, 'input', None))
+    source = getattr(args, 'input', None)
+    # A project is opened as one, after the window exists; handing it to
+    # MainWindow as a source read the archive as an STL.
+    project = source if source and str(source).lower().endswith('.voxmil') else None
+    window = MainWindow(settings, None if project else source)
     window.show()
     application.processEvents()
     if window.viewport:
@@ -4514,6 +4518,8 @@ def run(settings, args):
     goo = getattr(args, 'goo', None)
     if goo:
         window.open_goo(goo)
+    if project:
+        window.open_project(project)
     window.complete_startup()
     screenshot = getattr(args, 'screenshot', None)
     if screenshot:
