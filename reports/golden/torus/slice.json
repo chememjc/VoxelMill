@@ -47,19 +47,42 @@
     ]
   },
   "format": "goo",
-  "layer_blob_sha256": "ff1e9dc385fbc58a18b1f569a146b52fce282bb7a7bd8a83c525d7a2dce7de51",
+  "layer_blob_sha256": "fa72080b5099862022814cda1e12118267200b8c656a76d87a6c643d251dd61c",
   "layers": 260,
   "output": "out.goo",
   "print_time_s": 2025,
   "resin_usage": {
+    "breakdown": {
+      "method": null,
+      "model": {
+        "cost": null,
+        "mass_g": null,
+        "volume_ml": null,
+        "volume_mm3": null
+      },
+      "supports": {
+        "cost": null,
+        "mass_g": null,
+        "volume_ml": null,
+        "volume_mm3": null
+      },
+      "total": {
+        "cost": null,
+        "mass_g": null,
+        "volume_ml": 4.78711782,
+        "volume_mm3": 4787.1178199999995
+      },
+      "unavailable_reason": "slice reads a merged STL, so model and support resin cannot be separated; the prepare report carries the split"
+    },
     "cost": null,
     "cost_per_liter": null,
     "currency": "$",
     "density_g_cm3": null,
     "mass_g": null,
+    "note": "set resin density_g_cm3 to compute grams",
     "source": "raster_volume_mm3",
-    "volume_ml": 4.785951144599999,
-    "volume_mm3": 4785.9511446
+    "volume_ml": 4.78711782,
+    "volume_mm3": 4787.1178199999995
   },
   "schema_version": 1,
   "shape_px": [
@@ -80,8 +103,8 @@
       ]
     ],
     "path": "prepared.stl",
-    "sha256": "1dbdfc66e858f7fc2b2fdaf1cf736fbcd8eac870552d5dbc49800dd0e616b34d",
-    "triangles": 77724
+    "sha256": "2acd4be1f9c0aa98efbfd779f747168cb99c85c9eb306cefcf73ec31139afbe3",
+    "triangles": 77726
   },
   "validation": {
     "checks": {
@@ -140,7 +163,7 @@
           "bottom_layer_top_mm": 0.2,
           "bottom_lift_speed": 0.05,
           "build_z_mm": 165.0,
-          "candidate_triangle_count": 2954,
+          "candidate_triangle_count": 2963,
           "heuristic": "uncalibrated geometry score; not a force or failure prediction",
           "layer_height_mm": 0.05,
           "limitations": [
@@ -153,7 +176,7 @@
           "maximum_score": 7.857358890010895,
           "normal_lift_speed": 0.05,
           "reference_lift_speed": 0.05,
-          "region_count": 2152,
+          "region_count": 2162,
           "regions": [
             {
               "area_mm2": 785.7358890010895,
@@ -212,11 +235,11 @@
           ],
           "regions_truncated": false,
           "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-          "source_triangle_count": 77724,
+          "source_triangle_count": 77726,
           "status": "complete",
           "threshold_area_mm2": 100.0,
           "threshold_region_count": 2,
-          "total_region_count": 2152
+          "total_region_count": 2162
         },
         "layer": null,
         "message": "Large downward surface regions warrant review of orientation and release settings",
@@ -379,22 +402,17 @@
         "count": 32,
         "examples": [
           {
-            "component": 442,
+            "component": 446,
             "first_layer": 101,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 443,
+            "component": 447,
             "first_layer": 101,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 444,
-            "first_layer": 101,
-            "volume_mm3": 1.6199999999999997e-05
-          },
-          {
-            "component": 445,
+            "component": 448,
             "first_layer": 101,
             "volume_mm3": 1.6199999999999997e-05
           },
@@ -404,27 +422,27 @@
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 450,
+            "component": 453,
             "first_layer": 101,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 452,
+            "component": 454,
             "first_layer": 101,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 457,
+            "component": 456,
             "first_layer": 101,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 459,
+            "component": 461,
             "first_layer": 101,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 460,
+            "component": 463,
             "first_layer": 101,
             "volume_mm3": 1.6199999999999997e-05
           },
@@ -434,47 +452,42 @@
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 465,
+            "component": 468,
             "first_layer": 101,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 466,
-            "first_layer": 101,
-            "volume_mm3": 1.6199999999999997e-05
-          },
-          {
-            "component": 467,
+            "component": 469,
             "first_layer": 101,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
             "component": 470,
-            "first_layer": 102,
+            "first_layer": 101,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
             "component": 471,
+            "first_layer": 101,
+            "volume_mm3": 1.6199999999999997e-05
+          },
+          {
+            "component": 474,
             "first_layer": 102,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 476,
+            "component": 475,
+            "first_layer": 102,
+            "volume_mm3": 1.6199999999999997e-05
+          },
+          {
+            "component": 480,
             "first_layer": 104,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 477,
-            "first_layer": 104,
-            "volume_mm3": 1.6199999999999997e-05
-          },
-          {
-            "component": 478,
-            "first_layer": 104,
-            "volume_mm3": 1.6199999999999997e-05
-          },
-          {
-            "component": 479,
+            "component": 481,
             "first_layer": 104,
             "volume_mm3": 1.6199999999999997e-05
           },
@@ -489,12 +502,12 @@
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 488,
+            "component": 486,
             "first_layer": 104,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 489,
+            "component": 487,
             "first_layer": 104,
             "volume_mm3": 1.6199999999999997e-05
           },
@@ -509,32 +522,42 @@
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 494,
+            "component": 496,
             "first_layer": 104,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 495,
+            "component": 497,
             "first_layer": 104,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 607,
+            "component": 498,
+            "first_layer": 104,
+            "volume_mm3": 1.6199999999999997e-05
+          },
+          {
+            "component": 499,
+            "first_layer": 104,
+            "volume_mm3": 1.6199999999999997e-05
+          },
+          {
+            "component": 611,
             "first_layer": 117,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 610,
+            "component": 614,
             "first_layer": 117,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 620,
+            "component": 624,
             "first_layer": 120,
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 621,
+            "component": 625,
             "first_layer": 120,
             "volume_mm3": 1.6199999999999997e-05
           }
@@ -542,12 +565,12 @@
         "min_void_volume_mm3": 0.0,
         "negligible_count": 0,
         "negligible_volume_mm3": 0.0,
-        "nodes": 900,
+        "nodes": 904,
         "peak_present_trapped_layer": 120,
         "peak_present_trapped_volume_mm3": 0.0005183999999935907,
         "volume_mm3": 0.0005183999999999999
       },
-      "exposed_pixels": 295429083,
+      "exposed_pixels": 295501100,
       "grid": [
         1890,
         1890
@@ -565,7 +588,7 @@
         "bottom_layer_top_mm": 0.2,
         "bottom_lift_speed": 0.05,
         "build_z_mm": 165.0,
-        "candidate_triangle_count": 2954,
+        "candidate_triangle_count": 2963,
         "heuristic": "uncalibrated geometry score; not a force or failure prediction",
         "layer_height_mm": 0.05,
         "limitations": [
@@ -578,7 +601,7 @@
         "maximum_score": 7.857358890010895,
         "normal_lift_speed": 0.05,
         "reference_lift_speed": 0.05,
-        "region_count": 2152,
+        "region_count": 2162,
         "regions": [
           {
             "area_mm2": 785.7358890010895,
@@ -637,17 +660,17 @@
         ],
         "regions_truncated": false,
         "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-        "source_triangle_count": 77724,
+        "source_triangle_count": 77726,
         "status": "complete",
         "threshold_area_mm2": 100.0,
         "threshold_region_count": 2,
-        "total_region_count": 2152
+        "total_region_count": 2162
       },
       "pixel_pitch_mm": [
         0.018,
         0.018
       ],
-      "raster_volume_mm3": 4785.9511446,
+      "raster_volume_mm3": 4787.1178199999995,
       "transient_traps": {
         "definition": "empty space enclosed by already-printed material except toward the growth direction",
         "peak_layer": 120,

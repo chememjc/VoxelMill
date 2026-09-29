@@ -114,6 +114,7 @@
         },
         "contacts_blocked_by_policy": 0,
         "contacts_dropped_attached": 4,
+        "contacts_duplicate": 0,
         "contacts_failed": 0,
         "contacts_in_sealed_cavities": 0,
         "contacts_requested": 79,
@@ -142,7 +143,7 @@
         "min_tip_length_mm": 0.3,
         "min_tip_used_mm": 0.30000000000000004,
         "model_anchor": {
-          "candidates_rejected": 0,
+          "candidates_rejected": 1,
           "clearance_basis": "column-grid footprint and central-column penetration; not exact surface clearance",
           "diameter_basis": "configured endpoint diameter; 0 derives the chosen middle diameter",
           "diameter_mm": 0.4,
@@ -172,7 +173,12 @@
           "examples_capped_at": 256,
           "length_mm": 2.0,
           "penetration_mm": 0.15,
-          "shape": "cone"
+          "rejections": {
+            "existing_tip": 1
+          },
+          "shape": "cone",
+          "stub_basis": "island, manual or correction contacts with no other route, fused by one rod of contact diameter to material printed before them within a tip-and-anchor gap",
+          "stubs": 0
         },
         "object_groups": 0,
         "object_override_contacts": 0,
@@ -210,11 +216,15 @@
         "suppressed_contacts": 0,
         "tip_base_diameter_mm": 0.9,
         "tip_length_mm": 2.0,
+        "tips_joined_to_supports": 0,
         "tree": {
           "clusters": 0,
           "contacts_in_trees": 0,
           "enabled": false,
+          "fallbacks": {},
           "kept_independent": 0,
+          "trunk_diameter_mm": 1.2,
+          "trunk_limited_clusters": 0,
           "trunks": 0
         },
         "unbraced": {
@@ -236,7 +246,10 @@
         },
         "uncovered_fraction": 0.0,
         "uncovered_samples": 0,
-        "unroutable_positions": []
+        "unroutable_positions": [],
+        "unroutable_reasons": {
+          "branch_exhausted": 4
+        }
       },
       "union_bounds": [
         [
@@ -673,6 +686,14 @@
             0.018,
             0.018
           ],
+          "raster_volume_by_group": {
+            "model_mm3": 2644.8820326,
+            "model_pixels": 163264323,
+            "supports_mm3": 863.4525479999999,
+            "supports_pixels": 53299540,
+            "total_mm3": 3508.3345805999993,
+            "total_pixels": 216563863
+          },
           "raster_volume_mm3": 3508.3345805999993,
           "reopened": {
             "bounds": [
@@ -783,6 +804,7 @@
             },
             "contacts_blocked_by_policy": 0,
             "contacts_dropped_attached": 4,
+            "contacts_duplicate": 0,
             "contacts_failed": 0,
             "contacts_in_sealed_cavities": 0,
             "contacts_requested": 79,
@@ -811,7 +833,7 @@
             "min_tip_length_mm": 0.3,
             "min_tip_used_mm": 0.30000000000000004,
             "model_anchor": {
-              "candidates_rejected": 0,
+              "candidates_rejected": 1,
               "clearance_basis": "column-grid footprint and central-column penetration; not exact surface clearance",
               "diameter_basis": "configured endpoint diameter; 0 derives the chosen middle diameter",
               "diameter_mm": 0.4,
@@ -841,7 +863,12 @@
               "examples_capped_at": 256,
               "length_mm": 2.0,
               "penetration_mm": 0.15,
-              "shape": "cone"
+              "rejections": {
+                "existing_tip": 1
+              },
+              "shape": "cone",
+              "stub_basis": "island, manual or correction contacts with no other route, fused by one rod of contact diameter to material printed before them within a tip-and-anchor gap",
+              "stubs": 0
             },
             "object_groups": 0,
             "object_override_contacts": 0,
@@ -879,11 +906,15 @@
             "suppressed_contacts": 0,
             "tip_base_diameter_mm": 0.9,
             "tip_length_mm": 2.0,
+            "tips_joined_to_supports": 0,
             "tree": {
               "clusters": 0,
               "contacts_in_trees": 0,
               "enabled": false,
+              "fallbacks": {},
               "kept_independent": 0,
+              "trunk_diameter_mm": 1.2,
+              "trunk_limited_clusters": 0,
               "trunks": 0
             },
             "unbraced": {
@@ -905,7 +936,10 @@
             },
             "uncovered_fraction": 0.0,
             "uncovered_samples": 0,
-            "unroutable_positions": []
+            "unroutable_positions": [],
+            "unroutable_reasons": {
+              "branch_exhausted": 4
+            }
           },
           "transient_traps": {
             "definition": "empty space enclosed by already-printed material except toward the growth direction",
@@ -1168,7 +1202,8 @@
       "tip_length_mm": 2.0,
       "tip_shape": "cone",
       "tree_cluster_mm": 0.0,
-      "tree_supports": false
+      "tree_supports": false,
+      "trunk_diameter_mm": 1.2
     }
   },
   "source": "self_intersecting.stl",
@@ -1272,11 +1307,34 @@
       "volumetric_repair": "not_run"
     },
     "resin_usage": {
+      "breakdown": {
+        "method": "raster pixels on the printer lattice: total = union pixels, model = model pixels inside the union, supports = total - model (tip penetration counts as model)",
+        "model": {
+          "cost": null,
+          "mass_g": null,
+          "volume_ml": 2.6448820326,
+          "volume_mm3": 2644.8820326
+        },
+        "supports": {
+          "cost": null,
+          "mass_g": null,
+          "volume_ml": 0.8634525479999998,
+          "volume_mm3": 863.4525479999999
+        },
+        "total": {
+          "cost": null,
+          "mass_g": null,
+          "volume_ml": 3.5083345805999993,
+          "volume_mm3": 3508.3345805999993
+        },
+        "unavailable_reason": null
+      },
       "cost": null,
       "cost_per_liter": null,
       "currency": "$",
       "density_g_cm3": null,
       "mass_g": null,
+      "note": "set resin density_g_cm3 to compute grams",
       "source": "raster_volume_mm3",
       "volume_ml": 3.5083345805999993,
       "volume_mm3": 3508.3345805999993
@@ -7019,6 +7077,14 @@
         0.018,
         0.018
       ],
+      "raster_volume_by_group": {
+        "model_mm3": 2644.8820326,
+        "model_pixels": 163264323,
+        "supports_mm3": 863.4525479999999,
+        "supports_pixels": 53299540,
+        "total_mm3": 3508.3345805999993,
+        "total_pixels": 216563863
+      },
       "raster_volume_mm3": 3508.3345805999993,
       "reopened": {
         "bounds": [
@@ -7148,6 +7214,7 @@
         },
         "contacts_blocked_by_policy": 0,
         "contacts_dropped_attached": 4,
+        "contacts_duplicate": 0,
         "contacts_failed": 0,
         "contacts_in_sealed_cavities": 0,
         "contacts_requested": 79,
@@ -7176,7 +7243,7 @@
         "min_tip_length_mm": 0.3,
         "min_tip_used_mm": 0.30000000000000004,
         "model_anchor": {
-          "candidates_rejected": 0,
+          "candidates_rejected": 1,
           "clearance_basis": "column-grid footprint and central-column penetration; not exact surface clearance",
           "diameter_basis": "configured endpoint diameter; 0 derives the chosen middle diameter",
           "diameter_mm": 0.4,
@@ -7206,7 +7273,12 @@
           "examples_capped_at": 256,
           "length_mm": 2.0,
           "penetration_mm": 0.15,
-          "shape": "cone"
+          "rejections": {
+            "existing_tip": 1
+          },
+          "shape": "cone",
+          "stub_basis": "island, manual or correction contacts with no other route, fused by one rod of contact diameter to material printed before them within a tip-and-anchor gap",
+          "stubs": 0
         },
         "object_groups": 0,
         "object_override_contacts": 0,
@@ -7244,11 +7316,15 @@
         "suppressed_contacts": 0,
         "tip_base_diameter_mm": 0.9,
         "tip_length_mm": 2.0,
+        "tips_joined_to_supports": 0,
         "tree": {
           "clusters": 0,
           "contacts_in_trees": 0,
           "enabled": false,
+          "fallbacks": {},
           "kept_independent": 0,
+          "trunk_diameter_mm": 1.2,
+          "trunk_limited_clusters": 0,
           "trunks": 0
         },
         "unbraced": {
@@ -7270,7 +7346,10 @@
         },
         "uncovered_fraction": 0.0,
         "uncovered_samples": 0,
-        "unroutable_positions": []
+        "unroutable_positions": [],
+        "unroutable_reasons": {
+          "branch_exhausted": 4
+        }
       },
       "transient_traps": {
         "definition": "empty space enclosed by already-printed material except toward the growth direction",

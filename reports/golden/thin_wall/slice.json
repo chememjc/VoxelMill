@@ -52,11 +52,34 @@
   "output": "out.goo",
   "print_time_s": 3285,
   "resin_usage": {
+    "breakdown": {
+      "method": null,
+      "model": {
+        "cost": null,
+        "mass_g": null,
+        "volume_ml": null,
+        "volume_mm3": null
+      },
+      "supports": {
+        "cost": null,
+        "mass_g": null,
+        "volume_ml": null,
+        "volume_mm3": null
+      },
+      "total": {
+        "cost": null,
+        "mass_g": null,
+        "volume_ml": 1.3533274584000001,
+        "volume_mm3": 1353.3274584
+      },
+      "unavailable_reason": "slice reads a merged STL, so model and support resin cannot be separated; the prepare report carries the split"
+    },
     "cost": null,
     "cost_per_liter": null,
     "currency": "$",
     "density_g_cm3": null,
     "mass_g": null,
+    "note": "set resin density_g_cm3 to compute grams",
     "source": "raster_volume_mm3",
     "volume_ml": 1.3533274584000001,
     "volume_mm3": 1353.3274584

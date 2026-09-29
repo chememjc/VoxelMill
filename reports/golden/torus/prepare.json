@@ -21,18 +21,18 @@
   "diagnostics": [],
   "export": {
     "path": "prepared.stl",
-    "triangles": 77724,
+    "triangles": 77726,
     "warned": false,
     "written": true
   },
   "passes": [
     {
-      "exported_triangles": 77724,
+      "exported_triangles": 77726,
       "kind": "full_reslice",
       "pass": 1,
       "plate_fit": true,
       "raft": true,
-      "raster_volume_mm3": 4785.9511446,
+      "raster_volume_mm3": 4787.1178199999995,
       "supports": {
         "allow_part_to_part": true,
         "analysis": {
@@ -80,7 +80,7 @@
         "brace_angle_deg": 45.0,
         "brace_azimuth_deg": 0.0,
         "brace_branches_per_node": 1,
-        "brace_candidates_examined": 133,
+        "brace_candidates_examined": 139,
         "brace_destination": "supports",
         "brace_diameter_mm": 0.6,
         "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
@@ -91,15 +91,15 @@
         "brace_origins_examined": 90,
         "brace_pattern": "alternating",
         "brace_rejections": {
-          "bounds_rejected": 4,
+          "bounds_rejected": 2,
           "collision_rejected": 0,
           "duplicate_rejected": 0,
           "foot_rejected": 0,
           "length_rejected": 0,
-          "no_destination_rejected": 7,
-          "pattern_rejected": 59,
-          "spacing_rejected": 67,
-          "support_collision_rejected": 0,
+          "no_destination_rejected": 8,
+          "pattern_rejected": 61,
+          "spacing_rejected": 69,
+          "support_collision_rejected": 3,
           "ungrounded_rejected": 0
         },
         "brace_spacing_mm": 5.0,
@@ -114,6 +114,7 @@
         },
         "contacts_blocked_by_policy": 0,
         "contacts_dropped_attached": 0,
+        "contacts_duplicate": 0,
         "contacts_failed": 0,
         "contacts_in_sealed_cavities": 0,
         "contacts_requested": 90,
@@ -150,7 +151,10 @@
           "examples_capped_at": 256,
           "length_mm": 2.0,
           "penetration_mm": 0.15,
-          "shape": "cone"
+          "rejections": {},
+          "shape": "cone",
+          "stub_basis": "island, manual or correction contacts with no other route, fused by one rod of contact diameter to material printed before them within a tip-and-anchor gap",
+          "stubs": 0
         },
         "object_groups": 0,
         "object_override_contacts": 0,
@@ -188,11 +192,15 @@
         "suppressed_contacts": 0,
         "tip_base_diameter_mm": 0.9,
         "tip_length_mm": 2.0,
+        "tips_joined_to_supports": 0,
         "tree": {
           "clusters": 0,
           "contacts_in_trees": 0,
           "enabled": false,
+          "fallbacks": {},
           "kept_independent": 0,
+          "trunk_diameter_mm": 1.2,
+          "trunk_limited_clusters": 0,
           "trunks": 0
         },
         "unbraced": {
@@ -204,13 +212,14 @@
             "braced_pillars": 43,
             "max_mm": 4.172,
             "max_slenderness": 4.64,
-            "median_mm": 3.257,
+            "median_mm": 3.202,
             "pillars": 90
           }
         },
         "uncovered_fraction": 0.0,
         "uncovered_samples": 0,
-        "unroutable_positions": []
+        "unroutable_positions": [],
+        "unroutable_reasons": {}
       },
       "union_bounds": [
         [
@@ -224,8 +233,8 @@
           13.0
         ]
       ],
-      "union_triangles": 77724,
-      "union_volume_mm3": 4785.108629667807,
+      "union_triangles": 77726,
+      "union_volume_mm3": 4786.275116682666,
       "validation": {
         "checks": {
           "closed_surface": "pass",
@@ -248,22 +257,17 @@
               "count": 32,
               "examples": [
                 {
-                  "component": 442,
+                  "component": 446,
                   "first_layer": 101,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 443,
+                  "component": 447,
                   "first_layer": 101,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 444,
-                  "first_layer": 101,
-                  "volume_mm3": 1.6199999999999997e-05
-                },
-                {
-                  "component": 445,
+                  "component": 448,
                   "first_layer": 101,
                   "volume_mm3": 1.6199999999999997e-05
                 },
@@ -273,27 +277,27 @@
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 450,
+                  "component": 453,
                   "first_layer": 101,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 452,
+                  "component": 454,
                   "first_layer": 101,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 457,
+                  "component": 456,
                   "first_layer": 101,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 459,
+                  "component": 461,
                   "first_layer": 101,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 460,
+                  "component": 463,
                   "first_layer": 101,
                   "volume_mm3": 1.6199999999999997e-05
                 },
@@ -303,47 +307,42 @@
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 465,
+                  "component": 468,
                   "first_layer": 101,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 466,
-                  "first_layer": 101,
-                  "volume_mm3": 1.6199999999999997e-05
-                },
-                {
-                  "component": 467,
+                  "component": 469,
                   "first_layer": 101,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
                   "component": 470,
-                  "first_layer": 102,
+                  "first_layer": 101,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
                   "component": 471,
+                  "first_layer": 101,
+                  "volume_mm3": 1.6199999999999997e-05
+                },
+                {
+                  "component": 474,
                   "first_layer": 102,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 476,
+                  "component": 475,
+                  "first_layer": 102,
+                  "volume_mm3": 1.6199999999999997e-05
+                },
+                {
+                  "component": 480,
                   "first_layer": 104,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 477,
-                  "first_layer": 104,
-                  "volume_mm3": 1.6199999999999997e-05
-                },
-                {
-                  "component": 478,
-                  "first_layer": 104,
-                  "volume_mm3": 1.6199999999999997e-05
-                },
-                {
-                  "component": 479,
+                  "component": 481,
                   "first_layer": 104,
                   "volume_mm3": 1.6199999999999997e-05
                 },
@@ -358,12 +357,12 @@
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 488,
+                  "component": 486,
                   "first_layer": 104,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 489,
+                  "component": 487,
                   "first_layer": 104,
                   "volume_mm3": 1.6199999999999997e-05
                 },
@@ -378,32 +377,42 @@
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 494,
+                  "component": 496,
                   "first_layer": 104,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 495,
+                  "component": 497,
                   "first_layer": 104,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 607,
+                  "component": 498,
+                  "first_layer": 104,
+                  "volume_mm3": 1.6199999999999997e-05
+                },
+                {
+                  "component": 499,
+                  "first_layer": 104,
+                  "volume_mm3": 1.6199999999999997e-05
+                },
+                {
+                  "component": 611,
                   "first_layer": 117,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 610,
+                  "component": 614,
                   "first_layer": 117,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 620,
+                  "component": 624,
                   "first_layer": 120,
                   "volume_mm3": 1.6199999999999997e-05
                 },
                 {
-                  "component": 621,
+                  "component": 625,
                   "first_layer": 120,
                   "volume_mm3": 1.6199999999999997e-05
                 }
@@ -411,7 +420,7 @@
               "min_void_volume_mm3": 0.0,
               "negligible_count": 0,
               "negligible_volume_mm3": 0.0,
-              "nodes": 900,
+              "nodes": 904,
               "peak_present_trapped_layer": 120,
               "peak_present_trapped_volume_mm3": 0.0005183999999935907,
               "volume_mm3": 0.0005183999999999999
@@ -440,7 +449,7 @@
               "bottom_layer_top_mm": 0.2,
               "bottom_lift_speed": 0.05,
               "build_z_mm": 165.0,
-              "candidate_triangle_count": 2954,
+              "candidate_triangle_count": 2963,
               "heuristic": "uncalibrated geometry score; not a force or failure prediction",
               "layer_height_mm": 0.05,
               "limitations": [
@@ -453,7 +462,7 @@
               "maximum_score": 7.857358890010895,
               "normal_lift_speed": 0.05,
               "reference_lift_speed": 0.05,
-              "region_count": 2152,
+              "region_count": 2162,
               "regions": [
                 {
                   "area_mm2": 785.7358890010895,
@@ -512,11 +521,11 @@
               ],
               "regions_truncated": false,
               "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-              "source_triangle_count": 77724,
+              "source_triangle_count": 77726,
               "status": "complete",
               "threshold_area_mm2": 100.0,
               "threshold_region_count": 2,
-              "total_region_count": 2152
+              "total_region_count": 2162
             },
             "layer": null,
             "message": "Large downward surface regions warrant review of orientation and release settings",
@@ -530,22 +539,17 @@
             "count": 32,
             "examples": [
               {
-                "component": 442,
+                "component": 446,
                 "first_layer": 101,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 443,
+                "component": 447,
                 "first_layer": 101,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 444,
-                "first_layer": 101,
-                "volume_mm3": 1.6199999999999997e-05
-              },
-              {
-                "component": 445,
+                "component": 448,
                 "first_layer": 101,
                 "volume_mm3": 1.6199999999999997e-05
               },
@@ -555,27 +559,27 @@
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 450,
+                "component": 453,
                 "first_layer": 101,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 452,
+                "component": 454,
                 "first_layer": 101,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 457,
+                "component": 456,
                 "first_layer": 101,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 459,
+                "component": 461,
                 "first_layer": 101,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 460,
+                "component": 463,
                 "first_layer": 101,
                 "volume_mm3": 1.6199999999999997e-05
               },
@@ -585,47 +589,42 @@
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 465,
+                "component": 468,
                 "first_layer": 101,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 466,
-                "first_layer": 101,
-                "volume_mm3": 1.6199999999999997e-05
-              },
-              {
-                "component": 467,
+                "component": 469,
                 "first_layer": 101,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
                 "component": 470,
-                "first_layer": 102,
+                "first_layer": 101,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
                 "component": 471,
+                "first_layer": 101,
+                "volume_mm3": 1.6199999999999997e-05
+              },
+              {
+                "component": 474,
                 "first_layer": 102,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 476,
+                "component": 475,
+                "first_layer": 102,
+                "volume_mm3": 1.6199999999999997e-05
+              },
+              {
+                "component": 480,
                 "first_layer": 104,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 477,
-                "first_layer": 104,
-                "volume_mm3": 1.6199999999999997e-05
-              },
-              {
-                "component": 478,
-                "first_layer": 104,
-                "volume_mm3": 1.6199999999999997e-05
-              },
-              {
-                "component": 479,
+                "component": 481,
                 "first_layer": 104,
                 "volume_mm3": 1.6199999999999997e-05
               },
@@ -640,12 +639,12 @@
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 488,
+                "component": 486,
                 "first_layer": 104,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 489,
+                "component": 487,
                 "first_layer": 104,
                 "volume_mm3": 1.6199999999999997e-05
               },
@@ -660,32 +659,42 @@
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 494,
+                "component": 496,
                 "first_layer": 104,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 495,
+                "component": 497,
                 "first_layer": 104,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 607,
+                "component": 498,
+                "first_layer": 104,
+                "volume_mm3": 1.6199999999999997e-05
+              },
+              {
+                "component": 499,
+                "first_layer": 104,
+                "volume_mm3": 1.6199999999999997e-05
+              },
+              {
+                "component": 611,
                 "first_layer": 117,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 610,
+                "component": 614,
                 "first_layer": 117,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 620,
+                "component": 624,
                 "first_layer": 120,
                 "volume_mm3": 1.6199999999999997e-05
               },
               {
-                "component": 621,
+                "component": 625,
                 "first_layer": 120,
                 "volume_mm3": 1.6199999999999997e-05
               }
@@ -693,12 +702,12 @@
             "min_void_volume_mm3": 0.0,
             "negligible_count": 0,
             "negligible_volume_mm3": 0.0,
-            "nodes": 900,
+            "nodes": 904,
             "peak_present_trapped_layer": 120,
             "peak_present_trapped_volume_mm3": 0.0005183999999935907,
             "volume_mm3": 0.0005183999999999999
           },
-          "exposed_pixels": 295429083,
+          "exposed_pixels": 295501100,
           "growth_decimation": 8,
           "growth_violation_pixels": 0,
           "island_components": 0,
@@ -711,7 +720,7 @@
             "bottom_layer_top_mm": 0.2,
             "bottom_lift_speed": 0.05,
             "build_z_mm": 165.0,
-            "candidate_triangle_count": 2954,
+            "candidate_triangle_count": 2963,
             "heuristic": "uncalibrated geometry score; not a force or failure prediction",
             "layer_height_mm": 0.05,
             "limitations": [
@@ -724,7 +733,7 @@
             "maximum_score": 7.857358890010895,
             "normal_lift_speed": 0.05,
             "reference_lift_speed": 0.05,
-            "region_count": 2152,
+            "region_count": 2162,
             "regions": [
               {
                 "area_mm2": 785.7358890010895,
@@ -783,17 +792,25 @@
             ],
             "regions_truncated": false,
             "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-            "source_triangle_count": 77724,
+            "source_triangle_count": 77726,
             "status": "complete",
             "threshold_area_mm2": 100.0,
             "threshold_region_count": 2,
-            "total_region_count": 2152
+            "total_region_count": 2162
           },
           "pixel_pitch_mm": [
             0.018,
             0.018
           ],
-          "raster_volume_mm3": 4785.9511446,
+          "raster_volume_by_group": {
+            "model_mm3": 3755.6331371999995,
+            "model_pixels": 231829206,
+            "supports_mm3": 1031.4846827999997,
+            "supports_pixels": 63671894,
+            "total_mm3": 4787.1178199999995,
+            "total_pixels": 295501100
+          },
+          "raster_volume_mm3": 4787.1178199999995,
           "reopened": {
             "bounds": [
               [
@@ -819,8 +836,8 @@
             "open_layers": 0,
             "open_rows": 0,
             "path": "prepared.stl",
-            "sha256": "1dbdfc66e858f7fc2b2fdaf1cf736fbcd8eac870552d5dbc49800dd0e616b34d",
-            "triangles": 77724
+            "sha256": "2acd4be1f9c0aa98efbfd779f747168cb99c85c9eb306cefcf73ec31139afbe3",
+            "triangles": 77726
           },
           "supports": {
             "allow_part_to_part": true,
@@ -869,7 +886,7 @@
             "brace_angle_deg": 45.0,
             "brace_azimuth_deg": 0.0,
             "brace_branches_per_node": 1,
-            "brace_candidates_examined": 133,
+            "brace_candidates_examined": 139,
             "brace_destination": "supports",
             "brace_diameter_mm": 0.6,
             "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
@@ -880,15 +897,15 @@
             "brace_origins_examined": 90,
             "brace_pattern": "alternating",
             "brace_rejections": {
-              "bounds_rejected": 4,
+              "bounds_rejected": 2,
               "collision_rejected": 0,
               "duplicate_rejected": 0,
               "foot_rejected": 0,
               "length_rejected": 0,
-              "no_destination_rejected": 7,
-              "pattern_rejected": 59,
-              "spacing_rejected": 67,
-              "support_collision_rejected": 0,
+              "no_destination_rejected": 8,
+              "pattern_rejected": 61,
+              "spacing_rejected": 69,
+              "support_collision_rejected": 3,
               "ungrounded_rejected": 0
             },
             "brace_spacing_mm": 5.0,
@@ -903,6 +920,7 @@
             },
             "contacts_blocked_by_policy": 0,
             "contacts_dropped_attached": 0,
+            "contacts_duplicate": 0,
             "contacts_failed": 0,
             "contacts_in_sealed_cavities": 0,
             "contacts_requested": 90,
@@ -939,7 +957,10 @@
               "examples_capped_at": 256,
               "length_mm": 2.0,
               "penetration_mm": 0.15,
-              "shape": "cone"
+              "rejections": {},
+              "shape": "cone",
+              "stub_basis": "island, manual or correction contacts with no other route, fused by one rod of contact diameter to material printed before them within a tip-and-anchor gap",
+              "stubs": 0
             },
             "object_groups": 0,
             "object_override_contacts": 0,
@@ -977,11 +998,15 @@
             "suppressed_contacts": 0,
             "tip_base_diameter_mm": 0.9,
             "tip_length_mm": 2.0,
+            "tips_joined_to_supports": 0,
             "tree": {
               "clusters": 0,
               "contacts_in_trees": 0,
               "enabled": false,
+              "fallbacks": {},
               "kept_independent": 0,
+              "trunk_diameter_mm": 1.2,
+              "trunk_limited_clusters": 0,
               "trunks": 0
             },
             "unbraced": {
@@ -993,13 +1018,14 @@
                 "braced_pillars": 43,
                 "max_mm": 4.172,
                 "max_slenderness": 4.64,
-                "median_mm": 3.257,
+                "median_mm": 3.202,
                 "pillars": 90
               }
             },
             "uncovered_fraction": 0.0,
             "uncovered_samples": 0,
-            "unroutable_positions": []
+            "unroutable_positions": [],
+            "unroutable_reasons": {}
           },
           "transient_traps": {
             "definition": "empty space enclosed by already-printed material except toward the growth direction",
@@ -1256,7 +1282,8 @@
       "tip_length_mm": 2.0,
       "tip_shape": "cone",
       "tree_cluster_mm": 0.0,
-      "tree_supports": false
+      "tree_supports": false,
+      "trunk_diameter_mm": 1.2
     }
   },
   "source": "torus.stl",
@@ -1343,14 +1370,37 @@
       "volumetric_repair": "not_run"
     },
     "resin_usage": {
+      "breakdown": {
+        "method": "raster pixels on the printer lattice: total = union pixels, model = model pixels inside the union, supports = total - model (tip penetration counts as model)",
+        "model": {
+          "cost": null,
+          "mass_g": null,
+          "volume_ml": 3.7556331371999994,
+          "volume_mm3": 3755.6331371999995
+        },
+        "supports": {
+          "cost": null,
+          "mass_g": null,
+          "volume_ml": 1.0314846827999997,
+          "volume_mm3": 1031.4846827999997
+        },
+        "total": {
+          "cost": null,
+          "mass_g": null,
+          "volume_ml": 4.78711782,
+          "volume_mm3": 4787.1178199999995
+        },
+        "unavailable_reason": null
+      },
       "cost": null,
       "cost_per_liter": null,
       "currency": "$",
       "density_g_cm3": null,
       "mass_g": null,
+      "note": "set resin density_g_cm3 to compute grams",
       "source": "raster_volume_mm3",
-      "volume_ml": 4.785951144599999,
-      "volume_mm3": 4785.9511446
+      "volume_ml": 4.78711782,
+      "volume_mm3": 4787.1178199999995
     },
     "transform": {
       "mirror": [
@@ -1380,6 +1430,12 @@
     "diagnostics": [],
     "edges": [
       {
+        "end": "joint0",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot0"
+      },
+      {
         "end": "contact0",
         "kind": "tip",
         "radius_mm": 0.175,
@@ -1408,6 +1464,12 @@
         "kind": "tip",
         "radius_mm": 0.175,
         "start": "joint4"
+      },
+      {
+        "end": "joint5",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot5"
       },
       {
         "end": "contact5",
@@ -1542,6 +1604,12 @@
         "start": "joint23"
       },
       {
+        "end": "joint24",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot24"
+      },
+      {
         "end": "contact24",
         "kind": "tip",
         "radius_mm": 0.175,
@@ -1558,6 +1626,12 @@
         "kind": "tip",
         "radius_mm": 0.175,
         "start": "joint26"
+      },
+      {
+        "end": "joint27",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot27"
       },
       {
         "end": "contact27",
@@ -1606,12 +1680,6 @@
         "kind": "tip",
         "radius_mm": 0.175,
         "start": "joint33"
-      },
-      {
-        "end": "joint34",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "foot34"
       },
       {
         "end": "contact34",
@@ -1956,12 +2024,6 @@
         "start": "joint66"
       },
       {
-        "end": "joint67",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "foot67"
-      },
-      {
         "end": "contact67",
         "kind": "tip",
         "radius_mm": 0.175,
@@ -1990,12 +2052,6 @@
         "kind": "tip",
         "radius_mm": 0.175,
         "start": "joint69"
-      },
-      {
-        "end": "joint70",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "foot70"
       },
       {
         "end": "contact70",
@@ -2050,12 +2106,6 @@
         "kind": "tip",
         "radius_mm": 0.175,
         "start": "joint76"
-      },
-      {
-        "end": "joint77",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "foot77"
       },
       {
         "end": "contact77",
@@ -2349,10 +2399,10 @@
         "end": "brace_joint278",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "foot24"
+        "start": "foot67"
       },
       {
-        "end": "joint24",
+        "end": "joint67",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "brace_joint278"
@@ -2367,10 +2417,10 @@
         "end": "brace_joint279",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "foot27"
+        "start": "foot34"
       },
       {
-        "end": "joint27",
+        "end": "joint34",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "brace_joint279"
@@ -2385,10 +2435,10 @@
         "end": "brace_joint280",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "foot28"
+        "start": "foot70"
       },
       {
-        "end": "joint28",
+        "end": "joint70",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "brace_joint280"
@@ -2709,10 +2759,10 @@
         "end": "brace_joint298",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "foot5"
+        "start": "foot45"
       },
       {
-        "end": "joint5",
+        "end": "joint45",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "brace_joint298"
@@ -2721,28 +2771,10 @@
         "end": "brace_joint298",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "joint67"
-      },
-      {
-        "end": "brace_joint299",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "foot45"
-      },
-      {
-        "end": "joint45",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "brace_joint299"
-      },
-      {
-        "end": "brace_joint299",
-        "kind": "brace",
-        "radius_mm": 0.3,
         "start": "joint68"
       },
       {
-        "end": "brace_joint300",
+        "end": "brace_joint299",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot44"
@@ -2751,34 +2783,16 @@
         "end": "joint44",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "brace_joint300"
+        "start": "brace_joint299"
       },
       {
-        "end": "brace_joint300",
+        "end": "brace_joint299",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint69"
       },
       {
-        "end": "brace_joint301",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "foot0"
-      },
-      {
-        "end": "joint0",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "brace_joint301"
-      },
-      {
-        "end": "brace_joint301",
-        "kind": "brace",
-        "radius_mm": 0.3,
-        "start": "joint70"
-      },
-      {
-        "end": "brace_joint302",
+        "end": "brace_joint300",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot74"
@@ -2787,16 +2801,16 @@
         "end": "joint74",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "brace_joint302"
+        "start": "brace_joint300"
       },
       {
-        "end": "brace_joint302",
+        "end": "brace_joint300",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint71"
       },
       {
-        "end": "brace_joint303",
+        "end": "brace_joint301",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot73"
@@ -2805,16 +2819,16 @@
         "end": "joint73",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "brace_joint303"
+        "start": "brace_joint301"
       },
       {
-        "end": "brace_joint303",
+        "end": "brace_joint301",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint72"
       },
       {
-        "end": "brace_joint304",
+        "end": "brace_joint302",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot18"
@@ -2823,16 +2837,16 @@
         "end": "joint18",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "brace_joint304"
+        "start": "brace_joint302"
       },
       {
-        "end": "brace_joint304",
+        "end": "brace_joint302",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint36"
       },
       {
-        "end": "brace_joint305",
+        "end": "brace_joint303",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot19"
@@ -2841,16 +2855,16 @@
         "end": "joint19",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "brace_joint305"
+        "start": "brace_joint303"
       },
       {
-        "end": "brace_joint305",
+        "end": "brace_joint303",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint37"
       },
       {
-        "end": "brace_joint306",
+        "end": "brace_joint304",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot22"
@@ -2859,16 +2873,16 @@
         "end": "joint22",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "brace_joint306"
+        "start": "brace_joint304"
       },
       {
-        "end": "brace_joint306",
+        "end": "brace_joint304",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint40"
       },
       {
-        "end": "brace_joint307",
+        "end": "brace_joint305",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot23"
@@ -2877,16 +2891,16 @@
         "end": "joint23",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "brace_joint307"
+        "start": "brace_joint305"
       },
       {
-        "end": "brace_joint307",
+        "end": "brace_joint305",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint41"
       },
       {
-        "end": "brace_joint308",
+        "end": "brace_joint306",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot75"
@@ -2895,16 +2909,16 @@
         "end": "joint75",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "brace_joint308"
+        "start": "brace_joint306"
       },
       {
-        "end": "brace_joint308",
+        "end": "brace_joint306",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint46"
       },
       {
-        "end": "brace_joint309",
+        "end": "brace_joint307",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot76"
@@ -2913,16 +2927,16 @@
         "end": "joint76",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "brace_joint309"
+        "start": "brace_joint307"
       },
       {
-        "end": "brace_joint309",
+        "end": "brace_joint307",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint47"
       },
       {
-        "end": "brace_joint310",
+        "end": "brace_joint308",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot20"
@@ -2931,16 +2945,34 @@
         "end": "joint20",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "brace_joint310"
+        "start": "brace_joint308"
       },
       {
-        "end": "brace_joint310",
+        "end": "brace_joint308",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint31"
       },
       {
-        "end": "brace_joint311",
+        "end": "brace_joint309",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot28"
+      },
+      {
+        "end": "joint28",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "brace_joint309"
+      },
+      {
+        "end": "brace_joint309",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint35"
+      },
+      {
+        "end": "brace_joint310",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot16"
@@ -2949,16 +2981,16 @@
         "end": "joint16",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "brace_joint311"
+        "start": "brace_joint310"
       },
       {
-        "end": "brace_joint311",
+        "end": "brace_joint310",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint14"
       },
       {
-        "end": "brace_joint312",
+        "end": "brace_joint311",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot17"
@@ -2967,13 +2999,31 @@
         "end": "joint17",
         "kind": "vertical",
         "radius_mm": 0.45,
+        "start": "brace_joint311"
+      },
+      {
+        "end": "brace_joint311",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint15"
+      },
+      {
+        "end": "brace_joint312",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot77"
+      },
+      {
+        "end": "joint77",
+        "kind": "vertical",
+        "radius_mm": 0.45,
         "start": "brace_joint312"
       },
       {
         "end": "brace_joint312",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "joint15"
+        "start": "joint0"
       }
     ],
     "nodes": [
@@ -5483,27 +5533,27 @@
         "id": "brace_joint278",
         "kind": "brace_junction",
         "position_mm": [
-          3.0466836929321293,
-          10.314417266845703,
-          2.5961016896953013
+          4.737323045730591,
+          8.205284357070923,
+          1.9432782706392606
         ]
       },
       {
         "id": "brace_joint279",
         "kind": "brace_junction",
         "position_mm": [
-          7.40920581817627,
-          -7.795714187622071,
-          2.596101177846424
+          8.946870994567872,
+          -5.165478324890137,
+          0.8686517261419379
         ]
       },
       {
         "id": "brace_joint280",
         "kind": "brace_junction",
         "position_mm": [
-          10.455889320373537,
-          2.5187034130096437,
-          2.5961015116835426
+          9.474646091461182,
+          0.0,
+          1.9432783948680112
         ]
       },
       {
@@ -5663,22 +5713,13 @@
         "id": "brace_joint298",
         "kind": "brace_junction",
         "position_mm": [
-          6.0,
-          10.392304420471191,
-          1.3974936219213898
-        ]
-      },
-      {
-        "id": "brace_joint299",
-        "kind": "brace_junction",
-        "position_mm": [
           9.065330505371094,
           -10.314162254333496,
           1.0279333633689445
         ]
       },
       {
-        "id": "brace_joint300",
+        "id": "brace_joint299",
         "kind": "brace_junction",
         "position_mm": [
           9.042660395304361,
@@ -5687,16 +5728,7 @@
         ]
       },
       {
-        "id": "brace_joint301",
-        "kind": "brace_junction",
-        "position_mm": [
-          12.124999999999996,
-          -0.1750000000000007,
-          1.266721877267794
-        ]
-      },
-      {
-        "id": "brace_joint302",
+        "id": "brace_joint300",
         "kind": "brace_junction",
         "position_mm": [
           12.579325675964355,
@@ -5705,7 +5737,7 @@
         ]
       },
       {
-        "id": "brace_joint303",
+        "id": "brace_joint301",
         "kind": "brace_junction",
         "position_mm": [
           12.579325675964355,
@@ -5714,7 +5746,7 @@
         ]
       },
       {
-        "id": "brace_joint304",
+        "id": "brace_joint302",
         "kind": "brace_junction",
         "position_mm": [
           -10.45971908569336,
@@ -5723,7 +5755,7 @@
         ]
       },
       {
-        "id": "brace_joint305",
+        "id": "brace_joint303",
         "kind": "brace_junction",
         "position_mm": [
           -10.455889320373537,
@@ -5732,7 +5764,7 @@
         ]
       },
       {
-        "id": "brace_joint306",
+        "id": "brace_joint304",
         "kind": "brace_junction",
         "position_mm": [
           -3.065272569656372,
@@ -5741,7 +5773,7 @@
         ]
       },
       {
-        "id": "brace_joint307",
+        "id": "brace_joint305",
         "kind": "brace_junction",
         "position_mm": [
           -3.0466836929321293,
@@ -5750,7 +5782,7 @@
         ]
       },
       {
-        "id": "brace_joint308",
+        "id": "brace_joint306",
         "kind": "brace_junction",
         "position_mm": [
           13.718674182891846,
@@ -5759,7 +5791,7 @@
         ]
       },
       {
-        "id": "brace_joint309",
+        "id": "brace_joint307",
         "kind": "brace_junction",
         "position_mm": [
           13.731417655944824,
@@ -5768,7 +5800,7 @@
         ]
       },
       {
-        "id": "brace_joint310",
+        "id": "brace_joint308",
         "kind": "brace_junction",
         "position_mm": [
           -7.40920581817627,
@@ -5777,7 +5809,16 @@
         ]
       },
       {
-        "id": "brace_joint311",
+        "id": "brace_joint309",
+        "kind": "brace_junction",
+        "position_mm": [
+          10.455889320373537,
+          2.5187034130096437,
+          0.33168149560121346
+        ]
+      },
+      {
+        "id": "brace_joint310",
         "kind": "brace_junction",
         "position_mm": [
           12.023672898610432,
@@ -5786,12 +5827,21 @@
         ]
       },
       {
-        "id": "brace_joint312",
+        "id": "brace_joint311",
         "kind": "brace_junction",
         "position_mm": [
           12.030908107757568,
           -5.284301360448201,
           0.3287643672215901
+        ]
+      },
+      {
+        "id": "brace_joint312",
+        "kind": "brace_junction",
+        "position_mm": [
+          14.525353908538818,
+          0.0,
+          0.5932752782593524
         ]
       }
     ],
@@ -5835,7 +5885,7 @@
           "bottom_layer_top_mm": 0.2,
           "bottom_lift_speed": 0.05,
           "build_z_mm": 165.0,
-          "candidate_triangle_count": 2954,
+          "candidate_triangle_count": 2963,
           "heuristic": "uncalibrated geometry score; not a force or failure prediction",
           "layer_height_mm": 0.05,
           "limitations": [
@@ -5848,7 +5898,7 @@
           "maximum_score": 7.857358890010895,
           "normal_lift_speed": 0.05,
           "reference_lift_speed": 0.05,
-          "region_count": 2152,
+          "region_count": 2162,
           "regions": [
             {
               "area_mm2": 785.7358890010895,
@@ -5907,11 +5957,11 @@
           ],
           "regions_truncated": false,
           "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-          "source_triangle_count": 77724,
+          "source_triangle_count": 77726,
           "status": "complete",
           "threshold_area_mm2": 100.0,
           "threshold_region_count": 2,
-          "total_region_count": 2152
+          "total_region_count": 2162
         },
         "layer": null,
         "message": "Large downward surface regions warrant review of orientation and release settings",
@@ -6088,25 +6138,19 @@
         "count": 32,
         "examples": [
           {
-            "component": 442,
+            "component": 446,
             "first_layer": 101,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 443,
+            "component": 447,
             "first_layer": 101,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 444,
-            "first_layer": 101,
-            "void_class": "support",
-            "volume_mm3": 1.6199999999999997e-05
-          },
-          {
-            "component": 445,
+            "component": 448,
             "first_layer": 101,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
@@ -6118,31 +6162,31 @@
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 450,
+            "component": 453,
             "first_layer": 101,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 452,
+            "component": 454,
             "first_layer": 101,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 457,
+            "component": 456,
             "first_layer": 101,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 459,
+            "component": 461,
             "first_layer": 101,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 460,
+            "component": 463,
             "first_layer": 101,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
@@ -6154,55 +6198,49 @@
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 465,
+            "component": 468,
             "first_layer": 101,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 466,
-            "first_layer": 101,
-            "void_class": "support",
-            "volume_mm3": 1.6199999999999997e-05
-          },
-          {
-            "component": 467,
+            "component": 469,
             "first_layer": 101,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
             "component": 470,
-            "first_layer": 102,
+            "first_layer": 101,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
             "component": 471,
+            "first_layer": 101,
+            "void_class": "support",
+            "volume_mm3": 1.6199999999999997e-05
+          },
+          {
+            "component": 474,
             "first_layer": 102,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 476,
+            "component": 475,
+            "first_layer": 102,
+            "void_class": "support",
+            "volume_mm3": 1.6199999999999997e-05
+          },
+          {
+            "component": 480,
             "first_layer": 104,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 477,
-            "first_layer": 104,
-            "void_class": "support",
-            "volume_mm3": 1.6199999999999997e-05
-          },
-          {
-            "component": 478,
-            "first_layer": 104,
-            "void_class": "support",
-            "volume_mm3": 1.6199999999999997e-05
-          },
-          {
-            "component": 479,
+            "component": 481,
             "first_layer": 104,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
@@ -6220,13 +6258,13 @@
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 488,
+            "component": 486,
             "first_layer": 104,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 489,
+            "component": 487,
             "first_layer": 104,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
@@ -6244,37 +6282,49 @@
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 494,
+            "component": 496,
             "first_layer": 104,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 495,
+            "component": 497,
             "first_layer": 104,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 607,
+            "component": 498,
+            "first_layer": 104,
+            "void_class": "support",
+            "volume_mm3": 1.6199999999999997e-05
+          },
+          {
+            "component": 499,
+            "first_layer": 104,
+            "void_class": "support",
+            "volume_mm3": 1.6199999999999997e-05
+          },
+          {
+            "component": 611,
             "first_layer": 117,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 610,
+            "component": 614,
             "first_layer": 117,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 620,
+            "component": 624,
             "first_layer": 120,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
           },
           {
-            "component": 621,
+            "component": 625,
             "first_layer": 120,
             "void_class": "support",
             "volume_mm3": 1.6199999999999997e-05
@@ -6285,14 +6335,14 @@
         "model_volume_mm3": 0.0,
         "negligible_count": 0,
         "negligible_volume_mm3": 0.0,
-        "nodes": 900,
+        "nodes": 904,
         "peak_present_trapped_layer": 120,
         "peak_present_trapped_volume_mm3": 0.0005183999999935907,
         "support_count": 32,
         "support_volume_mm3": 0.0005183999999999999,
         "volume_mm3": 0.0005183999999999999
       },
-      "exposed_pixels": 295429083,
+      "exposed_pixels": 295501100,
       "growth_decimation": 8,
       "growth_violation_pixels": 0,
       "ignored_support_bottlenecks": {
@@ -6316,7 +6366,7 @@
         "bottom_layer_top_mm": 0.2,
         "bottom_lift_speed": 0.05,
         "build_z_mm": 165.0,
-        "candidate_triangle_count": 2954,
+        "candidate_triangle_count": 2963,
         "heuristic": "uncalibrated geometry score; not a force or failure prediction",
         "layer_height_mm": 0.05,
         "limitations": [
@@ -6329,7 +6379,7 @@
         "maximum_score": 7.857358890010895,
         "normal_lift_speed": 0.05,
         "reference_lift_speed": 0.05,
-        "region_count": 2152,
+        "region_count": 2162,
         "regions": [
           {
             "area_mm2": 785.7358890010895,
@@ -6388,17 +6438,25 @@
         ],
         "regions_truncated": false,
         "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-        "source_triangle_count": 77724,
+        "source_triangle_count": 77726,
         "status": "complete",
         "threshold_area_mm2": 100.0,
         "threshold_region_count": 2,
-        "total_region_count": 2152
+        "total_region_count": 2162
       },
       "pixel_pitch_mm": [
         0.018,
         0.018
       ],
-      "raster_volume_mm3": 4785.9511446,
+      "raster_volume_by_group": {
+        "model_mm3": 3755.6331371999995,
+        "model_pixels": 231829206,
+        "supports_mm3": 1031.4846827999997,
+        "supports_pixels": 63671894,
+        "total_mm3": 4787.1178199999995,
+        "total_pixels": 295501100
+      },
+      "raster_volume_mm3": 4787.1178199999995,
       "reopened": {
         "bounds": [
           [
@@ -6424,8 +6482,8 @@
         "open_layers": 0,
         "open_rows": 0,
         "path": "prepared.stl",
-        "sha256": "1dbdfc66e858f7fc2b2fdaf1cf736fbcd8eac870552d5dbc49800dd0e616b34d",
-        "triangles": 77724
+        "sha256": "2acd4be1f9c0aa98efbfd779f747168cb99c85c9eb306cefcf73ec31139afbe3",
+        "triangles": 77726
       },
       "support_collisions": {
         "allowance_mm": 2.6500000000000004,
@@ -6495,7 +6553,7 @@
         "brace_angle_deg": 45.0,
         "brace_azimuth_deg": 0.0,
         "brace_branches_per_node": 1,
-        "brace_candidates_examined": 133,
+        "brace_candidates_examined": 139,
         "brace_destination": "supports",
         "brace_diameter_mm": 0.6,
         "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
@@ -6506,15 +6564,15 @@
         "brace_origins_examined": 90,
         "brace_pattern": "alternating",
         "brace_rejections": {
-          "bounds_rejected": 4,
+          "bounds_rejected": 2,
           "collision_rejected": 0,
           "duplicate_rejected": 0,
           "foot_rejected": 0,
           "length_rejected": 0,
-          "no_destination_rejected": 7,
-          "pattern_rejected": 59,
-          "spacing_rejected": 67,
-          "support_collision_rejected": 0,
+          "no_destination_rejected": 8,
+          "pattern_rejected": 61,
+          "spacing_rejected": 69,
+          "support_collision_rejected": 3,
           "ungrounded_rejected": 0
         },
         "brace_spacing_mm": 5.0,
@@ -6529,6 +6587,7 @@
         },
         "contacts_blocked_by_policy": 0,
         "contacts_dropped_attached": 0,
+        "contacts_duplicate": 0,
         "contacts_failed": 0,
         "contacts_in_sealed_cavities": 0,
         "contacts_requested": 90,
@@ -6565,7 +6624,10 @@
           "examples_capped_at": 256,
           "length_mm": 2.0,
           "penetration_mm": 0.15,
-          "shape": "cone"
+          "rejections": {},
+          "shape": "cone",
+          "stub_basis": "island, manual or correction contacts with no other route, fused by one rod of contact diameter to material printed before them within a tip-and-anchor gap",
+          "stubs": 0
         },
         "object_groups": 0,
         "object_override_contacts": 0,
@@ -6603,11 +6665,15 @@
         "suppressed_contacts": 0,
         "tip_base_diameter_mm": 0.9,
         "tip_length_mm": 2.0,
+        "tips_joined_to_supports": 0,
         "tree": {
           "clusters": 0,
           "contacts_in_trees": 0,
           "enabled": false,
+          "fallbacks": {},
           "kept_independent": 0,
+          "trunk_diameter_mm": 1.2,
+          "trunk_limited_clusters": 0,
           "trunks": 0
         },
         "unbraced": {
@@ -6619,13 +6685,14 @@
             "braced_pillars": 43,
             "max_mm": 4.172,
             "max_slenderness": 4.64,
-            "median_mm": 3.257,
+            "median_mm": 3.202,
             "pillars": 90
           }
         },
         "uncovered_fraction": 0.0,
         "uncovered_samples": 0,
-        "unroutable_positions": []
+        "unroutable_positions": [],
+        "unroutable_reasons": {}
       },
       "transient_traps": {
         "definition": "empty space enclosed by already-printed material except toward the growth direction",

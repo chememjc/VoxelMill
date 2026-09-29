@@ -21,18 +21,18 @@
   "diagnostics": [],
   "export": {
     "path": "prepared.stl",
-    "triangles": 33700,
+    "triangles": 34726,
     "warned": false,
     "written": true
   },
   "passes": [
     {
-      "exported_triangles": 33700,
+      "exported_triangles": 34726,
       "kind": "full_reslice",
       "pass": 1,
       "plate_fit": true,
       "raft": true,
-      "raster_volume_mm3": 4566.1880844,
+      "raster_volume_mm3": 4566.451885199999,
       "supports": {
         "allow_part_to_part": true,
         "analysis": {
@@ -80,7 +80,7 @@
         "brace_angle_deg": 45.0,
         "brace_azimuth_deg": 0.0,
         "brace_branches_per_node": 1,
-        "brace_candidates_examined": 75,
+        "brace_candidates_examined": 85,
         "brace_destination": "supports",
         "brace_diameter_mm": 0.6,
         "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
@@ -96,10 +96,10 @@
           "duplicate_rejected": 0,
           "foot_rejected": 0,
           "length_rejected": 0,
-          "no_destination_rejected": 6,
-          "pattern_rejected": 39,
-          "spacing_rejected": 31,
-          "support_collision_rejected": 1,
+          "no_destination_rejected": 7,
+          "pattern_rejected": 42,
+          "spacing_rejected": 35,
+          "support_collision_rejected": 3,
           "ungrounded_rejected": 0
         },
         "brace_spacing_mm": 5.0,
@@ -114,6 +114,7 @@
         },
         "contacts_blocked_by_policy": 0,
         "contacts_dropped_attached": 0,
+        "contacts_duplicate": 0,
         "contacts_failed": 0,
         "contacts_in_sealed_cavities": 0,
         "contacts_requested": 37,
@@ -150,7 +151,10 @@
           "examples_capped_at": 256,
           "length_mm": 2.0,
           "penetration_mm": 0.15,
-          "shape": "cone"
+          "rejections": {},
+          "shape": "cone",
+          "stub_basis": "island, manual or correction contacts with no other route, fused by one rod of contact diameter to material printed before them within a tip-and-anchor gap",
+          "stubs": 0
         },
         "object_groups": 0,
         "object_override_contacts": 0,
@@ -188,11 +192,15 @@
         "suppressed_contacts": 0,
         "tip_base_diameter_mm": 0.9,
         "tip_length_mm": 2.0,
+        "tips_joined_to_supports": 0,
         "tree": {
           "clusters": 0,
           "contacts_in_trees": 0,
           "enabled": false,
+          "fallbacks": {},
           "kept_independent": 0,
+          "trunk_diameter_mm": 1.2,
+          "trunk_limited_clusters": 0,
           "trunks": 0
         },
         "unbraced": {
@@ -210,7 +218,8 @@
         },
         "uncovered_fraction": 0.0,
         "uncovered_samples": 0,
-        "unroutable_positions": []
+        "unroutable_positions": [],
+        "unroutable_reasons": {}
       },
       "union_bounds": [
         [
@@ -224,8 +233,8 @@
           25.0
         ]
       ],
-      "union_triangles": 33700,
-      "union_volume_mm3": 4566.209701717768,
+      "union_triangles": 34726,
+      "union_volume_mm3": 4566.473633883583,
       "validation": {
         "checks": {
           "closed_surface": "pass",
@@ -261,7 +270,7 @@
               "bottom_layer_top_mm": 0.2,
               "bottom_lift_speed": 0.05,
               "build_z_mm": 165.0,
-              "candidate_triangle_count": 1768,
+              "candidate_triangle_count": 2778,
               "heuristic": "uncalibrated geometry score; not a force or failure prediction",
               "layer_height_mm": 0.05,
               "limitations": [
@@ -270,14 +279,14 @@
                 "open, duplicate and nonmanifold surfaces require independent validation"
               ],
               "max_angle_deg": 10.0,
-              "maximum_projected_area_mm2": 275.91235723585527,
-              "maximum_score": 2.7591235723585528,
+              "maximum_projected_area_mm2": 275.91235723585515,
+              "maximum_score": 2.7591235723585514,
               "normal_lift_speed": 0.05,
               "reference_lift_speed": 0.05,
-              "region_count": 887,
+              "region_count": 890,
               "regions": [
                 {
-                  "area_mm2": 275.91235723585527,
+                  "area_mm2": 275.91235723585515,
                   "bottom_layer_intersection": true,
                   "bounds": [
                     [
@@ -294,10 +303,10 @@
                   "lift_speed": 0.05,
                   "mean_z_mm": 0.0,
                   "normal_layer_intersection": false,
-                  "projected_area_mm2": 275.91235723585527,
-                  "score": 2.7591235723585528,
+                  "projected_area_mm2": 275.91235723585515,
+                  "score": 2.7591235723585514,
                   "threshold": true,
-                  "triangle_count": 810,
+                  "triangle_count": 1818,
                   "z_layer_span": [
                     0,
                     0
@@ -306,11 +315,11 @@
               ],
               "regions_truncated": false,
               "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-              "source_triangle_count": 33700,
+              "source_triangle_count": 34726,
               "status": "complete",
               "threshold_area_mm2": 100.0,
               "threshold_region_count": 1,
-              "total_region_count": 887
+              "total_region_count": 890
             },
             "layer": null,
             "message": "Large downward surface regions warrant review of orientation and release settings",
@@ -326,12 +335,12 @@
             "min_void_volume_mm3": 0.0,
             "negligible_count": 0,
             "negligible_volume_mm3": 0.0,
-            "nodes": 561,
+            "nodes": 556,
             "peak_present_trapped_layer": 73,
             "peak_present_trapped_volume_mm3": 9.719999999999999e-05,
             "volume_mm3": 0.0
           },
-          "exposed_pixels": 281863462,
+          "exposed_pixels": 281879746,
           "growth_decimation": 8,
           "growth_violation_pixels": 0,
           "island_components": 0,
@@ -344,7 +353,7 @@
             "bottom_layer_top_mm": 0.2,
             "bottom_lift_speed": 0.05,
             "build_z_mm": 165.0,
-            "candidate_triangle_count": 1768,
+            "candidate_triangle_count": 2778,
             "heuristic": "uncalibrated geometry score; not a force or failure prediction",
             "layer_height_mm": 0.05,
             "limitations": [
@@ -353,14 +362,14 @@
               "open, duplicate and nonmanifold surfaces require independent validation"
             ],
             "max_angle_deg": 10.0,
-            "maximum_projected_area_mm2": 275.91235723585527,
-            "maximum_score": 2.7591235723585528,
+            "maximum_projected_area_mm2": 275.91235723585515,
+            "maximum_score": 2.7591235723585514,
             "normal_lift_speed": 0.05,
             "reference_lift_speed": 0.05,
-            "region_count": 887,
+            "region_count": 890,
             "regions": [
               {
-                "area_mm2": 275.91235723585527,
+                "area_mm2": 275.91235723585515,
                 "bottom_layer_intersection": true,
                 "bounds": [
                   [
@@ -377,10 +386,10 @@
                 "lift_speed": 0.05,
                 "mean_z_mm": 0.0,
                 "normal_layer_intersection": false,
-                "projected_area_mm2": 275.91235723585527,
-                "score": 2.7591235723585528,
+                "projected_area_mm2": 275.91235723585515,
+                "score": 2.7591235723585514,
                 "threshold": true,
-                "triangle_count": 810,
+                "triangle_count": 1818,
                 "z_layer_span": [
                   0,
                   0
@@ -389,17 +398,25 @@
             ],
             "regions_truncated": false,
             "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-            "source_triangle_count": 33700,
+            "source_triangle_count": 34726,
             "status": "complete",
             "threshold_area_mm2": 100.0,
             "threshold_region_count": 1,
-            "total_region_count": 887
+            "total_region_count": 890
           },
           "pixel_pitch_mm": [
             0.018,
             0.018
           ],
-          "raster_volume_mm3": 4566.1880844,
+          "raster_volume_by_group": {
+            "model_mm3": 4165.1409168,
+            "model_pixels": 257107464,
+            "supports_mm3": 401.3109683999999,
+            "supports_pixels": 24772282,
+            "total_mm3": 4566.451885199999,
+            "total_pixels": 281879746
+          },
+          "raster_volume_mm3": 4566.451885199999,
           "reopened": {
             "bounds": [
               [
@@ -425,8 +442,8 @@
             "open_layers": 0,
             "open_rows": 0,
             "path": "prepared.stl",
-            "sha256": "4314a91149eb81c8ecfdfcdb067fb9db8cc902f084d9784b9e10d16dd233b64c",
-            "triangles": 33700
+            "sha256": "8817987f8ca99a5e32ccb6b397aa8fc0eadad718858c5862d42418007977402f",
+            "triangles": 34726
           },
           "supports": {
             "allow_part_to_part": true,
@@ -475,7 +492,7 @@
             "brace_angle_deg": 45.0,
             "brace_azimuth_deg": 0.0,
             "brace_branches_per_node": 1,
-            "brace_candidates_examined": 75,
+            "brace_candidates_examined": 85,
             "brace_destination": "supports",
             "brace_diameter_mm": 0.6,
             "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
@@ -491,10 +508,10 @@
               "duplicate_rejected": 0,
               "foot_rejected": 0,
               "length_rejected": 0,
-              "no_destination_rejected": 6,
-              "pattern_rejected": 39,
-              "spacing_rejected": 31,
-              "support_collision_rejected": 1,
+              "no_destination_rejected": 7,
+              "pattern_rejected": 42,
+              "spacing_rejected": 35,
+              "support_collision_rejected": 3,
               "ungrounded_rejected": 0
             },
             "brace_spacing_mm": 5.0,
@@ -509,6 +526,7 @@
             },
             "contacts_blocked_by_policy": 0,
             "contacts_dropped_attached": 0,
+            "contacts_duplicate": 0,
             "contacts_failed": 0,
             "contacts_in_sealed_cavities": 0,
             "contacts_requested": 37,
@@ -545,7 +563,10 @@
               "examples_capped_at": 256,
               "length_mm": 2.0,
               "penetration_mm": 0.15,
-              "shape": "cone"
+              "rejections": {},
+              "shape": "cone",
+              "stub_basis": "island, manual or correction contacts with no other route, fused by one rod of contact diameter to material printed before them within a tip-and-anchor gap",
+              "stubs": 0
             },
             "object_groups": 0,
             "object_override_contacts": 0,
@@ -583,11 +604,15 @@
             "suppressed_contacts": 0,
             "tip_base_diameter_mm": 0.9,
             "tip_length_mm": 2.0,
+            "tips_joined_to_supports": 0,
             "tree": {
               "clusters": 0,
               "contacts_in_trees": 0,
               "enabled": false,
+              "fallbacks": {},
               "kept_independent": 0,
+              "trunk_diameter_mm": 1.2,
+              "trunk_limited_clusters": 0,
               "trunks": 0
             },
             "unbraced": {
@@ -605,7 +630,8 @@
             },
             "uncovered_fraction": 0.0,
             "uncovered_samples": 0,
-            "unroutable_positions": []
+            "unroutable_positions": [],
+            "unroutable_reasons": {}
           },
           "transient_traps": {
             "definition": "empty space enclosed by already-printed material except toward the growth direction",
@@ -862,7 +888,8 @@
       "tip_length_mm": 2.0,
       "tip_shape": "cone",
       "tree_cluster_mm": 0.0,
-      "tree_supports": false
+      "tree_supports": false,
+      "trunk_diameter_mm": 1.2
     }
   },
   "source": "sphere.stl",
@@ -949,14 +976,37 @@
       "volumetric_repair": "not_run"
     },
     "resin_usage": {
+      "breakdown": {
+        "method": "raster pixels on the printer lattice: total = union pixels, model = model pixels inside the union, supports = total - model (tip penetration counts as model)",
+        "model": {
+          "cost": null,
+          "mass_g": null,
+          "volume_ml": 4.1651409168,
+          "volume_mm3": 4165.1409168
+        },
+        "supports": {
+          "cost": null,
+          "mass_g": null,
+          "volume_ml": 0.4013109683999999,
+          "volume_mm3": 401.3109683999999
+        },
+        "total": {
+          "cost": null,
+          "mass_g": null,
+          "volume_ml": 4.566451885199999,
+          "volume_mm3": 4566.451885199999
+        },
+        "unavailable_reason": null
+      },
       "cost": null,
       "cost_per_liter": null,
       "currency": "$",
       "density_g_cm3": null,
       "mass_g": null,
+      "note": "set resin density_g_cm3 to compute grams",
       "source": "raster_volume_mm3",
-      "volume_ml": 4.566188084399999,
-      "volume_mm3": 4566.1880844
+      "volume_ml": 4.566451885199999,
+      "volume_mm3": 4566.451885199999
     },
     "transform": {
       "mirror": [
@@ -1106,6 +1156,12 @@
         "start": "joint13"
       },
       {
+        "end": "joint14",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot14"
+      },
+      {
         "end": "contact14",
         "kind": "tip",
         "radius_mm": 0.175,
@@ -1176,12 +1232,6 @@
         "kind": "tip",
         "radius_mm": 0.175,
         "start": "joint21"
-      },
-      {
-        "end": "joint22",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "foot22"
       },
       {
         "end": "contact22",
@@ -1493,10 +1543,10 @@
         "end": "brace_joint120",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "foot14"
+        "start": "foot1"
       },
       {
-        "end": "joint14",
+        "end": "joint1",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "brace_joint120"
@@ -1505,28 +1555,10 @@
         "end": "brace_joint120",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "joint22"
-      },
-      {
-        "end": "brace_joint121",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "foot1"
-      },
-      {
-        "end": "joint1",
-        "kind": "vertical",
-        "radius_mm": 0.45,
-        "start": "brace_joint121"
-      },
-      {
-        "end": "brace_joint121",
-        "kind": "brace",
-        "radius_mm": 0.3,
         "start": "joint17"
       },
       {
-        "end": "brace_joint122",
+        "end": "brace_joint121",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot20"
@@ -1535,16 +1567,16 @@
         "end": "joint20",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "brace_joint122"
+        "start": "brace_joint121"
       },
       {
-        "end": "brace_joint122",
+        "end": "brace_joint121",
         "kind": "brace",
         "radius_mm": 0.3,
         "start": "joint18"
       },
       {
-        "end": "brace_joint123",
+        "end": "brace_joint122",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "foot3"
@@ -1553,13 +1585,31 @@
         "end": "joint3",
         "kind": "vertical",
         "radius_mm": 0.45,
+        "start": "brace_joint122"
+      },
+      {
+        "end": "brace_joint122",
+        "kind": "brace",
+        "radius_mm": 0.3,
+        "start": "joint13"
+      },
+      {
+        "end": "brace_joint123",
+        "kind": "vertical",
+        "radius_mm": 0.45,
+        "start": "foot4"
+      },
+      {
+        "end": "joint4",
+        "kind": "vertical",
+        "radius_mm": 0.45,
         "start": "brace_joint123"
       },
       {
         "end": "brace_joint123",
         "kind": "brace",
         "radius_mm": 0.3,
-        "start": "joint13"
+        "start": "joint14"
       },
       {
         "end": "brace_joint124",
@@ -1601,10 +1651,10 @@
         "end": "brace_joint126",
         "kind": "vertical",
         "radius_mm": 0.45,
-        "start": "foot4"
+        "start": "foot22"
       },
       {
-        "end": "joint4",
+        "end": "joint22",
         "kind": "vertical",
         "radius_mm": 0.45,
         "start": "brace_joint126"
@@ -2719,22 +2769,13 @@
         "id": "brace_joint120",
         "kind": "brace_junction",
         "position_mm": [
-          -2.0775212049484253,
-          3.8317269682884216,
-          3.3769621383791955
-        ]
-      },
-      {
-        "id": "brace_joint121",
-        "kind": "brace_junction",
-        "position_mm": [
           -2.9028468132019043,
           6.123233998228043e-16,
           2.506050278075499
         ]
       },
       {
-        "id": "brace_joint122",
+        "id": "brace_joint121",
         "kind": "brace_junction",
         "position_mm": [
           5.949817419052124,
@@ -2743,11 +2784,20 @@
         ]
       },
       {
-        "id": "brace_joint123",
+        "id": "brace_joint122",
         "kind": "brace_junction",
         "position_mm": [
           -1.5151734948158264,
           -2.502824068069458,
+          2.5697291081169436
+        ]
+      },
+      {
+        "id": "brace_joint123",
+        "kind": "brace_junction",
+        "position_mm": [
+          -1.5151734948158264,
+          2.502824068069458,
           2.5697291081169436
         ]
       },
@@ -2773,9 +2823,9 @@
         "id": "brace_joint126",
         "kind": "brace_junction",
         "position_mm": [
-          -1.5151734948158264,
-          2.502824068069458,
-          1.9088290145074283
+          -2.9509083032608032,
+          5.209283471107483,
+          1.0511424326558794
         ]
       },
       {
@@ -2828,7 +2878,7 @@
           "bottom_layer_top_mm": 0.2,
           "bottom_lift_speed": 0.05,
           "build_z_mm": 165.0,
-          "candidate_triangle_count": 1768,
+          "candidate_triangle_count": 2778,
           "heuristic": "uncalibrated geometry score; not a force or failure prediction",
           "layer_height_mm": 0.05,
           "limitations": [
@@ -2837,14 +2887,14 @@
             "open, duplicate and nonmanifold surfaces require independent validation"
           ],
           "max_angle_deg": 10.0,
-          "maximum_projected_area_mm2": 275.91235723585527,
-          "maximum_score": 2.7591235723585528,
+          "maximum_projected_area_mm2": 275.91235723585515,
+          "maximum_score": 2.7591235723585514,
           "normal_lift_speed": 0.05,
           "reference_lift_speed": 0.05,
-          "region_count": 887,
+          "region_count": 890,
           "regions": [
             {
-              "area_mm2": 275.91235723585527,
+              "area_mm2": 275.91235723585515,
               "bottom_layer_intersection": true,
               "bounds": [
                 [
@@ -2861,10 +2911,10 @@
               "lift_speed": 0.05,
               "mean_z_mm": 0.0,
               "normal_layer_intersection": false,
-              "projected_area_mm2": 275.91235723585527,
-              "score": 2.7591235723585528,
+              "projected_area_mm2": 275.91235723585515,
+              "score": 2.7591235723585514,
               "threshold": true,
-              "triangle_count": 810,
+              "triangle_count": 1818,
               "z_layer_span": [
                 0,
                 0
@@ -2873,11 +2923,11 @@
           ],
           "regions_truncated": false,
           "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-          "source_triangle_count": 33700,
+          "source_triangle_count": 34726,
           "status": "complete",
           "threshold_area_mm2": 100.0,
           "threshold_region_count": 1,
-          "total_region_count": 887
+          "total_region_count": 890
         },
         "layer": null,
         "message": "Large downward surface regions warrant review of orientation and release settings",
@@ -3022,14 +3072,14 @@
         "model_volume_mm3": 0.0,
         "negligible_count": 0,
         "negligible_volume_mm3": 0.0,
-        "nodes": 561,
+        "nodes": 556,
         "peak_present_trapped_layer": 73,
         "peak_present_trapped_volume_mm3": 9.719999999999999e-05,
         "support_count": 0,
         "support_volume_mm3": 0.0,
         "volume_mm3": 0.0
       },
-      "exposed_pixels": 281863462,
+      "exposed_pixels": 281879746,
       "growth_decimation": 8,
       "growth_violation_pixels": 0,
       "ignored_support_bottlenecks": {
@@ -3053,7 +3103,7 @@
         "bottom_layer_top_mm": 0.2,
         "bottom_lift_speed": 0.05,
         "build_z_mm": 165.0,
-        "candidate_triangle_count": 1768,
+        "candidate_triangle_count": 2778,
         "heuristic": "uncalibrated geometry score; not a force or failure prediction",
         "layer_height_mm": 0.05,
         "limitations": [
@@ -3062,14 +3112,14 @@
           "open, duplicate and nonmanifold surfaces require independent validation"
         ],
         "max_angle_deg": 10.0,
-        "maximum_projected_area_mm2": 275.91235723585527,
-        "maximum_score": 2.7591235723585528,
+        "maximum_projected_area_mm2": 275.91235723585515,
+        "maximum_score": 2.7591235723585514,
         "normal_lift_speed": 0.05,
         "reference_lift_speed": 0.05,
-        "region_count": 887,
+        "region_count": 890,
         "regions": [
           {
-            "area_mm2": 275.91235723585527,
+            "area_mm2": 275.91235723585515,
             "bottom_layer_intersection": true,
             "bounds": [
               [
@@ -3086,10 +3136,10 @@
             "lift_speed": 0.05,
             "mean_z_mm": 0.0,
             "normal_layer_intersection": false,
-            "projected_area_mm2": 275.91235723585527,
-            "score": 2.7591235723585528,
+            "projected_area_mm2": 275.91235723585515,
+            "score": 2.7591235723585514,
             "threshold": true,
-            "triangle_count": 810,
+            "triangle_count": 1818,
             "z_layer_span": [
               0,
               0
@@ -3098,17 +3148,25 @@
         ],
         "regions_truncated": false,
         "score_formula": "(projected_area_mm2 / threshold_area_mm2) * (1 + max(0, mean_z_mm) / build_z_mm) * (lift_speed / reference_lift_speed)",
-        "source_triangle_count": 33700,
+        "source_triangle_count": 34726,
         "status": "complete",
         "threshold_area_mm2": 100.0,
         "threshold_region_count": 1,
-        "total_region_count": 887
+        "total_region_count": 890
       },
       "pixel_pitch_mm": [
         0.018,
         0.018
       ],
-      "raster_volume_mm3": 4566.1880844,
+      "raster_volume_by_group": {
+        "model_mm3": 4165.1409168,
+        "model_pixels": 257107464,
+        "supports_mm3": 401.3109683999999,
+        "supports_pixels": 24772282,
+        "total_mm3": 4566.451885199999,
+        "total_pixels": 281879746
+      },
+      "raster_volume_mm3": 4566.451885199999,
       "reopened": {
         "bounds": [
           [
@@ -3134,8 +3192,8 @@
         "open_layers": 0,
         "open_rows": 0,
         "path": "prepared.stl",
-        "sha256": "4314a91149eb81c8ecfdfcdb067fb9db8cc902f084d9784b9e10d16dd233b64c",
-        "triangles": 33700
+        "sha256": "8817987f8ca99a5e32ccb6b397aa8fc0eadad718858c5862d42418007977402f",
+        "triangles": 34726
       },
       "support_collisions": {
         "allowance_mm": 2.6500000000000004,
@@ -3205,7 +3263,7 @@
         "brace_angle_deg": 45.0,
         "brace_azimuth_deg": 0.0,
         "brace_branches_per_node": 1,
-        "brace_candidates_examined": 75,
+        "brace_candidates_examined": 85,
         "brace_destination": "supports",
         "brace_diameter_mm": 0.6,
         "brace_geometry": "downward 45 degrees; origins descend from full-width shoulders",
@@ -3221,10 +3279,10 @@
           "duplicate_rejected": 0,
           "foot_rejected": 0,
           "length_rejected": 0,
-          "no_destination_rejected": 6,
-          "pattern_rejected": 39,
-          "spacing_rejected": 31,
-          "support_collision_rejected": 1,
+          "no_destination_rejected": 7,
+          "pattern_rejected": 42,
+          "spacing_rejected": 35,
+          "support_collision_rejected": 3,
           "ungrounded_rejected": 0
         },
         "brace_spacing_mm": 5.0,
@@ -3239,6 +3297,7 @@
         },
         "contacts_blocked_by_policy": 0,
         "contacts_dropped_attached": 0,
+        "contacts_duplicate": 0,
         "contacts_failed": 0,
         "contacts_in_sealed_cavities": 0,
         "contacts_requested": 37,
@@ -3275,7 +3334,10 @@
           "examples_capped_at": 256,
           "length_mm": 2.0,
           "penetration_mm": 0.15,
-          "shape": "cone"
+          "rejections": {},
+          "shape": "cone",
+          "stub_basis": "island, manual or correction contacts with no other route, fused by one rod of contact diameter to material printed before them within a tip-and-anchor gap",
+          "stubs": 0
         },
         "object_groups": 0,
         "object_override_contacts": 0,
@@ -3313,11 +3375,15 @@
         "suppressed_contacts": 0,
         "tip_base_diameter_mm": 0.9,
         "tip_length_mm": 2.0,
+        "tips_joined_to_supports": 0,
         "tree": {
           "clusters": 0,
           "contacts_in_trees": 0,
           "enabled": false,
+          "fallbacks": {},
           "kept_independent": 0,
+          "trunk_diameter_mm": 1.2,
+          "trunk_limited_clusters": 0,
           "trunks": 0
         },
         "unbraced": {
@@ -3335,7 +3401,8 @@
         },
         "uncovered_fraction": 0.0,
         "uncovered_samples": 0,
-        "unroutable_positions": []
+        "unroutable_positions": [],
+        "unroutable_reasons": {}
       },
       "transient_traps": {
         "definition": "empty space enclosed by already-printed material except toward the growth direction",
