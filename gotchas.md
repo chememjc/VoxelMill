@@ -1,6 +1,71 @@
 # Engineering gotchas
 
-This is a verified lessons log, not a list of hypothetical hazards. Updated 2026-09-20.
+This is a verified lessons log, not a list of hypothetical hazards. Updated 2026-09-28.
+
+- **QVTK's widget `Render()` is `update()`, not a VTK render.** The macOS
+  deferred paint flush called `self.Render()`, which queued another paint, so
+  the view repainted forever (about 470 paints/s idle) and never drew the
+  scene from a paint; only explicit `viewport.render()` calls reached VTK.
+  Render the scene with `self._Iren.Render()`, never call `update()` from a
+  timer started in `paintEvent`, and coalesce with a single-shot timer that is
+  not restarted while running. Offscreen tests can build and resize a VTK
+  widget but must never render it (BadWindow).
+
+- **A cache keyed on widget size does nothing during a drag.** Every separator
+  step changes the size. The layer canvas repaints its old image re-centred
+  and rebuilds once the size has held 80 ms.
+
+- **Euler angles cannot take a world-axis delta by addition.**
+  `rotation_matrix` is Rz·Ry·Rx, so adding a ring drag to the stored angles is
+  exact only while the axes applied before the dragged one are zero. Compose
+  `R(delta) @ R(pose)` with `geometry.compose_rotation_deg` and snap only the
+  delta. Every gizmo drag starts from the current pose; absolute motion mode
+  is a panel display choice only. Before 0.6.1 it based drags on the import
+  pose, so a second ring discarded the first rotation, the offset and the lift.
+
+- **Pose readers must resolve `rotation_deg == 'auto'`.** An auto-oriented
+  primary stores the string; the gizmo and Arrange used to read it as zero.
+  Use `document.placement.rotation_deg`.
+
+- **`vtkActor.GetBounds()` includes the user transform.** A preview pivot
+  taken from it drifts every frame; clear the transform before reading it.
+
+- **Arrange needs the primary's real footprint.** When several files open
+  into an empty editor, queue the rest and add them after the first placement
+  lands; adding them while it is in flight stacks them at the centre and
+  fails with `models_intersect`.
+
+- **An unroutable 1-pixel island can sit on a knife edge over the part.**
+  Where an overhanging wall meets a slope diagonal to the pixel grid, single
+  pixels touch the layer below only at a corner. The plate column is blocked
+  by the part, "all branches blocked" really meant the tip base (one
+  `tip_length_mm` down) is already inside the part, and the material below is
+  closer than `2 × min_tip_length_mm`, so anchors fail `gap_too_short`. Such
+  contacts get a model stub. Build it from horizontal discs: a tilted round
+  rod prints its end-cap sliver as a new island. It must pass through the
+  contact at the contact's own layer. Place stubs lowest first.
+
+- **Compare island positions at `contact_key` resolution.** A cropped rescan
+  moves the grid origin, so the same island differs by about 1e-14 mm and was
+  re-added and routed again on every pass.
+
+- **Everything the router places must be checked against the audit's capsules.**
+  Tips were outside the occupancy index, so later shafts, anchors and braces
+  could pass through them (VM-097). Tips are now reserved in
+  `ColumnField.tip_capsules`, at the graph-edge radius the audit uses.
+  Reserving the whole cone rejected routes the audit accepts and broke island
+  routing. A tip hanging from a shaft must treat its own contact's tip and
+  shaft as one group.
+
+- **Resin split: count model pixels inside the union.** Model and support
+  exact volumes double-count tip penetration. Count model-raster pixels that
+  are also filled in the exported layer, and take supports = total − model.
+  Hook the count on the stream `analyze_layers` consumes: the exact-union path
+  reslices the reopened STL, and `UnionLayerStream` runs only for parity.
+
+- **Shipping a density in the Sunlu profile broke "profile == DEFAULTS" tests.**
+  Runs without `--resin` still report mL only, because `DEFAULTS` density stays 0.
+  A project saved with density 0 keeps it.
 
 - **Bracing must trace support-only grounding.** In 0.5.3, downward branches
   admit only shaft edges reachable from a plate foot without traversing a tip,
@@ -85,9 +150,7 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
 - **A VTK box widget on load looks like a failed open.** Attaching
   `vtkBoxWidget` in `_finish_model` framed every newly opened STL with a
   manipulator overlay. Attach it only after an explicit object-list or pick
-  selection. The widget reports an Euler delta relative to `PlaceWidget`;
-  adding that delta to stored RX/RY/RZ is exact for one-axis moves and only
-  approximate for large combined rotations.
+  selection.
 
 - **A first-run wizard must not run without a TTY.** `MainWindow(...,
   headless=False)` with no source is how the xvfb render child starts. A

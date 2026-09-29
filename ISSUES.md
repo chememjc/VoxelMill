@@ -59,8 +59,12 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-080 | Release the line-actor fix | Release | 5 | 4 | 20 | done |
 | N12 | Resolve GOO mirroring against both references | Feature | 4 | 5 | 20 | open (hardware) |
 | VM-060 | CI workflow that runs the tests | Test/CI | 4 | 5 | 20 | done |
+| VM-099 | Gizmo rotation snaps back to the import pose | Bug | 4 | 5 | 20 | done |
 | B3 | Printer database beyond the Mars 5 Ultra | Feature | 4 | 4 | 16 | deferred (post-beta) |
 | VM-011 | Release builds ship without TBB (confirmed) | Perf | 4 | 4 | 16 | done |
+| VM-098 | STEP import replaces the plate; Open/Import take one file | Bug | 4 | 4 | 16 | done |
+| VM-102 | Support failures do not say why or what to change | Feature | 4 | 4 | 16 | done |
+| VM-104 | Resin usage split into model, supports and total | Feature | 4 | 4 | 16 | done |
 | VM-003 | Editor leaks a scratch directory on every reload | Bug | 5 | 3 | 15 | done |
 | VM-004 | Wall-thickness analysis could refine past the memory budget | Bug | 5 | 3 | 15 | done |
 | VM-010 | Vectorize `hollow._bottom_open` | Perf | 5 | 3 | 15 | done |
@@ -69,6 +73,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-090 | Multi-part support collision audit | Feature | 3 | 5 | 15 | done |
 | VM-091 | Default supports that look like CHITUBOX Light | Feature | 3 | 5 | 15 | done |
 | VM-093 | `release.yml` platform selector | Release | 5 | 3 | 15 | done |
+| VM-101 | Sloped-edge islands on a STEP part cannot be routed | Bug | 3 | 5 | 15 | done |
 | D4 | Raft adhesion / removal-force calibration | Feature | 4 | 3 | 12 | open (hardware) |
 | G2 | Fuzzy, mode-aware settings search | Feature | 4 | 3 | 12 | done |
 | VM-061 | Lint and type-check configuration | Test/CI | 4 | 3 | 12 | done |
@@ -77,6 +82,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-014 | Retry/hollow benchmark fixture and CI perf gate | Perf | 3 | 4 | 12 | deferred (post-beta) |
 | VM-049 | Public-contract freeze checklist for 1.0 | Arch | 3 | 4 | 12 | partial |
 | VM-094 | Edge-case test matrix | Test/CI | 3 | 4 | 12 | done |
+| VM-103 | Tree-support trunk thicker than its branches | Feature | 4 | 3 | 12 | done |
 | A8 | Presets embedded in profiles | Feature | 5 | 2 | 10 | deferred (post-beta) |
 | VM-023 | Cheap boolean pre-checks for added models | Perf | 5 | 2 | 10 | done |
 | VM-064 | Goldens for the invalid-mesh fixtures | Test/CI | 5 | 2 | 10 | done |
@@ -99,6 +105,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-029 | Island scan grows faster than the geometry braces add | Perf | 3 | 3 | 9 | explained (not a defect) |
 | VM-044 | Output-format registry | Arch | 3 | 3 | 9 | done |
 | VM-081 | Test the Apple Silicon build | Release | 3 | 3 | 9 | done |
+| VM-100 | Dock resizing is slow on the Intel Mac | Perf | 3 | 3 | 9 | partial |
 | G8 | Keyboard shortcut editor (theme shipped) | Feature | 4 | 2 | 8 | done |
 | I3 | Print-time auto-calibration from measured prints | Feature | 4 | 2 | 8 | open (hardware) |
 | VM-020 | Cache the support KD-tree across island passes | Perf | 4 | 2 | 8 | won't fix (measured) |
@@ -131,7 +138,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-070 | Docstrings for the largest undocumented functions | Docs | 5 | 1 | 5 | done |
 | VM-040 | Typed settings model as the single source of truth | Arch | 1 | 5 | 5 | partial |
 | VM-096 | Exact-union exports can hold zero-volume folds | Bug | 2 | 2 | 4 | open |
-| VM-097 | A tip can touch a neighbouring model anchor's foot | Bug | 3 | 2 | 6 | open |
+| VM-097 | A tip can touch a neighbouring model anchor's foot | Bug | 3 | 2 | 6 | done |
 | VM-012 | Stop re-sampling downward faces for the overhang check | Perf | 4 | 1 | 4 | won't fix (measured) |
 | VM-071 | Section-aware help for repeated field names | Docs | 4 | 1 | 4 | done |
 | VM-084 | Windows topology on real hybrid hardware | Release | 4 | 1 | 4 | open |
@@ -912,7 +919,7 @@ removed the sphere's folds but broke the brace schedule, and was reverted.
 
 ### VM-097 — A tip can touch a neighbouring model anchor's foot
 
-Ease 3 · Benefit 2 · Confidence: sure · Status: open
+Ease 3 · Benefit 2 · Confidence: sure · Status: done
 
 **Problem.** On `floatvalveR7-cover.stl` with defaults, `prepare` warns `support_collisions`: seven
 pairs where a contact tip and the bottom connector of a nearby model-anchored pillar lie 0.22–0.36 mm
@@ -924,6 +931,96 @@ tip against placed anchors) with the same capsule test the collision audit uses,
 the anchor.
 
 **Where.** `src/voxelmill/supports.py` (`_model_anchor_candidate`, `route_contacts`)
+
+### VM-098 — STEP import replaces the plate; Open/Import take one file
+
+Ease 4 · Benefit 4 · Confidence: sure · Status: done
+
+**Problem.** `import_step` tessellates to a temporary STL and calls `open_stl`, which replaces the
+document, so a STEP part cannot share the plate with other parts. Open STL and Import STEP use
+single-file dialogs, drops ignore `.step`/`.stp`, and "Add model" with nothing open stores parts it
+never draws.
+
+**Fix.** One open-or-add helper: with no document, open the first file and add the rest; otherwise add
+every file to the plate and arrange. Multi-select dialogs; drops accept STEP.
+
+**Where.** `src/voxelmill/gui/window.py`, `src/voxelmill/gui/objects.py`
+
+### VM-099 — Gizmo rotation snaps back to the import pose
+
+Ease 4 · Benefit 5 · Confidence: sure · Status: done
+
+**Problem.** In absolute motion mode a gizmo release rebuilt the pose from `IMPORT_POSE` plus the one
+dragged axis, dropping earlier rotations, the XY offset and the lift. In both modes a world-axis delta
+was added to Rz·Ry·Rx Euler angles, which is exact only when the earlier axes are zero; multi-select
+`_write_pose` did the same.
+
+**Fix.** Base every drag on the current pose and compose `R_axis(Δ)·R(base)`, converting back with an
+exact inverse; absolute mode only changes what the panel shows.
+
+**Where.** `src/voxelmill/gui/window.py`, `src/voxelmill/geometry.py`
+
+### VM-100 — Dock resizing is slow on the Intel Mac
+
+Ease 3 · Benefit 3 · Confidence: likely · Status: partial
+
+**Problem.** Every separator step re-renders the full VTK scene (the macOS `singleShot(0)` defer does
+not coalesce), relays out the Setup form and rebuilds the layer image with numpy.
+
+**Fix.** Coalesce macOS renders with a restartable timer, cache the layer image, non-opaque splitter in
+the settings editor, no animated docks.
+
+**Where.** `src/voxelmill/gui/viewport.py`, `src/voxelmill/gui/layerview.py`, `src/voxelmill/gui/editors.py`
+
+### VM-101 — Sloped-edge islands on a STEP part cannot be routed
+
+Ease 3 · Benefit 5 · Confidence: sure · Status: done
+
+**Problem.** A STEP-derived part at rotation (0, 15, −35) leaves three 1-pixel islands on consecutive
+sloped layers near Z 53.4–53.9. Plate, branch and model-anchor routes all fail (6 anchor candidates
+rejected), island correction gives up after four passes, and export is withheld
+(`raster_connectivity`, `overlap`, `support_routes`). Each contact is reported twice. Tree supports and
+clearance are not the cause.
+
+**Where.** `src/voxelmill/supports.py` (`route_contacts`), `src/voxelmill/pipeline.py` (island guard)
+
+### VM-102 — Support failures do not say why or what to change
+
+Ease 4 · Benefit 4 · Confidence: sure · Status: done
+
+**Problem.** `support_unroutable` says only "No permitted collision-free route" with empty details, although
+the router knows which route failed and why. `incomplete_support_routes` gives counts only;
+`support_overlap` has no position; the GUI shows no message text for support faults.
+
+**Fix.** Reason, obstruction height and suggested settings in the details; positions and per-reason
+counts in the summary; fault colours and message text in the GUI; `routing_probe.py` accepts a project.
+
+**Where.** `src/voxelmill/supports.py`, `src/voxelmill/pipeline.py`, `src/voxelmill/gui/faults.py`, `scripts/routing_probe.py`
+
+### VM-103 — Tree-support trunk thicker than its branches
+
+Ease 4 · Benefit 3 · Confidence: sure · Status: done
+
+**Problem.** A tree trunk is as wide as its widest branch, which makes tall trees less stable than they
+could be.
+
+**Fix.** `support.trunk_diameter_mm` (default 1.2 mm, raised to the pillar diameter when smaller). The
+trunk's model clearance, support collisions and feet use the trunk radius; a colliding trunk falls
+back to independent pillars with a recorded reason.
+
+**Where.** `src/voxelmill/supports.py` (`_emit_tree_supports`), `src/voxelmill/config.py`, `src/voxelmill/settings_schema.py`
+
+### VM-104 — Resin usage split into model, supports and total
+
+Ease 4 · Benefit 4 · Confidence: sure · Status: done
+
+**Problem.** Reports give one resin total, the GUI export path gives none, and the bundled resin has no
+density, so no report shows grams.
+
+**Fix.** Per-group raster pixel counts give model, supports (with raft) and total mL, which sum exactly;
+grams appear when a density is configured. The Sunlu profile ships 1.10 g/mL.
+
+**Where.** `src/voxelmill/assembly.py`, `src/voxelmill/validation.py`, `src/voxelmill/config.py`, `src/voxelmill/gui/services.py`, `src/voxelmill/report_html.py`
 
 ## Feature backlog
 
