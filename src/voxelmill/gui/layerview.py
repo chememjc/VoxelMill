@@ -292,6 +292,9 @@ class LayerCanvas(QtWidgets.QWidget):
     #: a rasterized frame, or ``None`` once it leaves the frame or the widget.
     pixel_hovered = QtCore.Signal(object)
 
+    #: How long the size must hold before a resized view is rebuilt exactly.
+    resize_settle_ms = 80
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMinimumSize(240, 240)
@@ -308,6 +311,20 @@ class LayerCanvas(QtWidgets.QWidget):
         self._center = None
         self._drag_origin = None
         self._drag_center = None
+        # Painting reuses the last image while nothing it depends on changed.
+        # ``_generation`` covers what only the setters change (mask, grid,
+        # markers, colours); zoom, centre and size are read into the key.
+        self._generation = 0
+        self._image_key = None
+        self._image = None
+        # A dock-separator drag resizes this widget on every mouse step, and a
+        # fitted full-panel frame costs tens of milliseconds to rebuild. While
+        # only the size changes, paint the last image re-centred and rebuild
+        # once the size has held for ``resize_settle_ms``.
+        self._resize_settle = QtCore.QTimer(self)
+        self._resize_settle.setSingleShot(True)
+        self._resize_settle.setInterval(self.resize_settle_ms)
+        self._resize_settle.timeout.connect(self._settle_resize)
 
     # ---- state ----------------------------------------------------------
     @property
@@ -325,12 +342,14 @@ class LayerCanvas(QtWidgets.QWidget):
     def set_color_for(self, color_for):
         """Override the diagnostic-code → RGB mapping used when painting markers."""
         self._color_for = color_for
+        self._generation += 1
         self.update()
 
     def set_layer(self, mask, grid=None, diagnostics=()):
         mask = np.asarray(mask) if mask is not None else None
         changed_shape = mask is None or self._mask is None or mask.shape != self._mask.shape
         self._mask, self._grid, self._diagnostics = mask, grid, tuple(diagnostics)
+        self._generation += 1
         if changed_shape:
             # A different frame size invalidates a pan expressed in its pixels.
             self._center = None
@@ -483,21 +502,50 @@ class LayerCanvas(QtWidgets.QWidget):
         return tuple(sorted(codes))
 
     # ---- painting -------------------------------------------------------
+    def _view_key(self):
+        size = (max(1, self.width()), max(1, self.height()))
+        return (self._generation, id(self._mask), id(self._grid), id(self._diagnostics),
+                id(self._color_for), self._effective_zoom(),
+                tuple(self._effective_center())), size
+
     def rendered_image(self):
+        """The current view as an image, rebuilt only when its inputs changed."""
         if self._mask is None:
             return None
-        return render_layer_image(
-            self._mask, zoom=self._effective_zoom(), center=self._effective_center(),
-            size=(max(1, self.width()), max(1, self.height())),
-            diagnostics=self._diagnostics, grid=self._grid,
-            color_for=self._color_for)
+        key = self._view_key()
+        if key != self._image_key or self._image is None:
+            (*_, zoom, center), size = key
+            self._image = render_layer_image(
+                self._mask, zoom=zoom, center=center, size=size,
+                diagnostics=self._diagnostics, grid=self._grid,
+                color_for=self._color_for)
+            self._image_key = key
+        return self._image
+
+    def _settle_resize(self):
+        self.rendered_image()
+        self.update()
 
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
         painter.fillRect(self.rect(), QtGui.QColor(17, 17, 17))
-        image = self.rendered_image()
+        x = y = 0
+        image = None
+        if self._mask is not None and self._image is not None:
+            view, size = self._view_key()
+            if (self._image_key is not None and view == self._image_key[0]
+                    and size != self._image_key[1]):
+                # Same frame, zoom and centre at a new size: the view is laid
+                # out about its centre, so the old image re-centred is right
+                # to within a pixel except for the strips the resize uncovered.
+                image = self._image
+                x = (size[0] - image.width()) // 2
+                y = (size[1] - image.height()) // 2
+                self._resize_settle.start()
+        if image is None:
+            image = self.rendered_image()
         if image is not None:
-            painter.drawImage(0, 0, image)
+            painter.drawImage(x, y, image)
         painter.end()
 
 

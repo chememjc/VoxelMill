@@ -4,6 +4,7 @@ from __future__ import annotations
 from copy import deepcopy
 import json
 from pathlib import Path
+import sys
 import tempfile
 
 from PySide6 import QtCore, QtWidgets
@@ -16,6 +17,16 @@ from ..presets import apply_preset, save_preset
 from ..support_example import support_example
 from .helptext import help_for
 from .jobs import JobRunner
+
+
+def opaque_splitter_resize(platform=None):
+    """Resize live while the handle moves, except on macOS.
+
+    The support editor's right pane is a VTK view, and live resizing asks it
+    for a render per mouse step, which is what lags on the Intel iMac. There
+    the splitter shows a rubber band and resizes once, on release.
+    """
+    return (sys.platform if platform is None else platform) != 'darwin'
 
 
 SECTIONS = {'printer': ('printer',), 'resin': ('resin', 'process'), 'support': ('support',)}
@@ -135,6 +146,8 @@ class ConfigurationEditor(QtWidgets.QDialog):
         intro.setWordWrap(True)
         layout.addWidget(intro)
         splitter = QtWidgets.QSplitter()
+        splitter.setOpaqueResize(opaque_splitter_resize())
+        self.splitter = splitter
         layout.addWidget(splitter, 1)
         tabs = QtWidgets.QTabWidget()
         splitter.addWidget(tabs)

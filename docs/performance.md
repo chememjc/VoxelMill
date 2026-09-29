@@ -66,6 +66,30 @@ Saturn 4 Ultra 16K geometry (15120×6230, 0.014 mm), 8 workers, a plate-filling 
 
 Reports are identical at every step. Drainage's per-pocket bisection was the single worst cost at this size: 386 whole-volume labelings for 48 pockets.
 
+## Dock-separator drags (2026-09-28)
+
+`scripts/resize_benchmark.py` replays 80 separator steps (`resizeDocks`, 8 ms
+apart) with a model loaded and counts VTK renders. Linux, Xvfb (Mesa software
+GL), Setup tab showing; `--defer on` forces the macOS path:
+
+| Model | Path | Renders | Step mean |
+| --- | --- | --- | --- |
+| latch, 2,550 tri | synchronous paint (Linux, unchanged) | 158 | 24.3 ms |
+| latch | deferred, coalesced to 40 ms | 23 + 1 after | 9.0 ms |
+| left temporal bone, 6 M tri | synchronous paint | 158 | 247 ms |
+| left temporal bone | deferred, coalesced to 40 ms | 22 + 1 after | 26 ms |
+
+Before the fix, the macOS path never drew the scene from a paint at all: the
+deferred flush called QVTK's widget `Render()`, which is `update()`, so it queued
+another paint and repainted forever (about 470 paints/s on an idle offscreen
+widget) while only explicit `viewport.render()` calls reached VTK. Linux keeps
+its synchronous render per paint; it is only slow under software GL.
+
+The Layers canvas rebuilt its image on every paint. It now caches the image,
+and while only its size changes it repaints the old image re-centred and
+rebuilds once the size has held 80 ms: 79 → 3 layer images per 80-step drag
+with the Layers tab showing. A fitted full-panel frame costs 40-90 ms to build.
+
 ## Where the time actually goes — re-measured 2026-09-17 after the 2.74x
 
 The v0.1.0 profile that used to sit here was stale and was steering decisions

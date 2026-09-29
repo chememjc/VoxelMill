@@ -20,6 +20,11 @@ def vtk_render_backend():
     return 'native'
 
 
+def defers_paint_renders(platform=None):
+    """Does this platform keep VTK renders out of ``paintEvent``? Darwin only."""
+    return (sys.platform if platform is None else platform) == 'darwin'
+
+
 class _VTKInteractor(QVTKRenderWindowInteractor):
     """QVTK widget that must not Render inside a Cocoa CATransaction.
 
@@ -30,30 +35,61 @@ class _VTKInteractor(QVTKRenderWindowInteractor):
     after the annotated cube was removed. ``vtkGenericOpenGLRenderWindow``
     crashed on the same machine. Deferring the VTK render until the event
     loop is idle lets the transaction finish.
+
+    The deferred render is coalesced: a paint only starts a single-shot timer
+    that is not restarted while it runs, so a dock-separator drag -- a resize
+    and a paint per mouse step -- renders at most once per
+    ``render_interval_ms`` and once more after the last step. The flush calls
+    the interactor's ``Render`` (the scene), never the widget's ``Render``,
+    which QVTK defines as ``update()``: that queued another paint and kept the
+    widget repainting forever without drawing the scene.
+
+    Other platforms keep QVTK's synchronous render in ``paintEvent``.
     """
 
-    def __init__(self, parent=None):
+    #: Longest a deferred paint waits for its render; one per interval at most.
+    render_interval_ms = 40
+
+    def __init__(self, parent=None, defer_renders=None):
         super().__init__(parent)
-        self._paint_queued = False
+        self.defer_renders = (defers_paint_renders() if defer_renders is None
+                              else bool(defer_renders))
+        self._rendering = False
+        self._render_timer = QtCore.QTimer(self)
+        self._render_timer.setSingleShot(True)
+        self._render_timer.setInterval(self.render_interval_ms)
+        self._render_timer.timeout.connect(self._flush_deferred_paint)
 
     def paintEvent(self, ev):
-        if sys.platform != 'darwin':
+        if not self.defer_renders:
             return QVTKRenderWindowInteractor.paintEvent(self, ev)
-        if self._paint_queued:
+        # A paint raised by the render itself is that render's own output.
+        if self._rendering or self._render_timer.isActive():
             return
-        self._paint_queued = True
-        QtCore.QTimer.singleShot(0, self._flush_deferred_paint)
+        self._render_timer.start()
 
     def _flush_deferred_paint(self):
-        self._paint_queued = False
+        # Before Viewport.start() there is nothing to draw, and rendering
+        # would start the Cocoa window before it is shown.
+        if not self._scene_ready():
+            return
+        self._rendering = True
         try:
-            self.Render()
+            self._render_scene()
         except Exception:
             pass
+        finally:
+            self._rendering = False
+
+    def _scene_ready(self):
+        return bool(self._Iren.GetInitialized())
+
+    def _render_scene(self):
+        self._Iren.Render()
 
 
-def make_vtk_interactor(parent=None):
-    return _VTKInteractor(parent)
+def make_vtk_interactor(parent=None, defer_renders=None):
+    return _VTKInteractor(parent, defer_renders=defer_renders)
 
 from .camera import (
     ARROW_TURNS, CameraController, FACE_VIEWS, HOME_VIEW as CAMERA_HOME,

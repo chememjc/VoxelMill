@@ -88,12 +88,10 @@ def test_vtk_render_backend_is_native():
 
 
 def test_vtk_interactor_defers_cocoa_paint_event():
-    from voxelmill.gui.viewport import _VTKInteractor
+    from voxelmill.gui.viewport import _VTKInteractor, defers_paint_renders
     assert _VTKInteractor.paintEvent is not QVTKRenderWindowInteractor.paintEvent
-    import inspect
-    source = inspect.getsource(_VTKInteractor.paintEvent)
-    assert "sys.platform != 'darwin'" in source
-    assert 'singleShot' in source
+    assert defers_paint_renders('darwin') and not defers_paint_renders('linux')
+    # The coalescing behaviour itself is in test_gui_resize_perf.py.
 
 
 def test_auto_island_scan_does_not_raise_the_report_tab(application):
