@@ -25,13 +25,13 @@ except ImportError:  # Windows
 
 import numpy as np
 
-from .config import resin_usage
+from .config import resin_usage_from_metrics
 from . import geometry
 from .contracts import (CancellationToken, VoxelMillError, Diagnostic, ResourceBudget,
                         no_progress)
 from .mesh import open_stl, write_stl
 from .raster import MeshLayerStream
-from .assembly import prepare_model, assemble, RasterParity
+from .assembly import prepare_model, assemble, RasterParity, volume_tap
 from .supports import plan_supports, build_column_field, apply_support_validation
 from .validation import (analyze_layers, analyze_drainage, drainage_check,
                          attribute_drainage_by_model, attribute_enclosed_voids_by_model,
@@ -227,8 +227,13 @@ def _reslice(path, settings, budget, cancel, progress, *, track_voids=True, asse
         parity = (RasterParity(stream, assembly, budget=budget, cancel=cancel)
                   if assembly is not None and assembly.solid is None
                   and settings['assembly']['require_raster_parity'] else None)
-        report = analyze_layers(parity if parity is not None else stream, stream.grid, settings, cancel=cancel, budget=budget,
+        source = parity if parity is not None else stream
+        # Resin breakdown: model pixels inside the union, on this same grid.
+        tap = volume_tap(source, assembly, stream.grid, settings, budget=budget, cancel=cancel)
+        report = analyze_layers(tap or source, stream.grid, settings, cancel=cancel, budget=budget,
                                 progress=progress, track_voids=track_voids)
+        if tap is not None:
+            report.metrics['raster_volume_by_group'] = tap.volumes()
         report.diagnostics.extend(stream.diagnostics())
         if stream.open_rows:
             report.checks['closed_surface'] = 'fail'
@@ -863,8 +868,9 @@ def _finish_report(run):
     # Cured resin from the raster measurement, which already counts the
     # supports and any base.  A soup's signed volume is not physical volume,
     # so the raster figure is the only honest source here.
-    report['stages']['resin_usage'] = resin_usage(
-        run.settings, run.validation.metrics.get('raster_volume_mm3'))
+    # The model/support split comes from the same reslice pixels.
+    report['stages']['resin_usage'] = resin_usage_from_metrics(
+        run.settings, run.validation.metrics)
     report['seconds'] = time.monotonic() - run.started
     report['timing'] = run.timer.as_dict()
     if _resource is not None:

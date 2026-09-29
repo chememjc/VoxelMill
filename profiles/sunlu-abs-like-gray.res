@@ -3,6 +3,9 @@ schema_version = 1
 [resin]
 id = "sunlu-abs-like-gray"
 name = "Sunlu ABS-like gray"
+# Nominal density in g/cm³, not measured here; used only
+# to turn cured mL into grams in reports and GOO/CTB headers.
+density_g_cm3 = 1.10
 
 [processes.mars5-ultra.process]
 layer_height_mm = 0.05

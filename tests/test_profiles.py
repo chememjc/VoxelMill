@@ -128,6 +128,9 @@ def test_saving_a_printer_profile_reloads_to_the_same_settings(tmp_path):
     # Every other value survives, including the whole motion table.
     expected = dict(settings)
     expected['printer'] = dict(settings['printer'], name='Bench Machine')
+    # Resin properties belong to the resin profile, not the printer's: reloaded
+    # without one, the density is the unset default again.
+    expected['resin'] = dict(settings['resin'], density_g_cm3=DEFAULTS['resin']['density_g_cm3'])
     assert profiles.diff_settings(expected, reloaded) == {}
 
 
@@ -175,13 +178,49 @@ def test_resin_bind_requires_an_unambiguous_source_and_a_distinct_target(tmp_pat
 # ---- resin usage -----------------------------------------------------------
 
 def test_unsupplied_density_and_price_report_null_rather_than_a_guess():
-    settings = resolve_settings(PRINTER, RESIN, None)
+    settings = resolve_settings(PRINTER, None, None)
     assert settings['resin']['density_g_cm3'] == 0.0
     usage = resin_usage(settings, 25000.0)
     assert usage['volume_ml'] == 25.0
     assert usage['mass_g'] is None and usage['cost'] is None
     assert usage['density_g_cm3'] is None and usage['cost_per_liter'] is None
+    assert usage['note'] == 'set resin density_g_cm3 to compute grams'
     assert resin_usage(settings, None)['source'] == 'unavailable'
+
+
+def test_the_shipped_sunlu_profile_supplies_a_density():
+    for path in (RESIN, ROOT / 'src/voxelmill/data/sunlu-abs-like-gray.res'):
+        settings = resolve_settings(PRINTER, path, None)
+        assert settings['resin']['density_g_cm3'] == 1.10
+        usage = resin_usage(settings, 25000.0)
+        assert usage['mass_g'] == pytest.approx(25.0 * 1.10)
+        assert usage['note'] is None
+        assert usage['cost'] is None  # no price shipped
+
+
+def test_breakdown_splits_model_and_supports_and_adds_up():
+    settings = resolve_settings(PRINTER, RESIN, {'resin': {'cost_per_liter': 40.0}})
+    usage = resin_usage(settings, 25000.0, model_mm3=20000.0, supports_mm3=5000.0)
+    rows = usage['breakdown']
+    assert rows['unavailable_reason'] is None and rows['method']
+    assert rows['total']['volume_ml'] == usage['volume_ml'] == 25.0
+    assert rows['total']['mass_g'] == usage['mass_g'] == pytest.approx(27.5)
+    assert rows['model']['volume_ml'] == 20.0 and rows['supports']['volume_ml'] == 5.0
+    assert rows['model']['mass_g'] == pytest.approx(22.0)
+    assert rows['supports']['mass_g'] == pytest.approx(5.5)
+    assert rows['supports']['cost'] == pytest.approx(5.0 / 1000.0 * 40.0)
+    assert rows['model']['mass_g'] + rows['supports']['mass_g'] == pytest.approx(rows['total']['mass_g'])
+
+
+def test_breakdown_without_group_volumes_is_null_with_a_reason():
+    settings = resolve_settings(PRINTER, None, None)
+    usage = resin_usage(settings, 25000.0, breakdown_unavailable='merged STL')
+    rows = usage['breakdown']
+    assert rows['total']['volume_ml'] == 25.0 and rows['total']['mass_g'] is None
+    assert rows['model'] == rows['supports'] == {
+        'volume_mm3': None, 'volume_ml': None, 'mass_g': None, 'cost': None}
+    assert rows['unavailable_reason'] == 'merged STL' and rows['method'] is None
+    assert resin_usage(settings, None)['breakdown']['unavailable_reason']
 
 
 def test_supplied_density_and_price_produce_weight_and_cost():
@@ -204,7 +243,7 @@ def test_currency_must_fit_the_eight_ascii_byte_goo_field():
 
 def test_goo_header_carries_the_derived_weight_and_cost():
     from voxelmill.goo import header_from_settings
-    plain = resolve_settings(PRINTER, RESIN, None)
+    plain = resolve_settings(PRINTER, None, None)
     header = header_from_settings(plain, 10, volume_mm3=25000.0)
     # Unset stays exactly what every export wrote before these fields existed.
     assert header['material_grams'] == 0.0 and header['material_cost'] == 0.0
@@ -218,7 +257,9 @@ def test_goo_header_carries_the_derived_weight_and_cost():
 
 
 def test_resin_fields_are_additive_and_leave_existing_profiles_resolving():
-    assert resolve_settings(PRINTER, RESIN) == DEFAULTS
+    assert resolve_settings(PRINTER, None) == DEFAULTS
+    shipped = resolve_settings(PRINTER, RESIN)
+    assert shipped['resin'] == dict(DEFAULTS['resin'], density_g_cm3=1.10)
     assert set(DEFAULTS['resin']) == {'id', 'name', 'density_g_cm3', 'cost_per_liter', 'currency'}
     validate_settings(resolve_settings(None, None, None))
 

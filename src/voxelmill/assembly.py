@@ -295,6 +295,124 @@ class UnionLayerStream:
                                     'layers': self.layer_count})]
 
 
+SUPPORT_GROUP_NAMES = frozenset({'supports_and_raft', 'supports', 'raft'})
+
+
+def _is_support_group(group):
+    return group.name in SUPPORT_GROUP_NAMES or group.name.startswith('support')
+
+
+def volume_tap(layers, assembly, grid, settings, *, budget=None, cancel=None):
+    """Wrap ``layers`` in a :class:`GroupVolumeTap` for a grouped assembly.
+
+    ``None`` when there is no assembly or it has no model group, so nothing
+    can be split. With no support group every pixel is model and no extra
+    raster is needed.
+    """
+    groups = tuple(getattr(assembly, 'groups', None) or ())
+    model = [g.triangles for g in groups if not _is_support_group(g)]
+    if not model:
+        return None
+    if len(model) == len(groups):
+        return GroupVolumeTap(layers, None, grid, settings, budget=budget, cancel=cancel)
+    triangles = model[0] if len(model) == 1 else np.concatenate(model)
+    return GroupVolumeTap(layers, triangles, grid, settings, budget=budget, cancel=cancel)
+
+
+class GroupVolumeTap:
+    """Pass layers through unchanged while measuring how many are model pixels.
+
+    Wraps whatever stream ``analyze_layers`` reads (the reopened STL, or its
+    parity check) and rasterizes the model group on the same grid, at the same
+    antialias level, at each yielded layer's Z. A pixel counts as model when
+    both the model raster and the layer are nonzero, so the model count never
+    exceeds the union count and ``supports = total - model`` is exact and
+    nonnegative. Support tips that penetrate the model count as model.
+    ``model_triangles=None`` means the assembly has no supports: every pixel
+    is model and nothing extra is rasterized.
+    """
+    def __init__(self, layers, model_triangles, grid, settings, *, budget=None, cancel=None):
+        from . import _native
+        self.cancel = cancel or CancellationToken()
+        self.budget = budget or ResourceBudget(**settings['resources'])
+        self.layers = layers
+        self.grid = grid
+        self.levels = antialias_factor(settings)
+        self.layer_height = settings['process']['layer_height_mm']
+        self.native = None
+        if model_triangles is not None:
+            self.budget.require(grid.width * grid.height * 2 + len(model_triangles) * 80,
+                                'resin breakdown model raster')
+            if self.levels > 1:
+                require_supersample_buffer(self.budget, grid, self.levels)
+            self.native = _native.Rasterizer(model_triangles, self.cancel.check)
+            # Rasterize only the model's own XY window (one pixel of margin)
+            # and Z span; outside them the model raster is empty anyway.
+            low, high = geometry.triangle_bounds(model_triangles, cancel=self.cancel)
+            c0 = max(0, min(grid.width, math.floor((low[0] - grid.x0) / grid.dx) - 1))
+            r0 = max(0, min(grid.height, math.floor((low[1] - grid.y0) / grid.dy) - 1))
+            c1 = max(c0, min(grid.width, math.ceil((high[0] - grid.x0) / grid.dx) + 1))
+            r1 = max(r0, min(grid.height, math.ceil((high[1] - grid.y0) / grid.dy) + 1))
+            self.window = (slice(r0, r1), slice(c0, c1))
+            self.window_grid = RasterGrid(c1 - c0, r1 - r0, grid.x0 + c0 * grid.dx,
+                                          grid.y0 + r0 * grid.dy, grid.dx, grid.dy)
+            self.z_span = (float(low[2]), float(high[2]))
+        self.model_pixels = self.total_pixels = 0
+
+    def _count(self, z, mask):
+        """``(union pixels, model pixels inside them)`` for one layer."""
+        filled = int(np.count_nonzero(mask))
+        if (not filled or not self.window_grid.width or not self.window_grid.height
+                or not self.z_span[0] <= z <= self.z_span[1]):
+            return filled, 0
+        model = slice_coverage(self.native, z, self.window_grid, self.levels,
+                               self.cancel.check, 'nonzero', budget=self.budget)['mask']
+        return filled, int(np.count_nonzero(np.logical_and(model, mask[self.window])))
+
+    def _add(self, counts):
+        self.total_pixels += counts[0]
+        self.model_pixels += counts[1]
+
+    def __iter__(self):
+        if self.native is None:
+            for layer in self.layers:
+                filled = int(np.count_nonzero(layer.mask))
+                self.total_pixels += filled
+                self.model_pixels += filled
+                yield layer
+            return
+        # The native raster and the NumPy counts release the GIL, so one
+        # helper thread overlaps them with the layer analysis instead of
+        # adding them to the serial producer. Two layers in flight at most.
+        from concurrent.futures import ThreadPoolExecutor
+        from collections import deque
+        pending = deque()
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            try:
+                for layer in self.layers:
+                    pending.append(pool.submit(self._count, layer.z_mm, layer.mask))
+                    while len(pending) > 2:
+                        self._add(pending.popleft().result())
+                    yield layer
+                while pending:
+                    self._add(pending.popleft().result())
+            finally:
+                for future in pending:
+                    future.cancel()
+
+    def volumes(self):
+        """Model, support and total cured volume in mm³; model + supports == total."""
+        g, height = self.grid, self.layer_height
+        supports = self.total_pixels - self.model_pixels
+        # Same expression order as analyze_layers' raster_volume_mm3, so the
+        # total here is bit-identical to the one validation reports.
+        return {'model_pixels': self.model_pixels, 'supports_pixels': supports,
+                'total_pixels': self.total_pixels,
+                'model_mm3': self.model_pixels * g.dx * g.dy * height,
+                'supports_mm3': supports * g.dx * g.dy * height,
+                'total_mm3': self.total_pixels * g.dx * g.dy * height}
+
+
 class RasterParity:
     """Compare reopened bytes against a fresh grouped raster on its exact grid."""
     def __init__(self, actual, assembly, *, budget, cancel):

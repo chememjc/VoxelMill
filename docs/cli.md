@@ -192,7 +192,38 @@ regardless of which assembly path ran. `resin_usage` reports `volume_mm3`,
 and `source`; `mass_g`/`cost` (and the density/price fields that produced
 them) are `null` when the resin profile leaves `density_g_cm3`/
 `cost_per_liter` at `0.0`, meaning "not supplied" — see
-[configuration.md](configuration.md).
+[configuration.md](configuration.md). An unset density never fails the run:
+`note` then reads `"set resin density_g_cm3 to compute grams"` (it is `null`
+once a density is configured). The bundled `sunlu-abs-like-gray` resin
+profile ships `density_g_cm3 = 1.10`; the built-in defaults (no `--resin`)
+leave it unset.
+
+The flat fields above are the totals and keep their old meaning. Next to them,
+`breakdown` splits the cured resin into model and supports:
+
+```json
+"breakdown": {
+  "total":    {"volume_mm3": 18104.5, "volume_ml": 18.10, "mass_g": 19.91, "cost": null},
+  "model":    {"volume_mm3": 15007.8, "volume_ml": 15.01, "mass_g": 16.51, "cost": null},
+  "supports": {"volume_mm3": 3096.7,  "volume_ml": 3.10,  "mass_g": 3.41,  "cost": null},
+  "method": "raster pixels on the printer lattice: ...",
+  "unavailable_reason": null
+}
+```
+
+All three come from the same reslice pixels. While the reslice reads the
+exported STL, a helper rasterizes the model group on the same grid, at the
+same antialias level, and counts the model pixels that are also filled in the
+exported layer. `total` is every filled pixel, identical to
+`raster_volume_mm3`. `model` is the model pixels inside it. `supports` is
+`total - model`, so it includes the raft or base and the pillars, and
+`model + supports == total` holds exactly in pixels. Support tips that
+penetrate the model count as model, because that resin is inside the part.
+The pixel counts are recorded in `validation.metrics.raster_volume_by_group`
+(`model_pixels`, `supports_pixels`, `total_pixels`, and the three `*_mm3`
+figures). When no split was measured, `model` and `supports` hold nulls and
+`unavailable_reason` says why. `mass_g` and `cost` in every row follow the
+same density/price rule as the totals.
 
 `validation.metrics.support_collisions` audits the routed supports
 independently of the router. The support solids are intersected exactly with
@@ -298,8 +329,11 @@ during this same reslice, so it already includes supports and any raft, and
 is not a mesh's signed volume. It is `null`-valued the same way: `mass_g`
 and `cost` are `null` whenever the resin profile leaves density or price
 unsupplied. The GOO header's `material_grams`, `material_cost` and
-`price_currency` fields are filled from the same computation; see
-[configuration.md](configuration.md).
+`price_currency` fields are filled from the same computation (the totals); see
+[configuration.md](configuration.md). `slice` reads one merged STL, and
+nothing in it marks which pixels are supports, so its `breakdown` carries only
+`total`: `model` and `supports` are null, and `unavailable_reason` points to
+the `prepare` report, which has the split.
 
 The payload's `elephant_foot` block reports what first-layer compensation
 actually did to this export: `compensation_mm` and `layers_requested` echo

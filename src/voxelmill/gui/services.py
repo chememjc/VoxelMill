@@ -12,6 +12,7 @@ import tempfile
 import numpy as np
 
 from .. import geometry
+from ..config import resin_usage_from_metrics
 from ..contracts import VoxelMillError, Diagnostic, ResourceBudget
 from ..mesh import open_stl, write_stl
 from ..raster import MeshLayerStream, RasterGrid
@@ -266,6 +267,9 @@ def export_and_validate(document, union, path, token, progress, *, drainage=True
     # does the CLI prepare path.
     if document.derived.plan is not None:
         apply_support_validation(report, document.derived.plan, settings)
+    # The same resin figures ``prepare`` reports, split into model and
+    # supports from the reslice pixels; the Report tab shows them under metrics.
+    report.metrics['resin_usage'] = resin_usage_from_metrics(settings, report.metrics)
     return report
 
 

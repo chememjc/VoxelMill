@@ -55,6 +55,56 @@ def _metrics_rows(report: dict[str, Any]) -> list[tuple[str, str]]:
     return rows
 
 
+def _find_resin_usage(report: dict[str, Any]) -> dict[str, Any] | None:
+    """The report's resin usage, wherever this report kind keeps it."""
+    candidates = [report.get('resin_usage')]
+    for key in ('stages', 'metrics'):
+        section = report.get(key)
+        if isinstance(section, dict):
+            candidates.append(section.get('resin_usage'))
+    for nest_key in ('validation', 'report'):
+        nested = report.get(nest_key)
+        if isinstance(nested, dict) and isinstance(nested.get('metrics'), dict):
+            candidates.append(nested['metrics'].get('resin_usage'))
+    return next((c for c in candidates if isinstance(c, dict)), None)
+
+
+def _format_amount(value: Any, digits: int) -> str:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return f'{value:.{digits}f}'
+    return '\u2014'
+
+
+def _resin_section(usage: dict[str, Any]) -> list[str]:
+    found = usage.get('breakdown')
+    breakdown: dict[str, Any] = found if isinstance(found, dict) else {}
+    found = breakdown.get('total')
+    total: dict[str, Any] = found if isinstance(found, dict) else usage
+    rows: list[tuple[str, dict[str, Any]]] = [('total', total)]
+    for name, label in (('model', 'model'), ('supports', 'supports (incl. raft/base)')):
+        row = breakdown.get(name)
+        if isinstance(row, dict):
+            rows.append((label, row))
+    show_cost = any(isinstance(row.get('cost'), (int, float)) for _, row in rows)
+    currency = escape(str(usage.get('currency') or ''))
+    parts = ['<h2>Resin usage</h2>', '<table><tr><th>part</th><th>volume (mL)</th><th>mass (g)</th>'
+             + (f'<th>cost ({currency})</th>' if show_cost else '') + '</tr>']
+    for label, row in rows:
+        cost = f'<td>{_format_amount(row.get("cost"), 2)}</td>' if show_cost else ''
+        parts.append(f'<tr><td>{escape(label)}</td><td>{_format_amount(row.get("volume_ml"), 2)}</td>'
+                     f'<td>{_format_amount(row.get("mass_g"), 2)}</td>{cost}</tr>')
+    parts.append('</table>')
+    density = usage.get('density_g_cm3')
+    if isinstance(density, (int, float)):
+        parts.append(f'<p>Density {escape(str(density))} g/cm\u00b3.</p>')
+    for key in ('note',):
+        if usage.get(key):
+            parts.append(f'<p>{escape(str(usage[key]))}.</p>')
+    if breakdown.get('unavailable_reason'):
+        parts.append(f'<p>Model/support split unavailable: {escape(str(breakdown["unavailable_reason"]))}.</p>')
+    return parts
+
+
 def _group_diagnostics(diagnostics: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     groups: dict[str, list[dict[str, Any]]] = {name: [] for name in SEVERITY_ORDER}
     groups['other'] = []
@@ -135,6 +185,10 @@ def render_report(report_dict: dict[str, Any]) -> str:
                     f'<tr class="sev-{escape(severity)}"><td><code>{code}</code></td>'
                     f'<td>{message}</td><td>{layer_text}</td></tr>')
             parts.append('</table>')
+
+    resin = _find_resin_usage(report_dict)
+    if resin is not None:
+        parts.extend(_resin_section(resin))
 
     parts.append('<h2>Metrics</h2>')
     if not metric_rows:

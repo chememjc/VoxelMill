@@ -11,7 +11,12 @@ PROFILES = Path(__file__).resolve().parents[1] / 'profiles'
 
 def test_profiles_match_defaults_and_do_not_mutate():
     settings = resolve_settings(PROFILES / 'mars5-ultra.ptr', PROFILES / 'sunlu-abs-like-gray.res')
-    assert settings == DEFAULTS
+    # The one deliberate difference: the shipped resin profile supplies a
+    # density, while the defaults leave it unset (reports then give only mL).
+    assert settings['resin']['density_g_cm3'] == 1.10
+    expected = deepcopy(DEFAULTS)
+    expected['resin']['density_g_cm3'] = 1.10
+    assert settings == expected
     settings['printer']['build_mm'][0] = 1
     assert resolve_settings()['printer']['build_mm'][0] == 153.36
 

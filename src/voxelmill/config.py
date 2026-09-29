@@ -494,31 +494,85 @@ def layer_exposure(settings, index):
     return p['normal_exposure_s']
 
 
-def resin_usage(settings, volume_mm3):
+DENSITY_UNSET_NOTE = 'set resin density_g_cm3 to compute grams'
+BREAKDOWN_METHOD = ('raster pixels on the printer lattice: total = union pixels, '
+                    'model = model pixels inside the union, supports = total - model '
+                    '(tip penetration counts as model)')
+
+
+def _resin_amount(volume_mm3, density, price):
+    """One row of the breakdown: mL always, grams/cost only when configured."""
+    if volume_mm3 is None:
+        return {'volume_mm3': None, 'volume_ml': None, 'mass_g': None, 'cost': None}
+    milliliters = float(volume_mm3) / 1000.0
+    return {'volume_mm3': float(volume_mm3), 'volume_ml': milliliters,
+            'mass_g': milliliters * density if density > 0 else None,
+            'cost': milliliters / 1000.0 * price if price > 0 else None}
+
+
+def resin_usage(settings, volume_mm3, *, model_mm3=None, supports_mm3=None,
+                breakdown_unavailable=None):
     """Cured resin volume, and the weight and cost it implies.
 
     ``volume_mm3`` is the cured volume the raster analysis measured, so it
     already includes supports and any base.  Weight and cost are ``None``
     unless the resin profile supplies a density or a price: a default density
-    would put a fabricated number in every report.
+    would put a fabricated number in every report.  An unset density never
+    fails; ``note`` says how to get grams instead.
+
+    The flat fields are the totals, as they always were.  ``breakdown`` splits
+    them into ``total``, ``model`` and ``supports`` (supports include any raft
+    or base).  ``model_mm3`` and ``supports_mm3`` must come from the same
+    raster as ``volume_mm3`` so they add up to it exactly; without them the
+    model and support rows are null and ``unavailable_reason`` says why
+    (``breakdown_unavailable`` overrides the generic reason).
     """
-    if volume_mm3 is None:
-        return {'volume_mm3': None, 'volume_ml': None, 'mass_g': None,
-                'cost': None, 'currency': settings['resin']['currency'],
-                'density_g_cm3': None, 'cost_per_liter': None,
-                'source': 'unavailable'}
-    _number(volume_mm3, 'volume_mm3')
     resin = settings['resin']
-    milliliters = float(volume_mm3) / 1000.0
     density = float(resin['density_g_cm3'])
     price = float(resin['cost_per_liter'])
     return {
-        'volume_mm3': float(volume_mm3),
-        'volume_ml': milliliters,
-        'mass_g': milliliters * density if density > 0 else None,
-        'cost': milliliters / 1000.0 * price if price > 0 else None,
+        **total,
         'currency': resin['currency'],
-        'density_g_cm3': density if density > 0 else None,
-        'cost_per_liter': price if price > 0 else None,
-        'source': 'raster_volume_mm3',
+        # Unchanged from before the breakdown: no volume, no derived figures.
+        'density_g_cm3': density if density > 0 and volume_mm3 is not None else None,
+        'cost_per_liter': price if price > 0 and volume_mm3 is not None else None,
+        'source': 'raster_volume_mm3' if volume_mm3 is not None else 'unavailable',
+        'note': DENSITY_UNSET_NOTE if density <= 0 else None,
+        'breakdown': breakdown,
     }
+    if volume_mm3 is not None:
+        _number(volume_mm3, 'volume_mm3')
+    split = volume_mm3 is not None and model_mm3 is not None and supports_mm3 is not None
+    if split:
+        _number(model_mm3, 'model_mm3')
+        _number(supports_mm3, 'supports_mm3')
+    if volume_mm3 is None:
+        reason = 'no raster volume was measured'
+    elif split:
+        reason = None
+    else:
+        reason = breakdown_unavailable or 'per-part volumes were not measured for this report'
+    total = _resin_amount(volume_mm3, density, price)
+    breakdown = {
+        'total': total,
+        'model': _resin_amount(model_mm3 if split else None, density, price),
+        'supports': _resin_amount(supports_mm3 if split else None, density, price),
+        'method': BREAKDOWN_METHOD if split else None,
+        'unavailable_reason': reason,
+    }
+
+
+def resin_usage_from_metrics(settings, metrics, *, breakdown_unavailable=None):
+    """:func:`resin_usage` from a validation report's metrics.
+
+    Uses ``raster_volume_by_group`` (written by a reslice of a grouped
+    assembly) for the model/support split when it measured the same pixels as
+    ``raster_volume_mm3``; otherwise the split is reported unavailable.
+    """
+    metrics = metrics or {}
+    total = metrics.get('raster_volume_mm3')
+    groups = metrics.get('raster_volume_by_group')
+    if total is not None and isinstance(groups, dict) and groups.get('total_pixels') == metrics.get('exposed_pixels'):
+        return resin_usage(settings, total, model_mm3=groups['model_mm3'],
+                           supports_mm3=groups['supports_mm3'])
+    return resin_usage(settings, total, breakdown_unavailable=breakdown_unavailable)

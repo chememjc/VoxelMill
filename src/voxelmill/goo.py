@@ -146,6 +146,11 @@ def preview_from_heightmap(heights, size):
     return canvas
 
 
+# slice reads one merged STL: nothing in it says which pixels are supports.
+SLICE_BREAKDOWN_UNAVAILABLE = ('slice reads a merged STL, so model and support resin cannot '
+                               'be separated; the prepare report carries the split')
+
+
 def header_from_settings(settings, layer_count, *, volume_mm3=0.0, print_time_s=0,
                          software='voxelmill', software_version=None, created=None):
     """Map resolved settings onto GOO header values. Motion comes from the profile."""
@@ -1570,7 +1575,9 @@ def slice_stl(source, output, settings, *, allow_unresolved=False, cancel=None,
             # The same cured volume the header carries, expressed in the units
             # a user buys resin in.  Weight and cost stay null unless the resin
             # profile supplies a density or a price.
-            'resin_usage': resin_usage(settings, validation.metrics.get('raster_volume_mm3')),
+            'resin_usage': resin_usage(
+                settings, validation.metrics.get('raster_volume_mm3'),
+                breakdown_unavailable=SLICE_BREAKDOWN_UNAVAILABLE),
             # The volume above is the uncompensated raster measurement, which
             # is what the geometry contains; compensation removes the pixels
             # listed here from the bottom layers of the exposure only.

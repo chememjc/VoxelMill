@@ -563,6 +563,13 @@ number. The payload is unchanged and still exactly recoverable: right-click
 gives **Copy report as JSON**, and the widget's `toPlainText` returns the
 same JSON text the old box held.
 
+A validation (and the validation before every export) also reports resin use
+under `metrics` → `resin_usage`: the totals (`volume_ml`, and `mass_g` when
+the resin profile sets `density_g_cm3`, otherwise a `note` saying so), and
+`breakdown` → `total` / `model` / `supports`, each with mL and grams. It is
+the same computation and shape as `prepare`'s `stages.resin_usage`; see
+[cli.md](cli.md).
+
 The Layers tab renders one printer-pitch layer at a time. Its layer slider is
 vertical (layer 0 at the plate) and the zoom slider is horizontal; Ctrl+wheel
 zooms, a plain wheel steps one layer. Its diagnostic filter selects marker
