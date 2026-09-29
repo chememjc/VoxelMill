@@ -2251,9 +2251,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.layers.set_range(layer_count)
             self.faults.set_range(layer_count)
         self.set_attachment_state('routed')
-        self._report_island_guard(value['guard'])
+        self._report_island_guard(value['guard'], value['plan'])
 
-    def _report_island_guard(self, guard):
+    def _report_island_guard(self, guard, plan=None):
         """Say plainly what the island guard did -- never claim success it did not earn."""
         added = sum(item.get('contacts_added', 0) for item in guard['passes'])
         passes = len(guard['passes'])
@@ -2262,9 +2262,14 @@ class MainWindow(QtWidgets.QMainWindow):
             'island_count': guard['islands_remaining'],
             'layers': last['layers_scanned'] if last else None,
             'min_overlap_pixels': self.document.settings['support'].get('min_overlap_pixels'),
-            'not_examined': ['drainage_bottlenecks', 'support_routes', 'plate_fit',
-                             'union_raster_parity'],
+            'not_examined': ['drainage_bottlenecks', 'plate_fit', 'union_raster_parity'],
         }
+        # The router's own explanations (what blocked a contact and which
+        # settings to change) belong next to the islands they leave behind.
+        routing = [d.to_dict() if hasattr(d, 'to_dict') else asdict(d)
+                   for d in (plan.diagnostics if plan is not None else ())
+                   if d.code.startswith('support_')]
+        unroutable = sum(1 for d in routing if d['code'] == 'support_unroutable')
         self._set_island_badge(summary)
         if guard['resolved']:
             message = (f'attachments routed: {added} contact(s) added over {passes} pass(es); '
@@ -2275,14 +2280,18 @@ class MainWindow(QtWidgets.QMainWindow):
                        f"{guard['islands_remaining']} island(s) remain after {guard['max_passes']} "
                        'pass(es) -- compute attachments again or add support manually')
             level = 'warning'
+        if unroutable:
+            message += f'; {unroutable} contact(s) could not be routed -- the Report tab says why'
+            level = 'warning'
         self.statusBar().showMessage(message, 12000)
         self.notify(message, category='attachments', level=level)
         diagnostics = [{'code': 'raster_island', 'message': 'unsupported island',
                         'position_mm': list(position), 'severity': 'error'}
-                       for position in guard['island_positions']]
+                       for position in guard['island_positions']] + routing
         self._set_report({
-            'passed': guard['resolved'],
-            'checks': {'raster_connectivity': 'pass' if guard['resolved'] else 'fail'},
+            'passed': guard['resolved'] and not unroutable,
+            'checks': {'raster_connectivity': 'pass' if guard['resolved'] else 'fail',
+                       'support_routes': 'fail' if unroutable else 'pass'},
             'diagnostics': diagnostics,
             'metrics': {'passes': guard['passes'], 'islands_remaining': guard['islands_remaining'],
                        'max_passes': guard['max_passes'], 'contacts_added': added},
@@ -3668,6 +3677,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 data.get('severity', 'error'),
             ])
             item.setData(0, QtCore.Qt.UserRole, data)
+            suggest = (data.get('details') or {}).get('suggest')
+            if suggest:
+                item.setToolTip(0, f"{data.get('message', '')}\n\nSettings to try: "
+                                   + ', '.join(f'support.{key}' for key in suggest))
             self.diagnostic_list.addTopLevelItem(item)
             layer = data.get('layer')
             if layer is not None:
@@ -3681,6 +3694,11 @@ class MainWindow(QtWidgets.QMainWindow):
         diagnostic = item.data(0, QtCore.Qt.UserRole) or {}
         self.tabs.setCurrentIndex(self.layers_tab_index)
         layer = diagnostic.get('layer')
+        position = diagnostic.get('position_mm')
+        if layer is None and position is not None and len(position) == 3:
+            # Support diagnostics carry a position, not a layer.
+            height = self.document.settings['process']['layer_height_mm']
+            layer = max(0, int(float(position[2]) / height))
         if layer is not None:
             self.layers.slider.setValue(int(layer))
             self.request_layer(int(layer))

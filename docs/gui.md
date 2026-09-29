@@ -449,6 +449,15 @@ rather than counted. The verdict always comes from a full scan: if a cropped
 pass happens to look clean, one more whole-build scan confirms it before the
 loop reports success.
 
+After routing, the Report tab lists any islands still left, followed by the
+router's own support diagnostics. A `support_unroutable` line says what
+blocked that contact (the part below it, a branch that would start inside the
+part, material too close for a model anchor, the part-to-part policy); its
+tooltip names the `support.*` settings worth changing. Activating a line jumps
+the Layers tab to the layer at the contact's height. `support_routes` reads
+`fail` there whenever a contact could not be routed. See
+[troubleshooting.md](troubleshooting.md) for each reason.
+
 When passes run out with islands still present, that is reported honestly as
 `correction_incomplete` with the remaining count and their positions, not
 presented as a routing that worked. `support.max_island_passes` (default 5,
