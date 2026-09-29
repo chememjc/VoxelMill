@@ -252,11 +252,20 @@ def _check_members(archive):
     return seen
 
 
+def _system_symlink(path):
+    """A root-owned POSIX symlink such as macOS's ``/var`` -> ``private/var``.
+
+    Every macOS temporary directory lives under one, so refusing them made
+    projects impossible to open there. Only root can plant them.
+    """
+    return hasattr(os, 'getuid') and os.lstat(path).st_uid == 0
+
+
 def _safe_extract_dir(path):
     path = Path(os.path.abspath(path))
     # Do not follow symlinks while writing embedded source material.
     for parent in (path, *path.parents):
-        if parent.is_symlink():
+        if parent.is_symlink() and not _system_symlink(parent):
             _fail('Extraction directory cannot contain symlinks')
     path.mkdir(parents=True, exist_ok=True)
     return path

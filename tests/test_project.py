@@ -120,6 +120,22 @@ def test_symlink_extraction_directory_rejected(tmp_path):
         load_project(project, link)
 
 
+def test_root_owned_symlinked_parent_is_allowed(tmp_path, monkeypatch):
+    # macOS: $TMPDIR is under /var, a root-owned symlink to /private/var.
+    import voxelmill.project as project_module
+    source = tmp_path / 'source.stl'
+    source.write_bytes(b'source')
+    project = tmp_path / 'part.voxmil'
+    save_project(project, {}, source)
+    target = tmp_path / 'target'
+    target.mkdir()
+    link = tmp_path / 'var'
+    link.symlink_to(target, target_is_directory=True)
+    monkeypatch.setattr(project_module, '_system_symlink', lambda path: Path(path) == link)
+    state = load_project(project, link / 'extract')
+    assert Path(state['source']['extracted_path']).read_bytes() == b'source'
+
+
 def test_added_models_are_embedded_and_extracted_portably(tmp_path):
     primary = tmp_path / 'primary.stl'
     extra = tmp_path / 'extra.stl'

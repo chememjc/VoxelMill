@@ -67,6 +67,13 @@ This is a verified lessons log, not a list of hypothetical hazards. Updated 2026
   Runs without `--resin` still report mL only, because `DEFAULTS` density stays 0.
   A project saved with density 0 keeps it.
 
+- **macOS temporary directories sit under a symlink.** `$TMPDIR` is under
+  `/var`, a root-owned symlink to `/private/var`, so the project extractor's
+  "no symlinks in the path" rule refused every `.voxmil` on a Mac, from the
+  CLI and from the editor's Open project. The Linux and Windows batteries
+  could never see it. Root-owned POSIX symlinks are now trusted; the release
+  battery must prepare a project file on the Mac.
+
 - **Bracing must trace support-only grounding.** In 0.5.3, downward branches
   admit only shaft edges reachable from a plate foot without traversing a tip,
   model anchor or bottom connector. A primary part-to-part connection does not
