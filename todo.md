@@ -15,14 +15,10 @@ here. Keep this file under a screen.
 - Commit rule: messages describe only the diff since the last commit, with no tool or session references and no attribution trailers.
 - Verification habits: byte-identical output checks before/after every perf or refactor change; mark ISSUES.md status in both table and detail (`Status:` line), re-sort table by ease×benefit.
 
-## In flight — v0.6.1 beta (VM-098…VM-104)
+## In flight
 
-Test project: `deleteme.voxmil` (gitignored, repo root). Subagents edit, the orchestrator commits.
-
-- [ ] VM-100 macOS dock-resize: code done (root cause: deferred paint called QVTK `Render()` = `update()`, an endless repaint loop). Left: verify on the iMac with the DMG that idle renders/s ≈ 0 and drags are smooth (the packaged app can't run `scripts/resize_benchmark.py`; drive window resizes with osascript and watch CPU)
-- [ ] Goldens re-recorded after review; AppImage acceptance at 0.6.1
-- [ ] Docs: gui, cli, configuration, algorithms, troubleshooting, README
-- [ ] Release 0.6.1: version bump, release notes, CI, mac+windows workflow, iMac/Win11 battery, report, ask before tag, re-test published assets
+- Nothing. v0.6.1 is tagged and published, and the published assets were re-tested (`reports/releases/v0.6.1.md`).
+- Next work comes from ISSUES.md: VM-096, then the `deferred (post-beta)` items. The editor's island badge counts the unsupported model until Compute attachments runs (a known issue in the 0.6.1 report); consider making that clearer.
 
 ## Deferred past beta
 

@@ -105,7 +105,7 @@ Sorted from easiest and most significant to hardest and least valuable.
 | VM-029 | Island scan grows faster than the geometry braces add | Perf | 3 | 3 | 9 | explained (not a defect) |
 | VM-044 | Output-format registry | Arch | 3 | 3 | 9 | done |
 | VM-081 | Test the Apple Silicon build | Release | 3 | 3 | 9 | done |
-| VM-100 | Dock resizing is slow on the Intel Mac | Perf | 3 | 3 | 9 | partial |
+| VM-100 | Dock resizing is slow on the Intel Mac | Perf | 3 | 3 | 9 | done |
 | G8 | Keyboard shortcut editor (theme shipped) | Feature | 4 | 2 | 8 | done |
 | I3 | Print-time auto-calibration from measured prints | Feature | 4 | 2 | 8 | open (hardware) |
 | VM-020 | Cache the support KD-tree across island passes | Perf | 4 | 2 | 8 | won't fix (measured) |
@@ -962,7 +962,7 @@ exact inverse; absolute mode only changes what the panel shows.
 
 ### VM-100 — Dock resizing is slow on the Intel Mac
 
-Ease 3 · Benefit 3 · Confidence: likely · Status: partial
+Ease 3 · Benefit 3 · Confidence: likely · Status: done
 
 **Problem.** Every separator step re-renders the full VTK scene (the macOS `singleShot(0)` defer does
 not coalesce), relays out the Setup form and rebuilds the layer image with numpy.
