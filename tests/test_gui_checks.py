@@ -221,17 +221,42 @@ def test_preview_transform_moves_the_actor_without_touching_the_document(window)
     assert window.document.center_offset_mm == before
 
 
-def test_committing_a_transform_clears_the_live_preview_first(window):
+def test_committing_a_transform_holds_the_committed_delta_until_the_rebuild(window):
+    """Release no longer drops the preview: the old geometry would spring back.
+
+    What stays on the actor is the *committed* delta (3 mm), not whatever the
+    last preview frame showed (5 mm), and the rebuilt actors carry none.
+    """
     window.reload = lambda: None
     actor = window.scene.actors['model']
     window._on_object_preview_transformed(0, [5.0, 0.0, 0.0], [0.0, 0.0, 0.0])
     assert actor.GetUserTransform().GetMatrix().GetElement(0, 3) == pytest.approx(5.0)
     window._on_object_transformed(0, [3.0, 0.0, 0.0], [0.0, 0.0, 0.0])
-    # No user transform at all: the rebuild _write_pose triggers draws the real
-    # pose, so the delta must not still be sitting on the actor on top of it.
-    # "No preview" is the absence of a transform, not an identity one.
-    assert actor.GetUserTransform() is None
+    assert actor.GetUserTransform().GetMatrix().GetElement(0, 3) == pytest.approx(3.0)
     assert window.document.center_offset_mm[0] == pytest.approx(3.0)
+    window._redisplay_models()
+    # "No preview" is the absence of a transform, not an identity one.
+    assert window.scene.actors['model'].GetUserTransform() is None
+    assert window._held_previews == {}
+
+
+def test_a_drag_before_the_rebuild_lands_keeps_the_previous_commit(window):
+    """A second drag is previewed on top of the first, not on the stale geometry."""
+    window.reload = lambda: None
+    actor = window.scene.actors['model']
+    window._on_object_transformed(0, [3.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+    window._on_object_preview_transformed(0, [0.0, 2.0, 0.0], [0.0, 0.0, 0.0])
+    matrix = actor.GetUserTransform().GetMatrix()
+    assert matrix.GetElement(0, 3) == pytest.approx(3.0)
+    assert matrix.GetElement(1, 3) == pytest.approx(2.0)
+
+
+def test_clearing_previews_forgets_a_held_commit(window):
+    window.reload = lambda: None
+    window._on_object_transformed(0, [3.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+    window._clear_preview_transforms()
+    assert window.scene.actors['model'].GetUserTransform() is None
+    assert window._held_previews == {}
 
 
 def test_object_deselected_clears_the_list_selection(window):
@@ -271,14 +296,23 @@ def test_relative_mode_gizmo_delta_adds_to_the_current_pose(window):
     assert window.document.rotation_deg[2] == pytest.approx(40.0)
 
 
-def test_absolute_mode_gizmo_delta_is_measured_from_import_not_current_pose(window):
+def test_absolute_mode_gizmo_delta_lands_on_the_current_pose(window):
+    """Motion mode changes what the panel shows, never where a drag starts.
+
+    Basing an absolute-mode drag on the import pose snapped the part back to
+    its import orientation, offset and lift as soon as a second ring was used.
+    """
     window.reload = lambda: None
     window._set_motion_mode('absolute')
     window.object_panel.set_snap_angle(0.0)
-    window.document.set_orientation([0.0, 0.0, 10.0], [4.0, 0.0], 5.0)
+    window.document.set_orientation([0.0, 0.0, 10.0], [4.0, 0.0], 7.0)
     window._on_object_transformed(0, [0.0, 0.0, 0.0], [0.0, 0.0, 30.0])
-    # Import rotation is 0, so the result is 0 + 30, not 10 + 30.
-    assert window.document.rotation_deg[2] == pytest.approx(30.0)
+    assert window.document.rotation_deg[2] == pytest.approx(40.0)
+    assert window.document.center_offset_mm == pytest.approx([4.0, 0.0])
+    assert window.document.model_lift_mm == pytest.approx(7.0)
+    # The panel still shows the offset from import.
+    assert window.object_panel.rotate_rows['Z'].value() == pytest.approx(40.0)
+    assert window.object_panel.translate_rows['Z'].value() == pytest.approx(2.0)
 
 
 def test_absolute_mode_displays_and_edits_the_offset_from_import(window):

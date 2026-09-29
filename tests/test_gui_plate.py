@@ -233,7 +233,7 @@ def QtGuiDropEvent(mime):
 def test_dropping_onto_an_empty_editor_opens_the_first_file(application, cube):
     editor = MainWindow(small_settings(), None, headless=True)
     opened = []
-    editor.open_stl = lambda path: opened.append(path)
+    editor.open_stl = lambda path, **_kwargs: opened.append(path)
     editor.add_models = lambda paths: opened.extend(paths)
     mime = QtCore.QMimeData()
     mime.setUrls([QtCore.QUrl.fromLocalFile(str(cube))])

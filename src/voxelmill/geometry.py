@@ -159,6 +159,31 @@ def wrap_rotation_deg(angles):
     return float(wrapped[0]) if single else [float(v) for v in wrapped]
 
 
+def compose_rotation_deg(delta_deg, rotation_deg):
+    """Euler degrees for turning a part already at ``rotation_deg`` by ``delta_deg``.
+
+    ``delta_deg`` is a rotation about the fixed world axes (a gizmo ring, or
+    one part's change in a multi-select edit), applied *after* the part's own
+    rotation: ``R_new = R(delta) @ R(rotation)``. Adding the two angle triples
+    instead is exact only while the axes applied before the dragged one are
+    zero, because ``rotation_matrix`` is ``Rz @ Ry @ Rx``; a Y drag on a part
+    already turned about X then landed somewhere unrelated to either.
+
+    Only the delta is ever snapped (by whoever produced it). The result is
+    rounded at 1e-9 degrees solely to drop the float noise of the round trip
+    through a matrix, so a 45 degree turn is stored as 45.0 and not
+    45.00000000000001; it is then wrapped into ``(-180, 180]``. A zero delta
+    returns the input wrapped but otherwise untouched, so a pure translation
+    never rewrites a pose into a different but equivalent Euler triple.
+    """
+    delta = np.asarray(delta_deg, dtype=float)
+    if not np.any(delta):
+        return wrap_rotation_deg([float(value) for value in rotation_deg])
+    matrix = rotation_matrix(delta) @ rotation_matrix(rotation_deg)
+    # "+ 0.0" folds a rounded -0.0 into 0.0 so the stored pose reads cleanly.
+    return wrap_rotation_deg([round(angle, 9) + 0.0 for angle in matrix_to_euler_deg(matrix)])
+
+
 def envelope_fits(bounds, settings, reserve_mm=0.):
     bounds = np.asarray(bounds, dtype=float)
     build = np.asarray(settings['printer']['build_mm'], dtype=float)
@@ -295,11 +320,20 @@ envelope.
 
 
 def matrix_to_euler_deg(rotation):
-    """Extrinsic X, Y, Z degrees for a rotation matrix built as Rz @ Ry @ Rx."""
+    """Extrinsic X, Y, Z degrees for a rotation matrix built as Rz @ Ry @ Rx.
+
+    The inverse of ``rotation_matrix``: ``rotation_matrix(matrix_to_euler_deg(r))``
+    reproduces ``r``, including at Y = +-90 degrees. Y comes from ``atan2``
+    against ``cos(y)`` rather than ``asin``, which loses half its digits near
+    the poles. Only a true gimbal lock (``cos(y)`` below 1e-8, where X and Z
+    turn about the same world axis) takes the second branch; the old
+    ``asin``-based test switched at ``cos(y)`` ~ 4.5e-5 and then dropped Z,
+    which was off by that much again.
+    """
     r = np.asarray(rotation, dtype=float)
-    sy = float(np.clip(-r[2, 0], -1.0, 1.0))
-    y = math.asin(sy)
-    if abs(sy) < 1 - 1e-9:
+    cos_y = math.hypot(r[0, 0], r[1, 0])
+    y = math.atan2(-r[2, 0], cos_y)
+    if cos_y > 1e-8:
         x = math.atan2(r[2, 1], r[2, 2])
         z = math.atan2(r[1, 0], r[0, 0])
     else:  # gimbal lock: fold the free rotation into X

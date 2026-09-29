@@ -238,15 +238,33 @@ this step is not currently exposed in Configuration → Preferences. The nudge i
 ignored while a spin box has focus, so typing a number is never interrupted
 by that number's own arrow keys.
 
-`Configuration → Motion` chooses how a gizmo drag or an arrow-key nudge is interpreted:
-**Relative to current pose** (the default) lands the edit on top of wherever
-the part already is, and **Absolute from import pose** measures it from the
-part's pose at import instead (no rotation, centered, 5 mm lift) — so the
-same drag always ends up in the same place regardless of where the part
-started. In absolute mode the object panel's fields read as an offset from
-the import pose rather than as the pose itself: a field reading 0 means
-"still at the import pose." This is a per-person editor preference, stored
-next to the rotation snap increment, not a project or profile setting.
+`Configuration → Motion` chooses what the object panel's Move and Rotate
+fields display: **Relative to current pose** (the default) shows the part's
+pose itself, and **Absolute from import pose** shows it as an offset from the
+pose it had at import (no rotation, centered, 5 mm lift), so a field reading
+0 means "still at the import pose" and typing a number there means exactly
+that far from import. It does not change what a gizmo drag or a nudge does:
+in both modes a drag or a nudge lands on top of wherever the part already
+is, keeping its other rotations, its X/Y position and its lift. (Earlier
+versions measured an absolute-mode gizmo drag from the import pose, so
+grabbing a second ring threw the first rotation, the offset and the lift
+away.) This is a per-person editor preference, stored next to the rotation
+snap increment, not a project or profile setting.
+
+A rotation ring turns the part about that fixed world axis, on top of its
+current orientation. The stored X/Y/Z angles are applied X first, then Y,
+then Z, so a turn about X on a part already turned about Z (or about Y on one
+already turned about X) is not just a change to that one angle: the editor
+multiplies the two rotations and converts the result back to the three
+angles, which is why a single ring drag can change more than one Rotate
+field. Only the drag's own angle is snapped to the increment; the resulting
+angles are kept exactly. A part placed by auto-orientation is turned from
+the orientation the search found, not from its import pose. With several
+parts selected, each turns by the same world rotation about its own center.
+After release the part stays where it was dropped until the rebuilt geometry
+replaces it, a drag begun before then continues from there, and the camera
+stays where it is; only opening a file, a new project or adding parts frames
+the view again.
 
 Scale X/Y/Z and the Mirror X/Y/Z boxes here are per-part: they apply to
 whichever row is selected, including the primary part, and are the same
@@ -287,10 +305,17 @@ without overlap inside the build envelope less the edge clearance, using the
 support spacing as the gap between parts; it refuses with `arrange_no_fit`
 and changes nothing rather than returning an overlapping layout. The packed
 group is then centered on the plate, because a corner fill is the right pack
-and the wrong presentation. STL files can be dropped on the window or the
-object panel; a drop onto an empty editor opens the first file, and every
-dropped part lands at the plate center and the plate is then arranged.
-**Add...** takes the same route and accepts several files at once. It does
+and the wrong presentation. STL files (and STEP files, when FreeCAD is
+available to tessellate them) can be dropped on the window or the object
+panel. **File → Open STL...**, **File → Import STEP...**, **Parts → Add
+model...** and a drop all accept several files at once and take one route:
+when nothing is loaded the first file opens the plate and the rest are added
+once its placement lands, so the packer knows its real size; with a plate
+loaded, Import STEP, Add model and a drop add every file to it and arrange the
+plate, while Open STL replaces the plate (asking about unsaved changes first)
+and adds the rest of its selection to the new one. Import STEP used to open
+its result as a new document, discarding the plate it was imported into.
+**Add...** is the object panel's button for the same route. It does
 not ask where to put them: guessing a center offset for a part that has not
 been loaded yet is what made adding a second part a game of trial and error,
 so the packer places them and they can then be moved like anything else.

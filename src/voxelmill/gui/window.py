@@ -190,6 +190,17 @@ class MainWindow(QtWidgets.QMainWindow):
         atexit.register(_remove_dirs, self._scratch_dirs)
         self.viewport = None
         self.scene = None
+        # Committed gizmo drags still shown on their actors until the rebuilt
+        # parts replace them, keyed like scene.actors (see
+        # _hold_committed_preview).
+        self._held_previews: dict = {}
+        # Frame the camera on the next drawn model only after an open, a new
+        # document or an added part; a pose commit keeps the view where it is.
+        self._frame_next_model = True
+        # Parts chosen together with a file that opens a new plate. They are
+        # added once that file's placement lands, so the arrange that follows
+        # knows the primary's real footprint (see _open_or_add).
+        self._pending_adds = None
         self.goo_source = None
         self._requested_layer = None
         self.placement_fits = True
@@ -363,28 +374,37 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # ---- drag and drop -------------------------------------------------
     def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls() and ObjectPanel._dropped_models(event.mimeData()):
+        # Looked up once per drag, not per move event: finding FreeCAD walks
+        # the filesystem. The object panel shares the answer.
+        self._refresh_drop_suffixes()
+        if event.mimeData().hasUrls() and self._dropped_models(event.mimeData()):
             event.acceptProposedAction()
             return
         super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
-        if event.mimeData().hasUrls() and ObjectPanel._dropped_models(event.mimeData()):
+        if event.mimeData().hasUrls() and self._dropped_models(event.mimeData()):
             event.acceptProposedAction()
             return
         super().dragMoveEvent(event)
 
     def dropEvent(self, event):
-        """Dropping STLs adds them; the first one opens if nothing is loaded."""
-        paths = ObjectPanel._dropped_models(event.mimeData())
+        """Dropped files join the plate; the first one opens if nothing is loaded."""
+        paths = self._dropped_models(event.mimeData())
         if not paths:
             return super().dropEvent(event)
         event.acceptProposedAction()
-        if self.document.source is None:
-            self.open_stl(paths[0])
-            paths = paths[1:]
-        if paths:
-            self.add_models(paths)
+        self._open_or_add(paths)
+
+    def _dropped_models(self, mime):
+        return ObjectPanel._dropped_models(mime, self.object_panel.drop_suffixes)
+
+    def _refresh_drop_suffixes(self):
+        """STL always; STEP too when FreeCAD is there to tessellate it."""
+        from ..importers import find_freecad
+        step_ok = find_freecad(preferred=self._freecad_preferred()) is not None
+        self.object_panel.drop_suffixes = (('.stl', '.step', '.stp') if step_ok
+                                           else ('.stl',))
 
     # ---- construction --------------------------------------------------
     def _build_ui(self):
@@ -764,7 +784,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.object_panel.add_requested.connect(self.add_extra_model_dialog)
         self.object_panel.arrange_requested.connect(self.arrange_objects)
         self.object_panel.supports_requested.connect(lambda _index: self.compute_attachments())
-        self.object_panel.drop_received.connect(self.add_models)
+        self.object_panel.drop_received.connect(self._open_or_add)
         self.object_panel.drop_to_plate_requested.connect(self._on_drop_to_plate_requested)
         self.object_panel.zoom_to_selected_requested.connect(self._on_zoom_to_selected_requested)
         self.object_panel.auto_orient_requested.connect(self.auto_orient_selected)
@@ -1174,6 +1194,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if action is None:
             return
         action.setEnabled(find_freecad(preferred=self._freecad_preferred()) is not None)
+        self._refresh_drop_suffixes()
 
     # ---- motion mode -----------------------------------------------------
     #
@@ -1772,8 +1793,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _object_pose(self, index):
         if index == 0:
-            rotate = ((0.0, 0.0, 0.0) if self.document.rotation_deg == 'auto'
-                      else self.document.rotation_deg)
+            rotate = self.document.rotation_deg
+            if rotate == 'auto':
+                # The orientation the search actually chose, not the import
+                # pose: a gizmo drag or an arrange on an auto-oriented part
+                # starts from what is on screen, and reading 'auto' as zero
+                # made the first such edit throw the found orientation away.
+                placement = getattr(self.document, 'placement', None)
+                rotate = (list(placement.rotation_deg) if placement is not None
+                          else (0.0, 0.0, 0.0))
             return {'rotate': list(rotate), 'center_offset': list(self.document.center_offset_mm),
                     'lift_mm': float(self.document.model_lift_mm),
                     'scale': list(self.document.scale_factors),
@@ -1860,6 +1888,7 @@ class MainWindow(QtWidgets.QMainWindow):
         document has not agreed to yet; this is the single place that resets
         it before one runs.
         """
+        self._held_previews.clear()
         if self.scene is None:
             return
         for actor in self.scene.actors.values():
@@ -1875,16 +1904,34 @@ class MainWindow(QtWidgets.QMainWindow):
 
         This only ever redraws; the document and the geometry it drives are
         untouched until the drag commits (``_on_object_transformed``), so
-        nothing here can race a rebuild or need to be undone.
+        nothing here can race a rebuild or need to be undone. A drag that
+        starts before the previous commit's rebuild has landed is shown on
+        top of that commit's held transform (``_hold_committed_preview``);
+        otherwise the actor, still carrying the old geometry, would drop the
+        first rotation for the length of the second drag.
         """
-        if self.scene is None:
-            return
-        actor = self.scene.actors.get('model' if index == 0 else f'model:{index}')
+        key = 'model' if index == 0 else f'model:{index}'
+        actor = self.scene.actors.get(key) if self.scene is not None else None
         if actor is None:
             return
+        actor.SetUserTransform(self._preview_transform(actor, key, translation, rotation))
+        if self.viewport:
+            self.viewport.render()
+
+    def _preview_transform(self, actor, key, translation, rotation):
+        """A drag delta about the part's visible centre, after any held commit."""
+        held = self._held_previews.get(key)
+        # The pivot comes from the actor's own geometry: GetBounds() includes
+        # the user transform, and reading it with the previous frame's preview
+        # still applied made the pivot creep along with the drag.
+        current = actor.GetUserTransform()
+        actor.SetUserTransform(None)
         bounds = actor.GetBounds()
+        actor.SetUserTransform(current)
         center = [(bounds[0] + bounds[1]) / 2.0, (bounds[2] + bounds[3]) / 2.0,
                   (bounds[4] + bounds[5]) / 2.0]
+        if held is not None:
+            center = list(held.TransformPoint(center))
         transform = vtk.vtkTransform()
         transform.Translate(*translation)
         transform.Translate(*center)
@@ -1892,6 +1939,27 @@ class MainWindow(QtWidgets.QMainWindow):
         transform.RotateY(rotation[1])
         transform.RotateX(rotation[0])
         transform.Translate(*(-c for c in center))
+        if held is not None:
+            # Pre-multiply mode: this appends on the right, so the held commit
+            # is applied to the geometry first and the new drag after it.
+            transform.Concatenate(held)
+        return transform
+
+    def _hold_committed_preview(self, index, translation, rotation):
+        """Keep a committed drag on the actor until the rebuilt part replaces it.
+
+        Unlike a live preview this transform is a pose the document *has*
+        accepted, so it may stand while the rebuild runs. ``_redisplay_models``
+        draws fresh actors without it and forgets it; anything that clears
+        previews (``_clear_preview_transforms``) forgets it too.
+        """
+        key = 'model' if index == 0 else f'model:{index}'
+        actor = self.scene.actors.get(key) if self.scene is not None else None
+        if actor is None:
+            self._held_previews.pop(key, None)
+            return
+        transform = self._preview_transform(actor, key, translation, rotation)
+        self._held_previews[key] = transform
         actor.SetUserTransform(transform)
         if self.viewport:
             self.viewport.render()
@@ -1912,25 +1980,33 @@ class MainWindow(QtWidgets.QMainWindow):
         """A drag in the 3D view writes the same numbers the sliders do.
 
         The gizmo reports a delta from where the drag started, and its
-        rotation is snapped to the editor increment so a dragged part lands
-        somewhere repeatable. In relative mode the delta lands on top of the
-        part's current pose (the base below); in absolute mode it is measured
-        from the import pose instead, so the same drag always ends up at the
-        same place regardless of where the part started.
+        rotation delta is snapped to the editor increment so a dragged part
+        turns by a repeatable amount. The delta always lands on the part's
+        current pose, in either motion mode: motion mode only decides what
+        the panel's fields display (see ``_object_display_pose``). Basing an
+        absolute-mode drag on the import pose instead threw away every
+        earlier rotation, the XY offset and the lift, so grabbing a second
+        ring snapped the part back to where it was imported.
+
+        A ring turns the part about a fixed world axis, so the rotation is
+        composed as matrices (``compose_rotation_deg``); adding the delta to
+        the stored Euler angle is only right while the axes applied before it
+        are zero. The resulting angles are never snapped again -- only the
+        delta is.
         """
         if not 0 <= index <= len(self.document.extra_models):
             return
-        if self.scene is not None:
-            actor = self.scene.actors.get('model' if index == 0 else f'model:{index}')
-            if actor is not None:
-                # The rebuild _write_pose triggers redraws the actor at the
-                # committed pose; an identity transform here stops the live
-                # preview transform from being applied on top of it too.
-                actor.SetUserTransform(None)
-        base = self._object_pose(index) if self.motion_mode != 'absolute' else IMPORT_POSE
-        rotate = [self.object_panel.snap(a + b) for a, b in zip(base['rotate'], rotation)]
+        from ..geometry import compose_rotation_deg
+        delta = [self.object_panel.snap(value) for value in rotation]
+        base = self._object_pose(index)
+        rotate = compose_rotation_deg(delta, base['rotate'])
         offset = [a + b for a, b in zip(base['center_offset'], translation[:2])]
         lift = max(0.0, base['lift_mm'] + translation[2])
+        # Leave the committed delta on the actor until the rebuild draws the
+        # part at its new pose: clearing it here showed the old geometry for
+        # the whole place/repair round trip, which read as the part springing
+        # back. It now matches the document rather than contradicting it.
+        self._hold_committed_preview(index, list(translation), delta)
         self._write_pose(index, {'rotate': rotate, 'center_offset': offset, 'lift_mm': lift})
 
     def _on_pose_preview(self, index, pose):
@@ -1961,6 +2037,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         absolute = self._object_pose_from_edit(index, pose)
         for part in pose.get('applies_to') or [index]:
+            self._held_previews.pop('model' if part == 0 else f'model:{part}', None)
             if self.scene is not None:
                 actor = self.scene.actors.get('model' if part == 0 else f'model:{part}')
                 if actor is not None:
@@ -1981,19 +2058,31 @@ class MainWindow(QtWidgets.QMainWindow):
         by the same delta from its own current pose, rather than jumping to
         ``index``'s own numbers -- that is what keeps a multi-select drag from
         collapsing every selected part onto the same spot.
+
+        ``index`` itself takes ``pose['rotate']`` verbatim, so a typed angle
+        or a nudge is stored exactly as entered. Every other target turns by
+        the same *world* rotation that took ``index`` from its old to its new
+        orientation, ``R(new) @ R(old)^T``, composed onto its own pose.
+        Subtracting and re-adding Euler triples instead only agreed with that
+        while the parts' earlier-applied axes were all zero.
         """
+        from ..geometry import compose_rotation_deg, matrix_to_euler_deg, rotation_matrix
         targets = pose.get('applies_to') or [index]
         anchor = self._object_pose(index)
         delta_offset = [a - b for a, b in zip(pose['center_offset'], anchor['center_offset'])]
         delta_lift = pose['lift_mm'] - anchor['lift_mm']
-        delta_rotate = [a - b for a, b in zip(pose['rotate'], anchor['rotate'])]
+        turned = [round(a, 9) for a in pose['rotate']] != [round(a, 9) for a in anchor['rotate']]
+        world_turn = (matrix_to_euler_deg(rotation_matrix(pose['rotate'])
+                                          @ rotation_matrix(anchor['rotate']).T)
+                      if turned else [0.0, 0.0, 0.0])
         ok = True
         for target in targets:
             if not 0 <= target <= len(self.document.extra_models):
                 continue
             before = self._object_pose(target)
             after = {
-                'rotate': [a + b for a, b in zip(before['rotate'], delta_rotate)],
+                'rotate': (list(pose['rotate']) if target == index
+                           else compose_rotation_deg(world_turn, before['rotate'])),
                 'center_offset': [a + b for a, b in zip(before['center_offset'], delta_offset)],
                 'lift_mm': max(0.0, before['lift_mm'] + delta_lift),
             }
@@ -2295,12 +2384,38 @@ class MainWindow(QtWidgets.QMainWindow):
         # real. Reserve the largest footprint already known instead: too much
         # room only spreads the plate out, too little produces a layout the
         # collision check rejects.
+        #
+        # A part added from a different file has its size read from that file
+        # instead: several files opened or dropped together can each be
+        # larger than the primary, and the spare square then packs them into
+        # each other.
         if footprints:
             spare = (max(width for width, _ in footprints),
                      max(depth for _, depth in footprints))
+            known_paths = {str(self.document.source)} | {
+                str(spec['path']) for spec in self.document.extra_models[:len(footprints) - 1]}
             while len(footprints) < len(poses):
-                footprints.append(spare)
+                spec = self.document.extra_models[len(footprints) - 1]
+                measured = (None if str(spec['path']) in known_paths
+                            else self._file_footprint(spec))
+                footprints.append(measured or spare)
         return footprints[:len(poses)], poses
+
+    def _file_footprint(self, spec):
+        """XY size of an added part read from its file at its pose, or None."""
+        from ..geometry import placement_or_overflow
+        from ..mesh import open_stl as open_mesh
+        try:
+            with open_mesh(spec['path']) as mesh:
+                placement, _fits, _overflow = placement_or_overflow(
+                    mesh.triangles, self.document.settings, spec.get('rotate') or (0.0, 0.0, 0.0),
+                    (0.0, 0.0), float(spec.get('lift_mm', 5.0)), None,
+                    spec.get('scale') or (1.0, 1.0, 1.0),
+                    spec.get('mirror') or (False, False, False))
+        except (OSError, VoxelMillError):
+            return None
+        low, high = np.asarray(placement.bounds, dtype=float)
+        return (max(1e-3, float(high[0] - low[0])), max(1e-3, float(high[1] - low[1])))
 
     def add_models(self, paths):
         """Add one or more dropped or chosen STLs and lay the plate out again."""
@@ -2318,6 +2433,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return False
         if self.attachment_state == 'routed':
             self.set_attachment_state('stale')
+        self._frame_next_model = True
         self.arrange_objects(announce=False)
         self.statusBar().showMessage(f'added {added} part(s)', 5000)
         return True
@@ -3505,6 +3621,14 @@ class MainWindow(QtWidgets.QMainWindow):
         if result.error:
             if result.name in ('supports', 'union'):
                 self._island_check_after_supports = False
+            if result.name == 'place' and self._pending_adds is not None:
+                # They were waiting on this placement; adding them to some
+                # later, unrelated one would be a surprise.
+                if self._pending_adds:
+                    self.notify(f'{len(self._pending_adds)} further part(s) were not added '
+                                'because the first file could not be placed.',
+                                category='add model', level='warning')
+                self._pending_adds = None
             return self._report_error(result.error, result.name)
         handler = getattr(self, f'_finish_{result.name}', None)
         if handler:
@@ -3622,6 +3746,11 @@ class MainWindow(QtWidgets.QMainWindow):
         placed, placement = value['placed'], value['placement']
         self.jobs.submit('model', lambda token, progress: services.build_model(
             document, placed, placement, token, progress))
+        pending, self._pending_adds = self._pending_adds, None
+        if pending:
+            # The primary now has a footprint, so the parts opened alongside
+            # it can be added and arranged; this supersedes the model job.
+            self.add_models(pending)
 
     def _finish_model(self, value):
         derived = self.document.derived
@@ -3637,9 +3766,13 @@ class MainWindow(QtWidgets.QMainWindow):
                 f'display-only count: {flagged} triangles fall outside the build volume and are drawn red; '
                 'the printer cannot reach them', 20000)
         if self.viewport:
-            self.viewport.reset_camera()
+            # Only a new plate is framed. Resetting after every rebuild made
+            # each gizmo or panel commit throw away the view it was made in.
+            if self._frame_next_model:
+                self.viewport.reset_camera()
             if self.viewport.transform_index is not None:
                 self.viewport.select_transform_object(self.viewport.transform_index)
+        self._frame_next_model = False
         self._sync_z_extent()
         document = self.document
         triangles, bounds = value['triangles'], value['bounds']
@@ -3947,19 +4080,7 @@ class MainWindow(QtWidgets.QMainWindow):
         paths, _ = QtWidgets.QFileDialog.getOpenFileNames(self, 'Add model', '', filters)
         if not paths:
             return None
-        resolved = []
-        for path in paths:
-            suffix = Path(path).suffix.lower()
-            if suffix in ('.step', '.stp'):
-                stl = self._tessellate_step_to_temp(path)
-                if stl is None:
-                    continue
-                resolved.append(str(stl))
-            else:
-                resolved.append(path)
-        if not resolved:
-            return None
-        return self.add_models(resolved)
+        return self._open_or_add(paths)
 
     def handle_pick(self, position, role, modifiers=QtCore.Qt.NoModifier):
         """Shift adds a contact, Ctrl deletes, Alt moves the pending contact."""
@@ -4008,6 +4129,9 @@ class MainWindow(QtWidgets.QMainWindow):
         ``model:1``, ``model:2``, ... so they can be transformed independently.
         """
         self.scene.clear('model')
+        # Fresh actors carry no user transform, so a held commit is now drawn
+        # for real (or superseded) and must not be composed into a later drag.
+        self._held_previews.clear()
         displayed = self.placed if self.placed is not None else self.document.derived.model_triangles
         if displayed is None:
             return
@@ -4039,10 +4163,18 @@ class MainWindow(QtWidgets.QMainWindow):
         record = self.document.object_paint(index)
         return to_plate([record], [matrices[index]])
 
-    def open_stl(self, path):
-        if not self._confirm_discard_or_save():
-            return
+    def open_stl(self, path, *, confirm=True):
+        """Replace the document with a new one on ``path``.
+
+        ``confirm=False`` skips the unsaved-changes prompt; ``_open_or_add``
+        passes it when there is no source, because then nothing but the
+        settings exists and those carry over into the new document.
+        """
+        if confirm and not self._confirm_discard_or_save():
+            return False
         self.jobs.invalidate()
+        self._pending_adds = None
+        self._frame_next_model = True
         self._clear_orientation_candidates()
         if self.scene is not None:
             self.scene.clear()
@@ -4053,18 +4185,67 @@ class MainWindow(QtWidgets.QMainWindow):
         self._sync_widgets_from_document()
         self._refresh_undo()
         self.reload()
+        return True
 
     def open_stl_dialog(self):
-        path, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open STL', '', 'STL (*.stl)')
-        if path:
-            self.open_stl(path)
+        """Open a new plate; every further file chosen joins it."""
+        paths, _ = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open STL', '', 'STL (*.stl)')
+        if paths:
+            return self._open_or_add(paths, replace=True)
+        return None
 
     def import_step_dialog(self):
-        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+        """Add STEP parts to the plate, or open one when nothing is loaded."""
+        paths, _ = QtWidgets.QFileDialog.getOpenFileNames(
             self, 'Import STEP', '', 'STEP (*.step *.stp)')
-        if path:
-            return self.import_step(path)
+        if paths:
+            return self._open_or_add(paths)
         return None
+
+    def _open_or_add(self, paths, *, replace=False):
+        """The one route by which chosen or dropped files reach the plate.
+
+        With a model loaded (and ``replace`` off) every file is added and the
+        plate re-arranged. Otherwise the first file opens a new plate and the
+        rest are held until its placement lands (``_finish_place``): arranging
+        before then has no footprint for the primary, and stacking unarranged
+        parts on the plate centre fails the next place on ``models_intersect``.
+        Adding to an empty editor used to store the parts in a document with
+        no source, which ``reload`` never draws.
+
+        STEP files are tessellated first. The unsaved-changes prompt appears
+        only when a loaded document is actually being replaced.
+        """
+        paths = [str(path) for path in paths]
+        opening = replace or not self.document.source
+        if opening and self.document.source and not self._confirm_discard_or_save():
+            return False
+        resolved = self._model_paths_to_stl(paths)
+        if not resolved:
+            return None
+        if not opening:
+            if self._pending_adds is not None:
+                # The file that opened this plate is still being placed; join
+                # the queue rather than arrange around a primary with no size.
+                self._pending_adds.extend(resolved)
+                return True
+            return self.add_models(resolved)
+        if self.open_stl(resolved[0], confirm=False) is False:
+            return False
+        self._pending_adds = resolved[1:]
+        return True
+
+    def _model_paths_to_stl(self, paths):
+        """STL paths as given; STEP tessellated to a temp STL, or dropped with a report."""
+        resolved = []
+        for path in paths:
+            if Path(path).suffix.lower() in ('.step', '.stp'):
+                stl = self._tessellate_step_to_temp(path)
+                if stl is not None:
+                    resolved.append(str(stl))
+            else:
+                resolved.append(path)
+        return resolved
 
     def _tessellate_step_to_temp(self, path):
         """Tessellate STEP to a durable temp STL using document repair settings."""
@@ -4085,11 +4266,17 @@ class MainWindow(QtWidgets.QMainWindow):
         return stl_path
 
     def import_step(self, path):
-        stl_path = self._tessellate_step_to_temp(path)
-        if stl_path is None:
+        """Tessellate one STEP file onto the plate: added, or opened if it is empty.
+
+        This used to open the result as a new document, which discarded the
+        plate it was imported into.
+        """
+        stl_paths = self._model_paths_to_stl([str(path)])
+        if not stl_paths:
             return None
-        self.open_stl(stl_path)
-        return stl_path
+        if self._open_or_add(stl_paths) is False:
+            return None
+        return Path(stl_paths[0])
 
     def open_project_dialog(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open project', '', 'VoxelMill (*.voxmil)')
@@ -4100,6 +4287,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self._confirm_discard_or_save():
             return
         self._clear_orientation_candidates()
+        self._pending_adds = None
+        self._frame_next_model = True
         # Never extract into a placement scratch directory: those are deleted
         # as soon as a newer placement lands. Without an explicit directory the
         # document owns its extraction and removes it on reset.
@@ -4144,6 +4333,8 @@ class MainWindow(QtWidgets.QMainWindow):
             return False
         self.jobs.invalidate()
         self._clear_orientation_candidates()
+        self._pending_adds = None
+        self._frame_next_model = True
         if self.scene is not None:
             self.scene.clear()
         self.placed = None

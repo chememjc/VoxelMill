@@ -610,25 +610,29 @@ class ObjectPanel(QtWidgets.QWidget):
         return True
 
     # ---- drag and drop --------------------------------------------------
+    #: File suffixes a drop accepts. The window widens this to STEP when
+    #: FreeCAD is available to tessellate it; the panel cannot know that.
+    drop_suffixes: tuple[str, ...] = ('.stl',)
+
     @staticmethod
-    def _dropped_models(mime):
+    def _dropped_models(mime, suffixes=('.stl',)):
         return [url.toLocalFile() for url in mime.urls()
-                if url.isLocalFile() and url.toLocalFile().lower().endswith('.stl')]
+                if url.isLocalFile() and url.toLocalFile().lower().endswith(tuple(suffixes))]
 
     def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls() and self._dropped_models(event.mimeData()):
+        if event.mimeData().hasUrls() and self._dropped_models(event.mimeData(), self.drop_suffixes):
             event.acceptProposedAction()
             return
         super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
-        if event.mimeData().hasUrls() and self._dropped_models(event.mimeData()):
+        if event.mimeData().hasUrls() and self._dropped_models(event.mimeData(), self.drop_suffixes):
             event.acceptProposedAction()
             return
         super().dragMoveEvent(event)
 
     def dropEvent(self, event):
-        paths = self._dropped_models(event.mimeData())
+        paths = self._dropped_models(event.mimeData(), self.drop_suffixes)
         if not paths:
             return super().dropEvent(event)
         event.acceptProposedAction()

@@ -139,3 +139,126 @@ def test_preview_transform_is_cleared_before_compute_attachments_runs(window, ap
     # so the actor the user is looking at agrees with the document again.
     assert np.allclose(_actor_matrix(actor), np.eye(4))
     assert window.document.rotation_deg == [0.0, 0.0, 0.0]
+
+
+# ---- VM-099: a second ring must not snap the part back --------------------
+
+def _drag_x_then_y_then_z(window, index):
+    for delta in ([30.0, 0.0, 0.0], [0.0, 45.0, 0.0], [0.0, 0.0, 60.0]):
+        window._on_object_transformed(index, [0.0, 0.0, 0.0], delta)
+
+
+def _expected_after_xyz(start):
+    return (rotation_matrix([0.0, 0.0, 60.0]) @ rotation_matrix([0.0, 45.0, 0.0])
+            @ rotation_matrix([30.0, 0.0, 0.0]) @ rotation_matrix(start))
+
+
+@pytest.mark.parametrize('mode', ['relative', 'absolute'])
+def test_ring_drags_on_three_axes_compose_in_either_motion_mode(window, mode):
+    window.reload = lambda: None
+    window._set_motion_mode(mode)
+    window.object_panel.set_snap_angle(15.0)
+    start = [10.0, 20.0, 0.0]
+    window.document.set_orientation(start, [4.0, -3.0], 7.5)
+    _drag_x_then_y_then_z(window, 0)
+    assert np.allclose(rotation_matrix(window.document.rotation_deg),
+                       _expected_after_xyz(start), atol=1e-9)
+    # Neither the offset nor the lift is reset by a rotation.
+    assert window.document.center_offset_mm == pytest.approx([4.0, -3.0])
+    assert window.document.model_lift_mm == pytest.approx(7.5)
+
+
+@pytest.mark.parametrize('mode', ['relative', 'absolute'])
+def test_an_added_part_composes_its_ring_drags_too(window, mode):
+    window.reload = lambda: None
+    window._set_motion_mode(mode)
+    window.duplicate_object(0, 1)
+    window.document.set_extra_model_pose(0, rotate=[0.0, 0.0, 25.0], center_offset=[12.0, 5.0],
+                                         lift_mm=6.0)
+    _drag_x_then_y_then_z(window, 1)
+    spec = window.document.extra_models[0]
+    assert np.allclose(rotation_matrix(spec['rotate']), _expected_after_xyz([0.0, 0.0, 25.0]),
+                       atol=1e-9)
+    assert list(spec['center_offset']) == pytest.approx([12.0, 5.0])
+    assert spec['lift_mm'] == pytest.approx(6.0)
+
+
+def test_only_the_delta_is_snapped_not_the_resulting_angles(window):
+    window.reload = lambda: None
+    window.object_panel.set_snap_angle(15.0)
+    window.document.set_orientation([7.0, 0.0, 0.0], [0.0, 0.0], 5.0)
+    window._on_object_transformed(0, [0.0, 0.0, 0.0], [0.0, 0.0, 31.0])
+    # 31 snaps to 30; the 7 degrees already there are not rounded to 0 or 15.
+    assert window.document.rotation_deg == pytest.approx([7.0, 0.0, 30.0])
+
+
+def test_a_drag_on_an_auto_oriented_part_starts_from_the_found_orientation(window):
+    window.reload = lambda: None
+    window.object_panel.set_snap_angle(0.0)
+    window.document.rotation_deg = 'auto'
+    window.document.placement.rotation_deg = [90.0, 0.0, 0.0]
+    window._on_object_transformed(0, [0.0, 0.0, 0.0], [0.0, 30.0, 0.0])
+    assert window.document.rotation_deg != 'auto'
+    assert np.allclose(rotation_matrix(window.document.rotation_deg),
+                       rotation_matrix([0.0, 30.0, 0.0]) @ rotation_matrix([90.0, 0.0, 0.0]),
+                       atol=1e-9)
+
+
+def test_a_multi_select_edit_turns_every_part_by_the_same_world_rotation(window):
+    window.reload = lambda: None
+    window.duplicate_object(0, 1)
+    window.document.set_extra_model_pose(0, rotate=[90.0, 0.0, 0.0])
+    window._write_pose(0, {'rotate': [0.0, 0.0, 30.0], 'center_offset': list(
+        window.document.center_offset_mm), 'lift_mm': window.document.model_lift_mm,
+        'applies_to': [0, 1]})
+    assert window.document.rotation_deg == pytest.approx([0.0, 0.0, 30.0])
+    assert np.allclose(rotation_matrix(window.document.extra_models[0]['rotate']),
+                       rotation_matrix([0.0, 0.0, 30.0]) @ rotation_matrix([90.0, 0.0, 0.0]),
+                       atol=1e-9)
+
+
+def test_panel_nudges_still_step_the_displayed_angle(window):
+    window.reload = lambda: None
+    window.document.set_orientation([30.0, 0.0, 0.0], [0.0, 0.0], 5.0)
+    window._sync_object_pose(0)
+    window.object_panel.rotate_rows['Y'].nudge(45.0)
+    window.apply_object_pose()
+    assert window.document.rotation_deg == pytest.approx([30.0, 45.0, 0.0])
+
+
+def test_a_pose_commit_does_not_reframe_the_camera(window):
+    """Only an open, a new plate or an added part frames the view."""
+    window.reload = lambda: None
+    assert window._frame_next_model is False
+    window._on_object_transformed(0, [0.0, 0.0, 0.0], [0.0, 0.0, 30.0])
+    assert window._frame_next_model is False
+    window.new_project()
+    assert window._frame_next_model is True
+
+
+def test_a_composed_pose_survives_save_and_reopen(window, application, tmp_path):
+    window.reload = lambda: None
+    window.object_panel.set_snap_angle(0.0)
+    window.duplicate_object(0, 1)
+    window.document.set_orientation([0.0, 0.0, 0.0], [-15.0, 0.0], 6.0)
+    window.document.set_extra_model_pose(0, center_offset=[15.0, 0.0])
+    _drag_x_then_y_then_z(window, 0)
+    _drag_x_then_y_then_z(window, 1)
+    primary = list(window.document.rotation_deg)
+    extra = list(window.document.extra_models[0]['rotate'])
+    project = tmp_path / 'posed.voxmil'
+    window.document.save(project)
+
+    reopened = MainWindow(small_settings(), None, headless=True)
+    try:
+        reopened.open_project(project, extract_dir=tmp_path / 'extracted')
+        assert reopened.document.rotation_deg == pytest.approx(primary)
+        assert reopened.document.center_offset_mm == pytest.approx([-15.0, 0.0])
+        assert reopened.document.model_lift_mm == pytest.approx(6.0)
+        assert list(reopened.document.extra_models[0]['rotate']) == pytest.approx(extra)
+        assert list(reopened.document.extra_models[0]['center_offset']) == pytest.approx([15.0, 0.0])
+    finally:
+        reopened.jobs.cancel_all()
+        reopened.jobs.wait(5000)
+        reopened.document.dirty = False
+        reopened.close()
