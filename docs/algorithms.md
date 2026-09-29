@@ -525,6 +525,31 @@ worth changing. `metrics.unroutable_reasons` counts every failure by reason and
 rounded plate coordinates repeat an earlier one is routed once
 (`contacts_duplicate`).
 
+**Tip reservations (0.6.1, VM-097).** Every routed tip is reserved in the
+routing occupancy as its graph edge: junction to contact at
+`contact_diameter_mm / 2`. Vertical pillars, angled branches, model-anchor
+shafts and bottom connectors, small model pillars, stubs, tree trunks and
+branches, and braces are all tested against those tips with the collision
+audit's own rule (the two radii, no `support_clearance_mm`), so the router never
+emits a pair the audit would report. A vertical blocked only by a tip is not a
+density skip; the contact tries its branches and anchor instead
+(`plate.blocked_by = existing_tip`, `anchor.why = existing_tip`). Each new tip
+is also tested against every shaft and tip routed before it; since the tip's
+column is fixed by the contact, no other plate or anchor route moves it, so a
+face-sampled contact fails as `tip_blocked` and a mandatory one goes to the stub
+phase. There, after a stub into material and a join onto another stub or tip, a
+mandatory contact may **hang from a routed shaft beside it**: an angled tip from
+a point on that shaft's axis, below the contact, rising at least
+`pillar_angle_deg`, whose free length beyond the shaft's surface lies between
+`min_tip_length_mm` and `tip_length_mm`. It must miss the model beyond the
+contact, every other shaft and tip. The shaft's edge is split at a `junction`
+node (`tip_joint<n>`), so the graph records the join; `tips_joined_to_supports`
+counts them and they are counted as `routing.branched`. The tip's own shaft and
+tip form one group, so a tip hanging from a shaft may start where that shaft's
+own tip begins. The whole cone is not reserved: a neighbour grazing a tip's wide
+base fuses two supports, which the audit does not report either, and reserving
+the cone rejected routes that both the previous release and the audit accept.
+
 **Stubs (0.6.1).** Island births, manual contacts and correction contacts are
 never dropped, so when every route above fails for one of them, it gets a stub
 after all other contacts have routed, lowest first. The stub is one rod of

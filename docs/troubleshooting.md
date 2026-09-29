@@ -258,6 +258,8 @@ and `details` carries the same as data:
 | `anchor_rejected:penetration_exceeds_material` | The material below is thinner than `model_anchor_penetration_mm`. | `model_anchor_penetration_mm` |
 | `anchor_rejected:shaft_blocked` | The shaft down to the material below passes through the model. | `support_clearance_mm`, `pillar_diameter_mm`, `small_pillar_diameter_mm` |
 | `anchor_rejected:existing_support` | That shaft would cross a support already routed. | `spacing_mm`, `support_clearance_mm` |
+| `anchor_rejected:existing_tip` | The anchor's shaft or bottom connector would pass through another contact's tip (routed tips are reserved; see [algorithms.md](algorithms.md#supports)). | `spacing_mm`, `model_anchor_diameter_mm`, `tip_base_diameter_mm` |
+| `tip_blocked` | The contact's own tip would pass through a support or tip routed before it. The tip stands on the contact, so no other route moves it. | `spacing_mm`, `tip_base_diameter_mm`, `tip_length_mm` |
 | `anchor_rejected:small_pillar_no_fit` | The small model pillar does not fit its depths or clearance. | `small_pillar_*` |
 | `policy_blocked` | Only a support standing on the model fits, and `allow_part_to_part` is off. | `allow_part_to_part` |
 
@@ -309,7 +311,13 @@ two kinds in plain words (for example "a contact tip … and a vertical pillar")
 `position_mm` is the midpoint of their closest approach, and each example in
 `details.examples` carries `kinds`, `position_mm`, `distance_mm`, `radii_mm` and
 a `description`. Raising `support_clearance_mm` or changing `spacing_mm` moves
-the routes apart. `support_model_intrusion` is support material inside a part
+the routes apart. Routed tips are reserved in the router's occupancy with this
+same rule, so a pair involving a contact tip should no longer appear; if one
+does, the router and the audit disagree, which is a bug to report. When the
+router refused a route for this reason, the contact carries
+`plate.blocked_by = existing_tip`, `anchor_rejected:existing_tip` or
+`tip_blocked`, and a mandatory contact (island, manual or correction) may
+instead hang from the pillar beside it (`tips_joined_to_supports`). `support_model_intrusion` is support material inside a part
 away from any tip or anchor; its `position_mm` is the worst piece's centre. The
 Faults view colours both.
 

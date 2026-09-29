@@ -66,6 +66,9 @@ class ColumnField:
     #: :class:`CapsuleIndex`). Later candidates that intersect one (except
     #: at an endpoint / planned brace joint) are skipped or rerouted.
     occupied_capsules: 'CapsuleIndex' = field(default_factory=lambda: CapsuleIndex())
+    #: Contact tips routed in this pass, junction to contact at the contact
+    #: radius: the capsule the collision audit tests a tip edge with.
+    tip_capsules: 'CapsuleIndex' = field(default_factory=lambda: CapsuleIndex())
 
     def __post_init__(self):
         # Layer index of the lowest material in each column, or ``layers`` when
@@ -662,6 +665,39 @@ def _joint_only(starts, ends, low, high, joint, limit):
     return segment_distances(rest_low, rest_high, starts, ends) >= limit - 1e-9
 
 
+def _tip_capsules(base, contact, base_r, contact_r):
+    """The capsule a tip reserves: its graph edge, junction to contact.
+
+    The radius is the contact radius, exactly what the collision audit tests
+    the ``tip`` edge with, so router and audit agree. The cone is wider at its
+    base (``base_r``), but a neighbour grazing that base is a fusion between
+    two supports, which the audit does not report either; reserving the whole
+    cone rejected routes on real parts that both HEAD and the audit accept.
+    """
+    del base_r
+    return [(tuple(float(v) for v in base), tuple(float(v) for v in contact), float(contact_r))]
+
+
+def _hits_tips(field, start, end, radius, skip=()):
+    """True when this capsule overlaps a routed contact tip.
+
+    The rule is the collision audit's: the two radii, no clearance. A tip is
+    fused into the model at its contact and is meant to be snapped off, so
+    what must not happen is another support passing through it; a joint at
+    an endpoint on the tip's axis is not an overlap, as for shafts.
+    """
+    tips = getattr(field, 'tip_capsules', None)
+    if tips is None or not len(tips):
+        return False
+    return _hits_occupied(field, start, end, radius, 0.0, skip=skip, index=tips)
+
+
+def _tip_blocked(field, start, end, radius):
+    """Whether a new tip overlaps a routed shaft or tip (the audit's rule)."""
+    return (_hits_occupied(field, start, end, radius, 0.0)
+            or _hits_tips(field, start, end, radius))
+
+
 def _mark_occupied(field, start, end, radius):
     field.occupied_capsules.add(start, end, radius)
 
@@ -958,7 +994,11 @@ def _plate_route(field, column, contact_index, point, base_z, spec, spacing, cle
         # edge would stand its pillar half inside the wall below. Test the
         # pillar's own radius, without clearance, so curvature beside the
         # tip (excluded around it) still allows a vertical.
-        if model_shaft_clear((x, y, 0.0), (x, y, base_z), pillar_r):
+        if _hits_tips(field, (x, y, 0.0), (x, y, base_z), pillar_r):
+            # Another contact's tip stands in this column: the pillar would
+            # pass through it. Not a density skip; the contact still needs one.
+            evidence['plate'] = {'blocked_by': 'existing_tip'}
+        elif model_shaft_clear((x, y, 0.0), (x, y, base_z), pillar_r):
             plate_kind, plate_anchor = 'vertical', (x, y, 0.0)
         else:
             evidence['plate'] = {'blocked_by': 'wall_beside_pillar',
@@ -1073,7 +1113,11 @@ def _model_anchor_candidate(field, column, contact_index, point, spec, support, 
         if upper_fits and _model_anchor_clear(field, column, x, y, anchor_z, gap,
                 support['small_pillar_lower_depth_mm'], small_r,
                 support['support_clearance_mm'], cancel):
-            model_anchor = (x, y, anchor_z)
+            if _tip_blocked(field, (x, y, anchor_z), (x, y, z), small_r):
+                rejected = True
+                info['why'] = 'existing_support'
+            else:
+                model_anchor = (x, y, anchor_z)
         else:
             rejected = True
             info['why'] = 'small_pillar_no_fit'
@@ -1109,11 +1153,20 @@ def _model_anchor_candidate(field, column, contact_index, point, spec, support, 
                     cancel, exclude_both))
                 occupied = (middle_hi - middle_lo > 1e-9 and _hits_occupied(
                     field, (x, y, middle_lo), (x, y, middle_hi), candidate_r, clearance_mm))
-                if middle_ok and not occupied:
+                # The shaft and the bottom connector, whose foot sits on the
+                # same surface a neighbour's tip may touch, must miss every
+                # routed tip (the collision audit's rule).
+                tip_in_way = ((middle_hi - middle_lo > 1e-9 and _hits_tips(
+                    field, (x, y, middle_lo), (x, y, middle_hi), candidate_r))
+                    or (fit_bottom + anchor_depth > 1e-9 and _tip_blocked(
+                        field, (x, y, anchor_z - anchor_depth), (x, y, anchor_z + fit_bottom),
+                        bottom_r)))
+                if middle_ok and not occupied and not tip_in_way:
                     model_anchor = (x, y, anchor_z)
                 else:
                     rejected = True
-                    info['why'] = 'shaft_blocked' if not middle_ok else 'existing_support'
+                    info['why'] = ('shaft_blocked' if not middle_ok else
+                                   'existing_support' if occupied else 'existing_tip')
             else:
                 rejected = True
                 info['why'] = _anchor_connector_why(field, column, anchor_z, anchor_depth)
@@ -1287,6 +1340,94 @@ def _emit_stub(stub, order, point, graph, solids, field, records, local_paramete
                     'edges': [edge], 'group': group})
 
 
+def _record_shaft(records, start, end, edge, field):
+    """Remember an emitted shaft segment so a mandatory contact may hang from it."""
+    records.append({'pieces': [(tuple(float(v) for v in start), tuple(float(v) for v in end), edge)],
+                    'group': [field.occupied_capsules.capsules[-1]],
+                    'radius': float(edge.radius_mm)})
+
+
+def _join_shaft(field, point, spec, support, shafts, cancel):
+    """An angled tip from a routed shaft to a contact nothing else can reach.
+
+    For island, manual and correction contacts only. When the contact stands
+    beside another route's pillar, its own pillar and every branch from its
+    tip base collide with that pillar, yet the geometry genuinely meets: the
+    contact can hang from the pillar. The tip runs from a point on the shaft's
+    axis, below the contact, whose free length beyond the shaft's surface is
+    between ``min_tip_length_mm`` and ``tip_length_mm``, rising at least ``pillar_angle_deg``; it must
+    miss the model beyond the contact itself, every other shaft and every
+    tip, with the audit's no-clearance rule. Returns the nearest such joint,
+    or None.
+    """
+    x, y, z = point
+    here = np.array([x, y, z], dtype=float)
+    reach, shortest, tangent = float(spec.tip), float(spec.min_tip), spec.branch_tangent
+    exclude = _exclude_spheres((x, y, z), spec.penetration, support['break_point_diameter_mm'])
+    best = None
+    for record in shafts:
+        cancel.check()
+        for piece, (low, high, _edge) in enumerate(record['pieces']):
+            low, high = np.asarray(low, dtype=float), np.asarray(high, dtype=float)
+            if (min(low[2], high[2]) >= z or np.linalg.norm((low + high) / 2 - here)
+                    > reach + np.linalg.norm(high - low) / 2 + record['radius']):
+                continue
+            for t in np.linspace(1.0, 0.0, 25):
+                junction = low + (high - low) * t
+                rise = z - junction[2]
+                lateral = math.hypot(junction[0] - x, junction[1] - y)
+                length = math.hypot(rise, lateral)
+                # The tip leaves the shaft at its surface, so its free length
+                # is measured from there.
+                free = length - record['radius']
+                if rise <= 0 or not shortest <= free <= reach or rise < lateral * tangent - 1e-9:
+                    continue
+                if best is not None and length >= best['length_mm']:
+                    continue
+                joint = tuple(float(v) for v in junction)
+                if (_hits_occupied(field, joint, (x, y, z), spec.contact_r, 0.0, skip=record['group'])
+                        or _hits_tips(field, joint, (x, y, z), spec.contact_r, skip=record['group'])
+                        or not _shaft_clear(field, joint, (x, y, z), spec.contact_r, 0.0, cancel,
+                                            exclude + [(junction, record['radius'])])):
+                    continue
+                best = {'junction': joint, 'record': record, 'piece': piece, 'length_mm': length,
+                        'base_r': min(record['radius'], spec.tip_base_r)}
+    return best
+
+
+def _emit_joined_tip(joint, order, point, spec, support, graph, solids, field, records,
+                     local_parameters):
+    """Emit an angled tip hanging from a routed shaft; split that shaft's edge."""
+    from .support_segments import tip_segment
+    x, y, z = point
+    head, name = f'contact{order}', f'tip_joint{order}'
+    if local_parameters:
+        graph.overrides.append({'contact': head, 'reason': 'effective_parameters',
+                                'parameters': dict(local_parameters)})
+    top = (x, y, z + spec.penetration)
+    span = math.dist(joint['junction'], top)
+    ball = float(support['break_point_diameter_mm'])
+    solids.append(tip_segment(joint['junction'], top, max(joint['base_r'], spec.contact_r),
+                              spec.contact_r, support['tip_shape'],
+                              ball if ball and ball <= span else 0.0))
+    graph.nodes.extend([SupportNode(name, list(joint['junction']), 'junction'),
+                        SupportNode(head, [x, y, z], 'contact')])
+    record = joint['record']
+    low, high, old = record['pieces'][joint['piece']]
+    lower = SupportEdge(old.start, name, old.radius_mm, old.kind)
+    upper = SupportEdge(name, old.end, old.radius_mm, old.kind)
+    graph.edges[graph.edges.index(old)] = lower
+    graph.edges.append(upper)
+    # Later joins onto this shaft land on whichever half holds them.
+    record['pieces'][joint['piece']:joint['piece'] + 1] = [
+        (low, joint['junction'], lower), (joint['junction'], high, upper)]
+    edge = SupportEdge(name, head, spec.contact_r, 'tip')
+    graph.edges.append(edge)
+    field.tip_capsules.add(joint['junction'], (x, y, z), spec.contact_r)
+    records.append({'segments': ((joint['junction'], (x, y, z)),), 'edges': [edge],
+                    'group': [field.tip_capsules.capsules[-1]]})
+
+
 def _join_stub(field, point, spec, stubs, tips=None):
     """A stub that joins an earlier stub or a routed tip instead of the model.
 
@@ -1339,6 +1480,8 @@ UNROUTABLE_SUGGESTIONS = {
     'anchor_rejected:shaft_blocked': ('support_clearance_mm', 'pillar_diameter_mm',
                                       'small_pillar_diameter_mm'),
     'anchor_rejected:existing_support': ('spacing_mm', 'support_clearance_mm'),
+    'anchor_rejected:existing_tip': ('spacing_mm', 'model_anchor_diameter_mm', 'tip_base_diameter_mm'),
+    'tip_blocked': ('spacing_mm', 'tip_base_diameter_mm', 'tip_length_mm'),
     'anchor_rejected:small_pillar_no_fit': ('small_pillar_upper_depth_mm',
                                             'small_pillar_lower_depth_mm',
                                             'small_pillar_diameter_mm', 'small_pillar_mode'),
@@ -1360,6 +1503,8 @@ _ANCHOR_WHY_TEXT = {
     'shaft_blocked': 'the shaft down to the material at Z {surface:.2f} would pass through the model',
     'existing_support': ('the shaft down to the material at Z {surface:.2f} would cross a '
                          'support already routed there'),
+    'existing_tip': ("the support down to the material at Z {surface:.2f} would pass through "
+                     "another contact's tip"),
     'small_pillar_no_fit': ('the small model pillar down to Z {surface:.2f} does not fit its '
                             'configured depths or clearance'),
 }
@@ -1394,6 +1539,8 @@ def explain_unroutable(evidence, support, *, policy_refused=False, fit_failed=Fa
                       f"wall or edge), with material down to Z {plate['material_from_z_mm']:.2f}")
     elif plate.get('blocked_by') == 'wall_beside_pillar':
         plate_text = 'a vertical pillar would stand inside the wall beside the contact'
+    elif plate.get('blocked_by') == 'existing_tip':
+        plate_text = "a vertical pillar would pass through another contact's tip"
     else:
         plate_text = 'no vertical pillar fits'
     if not branch.get('free_columns'):
@@ -1409,7 +1556,12 @@ def explain_unroutable(evidence, support, *, policy_refused=False, fit_failed=Fa
     else:
         branch_text = (f"all {branch['within_angle']} angled branch(es) within {radius:.1f} mm "
                        'hit the model or another support')
-    if policy_refused:
+    tip = evidence.get('tip') or {}
+    if tip.get('blocked'):
+        reason = 'tip_blocked'
+        headline = ("its own tip, from Z {:.2f} up to the contact, would pass through a support or "
+                    'tip routed before it'.format(tip.get('tip_base_z_mm', 0.0)))
+    elif policy_refused:
         reason = 'policy_blocked'
         headline = ('only a support standing on the model below fits here, and '
                     'allow_part_to_part is off')
@@ -1497,6 +1649,7 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
     normalized_parameters = normalize_contact_parameters(contact_parameters, settings)
     started = time.monotonic()
     field.occupied_capsules = CapsuleIndex(settings['support']['spacing_mm'])
+    field.tip_capsules = CapsuleIndex(settings['support']['spacing_mm'])
     exempt_keys = {contact_key(point) for point in density_exempt}
     spacing = float(global_support['spacing_mm'])
     base_spec = _contact_spec(global_support, field)
@@ -1518,7 +1671,9 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
     small_models = 0
     stubs = 0
     stub_records = []
-    tip_index = CapsuleIndex(spacing)
+    shaft_records = []
+    tips_joined = 0
+    tip_index = field.tip_capsules
     duplicates = 0
     failure_reasons = {}
     seen_keys = set()
@@ -1607,7 +1762,8 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                 return True
             if not _shaft_clear(field, start, end, radius, clearance_mm, cancel, exclude):  # noqa: B023
                 return False
-            return not _hits_occupied(field, start, end, radius, clearance_mm)  # noqa: B023
+            return not (_hits_occupied(field, start, end, radius, clearance_mm)  # noqa: B023
+                        or _hits_tips(field, start, end, radius))
 
         def _model_shaft_clear(start, end, radius):
             return _shaft_clear(field, start, end, radius, 0.0, cancel, exclude)  # noqa: B023
@@ -1663,7 +1819,21 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                     elif not is_small_model and gap <= tip:
                         tip_used, base_z = gap, anchor[2]
                         shortened += 1
-        if kind is None and exempt and model_anchor is None:
+        tip_conflict = False
+        if kind is not None and not is_small_model:
+            # The tip base the emitted tip will have (see top_base below).
+            thin_run = small_r if small_r > 0 else contact_r
+            top_base = thin_run if (kind == 'model_anchor' and not full_middle) else tip_base_r
+            if any(_tip_blocked(field, start, end, radius) for start, end, radius in
+                   _tip_capsules((x, y, base_z), (x, y, z), top_base, contact_r)):
+                # This contact's own tip would pass through a support routed
+                # before it. The column is fixed by the contact, so no other
+                # plate or anchor route moves the tip; only a stub can help.
+                tip_conflict = True
+                evidence['tip'] = {'blocked': True, 'tip_base_z_mm': round(base_z, 4),
+                                   'route': kind}
+                kind = None
+        if kind is None and exempt and (model_anchor is None or tip_conflict):
             # An island (or a manual/correction contact) may never be dropped.
             # When nothing else fits it is fused to the material beside or
             # below it, after every other contact, lowest first, so a stub
@@ -1734,10 +1904,12 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
             graph.edges.append(SupportEdge(foot, middle_start,
                                float(support['model_anchor_diameter_mm']) / 2 or run_r, 'bottom'))
         if elbow is None:
-            graph.edges.append(SupportEdge(middle_start, junction, run_r, kind))
+            shaft_edges = [SupportEdge(middle_start, junction, run_r, kind)]
         else:
-            graph.edges.extend([SupportEdge(middle_start, f'elbow{order}', run_r, kind),
-                                SupportEdge(f'elbow{order}', junction, run_r, kind)])
+            shaft_edges = [SupportEdge(middle_start, f'elbow{order}', run_r, kind),
+                           SupportEdge(f'elbow{order}', junction, run_r, kind)]
+        graph.edges.extend(shaft_edges)
+        shaft_mark = len(shaft_records)
         tip_edge = SupportEdge(junction, head, contact_r, 'tip')
         graph.edges.append(tip_edge)
         from .support_segments import tip_segment, elbow_sphere
@@ -1748,9 +1920,11 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                 # Branched vertical runs brace with plate pillars.
                 pillars.append((anchor[0], anchor[1], elbow[2], run_r))
                 _mark_occupied(field, anchor, elbow, run_r)
+                _record_shaft(shaft_records, anchor, elbow, shaft_edges[0], field)
             solids.append(cylinder_between(elbow, (x, y, base_z), run_r))
             solids.append(elbow_sphere(elbow, run_r))
             _mark_occupied(field, elbow, (x, y, base_z), run_r)
+            _record_shaft(shaft_records, elbow, (x, y, base_z), shaft_edges[1], field)
             length = run_length
         else:
             length = run_length
@@ -1793,6 +1967,7 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                 else:
                     solids.append(cylinder_between((x, y, middle_z), (x, y, base_z), run_r))
                     _mark_occupied(field, (x, y, middle_z), (x, y, base_z), run_r)
+                    _record_shaft(shaft_records, (x, y, middle_z), (x, y, base_z), shaft_edges[0], field)
                     if kind == 'vertical':
                         pillars.append((x, y, base_z, run_r))
         heights.append(length)
@@ -1803,11 +1978,20 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         top_base = run_r if (kind == 'model_anchor' and not full_middle) else tip_base_r
         solids.append(tip_segment((x, y, base_z), (x, y, z + penetration), top_base, contact_r,
                                   support['tip_shape'], top_ball))
-        # Tips are not shafts, so routing never avoided them; the stub phase
-        # must, at the tip's widest radius, or join one on purpose.
-        tip_index.add((x, y, base_z), (x, y, z + penetration), max(top_base, contact_r))
+        # Reserve the tip, so later shafts, anchors, trees, braces and stubs
+        # keep out of it and later tips do not cross it.
+        tip_group = []
+        for start, end, radius in _tip_capsules((x, y, base_z), (x, y, z), top_base, contact_r):
+            tip_index.add(start, end, radius)
+            tip_group.append(tip_index.capsules[-1])
         stub_records.append({'segments': (((x, y, base_z), (x, y, z)),), 'edges': [tip_edge],
-                             'group': [tip_index.capsules[-1]]})
+                             'group': tip_group})
+        if tree_jobs and tree_jobs[-1]['order'] == order:
+            tree_jobs[-1]['tip_capsules'] = tip_group
+        # A contact's tip and its own shaft are one support: a tip hanging
+        # from that shaft may touch both.
+        for record in shaft_records[shaft_mark:]:
+            record['group'].extend(tip_group)
         if elbow is not None:
             from .support_segments import shoulder_joint
             solids.append(shoulder_joint((x, y, base_z), run_r, min(top_base, contact_r), tip_span))
@@ -1840,6 +2024,18 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
                         'radius_mm': spec.contact_r,
                         'length_mm': math.dist(junction, point) + spec.penetration,
                         'joins': joined}
+        if stub is None:
+            # A pillar or anchor shaft beside the contact: hang the contact
+            # from it with an angled tip. This is not a model anchor, so
+            # allow_part_to_part does not apply.
+            joint = _join_shaft(field, point, spec, support, shaft_records, cancel)
+            if joint is not None:
+                _emit_joined_tip(joint, order, point, spec, support, graph, solids, field,
+                                 stub_records, local_parameters)
+                routed['branched'] += 1
+                tips_joined += 1
+                heights.append(joint['length_mm'])
+                continue
         if stub is None:
             evidence['stub'] = {'why': why, 'reach_mm': round(stub_reach_mm(spec, field), 4)}
             record_failure(point, evidence, support)
@@ -1891,6 +2087,7 @@ def route_contacts(contacts, field, settings, *, cancel=None, branch_attempts=8,
         'unroutable_positions': unroutable_positions,
         'unroutable_reasons': dict(sorted(failure_reasons.items())),
         'contacts_duplicate': duplicates,
+        'tips_joined_to_supports': tips_joined,
         'contacts_dropped_attached': 0,
         'tree': tree_metrics,
         'contacts_in_sealed_cavities': sealed,
@@ -2029,7 +2226,9 @@ def _emit_tree_supports(jobs, solids, pillars, feet, foot_radii, field, settings
         # Every other routed shaft: angled branches, model anchors, stubs.
         # The members' own reserved verticals are what the tree replaces.
         skip = [jobs[index]['capsule'] for index in members if jobs[index].get('capsule') is not None]
+        own_tips = [capsule for index in members for capsule in jobs[index].get('tip_capsules', ())]
         return any(_hits_occupied(field, start, end, r, clearance_mm, skip=skip)
+                   or _hits_tips(field, start, end, r, skip=own_tips)
                    for start, end, r in segments)
 
     def trunk_blocked(tx, ty, trunk_top, trunk_r):
@@ -2700,6 +2899,9 @@ def _brace(pillars, settings, solids, limit=20000, *, field=None, evidence=None,
         # passes beside another support fuses with it as surely as one that
         # crosses its axis, and the graph would never record that joint.
         start, end = np.asarray(start, dtype=float), np.asarray(end, dtype=float)
+        # Contact tips are not brace segments; a brace must still miss them.
+        if field is not None and _hits_tips(field, start, end, r):
+            return True
         others = [segment for segment in segments if not segment['owners'] & skip]
         if not others:
             return False
