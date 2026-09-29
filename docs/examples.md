@@ -312,7 +312,7 @@ _voxelmill_complete() {
 ```
 
 ```
-.TH VOXELMILL 1 "2026-09-24" "VoxelMill 0.6.0" "voxelmill manual"
+.TH VOXELMILL 1 "2026-09-28" "VoxelMill 0.6.1" "voxelmill manual"
 .SH NAME
 voxelmill \- prepare, support, slice and verify a single part for a masked stereolithography printer
 ```

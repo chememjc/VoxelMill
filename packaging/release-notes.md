@@ -1,29 +1,23 @@
-Beta {version}: portable Linux / macOS / Windows builds. Unsigned. The first beta.
-
-## Supports
-
-- **Defaults that print.** With default settings, 14 of the 18 test shapes used to fail validation, which blocks the export. Every valid test shape now passes. Contacts sit on a hexagonal lattice, and a repair pass adds a contact wherever a downward face is out of reach. Model anchors can land on slopes up to 60°, and part-to-part anchoring is on by default. Support crevices at the tip/model interface are warnings rather than failures (`repair.support_void_policy = "ignore"`); cavities in the model still fail.
-- **A CHITUBOX Light look.** Contacts are 0.35 mm with 0.2 mm penetration, pillars are 0.9 mm, and 0.6 mm braces zigzag between neighbouring pillars every 5 mm from 3 mm above the plate. The `light` and `heavy` presets and the shipped resin profile are rescaled around these values. Separate pillars keep the support clearance between them.
-- **Braces on pillars standing on the model.** A new checkbox (`support.brace_model_pillars`, `--brace-model-pillars`, off by default) lets braces join pillars that stand on the model. On the bracket test part it braces 16 of its 17 model-standing pillars, and their longest unbraced run drops from 22.6 mm to 9.9 mm.
-- **No starved pillars in dense rows.** A pillar left with an unbraced run longer than two brace intervals gets another attempt at bracing. On the bracket the worst plate pillar went from 25.9 mm unbraced to 10 mm.
-- **Collision audit.** Every `prepare` intersects the supports with each part and checks support shafts against each other (`validation.metrics.support_collisions`). This found and fixed brace feet inside neighbouring pillars, pillars standing partly inside a part's wall, branches overlapping near elbows, and overlapping pillars in tree mode.
-- **`slice`, `verify` and `validate` accept what `prepare` passed.** A single STL or slice file cannot say which voids the supports made, so these commands used to fail, and withhold, an export `prepare` had just passed, on one-voxel crevices under the support tips. Under the default void policy they now warn when no finding can be a model cavity: every void is smaller than a support contact, and any sealed drainage chamber is a single grid cell. A hollow part without a drain still fails.
-- Every report states the longest unbraced pillar run and its slenderness, for pillars on the plate and on the model (`supports.unbraced`).
+Beta {version}: portable Linux / macOS / Windows builds. Unsigned. A bug-fix and feature update to the first beta.
 
 ## Editor
 
-- **Settings search** ranks every setting by its path, label, CLI flag and help text. It tolerates typos, filters the settings pages and highlights the best match. When the current settings mode hides a match, a link offers to switch modes.
-- **Typed settings pages** for hollowing, peel analysis, assembly and resources. The raw JSON box is now only an Expert fallback.
-- **Keyboard shortcuts** can be changed under Configuration → Shortcuts. The editor refuses conflicting keys, can reset one shortcut or all of them, and saves your changes.
-- **Layer viewer pixel readout:** hover over a layer to see the pixel's coordinates, its position in mm, its value and any issue marked there.
-- **Profile library** asks before replacing unsaved editor changes, and before saving over an existing profile.
-- **Islands** are no longer re-checked after every edit by default, but still after supports are generated. *Verification → Re-check islands after every edit* restores the old behaviour.
-- The Setup form has checkboxes for bracing and for bracing pillars that stand on the model.
+- **STEP import adds to the plate.** Import STEP used to open its result as a new document and discard the parts already on the plate. It now adds the part(s) and re-arranges the plate, like Add model. With nothing loaded, the first file opens the plate and the rest are added once it is placed.
+- **Open several files at once.** Open STL, Import STEP and Add model accept multi-selection. Open STL still replaces the plate; Import STEP, Add model and drops add to it. STEP files can be dropped on the window when FreeCAD is available.
+- **Rotation gizmo keeps earlier rotations.** In *Absolute from import pose* mode, grabbing a second rotation ring reset the part to its import pose plus that one axis, and also reset its position and lift. Every drag now starts from the current pose in both modes; the mode only changes what the panel fields show. Ring turns are now composed exactly (a turn about X on a part already turned about Z used to land somewhere else), only the dragged angle is snapped, an auto-oriented part turns from its found orientation, and the camera no longer re-frames after every drag.
+- **Smooth pane resizing on macOS.** The Mac build's 3D view was stuck in a continuous repaint loop, which made dragging the pane separators slow on Intel Macs. Renders are now coalesced to one per 40 ms during a drag, and the Layers view reuses its image while its size changes.
+- **Support explanations in the Report tab.** After Compute attachments, any contact that could not be routed is listed with the reason and, in its tooltip, the settings worth changing. Activating it jumps to its layer.
 
-## Command line
+## Supports
 
-- `--brace-model-pillars / --no-brace-model-pillars`.
-- The brace options' help text now states the current defaults.
+- **Knife-edge islands are supported.** Where an overhanging wall meets a slope diagonally to the pixel grid, single pixels can hang from the layer below by a corner, directly above the part and too close to it for a model anchor. Supports could not reach them, so export was withheld. They now get a short stub from the part below. The same island is no longer reported and routed twice.
+- **Supports no longer pass through each other's tips.** Routed tips are now reserved, so a later pillar, anchor, tree or brace avoids them. This fixes the tip-versus-pillar `support_overlap` warnings.
+- **Thicker tree trunks.** New setting `support.trunk_diameter_mm` (`--trunk-diameter-mm`, default 1.2 mm) makes a tree's shared trunk thicker than its 0.9 mm branches. A value below the branch diameter is raised to it; projects saved before this setting existed keep branch-thick trunks. The `heavy` preset uses 1.8 mm. A trunk that would hit the model or another support falls back to separate pillars, and the report counts why.
+- **Failures say why.** `support_unroutable` now names what blocked the contact (the part below it, a branch that would start inside the part, material too close for an anchor, a neighbouring tip, the part-to-part policy) with the obstruction height and the settings to change. `incomplete_support_routes` counts failures by reason and lists positions. `support_overlap` names the two supports and where they meet. `scripts/routing_probe.py` accepts a project file.
+
+## Reports
+
+- **Resin usage by model and supports.** `prepare`, the editor's validation and `report-html` report cured resin as total, model and supports (including any raft or base), in mL, and in grams when the resin profile sets a density. Without a density, only mL is reported. The bundled Sunlu ABS-like gray profile now sets 1.10 g/cm³. `slice` reads a merged STL and reports the total only.
 
 This is a beta. The GUI editor, CLI (`prepare`, `slice`, …), and CPU-only native kernels are bundled. CUDA is not. Qt is used via PySide6 under LGPL v3; see `licenses/THIRD-PARTY.md`. Physical print strength has not been validated.
 

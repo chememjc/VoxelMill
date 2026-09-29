@@ -547,7 +547,7 @@ def build_parser():
     parser.add_argument("appimage", nargs="?", help="built or downloaded AppImage")
     parser.add_argument("--source", default=str(DEFAULT_SOURCE), help="acceptance STL")
     parser.add_argument("--output-dir", required=True, help="durable evidence directory")
-    parser.add_argument("--expected-version", default="0.5.4")
+    parser.add_argument("--expected-version", default="0.6.1")
     parser.add_argument("--workflow-url", help="published workflow run URL or other provenance")
     parser.add_argument("--skip-gui", action="store_true",
                         help="only for hosts without Xvfb; records unavailable render coverage")

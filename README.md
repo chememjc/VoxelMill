@@ -2,7 +2,7 @@
 
 A staged Linux application for single-part resin-print preparation. Open work before the first stable release (bugs, performance, architecture and the feature backlog) is tracked in [ISSUES.md](ISSUES.md).
 
-v0.6.0 (beta) keeps a Python CLI and optional GUI, with hot geometry and raster
+v0.6.1 (beta) keeps a Python CLI and optional GUI, with hot geometry and raster
 work in the C++ `_native` kernels. Portable builds: Linux x86_64 AppImage, two
 thin macOS DMGs (Intel and Apple Silicon), and a Windows x64 zip. See
 [docs/packaging.md](docs/packaging.md) and [docs/platforms.md](docs/platforms.md).
@@ -11,21 +11,21 @@ What will stay stable from 1.0 on is in [docs/stability.md](docs/stability.md).
 ## Install (beta binaries)
 
 Download the matching asset from the [GitHub Releases](https://github.com/chememjc/VoxelMill/releases) page.
-The [0.6.0 verification record](reports/releases/v0.6.0.md) documents artifact
+The [0.6.1 verification record](reports/releases/v0.6.1.md) documents artifact
 provenance, per-platform acceptance and coverage limits; earlier releases are
 under [reports/releases/](reports/releases/).
 
 **Linux x86_64**
 
 ```sh
-chmod +x VoxelMill-0.6.0-linux-x86_64.AppImage
-./VoxelMill-0.6.0-linux-x86_64.AppImage --help
-./VoxelMill-0.6.0-linux-x86_64.AppImage gui
+chmod +x VoxelMill-0.6.1-linux-x86_64.AppImage
+./VoxelMill-0.6.1-linux-x86_64.AppImage --help
+./VoxelMill-0.6.1-linux-x86_64.AppImage gui
 ```
 
 The editor needs host OpenGL and X11 or Wayland.
 
-**macOS** — Intel (`VoxelMill-0.6.0-macos-x86_64.dmg`) or Apple Silicon (`VoxelMill-0.6.0-macos-arm64.dmg`). Copy `VoxelMill.app` to Applications. The build is unsigned, so clear quarantine once:
+**macOS** — Intel (`VoxelMill-0.6.1-macos-x86_64.dmg`) or Apple Silicon (`VoxelMill-0.6.1-macos-arm64.dmg`). Copy `VoxelMill.app` to Applications. The build is unsigned, so clear quarantine once:
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/VoxelMill.app
@@ -34,7 +34,7 @@ open /Applications/VoxelMill.app
 
 If macOS still blocks it: System Settings → Privacy & Security → Open Anyway.
 
-**Windows x64** — unzip `VoxelMill-0.6.0-windows-x64.zip` and run `VoxelMill\VoxelMill.exe` (CLI subcommands work from that same exe). SmartScreen may warn; Open anyway.
+**Windows x64** — unzip `VoxelMill-0.6.1-windows-x64.zip` and run `VoxelMill\VoxelMill.exe` (CLI subcommands work from that same exe). SmartScreen may warn; Open anyway.
 
 The editor's **Configuration** menu includes dedicated **Printer**, **Resin**,
 and **Support** editors with portable configuration saves. The support editor
