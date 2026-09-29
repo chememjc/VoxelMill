@@ -6,6 +6,7 @@ scene render is replaced by a counter.
 """
 from __future__ import annotations
 
+import gc
 import time
 
 import numpy as np
@@ -200,3 +201,38 @@ def test_only_macos_settings_splitters_resize_on_release(application):
     assert isinstance(dialog.splitter, QtWidgets.QSplitter)
     assert dialog.splitter.opaqueResize() == opaque_splitter_resize()
     dialog.reject()
+
+
+def test_a_render_that_raises_its_own_paint_does_not_loop(application):
+    # vtkCocoaRenderWindow::Render asks Cocoa to redisplay the view, which
+    # arrives as a Qt paint just after the render: on the iMac that kept the
+    # idle editor re-rendering at ~25 Hz. An unchanged-size paint that echoes
+    # a render is its output, not a request for another one.
+    from PySide6 import QtCore
+    widget, renders = _counting_interactor(defer_renders=True)
+
+    def echoing_render():
+        renders.append(time.monotonic())
+        # The echo is delivered as the paint it becomes. Bound to the widget,
+        # so a pending one dies with it; a queued update() on this VTK widget
+        # outlived the test and crashed the next one.
+        QtCore.QTimer.singleShot(2, widget, lambda: widget.paintEvent(None))
+
+    widget._render_scene = echoing_render
+    widget.resize(300, 300)
+    widget.show()
+    _spin(application, 0.3)
+    renders.clear()
+    _spin(application, 0.5)
+    assert len(renders) <= 1, f'{len(renders)} idle renders in 0.5 s'
+    # A real resize still renders.
+    widget.resize(360, 300)
+    _spin(application, 0.3)
+    assert renders, 'a resize after an echo must still render'
+    widget._render_scene = lambda: renders.append(time.monotonic())
+    _spin(application, 0.2)
+    widget.close()
+    # The echo closures make a cycle through the widget. Left to the cyclic
+    # collector, the VTK widget was destroyed in the middle of a later test
+    # and segfaulted there; collect it while this test still owns it.
+    gc.collect()

@@ -7,6 +7,7 @@ render interactively the viewport shows a strided preview and says so through
 from __future__ import annotations
 
 import sys
+import time
 
 import numpy as np
 from PySide6 import QtCore, QtWidgets
@@ -44,17 +45,28 @@ class _VTKInteractor(QVTKRenderWindowInteractor):
     which QVTK defines as ``update()``: that queued another paint and kept the
     widget repainting forever without drawing the scene.
 
+    ``vtkCocoaRenderWindow::Render`` also asks Cocoa to redisplay the view, and
+    that arrives as a Qt paint just after the render returns. Started as a new
+    render, it kept an idle editor rendering at the timer's rate (about a fifth
+    of a core on the Intel iMac). A paint within ``echo_window_s`` of the last
+    deferred render, at the size that render drew, is that render's echo and
+    is dropped. Scene changes render explicitly through ``Viewport.render``,
+    and a resize changes the size, so neither depends on such a paint.
+
     Other platforms keep QVTK's synchronous render in ``paintEvent``.
     """
 
     #: Longest a deferred paint waits for its render; one per interval at most.
     render_interval_ms = 40
+    #: How soon after a deferred render a same-size paint counts as its echo.
+    echo_window_s = 0.1
 
     def __init__(self, parent=None, defer_renders=None):
         super().__init__(parent)
         self.defer_renders = (defers_paint_renders() if defer_renders is None
                               else bool(defer_renders))
         self._rendering = False
+        self._last_render = None
         self._render_timer = QtCore.QTimer(self)
         self._render_timer.setSingleShot(True)
         self._render_timer.setInterval(self.render_interval_ms)
@@ -66,6 +78,10 @@ class _VTKInteractor(QVTKRenderWindowInteractor):
         # A paint raised by the render itself is that render's own output.
         if self._rendering or self._render_timer.isActive():
             return
+        if self._last_render is not None:
+            rendered_at, size = self._last_render
+            if size == self.size() and time.monotonic() - rendered_at < self.echo_window_s:
+                return
         self._render_timer.start()
 
     def _flush_deferred_paint(self):
@@ -80,6 +96,7 @@ class _VTKInteractor(QVTKRenderWindowInteractor):
             pass
         finally:
             self._rendering = False
+            self._last_render = (time.monotonic(), self.size())
 
     def _scene_ready(self):
         return bool(self._Iren.GetInitialized())
